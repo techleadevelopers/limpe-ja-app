@@ -21,6 +21,8 @@ import {
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Clipboard from 'expo-clipboard';
+import { Linking } from 'react-native';
 
 import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
@@ -31,20 +33,81 @@ import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { AppColors, AppShadows } from '../../../constants/appStyles';
 import { useDevice } from '@/utils/responsive';
 
+// Novos imports para integração
+import { useProviderServices } from '../../../hooks/useProviderServices';
+import ProviderServicesInline from '../../../components/booking/ProviderServicesInline';
+
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient as any);
+
+// Local light theme tokens for this screen only (UI refactor only)
+const UI = {
+  bg: '#f2f2f2',
+  card: '#FFFFFF',
+  textPrimary: '#1A1A1A',
+  textSecondary: '#6B7280',
+  divider: '#E5E7EB',
+  accent: '#2563EB',
+  success: '#16A34A',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+} as const;
 
 const isCancellableStatus = (status: BookingStatus): status is BookingStatus.CONFIRMED | BookingStatus.PENDING => status === BookingStatus.CONFIRMED || status === BookingStatus.PENDING;
 const isCompletedStatus = (status: BookingStatus): status is BookingStatus.COMPLETED => status === BookingStatus.COMPLETED;
 
+// Solid backgrounds for a clean status pill (no gradient look)
 const gradients = {
-  confirmed: ['#D4EDDA', '#C3E6CB'] as const,
-  pending: ['#FFF3CD', '#FFEAA7'] as const,
-  inProgress: ['#D1ECF1', '#B8E1E9'] as const,
-  completed: ['#F8F9FA', '#E9ECEF'] as const,
-  cancelled: ['#F8D7DA', '#F1B0B7'] as const,
-  other: ['#E2E3E5', '#DEE2E6'] as const,
-  rescheduled: ['#EAE6F3', '#D7CFF0'] as const,
+  confirmed: ['rgba(22,163,74,0.12)', 'rgba(22,163,74,0.12)'] as const,
+  pending: ['rgba(245,158,11,0.15)', 'rgba(245,158,11,0.15)'] as const,
+  inProgress: ['rgba(37,99,235,0.12)', 'rgba(37,99,235,0.12)'] as const,
+  completed: ['#F3F4F6', '#F3F4F6'] as const,
+  cancelled: ['rgba(239,68,68,0.12)', 'rgba(239,68,68,0.12)'] as const,
+  other: ['#F3F4F6', '#F3F4F6'] as const,
+  rescheduled: ['rgba(124,58,237,0.12)', 'rgba(124,58,237,0.12)'] as const,
 } as const;
+
+type GradientKey = keyof typeof gradients;
+const statusToKey = (s?: BookingStatus | null): GradientKey => {
+  switch (s) {
+    case BookingStatus.CONFIRMED:
+      return 'confirmed';
+    case BookingStatus.PENDING:
+      return 'pending';
+    case BookingStatus.IN_PROGRESS:
+      return 'inProgress';
+    case BookingStatus.COMPLETED:
+      return 'completed';
+    case BookingStatus.CANCELLED:
+      return 'cancelled';
+    default:
+      return 'other';
+  }
+};
+
+const getStatusStyle = (status: BookingStatus) => {
+  switch (status) {
+    case BookingStatus.CONFIRMED:
+      return { text: 'CONFIRMADO', color: AppColors.successStandard, gradient: gradients.confirmed, icon: 'checkmark-circle-outline' as const };
+    case BookingStatus.PENDING:
+      return { text: 'PENDENTE', color: AppColors.warningYellow, gradient: gradients.pending, icon: 'time-outline' as const };
+    case BookingStatus.PENDING_PROVIDER_CONFIRMATION:
+      return { text: 'AGUARDANDO', color: AppColors.warningYellow, gradient: gradients.pending, icon: 'hourglass-outline' as const };
+    case BookingStatus.IN_PROGRESS:
+      return { text: 'EM ANDAMENTO', color: AppColors.primaryInteractive, gradient: gradients.inProgress, icon: 'sync-circle-outline' as const };
+    case BookingStatus.COMPLETED:
+      return { text: 'CONCLUÍDO', color: AppColors.textAuxiliary, gradient: gradients.completed, icon: 'flag-outline' as const };
+    case BookingStatus.CANCELLED:
+      return { text: 'CANCELADO', color: AppColors.errorRed, gradient: gradients.cancelled, icon: 'close-circle-outline' as const };
+    case BookingStatus.REJECTED:
+      return { text: 'REJEITADO', color: AppColors.textAuxiliary, gradient: gradients.other, icon: 'alert-circle-outline' as const };
+    case BookingStatus.RESCHEDULED:
+      return { text: 'REAGENDADO', color: '#6F42C1', gradient: gradients.rescheduled, icon: 'sync-outline' as const };
+    case BookingStatus.NO_SHOW:
+      return { text: 'NÃO COMPARECEU', color: AppColors.textBody, gradient: gradients.other, icon: 'person-remove-outline' as const };
+    default:
+      return { text: 'DESCONHECIDO', color: AppColors.mediumGray, gradient: gradients.other, icon: 'help-circle-outline' as const };
+  }
+};
 
 const renderProviderAvatar = (avatarUrl?: string | null, size: number = 80) => {
   if (!avatarUrl || avatarUrl === '') {
@@ -65,13 +128,229 @@ const renderProviderAvatar = (avatarUrl?: string | null, size: number = 80) => {
   );
 };
 
+// Subcomponente: HeaderBar (voltar + título + status pill)
+function HeaderBar({ booking, router, insets }: { booking: BookingDetails; router: any; insets: any }) {
+  const statusInfo = getStatusStyle(booking.status);
+  const rCard: StyleProp<ViewStyle> = useDevice().isLargePhone
+    ? { alignSelf: 'center' as ViewStyle['alignSelf'], width: '100%', maxWidth: 820 }
+    : undefined;
+
+  return (
+    <View style={[styles.headerBar, rCard]}>
+      <TouchableOpacity onPress={() => router.back()} style={{ paddingVertical: 10, paddingHorizontal: 12 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityRole="button" accessibilityLabel="Voltar">
+        <Ionicons name="arrow-back" size={22} color={UI.textPrimary} />
+      </TouchableOpacity>
+      <Text style={{ fontSize: 17, fontWeight: '800', color: UI.textPrimary }}>Detalhes do agendamento</Text>
+      <View style={{ backgroundColor: gradients[statusToKey(booking?.status)][0] || 'rgba(0,0,0,0.04)', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
+        <Ionicons name={statusInfo.icon} size={16} color={statusInfo.color} />
+        <Text style={{ marginLeft: 6, color: statusInfo.color, fontWeight: '700', fontSize: 13 }} numberOfLines={1}>
+          {statusInfo.text}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// Subcomponente: ProviderHeaderCard (avatar + serviço + provider + pill)
+function ProviderHeaderCard({ booking, providerSectionAnim, providerFloatAnim, rCard, rTitle }: { booking: BookingDetails; providerSectionAnim: any; providerFloatAnim: any; rCard: any; rTitle: any }) {
+  const statusInfo = getStatusStyle(booking.status);
+
+  return (
+    <Animated.View style={[styles.card, rCard, styles.providerSectionCard, { opacity: providerSectionAnim, transform: [{ translateY: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { scale: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: providerFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) }] }]}>
+      <BlurView intensity={Platform.OS === 'ios' ? 18 : 36} tint="light" style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={['#FFFFFF', '#F5FAFF'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+      <View style={styles.providerSection}>
+        {renderProviderAvatar(booking.providerAvatarUrl, 80)}
+        <View style={styles.providerInfo}>
+          <Text style={[styles.serviceNameText, rTitle]} numberOfLines={2}>
+            {sanitizeText(booking.serviceName)}
+          </Text>
+          <Text style={styles.providerNameText} numberOfLines={2}>
+            {`com ${sanitizeText(booking.providerFullName)}`}
+          </Text>
+        </View>
+        <LinearGradient colors={statusInfo.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.statusBadge}>
+          <Ionicons name={statusInfo.icon} size={16} color={statusInfo.color} />
+          <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.text}</Text>
+        </LinearGradient>
+      </View>
+    </Animated.View>
+  );
+}
+
+// Subcomponente: DetailsCard (data/hora, endereço, valor, notas)
+function DetailsCard({ booking, detailsCardAnim, detailsFloatAnim, rCard, rDetails, handleCopyAddress, handleOpenInMaps }: { booking: BookingDetails; detailsCardAnim: any; detailsFloatAnim: any; rCard: any; rDetails: any; handleCopyAddress: () => void; handleOpenInMaps: () => void }) {
+  return (
+    <Animated.View style={[styles.card, rCard, { opacity: detailsCardAnim, transform: [{ scale: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { translateY: detailsFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }] }]}>
+      <BlurView intensity={Platform.OS === 'ios' ? 18 : 36} tint="light" style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={['#FFFFFF', '#F5FAFF'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+      <View style={styles.sectionTitleContainer}>
+        <Text style={styles.sectionTitle}>Detalhes do agendamento</Text>
+      </View>
+      <View style={styles.detailRow}>
+        <Ionicons name="calendar-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
+        <Text style={styles.detailLabel}>Data e hora</Text>
+        <Text style={[styles.detailValue, rDetails]}>
+          {formatDateTime(booking.scheduledDate, booking.scheduledTime, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </View>
+      <View style={styles.detailRow}>
+        <Ionicons name="location-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
+        <Text style={styles.detailLabel}>Endereço</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.detailValueAddress, rDetails]}>
+            {sanitizeText(`${booking.address.street}, ${booking.address.number}${booking.address.complement ? `, ${booking.address.complement}` : ''}`)}
+            {sanitizeText(`\n${booking.address.neighborhood}, ${booking.address.city} - ${booking.address.state}`)}
+            {sanitizeText(`\nCEP: ${booking.address.cep}`)}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+            <TouchableOpacity onPress={handleCopyAddress} style={{ backgroundColor: '#F3F4F6', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 }}>
+              <Text style={{ color: UI.textPrimary, fontWeight: '700', fontSize: 12 }}>Copiar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleOpenInMaps} style={{ backgroundColor: '#F3F4F6', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 }}>
+              <Text style={{ color: UI.textPrimary, fontWeight: '700', fontSize: 12 }}>Abrir no mapa</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+      <View style={styles.detailRow}>
+        <Ionicons name="cash-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
+        <Text style={styles.detailLabel}>Valor</Text>
+        <Text style={[styles.detailValue, styles.priceText]}>{formatPriceBRL(booking.totalPrice)}</Text>
+      </View>
+      {booking.notes && (
+        <View style={styles.detailRow}>
+          <Ionicons name="document-text-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
+          <Text style={styles.detailLabel}>Observações</Text>
+          <Text style={styles.detailValue}>{sanitizeText(booking.notes)}</Text>
+        </View>
+      )}
+    </Animated.View>
+  );
+}
+
+// Subcomponente: ActionsCard (ações)
+function ActionsCard({ 
+  booking, 
+  actionsCardAnim, 
+  actionsFloatAnim, 
+  rCard, 
+  rActionBtn, 
+  isCancellableStatus, 
+  isCompletedStatus, 
+  isReviewed,
+  handleCancelBooking, 
+  handleContactProvider, 
+  handleReviewService, 
+  handleViewProviderProfile,
+  cancelButtonScaleAnim,
+  contactButtonScaleAnim,
+  reviewButtonScaleAnim,
+  profileButtonScaleAnim,
+  onPressInButton,
+  onPressOutButton 
+}: { 
+  booking: BookingDetails; 
+  actionsCardAnim: any; 
+  actionsFloatAnim: any; 
+  rCard: any; 
+  rActionBtn: any; 
+  isCancellableStatus: (status: BookingStatus) => boolean; 
+  isCompletedStatus: (status: BookingStatus) => boolean;
+  isReviewed: boolean;
+  handleCancelBooking: () => void; 
+  handleContactProvider: () => void; 
+  handleReviewService: () => void; 
+  handleViewProviderProfile: () => void;
+  cancelButtonScaleAnim: any;
+  contactButtonScaleAnim: any;
+  reviewButtonScaleAnim: any;
+  profileButtonScaleAnim: any;
+  onPressInButton: (anim: any) => void;
+  onPressOutButton: (anim: any) => void;
+}) {
+  const statusInfo = getStatusStyle(booking.status);
+
+  return (
+    <Animated.View style={[styles.actionsCard, rCard, { opacity: actionsCardAnim, transform: [{ scale: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { translateY: actionsFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -1] }) }] }]}>
+      <BlurView intensity={Platform.OS === 'ios' ? 18 : 36} tint="light" style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={['#FFFFFF', '#F5FAFF'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+      <View style={styles.sectionTitleContainer}>
+        <Text style={styles.sectionTitle}>Ações</Text>
+      </View>
+      {isCancellableStatus(booking.status) && (
+        <AnimatedLinearGradient colors={['#FF6B6B', '#EE5A52'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButton, rActionBtn, styles.cancelButton, { transform: [{ scale: cancelButtonScaleAnim }] }]}>
+          <TouchableOpacity style={styles.actionButtonInner} onPress={handleCancelBooking} onPressIn={() => onPressInButton(cancelButtonScaleAnim)} onPressOut={() => onPressOutButton(cancelButtonScaleAnim)} activeOpacity={1}>
+            <Ionicons name="close-circle-outline" size={20} color={AppColors.white} />
+            <Text style={styles.actionButtonText}>Cancelar agendamento</Text>
+          </TouchableOpacity>
+        </AnimatedLinearGradient>
+      )}
+      <AnimatedLinearGradient colors={['#2DBF8A', '#1E9B73'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButton, rActionBtn, { transform: [{ scale: contactButtonScaleAnim }] }]}>
+        <TouchableOpacity style={styles.actionButtonInner} onPress={handleContactProvider} onPressIn={() => onPressInButton(contactButtonScaleAnim)} onPressOut={() => onPressOutButton(contactButtonScaleAnim)} activeOpacity={1}>
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color={AppColors.white} />
+          <Text style={styles.actionButtonText}>Contatar {sanitizeText(booking.providerFullName.split(' ')[0])}</Text>
+        </TouchableOpacity>
+      </AnimatedLinearGradient>
+      {isCompletedStatus(booking.status) && !isReviewed && (
+        <AnimatedLinearGradient colors={['#FFD453', '#FFB84D'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButton, rActionBtn, styles.reviewButton, { transform: [{ scale: reviewButtonScaleAnim }] }]}>
+          <TouchableOpacity style={styles.actionButtonInner} onPress={handleReviewService} onPressIn={() => onPressInButton(reviewButtonScaleAnim)} onPressOut={() => onPressOutButton(reviewButtonScaleAnim)} activeOpacity={1}>
+            <Ionicons name="star-outline" size={20} color={AppColors.white} />
+            <Text style={styles.actionButtonText}>Avaliar serviço</Text>
+          </TouchableOpacity>
+        </AnimatedLinearGradient>
+      )}
+      <AnimatedLinearGradient colors={['#667EEA', '#764BA2'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButtonOutline, rActionBtn, { transform: [{ scale: profileButtonScaleAnim }] }]}>
+        <TouchableOpacity style={[styles.actionButtonInner, styles.actionButtonOutlineInner]} onPress={handleViewProviderProfile} onPressIn={() => onPressInButton(profileButtonScaleAnim)} onPressOut={() => onPressOutButton(profileButtonScaleAnim)} activeOpacity={1}>
+          <Ionicons name="person-circle-outline" size={20} color={AppColors.primaryInteractive} />
+          <Text style={[styles.actionButtonText, styles.actionButtonOutlineText]}>Ver perfil de {sanitizeText(booking.providerFullName.split(' ')[0])}</Text>
+        </TouchableOpacity>
+      </AnimatedLinearGradient>
+    </Animated.View>
+  );
+}
+
+// Subcomponente: ReviewSheet (modal)
+function ReviewSheet({ showReviewSheet, setShowReviewSheet, booking, router }: { showReviewSheet: boolean; setShowReviewSheet: (v: boolean) => void; booking: BookingDetails; router: any }) {
+  return (
+    <Modal visible={showReviewSheet} transparent animationType="slide" onRequestClose={() => setShowReviewSheet(false)}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: AppColors.white, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: AppColors.textBody, marginBottom: 8 }}>Avaliar serviço</Text>
+          <Text style={{ fontSize: 14, color: AppColors.textAuxiliary, marginBottom: 16 }}>Conte como foi sua experiência. Sua opinião ajuda outros clientes e os prestadores.</Text>
+          <View style={{ flexDirection: 'row' }}>
+            <TouchableOpacity
+              onPress={() => {
+                setShowReviewSheet(false);
+                router.push({ pathname: '/(common)/feedback/[targetId]', params: { targetId: booking.id, type: 'service', serviceName: sanitizeText(booking.serviceName), providerName: sanitizeText(booking.providerFullName), providerId: booking.providerId } } as any);
+              }}
+              style={{ flex: 1, backgroundColor: AppColors.primaryInteractive, paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginRight: 8 }}
+            >
+              <Text style={{ color: AppColors.white, fontWeight: '700' }}>Avaliar agora</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowReviewSheet(false)}
+              style={{ flex: 1, backgroundColor: AppColors.backgroundNeutral, paddingVertical: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: AppColors.borderNeutral, marginLeft: 8 }}
+            >
+              <Text style={{ color: AppColors.textBody, fontWeight: '700' }}>Depois</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function BookingDetailsScreen() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isSmallPhone, isLargePhone } = useDevice();
 
-  const rCard: StyleProp<ViewStyle> = React.useMemo(() => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined), [isLargePhone]);
+  const rCard: StyleProp<ViewStyle> = React.useMemo(
+    () => (isLargePhone ? { alignSelf: 'center' as ViewStyle['alignSelf'], width: '100%', maxWidth: 820 } : undefined),
+    [isLargePhone]
+  );
   const rTitle: StyleProp<TextStyle> = React.useMemo(() => (isLargePhone ? { fontSize: 24 } : undefined), [isLargePhone]);
   const rDetails: StyleProp<TextStyle> = React.useMemo(() => (isSmallPhone ? { lineHeight: 22 } : undefined), [isSmallPhone]);
   const rActionBtn: StyleProp<ViewStyle> = React.useMemo(() => ({ minHeight: 48 }), []);
@@ -94,6 +373,9 @@ export default function BookingDetailsScreen() {
   const providerFloatAnim = useRef(new Animated.Value(0)).current;
   const detailsFloatAnim = useRef(new Animated.Value(0)).current;
   const actionsFloatAnim = useRef(new Animated.Value(0)).current;
+
+  // Integração: Hook para serviços do prestador (após booking carregado)
+  const { services: providerServices } = useProviderServices(booking?.providerId);
 
   const createAndStartFloatAnimation = useCallback((animValue: Animated.Value) => {
     const loop = Animated.loop(
@@ -125,10 +407,11 @@ export default function BookingDetailsScreen() {
         if (completed && !alreadyReviewed) setShowReviewSheet(true);
       } catch {}
 
-      Animated.stagger(140, [
-        Animated.timing(providerSectionAnim, { toValue: 1, duration: 480, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        Animated.timing(detailsCardAnim, { toValue: 1, duration: 560, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        Animated.timing(actionsCardAnim, { toValue: 1, duration: 640, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      const D = 240; const S = 60;
+      Animated.stagger(S, [
+        Animated.timing(providerSectionAnim, { toValue: 1, duration: D, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(detailsCardAnim, { toValue: 1, duration: D, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(actionsCardAnim, { toValue: 1, duration: D, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       ]).start();
     } catch (err: any) {
       console.error('[BookingDetailsScreen] Erro ao buscar detalhes:', err);
@@ -176,7 +459,7 @@ export default function BookingDetailsScreen() {
           setIsLoading(true);
           try {
             await cancelBooking(booking.id);
-            Alert.alert('Sucesso', 'Agendamento cancelado.');
+            // Removido Alert de sucesso; use Toast.show({ type: 'success', text1: 'Agendamento cancelado.' }) aqui se tiver Toast
             setBooking((prev) => (prev ? { ...prev, status: BookingStatus.CANCELLED } : null));
           } catch (err: any) {
             console.error('Erro ao cancelar:', err);
@@ -224,30 +507,32 @@ export default function BookingDetailsScreen() {
     ]);
   }, []);
 
-  const getStatusStyle = (status: BookingStatus) => {
-    switch (status) {
-      case BookingStatus.CONFIRMED:
-        return { text: 'CONFIRMADO', color: AppColors.successStandard, gradient: gradients.confirmed, icon: 'checkmark-circle-outline' as const };
-      case BookingStatus.PENDING:
-        return { text: 'PENDENTE', color: AppColors.warningYellow, gradient: gradients.pending, icon: 'time-outline' as const };
-      case BookingStatus.PENDING_PROVIDER_CONFIRMATION:
-        return { text: 'AGUARDANDO', color: AppColors.warningYellow, gradient: gradients.pending, icon: 'hourglass-outline' as const };
-      case BookingStatus.IN_PROGRESS:
-        return { text: 'EM ANDAMENTO', color: AppColors.primaryInteractive, gradient: gradients.inProgress, icon: 'sync-circle-outline' as const };
-      case BookingStatus.COMPLETED:
-        return { text: 'CONCLUÍDO', color: AppColors.textAuxiliary, gradient: gradients.completed, icon: 'flag-outline' as const };
-      case BookingStatus.CANCELLED:
-        return { text: 'CANCELADO', color: AppColors.errorRed, gradient: gradients.cancelled, icon: 'close-circle-outline' as const };
-      case BookingStatus.REJECTED:
-        return { text: 'REJEITADO', color: AppColors.textAuxiliary, gradient: gradients.other, icon: 'alert-circle-outline' as const };
-      case BookingStatus.RESCHEDULED:
-        return { text: 'REAGENDADO', color: '#6F42C1', gradient: gradients.rescheduled, icon: 'sync-outline' as const };
-      case BookingStatus.NO_SHOW:
-        return { text: 'NÃO COMPARECEU', color: AppColors.textBody, gradient: gradients.other, icon: 'person-remove-outline' as const };
-      default:
-        return { text: 'DESCONHECIDO', color: AppColors.mediumGray, gradient: gradients.other, icon: 'help-circle-outline' as const };
-    }
-  };
+  const handleCopyAddress = useCallback(() => {
+    if (!booking) return;
+    try {
+      const a = booking.address;
+      const text = `${a.street}, ${a.number}${a.complement ? `, ${a.complement}` : ''} - ${a.neighborhood}, ${a.city} - ${a.state}, ${a.cep}`;
+      Clipboard.setStringAsync(text);
+      // Opcional: Toast.show({ type: 'success', text1: 'Endereço copiado' });
+    } catch {}
+  }, [booking]);
+
+  const handleOpenInMaps = useCallback(() => {
+    if (!booking) return;
+    const a = booking.address;
+    const query = encodeURIComponent(`${a.street}, ${a.number} ${a.complement || ''}, ${a.neighborhood}, ${a.city} - ${a.state}, ${a.cep}`);
+    const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    Linking.openURL(url).catch(() => Alert.alert('Não foi possível abrir o mapa'));
+  }, [booking]);
+
+  // Integração: onSelect para ProviderServicesInline
+  const handleSelectService = useCallback((serviceId: string) => {
+    if (!booking) return;
+    router.push({
+      pathname: '/(client)/bookings/schedule-service',
+      params: { providerId: booking.providerId, serviceId },
+    } as any);
+  }, [booking, router]);
 
   if (isLoading) {
     return (
@@ -301,176 +586,74 @@ export default function BookingDetailsScreen() {
   }
 
   const isReviewed = !!booking.reviewId;
-  const statusInfo = getStatusStyle(booking.status);
 
   return (
-    <ScrollView style={[styles.scrollViewContainer, { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 20 }]}>
-      <Stack.Screen
-        options={{
-          title: 'Detalhes do agendamento',
-          headerShown: true,
-          headerTitleAlign: 'center',
-          headerTitleStyle: { fontFamily: 'Montserrat-SemiBold', fontSize: 20, color: AppColors.textBody },
-          headerStyle: { backgroundColor: AppColors.white },
-          headerShadowVisible: false,
-          headerTintColor: AppColors.primaryInteractive,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ paddingVertical: 10, paddingHorizontal: 12 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityRole="button" accessibilityLabel="Voltar">
-              <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
-            </TouchableOpacity>
-          ),
-        } as any}
-      />
-
-      <Animated.View style={[styles.card, rCard, styles.providerSectionCard, { opacity: providerSectionAnim, transform: [{ translateY: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }, { scale: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: providerFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) }] }]}>
-        <BlurView intensity={Platform.OS === 'ios' ? 18 : 36} tint="light" style={StyleSheet.absoluteFillObject} />
-        <LinearGradient colors={['#FFFFFF', '#F5FAFF'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
-        <View style={styles.providerSection}>
-          {renderProviderAvatar(booking.providerAvatarUrl, 80)}
-
-          <View style={styles.providerInfo}>
-            <Text style={[styles.serviceNameText, rTitle]} numberOfLines={2}>
-              {sanitizeText(booking.serviceName)}
-            </Text>
-            <Text style={styles.providerNameText} numberOfLines={2}>
-              {`com ${sanitizeText(booking.providerFullName)}`}
-            </Text>
-          </View>
-
-          <LinearGradient colors={statusInfo.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.statusBadge}>
-            <Ionicons name={statusInfo.icon} size={16} color={statusInfo.color} />
-            <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.text}</Text>
-          </LinearGradient>
-        </View>
-      </Animated.View>
-
-      <Animated.View style={[styles.card, rCard, { opacity: detailsCardAnim, transform: [{ scale: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }, { translateY: detailsFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }] }]}>
-        <BlurView intensity={Platform.OS === 'ios' ? 18 : 36} tint="light" style={StyleSheet.absoluteFillObject} />
-        <LinearGradient colors={['#FFFFFF', '#F5FAFF'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
-
-        <View style={styles.sectionTitleContainer}>
-          <Text style={styles.sectionTitle}>Detalhes do agendamento</Text>
-        </View>
-
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
-          <Text style={styles.detailLabel}>Data e hora</Text>
-          <Text style={[styles.detailValue, rDetails]}>
-            {formatDateTime(booking.scheduledDate, booking.scheduledTime, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        </View>
-
-        <View style={styles.detailRow}>
-          <Ionicons name="location-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
-          <Text style={styles.detailLabel}>Endereço</Text>
-          <Text style={[styles.detailValueAddress, rDetails]}>
-            {sanitizeText(`${booking.address.street}, ${booking.address.number}`)}
-            {booking.address.complement ? sanitizeText(` , ${booking.address.complement}`) : ''}
-            {sanitizeText(`\n${booking.address.neighborhood}, ${booking.address.city} - ${booking.address.state}`)}
-            {sanitizeText(`\nCEP: ${booking.address.cep}`)}
-          </Text>
-        </View>
-
-        <View style={styles.detailRow}>
-          <Ionicons name="cash-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
-          <Text style={styles.detailLabel}>Valor</Text>
-          <Text style={[styles.detailValue, styles.priceText]}>{formatPriceBRL(booking.totalPrice)}</Text>
-        </View>
-
-        {booking.notes && (
-          <View style={styles.detailRow}>
-            <Ionicons name="document-text-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
-            <Text style={styles.detailLabel}>Observações</Text>
-            <Text style={styles.detailValue}>{sanitizeText(booking.notes)}</Text>
-          </View>
-        )}
-      </Animated.View>
-
-      <Animated.View style={[styles.actionsCard, rCard, { opacity: actionsCardAnim, transform: [{ scale: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }, { translateY: actionsFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -1] }) }] }]}>
-        <BlurView intensity={Platform.OS === 'ios' ? 18 : 36} tint="light" style={StyleSheet.absoluteFillObject} />
-        <LinearGradient colors={['#FFFFFF', '#F5FAFF'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
-
-        <View style={styles.sectionTitleContainer}>
-          <Text style={styles.sectionTitle}>Ações</Text>
-        </View>
-
-        {isCancellableStatus(booking.status) && (
-          <AnimatedLinearGradient colors={['#FF6B6B', '#EE5A52'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButton, rActionBtn, styles.cancelButton, { transform: [{ scale: cancelButtonScaleAnim }] }]}>
-            <TouchableOpacity style={styles.actionButtonInner} onPress={handleCancelBooking} onPressIn={() => onPressInButton(cancelButtonScaleAnim)} onPressOut={() => onPressOutButton(cancelButtonScaleAnim)} activeOpacity={1}>
-              <Ionicons name="close-circle-outline" size={20} color={AppColors.white} />
-              <Text style={styles.actionButtonText}>Cancelar agendamento</Text>
-            </TouchableOpacity>
-          </AnimatedLinearGradient>
-        )}
-
-        <AnimatedLinearGradient colors={['#2DBF8A', '#1E9B73'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButton, rActionBtn, { transform: [{ scale: contactButtonScaleAnim }] }]}>
-          <TouchableOpacity style={styles.actionButtonInner} onPress={handleContactProvider} onPressIn={() => onPressInButton(contactButtonScaleAnim)} onPressOut={() => onPressOutButton(contactButtonScaleAnim)} activeOpacity={1}>
-            <Ionicons name="chatbubble-ellipses-outline" size={20} color={AppColors.white} />
-            <Text style={styles.actionButtonText}>Contatar {sanitizeText(booking.providerFullName.split(' ')[0])}</Text>
-          </TouchableOpacity>
-        </AnimatedLinearGradient>
-
-        {isCompletedStatus(booking.status) && !isReviewed && (
-          <AnimatedLinearGradient colors={['#FFD453', '#FFB84D'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButton, rActionBtn, styles.reviewButton, { transform: [{ scale: reviewButtonScaleAnim }] }]}>
-            <TouchableOpacity style={styles.actionButtonInner} onPress={handleReviewService} onPressIn={() => onPressInButton(reviewButtonScaleAnim)} onPressOut={() => onPressOutButton(reviewButtonScaleAnim)} activeOpacity={1}>
-              <Ionicons name="star-outline" size={20} color={AppColors.white} />
-              <Text style={styles.actionButtonText}>Avaliar serviço</Text>
-            </TouchableOpacity>
-          </AnimatedLinearGradient>
-        )}
-
-        <AnimatedLinearGradient colors={['#667EEA', '#764BA2'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButtonOutline, rActionBtn, { transform: [{ scale: profileButtonScaleAnim }] }]}>
-          <TouchableOpacity style={[styles.actionButtonInner, styles.actionButtonOutlineInner]} onPress={handleViewProviderProfile} onPressIn={() => onPressInButton(profileButtonScaleAnim)} onPressOut={() => onPressOutButton(profileButtonScaleAnim)} activeOpacity={1}>
-            <Ionicons name="person-circle-outline" size={20} color={AppColors.primaryInteractive} />
-            <Text style={[styles.actionButtonText, styles.actionButtonOutlineText]}>Ver perfil de {sanitizeText(booking.providerFullName.split(' ')[0])}</Text>
-          </TouchableOpacity>
-        </AnimatedLinearGradient>
-      </Animated.View>
-      <Modal visible={showReviewSheet} transparent animationType="slide" onRequestClose={() => setShowReviewSheet(false)}>
-        <View style={{ flex:1, backgroundColor:'rgba(0,0,0,0.25)', justifyContent:'flex-end' }}>
-          <View style={{ backgroundColor: AppColors.white, borderTopLeftRadius:16, borderTopRightRadius:16, padding:16 }}>
-            <Text style={{ fontSize:18, fontWeight:'700', color: AppColors.textBody, marginBottom:8 }}>Avaliar serviço</Text>
-            <Text style={{ fontSize:14, color: AppColors.textAuxiliary, marginBottom:16 }}>Conte como foi sua experiência. Sua opinião ajuda outros clientes e os prestadores.</Text>
-            <View style={{ flexDirection:'row' }}>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowReviewSheet(false);
-                  if (booking) router.push({ pathname: '/(common)/feedback/[targetId]', params: { targetId: booking.id, type: 'service', serviceName: sanitizeText(booking.serviceName), providerName: sanitizeText(booking.providerFullName), providerId: booking.providerId } } as any);
-                }}
-                style={{ flex:1, backgroundColor: AppColors.primaryInteractive, paddingVertical:12, borderRadius:10, alignItems:'center', marginRight:8 }}
-              >
-                <Text style={{ color: AppColors.white, fontWeight:'700' }}>Avaliar agora</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowReviewSheet(false)}
-                style={{ flex:1, backgroundColor: AppColors.backgroundNeutral, paddingVertical:12, borderRadius:10, alignItems:'center', borderWidth:1, borderColor: AppColors.borderNeutral, marginLeft:8 }}
-              >
-                <Text style={{ color: AppColors.textBody, fontWeight:'700' }}>Depois</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </ScrollView>
+    <>
+      <ScrollView style={[styles.scrollViewContainer, { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 20 }]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        {/* Subcomponentes no ScrollView */}
+        <HeaderBar booking={booking} router={router} insets={insets} />
+        <ProviderHeaderCard booking={booking} providerSectionAnim={providerSectionAnim} providerFloatAnim={providerFloatAnim} rCard={rCard} rTitle={rTitle} />
+        <DetailsCard 
+          booking={booking} 
+          detailsCardAnim={detailsCardAnim} 
+          detailsFloatAnim={detailsFloatAnim} 
+          rCard={rCard} 
+          rDetails={rDetails} 
+          handleCopyAddress={handleCopyAddress} 
+          handleOpenInMaps={handleOpenInMaps} 
+        />
+        <ActionsCard 
+          booking={booking} 
+          actionsCardAnim={actionsCardAnim} 
+          actionsFloatAnim={actionsFloatAnim} 
+          rCard={rCard} 
+          rActionBtn={rActionBtn} 
+          isCancellableStatus={isCancellableStatus} 
+          isCompletedStatus={isCompletedStatus}
+          isReviewed={isReviewed}
+          handleCancelBooking={handleCancelBooking} 
+          handleContactProvider={handleContactProvider} 
+          handleReviewService={handleReviewService} 
+          handleViewProviderProfile={handleViewProviderProfile}
+          cancelButtonScaleAnim={cancelButtonScaleAnim}
+          contactButtonScaleAnim={contactButtonScaleAnim}
+          reviewButtonScaleAnim={reviewButtonScaleAnim}
+          profileButtonScaleAnim={profileButtonScaleAnim}
+          onPressInButton={onPressInButton}
+          onPressOutButton={onPressOutButton}
+        />
+        {/* Novo: ProviderServicesInline para upsell */}
+        <ProviderServicesInline
+          data={providerServices}
+          onSelect={handleSelectService}
+        />
+      </ScrollView>
+      {/* Subcomponente: ReviewSheet (Modal fora do ScrollView) */}
+      <ReviewSheet showReviewSheet={showReviewSheet} setShowReviewSheet={setShowReviewSheet} booking={booking} router={router} />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollViewContainer: { flex: 1, backgroundColor: AppColors.backgroundLight },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, backgroundColor: AppColors.backgroundLight },
+  scrollViewContainer: { flex: 1, backgroundColor: UI.bg },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, backgroundColor: UI.bg },
   loadingText: { marginTop: 16, fontSize: 15, color: AppColors.textAuxiliary, fontFamily: 'Montserrat-Regular' },
   errorText: { fontSize: 16, color: AppColors.errorRed, textAlign: 'center', marginBottom: 24, fontFamily: 'Montserrat-Regular', lineHeight: 22 },
 
-  actionButton: { borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 14, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.12)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.32, shadowRadius: 10 }, android: { elevation: 8 } }) },
+  // Novo estilo para HeaderBar
+  headerBar: { paddingTop: 8, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+
+  actionButton: { borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.12)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.32, shadowRadius: 10 }, android: { elevation: 8 } }) },
   actionButtonInner: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20 },
   actionButtonText: { color: AppColors.white, fontSize: 17, fontWeight: '600', marginLeft: 12, fontFamily: 'Montserrat-SemiBold' },
 
-  card: { backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 18, padding: 20, marginHorizontal: 16, marginTop: 16, marginBottom: 12, overflow: 'hidden', ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.28, shadowRadius: 12 }, android: { elevation: 8 } }) },
+  card: { backgroundColor: UI.card, borderRadius: 18, padding: 20, marginHorizontal: 16, marginTop: 16, marginBottom: 12, overflow: 'hidden', ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.28, shadowRadius: 12 }, android: { elevation: 8 } }) },
   providerSectionCard: { paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: 'relative' },
   providerSection: { flexDirection: 'row', alignItems: 'center', flex: 1 },
 
-  photoPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF', borderWidth: 3, borderColor: AppColors.primaryInteractive },
-  providerImage: { borderWidth: 3, borderColor: AppColors.primaryInteractive },
+  photoPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF', borderWidth: 2, borderColor: UI.divider },
+  providerImage: { borderWidth: 2, borderColor: UI.divider },
 
   providerInfo: { flex: 1, marginLeft: 16 },
   serviceNameText: { fontSize: 22, fontWeight: '700', color: AppColors.textBody, marginBottom: 6, fontFamily: 'Montserrat-SemiBold' },
@@ -488,12 +671,12 @@ const styles = StyleSheet.create({
   detailValue: { fontSize: 15, color: AppColors.textBody, flex: 1, fontFamily: 'Montserrat-Regular', lineHeight: 22 },
   detailValueAddress: { fontSize: 15, color: AppColors.textBody, flex: 1, lineHeight: 22, fontFamily: 'Montserrat-Regular' },
 
-  priceText: { fontWeight: '700', color: AppColors.primaryInteractive, fontFamily: 'Montserrat-SemiBold', textShadowColor: 'rgba(0,0,0,0.06)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1, fontSize: 16 },
+  priceText: { fontWeight: '700', color: UI.accent, fontFamily: 'Montserrat-SemiBold', textShadowColor: 'rgba(0,0,0,0.06)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1, fontSize: 16 },
 
-  actionsCard: { backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 18, padding: 20, marginHorizontal: 16, marginTop: 16, marginBottom: 40, overflow: 'hidden', ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.28, shadowRadius: 12 }, android: { elevation: 8 } }) },
+  actionsCard: { backgroundColor: UI.card, borderRadius: 18, padding: 20, marginHorizontal: 16, marginTop: 16, marginBottom: 40, overflow: 'hidden', ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.28, shadowRadius: 12 }, android: { elevation: 8 } }) },
   cancelButton: {},
   reviewButton: {},
-  actionButtonOutline: { borderRadius: 14, borderWidth: 2, borderColor: AppColors.primaryInteractive, marginBottom: 16, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 }, android: { elevation: 6 } }) },
+  actionButtonOutline: { borderRadius: 14, borderWidth: 2, borderColor: UI.accent, marginBottom: 16, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 }, android: { elevation: 6 } }) },
   actionButtonOutlineInner: { backgroundColor: 'transparent', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20 },
-  actionButtonOutlineText: { color: AppColors.primaryInteractive, marginLeft: 12, fontFamily: 'Montserrat-SemiBold', fontSize: 16 },
+  actionButtonOutlineText: { color: UI.accent, marginLeft: 12, fontFamily: 'Montserrat-SemiBold', fontSize: 16 },
 });
