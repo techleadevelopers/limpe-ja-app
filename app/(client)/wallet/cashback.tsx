@@ -21,6 +21,19 @@ export default function CashbackScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
 
+  // Map backend history types to user-friendly labels
+  const getHistoryTypeLabel = React.useCallback((type: string) => {
+    switch (type) {
+      case 'SERVICE_COMPLETED':
+        return t('wallet.history.service_completed', { defaultValue: 'Agendamento Completo' });
+      default:
+        // Fallback: try i18n key or prettify the raw type
+        const pretty = (type || '').replace(/_/g, ' ').trim();
+        const key = `wallet.history.${(type || '').toLowerCase()}`;
+        return t(key as any, { defaultValue: pretty });
+    }
+  }, [t]);
+
   const balQuery = useQuery({ queryKey: ['loyaltyBalance'], queryFn: getMyLoyaltyBalance, staleTime: 60000 });
 
   const histQuery = useQuery<LoyaltyHistoryItem[]>({
@@ -147,7 +160,9 @@ export default function CashbackScreen() {
             renderItem={({ item }) => (
               <View style={[styles.historyItem, { backgroundColor: theme.cardBackground }]}> 
                 <View>
-                  <Text style={[styles.historyType, { color: theme.text }]}>{item.type}</Text>
+                  <Text style={[styles.historyType, { color: theme.text }]}>
+                    {getHistoryTypeLabel(item.type)}
+                  </Text>
                   <Text style={[styles.historyDate, { color: theme.textMuted }]}>{new Date(item.createdAt).toLocaleDateString('pt-BR')}</Text>
                 </View>
                 <Text style={[styles.historyPoints, { color: theme.primary }]}>{item.points} pts</Text>
@@ -167,12 +182,12 @@ export default function CashbackScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingTop: 16, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerTitle: { fontSize: 16, fontWeight: '800' },
+  header: { paddingTop: 80, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerTitle: { fontSize: 17, fontWeight: '800' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { flex: 1, paddingHorizontal: 16, paddingBottom: 16 },
+  content: { flex: 1, paddingHorizontal: 16, paddingBottom: 16, marginTop: 20, },
   balanceCard: { borderRadius: 12, padding: 16, marginTop: 8, marginBottom: 16 },
-  balanceLabel: { fontSize: 12, fontWeight: '600' },
+  balanceLabel: { fontSize: 14, fontWeight: '600' },
   balanceValue: { fontSize: 28, fontWeight: '800', marginTop: 4 },
   actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   primaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10 },
