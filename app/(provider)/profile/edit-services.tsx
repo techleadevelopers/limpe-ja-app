@@ -610,7 +610,7 @@ export default function EditProviderServicesScreen() {
       setPricePerRoomDisplay(rawPricePerRoom ? normalizeCurrencyInput(String(Math.round(parseFloat(rawPricePerRoom) * 100))).display : '');
     }
 
-    setPricingType(service.pricingType);
+    setPricingType(service.pricingType === PricingType.BY_SIZE ? PricingType.FIXED_PRICE : service.pricingType);
     setServiceDuration(String(service.duration || ''));
     setFormError(null);
   }, []);
@@ -780,7 +780,6 @@ export default function EditProviderServicesScreen() {
             >
               <Picker.Item label="Preço Fixo por Serviço" value={PricingType.FIXED_PRICE} />
               <Picker.Item label="Por Hora" value={PricingType.HOURLY} />
-              <Picker.Item label="Por Metragem/Cômodo" value={PricingType.BY_SIZE} />
             </Picker>
           </View>
 
@@ -802,14 +801,7 @@ export default function EditProviderServicesScreen() {
             >
               <Text style={[styles.quickChipText, pricingType === PricingType.HOURLY && styles.quickChipTextSelected]}>Por Hora</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.quickChip, pricingType === PricingType.BY_SIZE && styles.quickChipSelected]}
-              onPress={() => setPricingType(PricingType.BY_SIZE)}
-              accessibilityRole="button"
-              accessibilityLabel="Selecionar Por m²/Por cômodo"
-            >
-              <Text style={[styles.quickChipText, pricingType === PricingType.BY_SIZE && styles.quickChipTextSelected]}>m²/Cômodo</Text>
-            </TouchableOpacity>
+            {/* Removido: opção m²/Cômodo */}
           </View>
 
           {(pricingType === PricingType.FIXED_PRICE || pricingType === PricingType.HOURLY) && (
@@ -841,7 +833,8 @@ export default function EditProviderServicesScreen() {
             </>
           )}
 
-          {pricingType === PricingType.BY_SIZE && (
+          {/* Removido BY_SIZE */}
+          {false && pricingType === PricingType.BY_SIZE && (
             <>
               <Text style={styles.inputLabel}>Preço por Metro Quadrado</Text>
               <TextInput
@@ -960,7 +953,6 @@ export default function EditProviderServicesScreen() {
                 <View style={styles.modalChipsRow}>
                   <TouchableOpacity style={[styles.modalChip, pricingType === PricingType.FIXED_PRICE && styles.modalChipActive]} onPress={() => setPricingType(PricingType.FIXED_PRICE)}><Text style={[styles.modalChipText, pricingType === PricingType.FIXED_PRICE && styles.modalChipTextActive]}>Fixo</Text></TouchableOpacity>
                   <TouchableOpacity style={[styles.modalChip, pricingType === PricingType.HOURLY && styles.modalChipActive]} onPress={() => setPricingType(PricingType.HOURLY)}><Text style={[styles.modalChipText, pricingType === PricingType.HOURLY && styles.modalChipTextActive]}>Por Hora</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalChip, pricingType === PricingType.BY_SIZE && styles.modalChipActive]} onPress={() => setPricingType(PricingType.BY_SIZE)}><Text style={[styles.modalChipText, pricingType === PricingType.BY_SIZE && styles.modalChipTextActive]}>m²/Cômodo</Text></TouchableOpacity>
                 </View>
 
                 {(pricingType === PricingType.FIXED_PRICE || pricingType === PricingType.HOURLY) && (
@@ -976,7 +968,7 @@ export default function EditProviderServicesScreen() {
                     />
                   </>
                 )}
-                {pricingType === PricingType.BY_SIZE && (
+                {false && pricingType === PricingType.BY_SIZE && (
                   <>
                     <Text style={styles.inputLabel}>Preço por m²</Text>
                     <TextInput
@@ -1096,44 +1088,18 @@ const styles = StyleSheet.create({
   modalConfirmText: { color: '#fff' },
   outerContainer: {
     flex: 1,
-    backgroundColor: Colors.bgSoft,
+    backgroundColor: '#f2f2f2',
   },
   scrollViewContent: {
     paddingBottom: 50,
     paddingHorizontal: Spacing.sm,
   },
-  customHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Platform.OS === 'ios' ? 20 : Spacing.lg,
-    paddingTop: Platform.OS === 'ios' ? 55 : Spacing.lg,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-      },
-      android: { elevation: 4 },
-    }),
-  },
+  customHeader: { paddingTop: 80, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF' },
   headerBackButton: {
     marginRight: Spacing.xs,
     padding: Spacing.sm,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#2F3A4A',
-    flex: 1,
-    textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
-  },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: '#2F3A4A', flex: 1, textAlign: 'center' },
   headerActionIconPlaceholder: {
     width: 28,
     marginLeft: Spacing.xs,
@@ -1432,3 +1398,5 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
 });
+
+
