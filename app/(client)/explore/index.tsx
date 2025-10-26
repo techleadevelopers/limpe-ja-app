@@ -6,6 +6,8 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  AccessibilityInfo,
+  Easing,
   Dimensions,
   FlatList,
   ScrollView,
@@ -199,6 +201,7 @@ export default function ExploreClientScreen() {
   const recommendationsAnim = useRef(new Animated.Value(0)).current;
   const providersAnim = useRef(new Animated.Value(0)).current;
   const navBarAnim = useRef(new Animated.Value(0)).current;
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   // Adicionado ref para verificar se o componente está montado
   const isMounted = useRef(true);
@@ -294,19 +297,25 @@ export default function ExploreClientScreen() {
     }
 
     if (isMounted.current) {
-      Animated.sequence([
-        Animated.spring(headerAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
-        Animated.delay(50),
-        Animated.spring(categoriesAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
-        Animated.delay(50),
-        Animated.spring(bannerAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
-        Animated.delay(50),
-        Animated.spring(recommendationsAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
-        Animated.delay(50),
-        Animated.spring(providersAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
-        Animated.delay(50),
-        Animated.spring(navBarAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
-      ]).start();
+      const D = 240; // duração padrão
+      const S = 60;  // passo de atraso
+      if (reducedMotion) {
+        headerAnim.setValue(1);
+        categoriesAnim.setValue(1);
+        bannerAnim.setValue(1);
+        recommendationsAnim.setValue(1);
+        providersAnim.setValue(1);
+        navBarAnim.setValue(1);
+      } else {
+        Animated.parallel([
+          Animated.timing(headerAnim, { toValue: 1, duration: D, delay: 0, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(categoriesAnim, { toValue: 1, duration: D, delay: S, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(bannerAnim, { toValue: 1, duration: D, delay: S*2, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(recommendationsAnim, { toValue: 1, duration: D, delay: S*3, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(providersAnim, { toValue: 1, duration: D, delay: S*4, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(navBarAnim, { toValue: 1, duration: D, delay: S*5, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        ]).start();
+      }
 
       setLoading(false);
       setIsRefreshing(false);
@@ -329,7 +338,17 @@ export default function ExploreClientScreen() {
     providersAnim,
     navBarAnim,
     searchRadiusKm,
+    reducedMotion,
   ]);
+  // Respeitar "reduzir movimento"
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled?.().then((v: boolean) => {
+      if (mounted) setReducedMotion(!!v);
+    }).catch(() => {});
+    const sub = (AccessibilityInfo as any).addEventListener?.('reduceMotionChanged', (v: boolean) => setReducedMotion(!!v));
+    return () => { mounted = false; (sub && sub.remove?.()); };
+  }, []);
   useEffect(() => {
     isMounted.current = true; // Componente montado
     fetchData();
@@ -612,7 +631,7 @@ export default function ExploreClientScreen() {
                     styles.categoriesSection,
                     { 
                       opacity: categoriesAnim, 
-                      transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] 
+                      transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }] 
                     },
                   ]}>
                   <View style={styles.categoryTitleWrapper}>
@@ -641,37 +660,11 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* Carrossel de Banners UNICO */}
-                <Animated.View
-                  style={[
-                    styles.carouselContainer,
-                    { 
-                      opacity: bannerAnim, 
-                      transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] 
-                    },
-                  ]}>
-                  <FlatList<BannerDataItem>
-                    ref={flatListRef}
-                    data={bannerData}
-                    renderItem={renderBannerItem}
-                    keyExtractor={(item) => item.id}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    onViewableItemsChanged={onViewableItemsChanged}
-                    viewabilityConfig={viewabilityConfig}
-                    snapToInterval={screenWidth}
-                    decelerationRate="fast"
-                    contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }}
-                    nestedScrollEnabled={true} // Melhora scroll aninhado no Android
-                  />
-                </Animated.View>
-
                 {/* Recomendações UNICAS */}
                 <Animated.View
                   style={{
                     opacity: recommendationsAnim,
-                    transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+                    transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
                   }}>
                   <SecaoRecomendacoes
                     titulo={t('search.recommended_providers')}
@@ -693,7 +686,7 @@ export default function ExploreClientScreen() {
                 <Animated.View
                   style={{
                     opacity: providersAnim,
-                    transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+                    transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
                   }}>
                   <SecaoPrestadores
                     titulo={t('search.nearby_providers')}
@@ -714,11 +707,37 @@ export default function ExploreClientScreen() {
                   
                 </Animated.View>
 
+                {/* Carrossel de Banners UNICO - Movido para abaixo da seção Profissionais por Perto */}
+                <Animated.View
+                  style={[
+                    styles.carouselContainer,
+                    { 
+                      opacity: bannerAnim, 
+                      transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }] 
+                    },
+                  ]}>
+                  <FlatList<BannerDataItem>
+                    ref={flatListRef}
+                    data={bannerData}
+                    renderItem={renderBannerItem}
+                    keyExtractor={(item) => item.id}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onViewableItemsChanged={onViewableItemsChanged}
+                    viewabilityConfig={viewabilityConfig}
+                    snapToInterval={screenWidth}
+                    decelerationRate="fast"
+                    contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }}
+                    nestedScrollEnabled={true} // Melhora scroll aninhado no Android
+                  />
+                </Animated.View>
+
                 {/* HorizontalMiniGrid  */}
                 <Animated.View
                   style={{
                     opacity: providersAnim,
-                    transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+                    transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
                   }}>
                   <View style={styles.miniGridHeader}>
                     <Text style={styles.miniGridTitle} allowFontScaling={false}>
