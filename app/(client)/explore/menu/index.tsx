@@ -43,20 +43,20 @@ const withAlpha = (hex: string, a: number) => {
 
 // =================== ÍCONES 3D ===================
 const Icons3D = {
-  profile: require('../../../../assets/images/3d/perfil.png'),
+  profile: require('../../../../assets/images/3d/profile5.png'),
   ticket: require('../../../../assets/images/3d/ticket.png'),
-  cashback: require('../../../../assets/images/3d/cashback.png'),
-  champions2: require('../../../../assets/images/3d/champions2.png'),
-  missions: require('../../../../assets/images/3d/step1-card-profile.png'),
+  cashback: require('../../../../assets/images/3d/cashback3.png'),
+  champions2: require('../../../../assets/images/3d/champp.png'),
+  missions: require('../../../../assets/images/3d/missions8.png'),
   referral: require('../../../../assets/images/3d/gift2.png'),
-  metrics: require('../../../../assets/images/3d/uptrend.png'),
-  support: require('../../../../assets/images/3d/support.png'),
-  safety: require('../../../../assets/images/3d/security.png'),
-  privacy: require('../../../../assets/images/3d/privacidade.png'),
+  metrics: require('../../../../assets/images/3d/metrics.png'),
+  support: require('../../../../assets/images/3d/support4.png'),
+  safety: require('../../../../assets/images/3d/security2.png'),
+  privacy: require('../../../../assets/images/3d/setting2.png'),
   bookService: require('../../../../assets/images/3d/button.png'),
 } satisfies Record<string, ImageSourcePropType>;
 
-const Icon3D = ({ src, size = 46, style }: { src: ImageSourcePropType; size?: number; style?: any }) => (
+const Icon3D = ({ src, size = 38, style }: { src: ImageSourcePropType; size?: number; style?: any }) => (
   <Image source={src} style={[{ width: size, height: size }, style]} resizeMode="contain" />
 );
 
@@ -91,7 +91,7 @@ function Shimmer({ style, borderRadius = 12 }: { style?: any; borderRadius?: num
         }}
       >
         <LinearGradient
-          colors={['rgba(173, 216, 230, 0.7)', 'rgba(74, 145, 226, 0.38)', 'rgba(173, 216, 230, 0.7)']}
+          colors={['#f2f2f2', 'rgba(74, 145, 226, 0.07)', '#f2f2f2']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={{ flex: 1 }}
@@ -110,15 +110,15 @@ interface MenuCategoryItem {
 }
 
 const menuCategories: MenuCategoryItem[] = [
-  { key: 'coupons', title: 'cupons', icon: Icons3D.ticket, route: '/(client)/coupons' },
-  { key: 'missions', title: 'missões', icon: Icons3D.missions, route: '/(client)/missions' },
-  { key: 'champions2', title: 'Ranking', icon: Icons3D.champions2, route: '/(client)/champions2' },
-  { key: 'cashback', title: 'cashback', icon: Icons3D.cashback, route: '/(client)/wallet/cashback' },
-  { key: 'referral', title: 'indicações', icon: Icons3D.referral, route: '/(client)/referrals' },
-  { key: 'metrics', title: 'métricas', icon: Icons3D.metrics, route: '/(client)/metrics' },
-  { key: 'support', title: 'suporte', icon: Icons3D.support, route: '/(common)/support' },
-  { key: 'safety', title: 'segurança', icon: Icons3D.safety, route: '/(common)/safety' },
-  { key: 'settings', title: 'ajustes', icon: Icons3D.privacy, route: '/(client)/settings' },
+  { key: 'coupons', title: 'Cupons', icon: Icons3D.ticket, route: '/(client)/coupons' },
+  { key: 'missions', title: 'Missões', icon: Icons3D.missions, route: '/(client)/missions' },
+  { key: 'champions2', title: 'Ranking', icon: Icons3D.champions2, route: '/(client)/explore/ranking' },
+  { key: 'cashback', title: 'Cashback', icon: Icons3D.cashback, route: '/(client)/wallet/cashback' },
+  { key: 'referral', title: 'Indicações', icon: Icons3D.referral, route: '/(client)/referrals' },
+  { key: 'metrics', title: 'Métricas', icon: Icons3D.metrics, route: '/(client)/metrics' },
+  { key: 'support', title: 'Suporte', icon: Icons3D.support, route: '/(common)/support' },
+  { key: 'safety', title: 'Segurança', icon: Icons3D.safety, route: '/(client)/explore/sercurity' },
+  { key: 'settings', title: 'Ajustes', icon: Icons3D.privacy, route: '/(client)/profile' },
 ];
 
 // =================== CATEGORY MINI CARD ===================
@@ -132,6 +132,8 @@ function CategoryMiniCard({ item, theme }: { item: MenuCategoryItem; theme: Retu
   const translateY = useRef(new Animated.Value(6)).current;
   const scale = useRef(new Animated.Value(0.995)).current;
   const shimmerProg = useRef(new Animated.Value(0)).current;
+  // Premium micro‑motion for icon
+  const iconWave = useRef(new Animated.Value(Math.random())).current;
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then((v) => {
@@ -158,13 +160,22 @@ function CategoryMiniCard({ item, theme }: { item: MenuCategoryItem; theme: Retu
           ]),
           { iterations: -1 },
         ).start();
+
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(iconWave, { toValue: 1, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+            Animated.timing(iconWave, { toValue: 0, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          ]),
+          { iterations: -1 },
+        ).start();
       } else {
         translateY.setValue(0);
         scale.setValue(1);
         shimmerProg.setValue(0);
+        iconWave.setValue(0);
       }
     });
-  }, [translateY, scale, shimmerProg]);
+  }, [translateY, scale, shimmerProg, iconWave]);
 
   const shimmerTranslate = shimmerProg.interpolate({
     inputRange: [0, 1],
@@ -200,22 +211,32 @@ function CategoryMiniCard({ item, theme }: { item: MenuCategoryItem; theme: Retu
             {
               borderRadius: 22,
               overflow: 'hidden',
-              opacity: 0.12,
+              opacity: 0,
               backgroundColor: 'transparent',
               transform: [{ translateX: shimmerTranslate }],
             },
           ]}
         >
           <LinearGradient
-            colors={['rgba(255,255,255,0.0)', 'rgba(255,255,255,0.22)', 'rgba(255,255,255,0.0)']}
+            colors={['rgba(24, 154, 224, 0.36)', 'rgba(255,255,255,0.22)', 'rgba(255,255,255,0.0)']}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 1 }}
             style={{ flex: 1 }}
           />
         </Animated.View>
 
         <View style={styles.categoryContent}>
-          <Icon3D src={item.icon} size={66} />
+          <Animated.View
+            style={{
+              transform: [
+                { translateY: iconWave.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) },
+                { scale: iconWave.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) },
+                { rotate: iconWave.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['-1.2deg', '0deg', '1.2deg'] }) },
+              ],
+            }}
+          >
+            <Icon3D src={item.icon} size={56} />
+          </Animated.View>
           <Text style={[styles.categoryMiniCardTitle, { color: theme.text }]} numberOfLines={1}>
             {item.title}
           </Text>
@@ -277,13 +298,8 @@ export default function ClientMenuScreen() {
     profile?.providerDetails?.avatarUrl;
 
   return (
-    // Gradient como fundo FULL-BLEED cobrindo toda a tela
-    <LinearGradient
-      colors={['rgba(212,233,240,1)', 'rgba(74,119,226,0.18)', 'rgba(225,206,230,0)']}
-      start={{ x: 0.12, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.fullBackground}
-    >
+    // Fundo sólido premium (sem gradiente)
+    <View style={[styles.fullBackground, { backgroundColor: '#f2f2f2' }]}>
       <View style={styles.screenOverlay}>
         <Stack.Screen options={{ headerShown: false }} />
         <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
@@ -302,9 +318,9 @@ export default function ClientMenuScreen() {
             style={{ padding: 5, marginLeft: -5 }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="arrow-back" size={24} color="#4A5568" />
+            <Ionicons name="arrow-back" size={22} color={theme.text} />
           </TouchableOpacity>
-          <Text style={[styles.topHeaderTitle, { color: '#4A5568' }]}>Menu Principal</Text>
+          <Text style={[styles.topHeaderTitle, { color: theme.text }]}>Para você</Text>
           <View style={{ width: 20 }} />
         </Animated.View>
 
@@ -355,7 +371,7 @@ export default function ClientMenuScreen() {
           <NavBar />
         </View>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -409,7 +425,7 @@ const styles = StyleSheet.create({
 
   topHeader: {
     paddingHorizontal: 26,
-    marginBottom: 10,
+    marginBottom: 0,
     paddingTop: Platform.OS === 'ios' ? 59 : 20,
     paddingBottom: 12,
     borderBottomLeftRadius: 22,
@@ -417,7 +433,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
   },
   topHeaderTitle: {
     fontWeight: '700',
@@ -429,8 +445,8 @@ const styles = StyleSheet.create({
 
   profileBlock: { alignItems: 'center', paddingVertical: 8 },
   avatarWrap: {
-    width: 69,
-    height: 69,
+    width: 59,
+    height: 59,
     borderRadius: 43,
     overflow: 'hidden',
     marginBottom: 0,
@@ -445,7 +461,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-around',
     gap: 10,
-    marginTop: 20,
+    marginTop: 30,
     paddingHorizontal: 10,
     marginBottom: 20,
   },
@@ -476,7 +492,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     marginTop: 2,
-    textTransform: 'lowercase',
+    textTransform: 'capitalize',
   },
 
   cardAnimatedWrap: {
@@ -497,3 +513,4 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.06)',
   },
 });
+
