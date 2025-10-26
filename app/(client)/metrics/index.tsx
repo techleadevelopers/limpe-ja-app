@@ -10,17 +10,14 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
-  Image,
   ImageSourcePropType,
   useColorScheme,
   RefreshControl,
   AccessibilityInfo,
-  GestureResponderEvent,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LineChart } from 'react-native-chart-kit';
-import { LinearGradient } from 'expo-linear-gradient';
+// Chart removed: rendering monthly bookings as summary grid
 import { useTranslation } from 'react-i18next';
 
 import { useQuery } from '@tanstack/react-query';
@@ -37,27 +34,7 @@ import { EmptyState } from '../../../components/EmptyState';
 import Toast from '../../../components/Toast';
 import Colors from '../../../constants/Colors';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const HERO_HEIGHT = SCREEN_HEIGHT * 0.36; // Consistent with missions.tsx
-
-// ---------- 3D ICONS (absolute paths) ----------
-const Icons3D = {
-  heroStats: require('../../../assets/images/3d/uptrend.png'),
-  chart: require('../../../assets/images/3d/uptrend.png'),
-  progress: require('../../../assets/images/3d/check.png'),
-  funnel: require('../../../assets/images/3d/payments.png'),
-  woman: require('../../../assets/images/3d/woman.png'),
-  crown: require('../../../assets/images/3d/crown.png'),
-  mascrank: require('../../../assets/images/3d/masc-rank.png'), // Reused for hero consistency
-} as const;
-
-const Icon3D = ({
-  src,
-  size = 28,
-  style,
-}: { src: ImageSourcePropType; size?: number; style?: any }) => (
-  <Image source={src} style={[{ width: size, height: size }, style]} resizeMode="contain" />
-);
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ===== Utils =====
 const withAlpha = (hex: string, alpha: number) => {
@@ -97,9 +74,20 @@ export default function ClientMetricsScreen() {
   const isReducedMotion = useReducedMotion();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Map backend history types to user-friendly labels
+  const getHistoryTypeLabel = React.useCallback((type: string) => {
+    switch (type) {
+      case 'SERVICE_COMPLETED':
+        return t('wallet.history.service_completed', { defaultValue: 'Agendamento Completo' });
+      default:
+        const pretty = (type || '').replace(/_/g, ' ').trim();
+        const key = `wallet.history.${(type || '').toLowerCase()}`;
+        return t(key as any, { defaultValue: pretty });
+    }
+  }, [t]);
+
   const headerAnim = useRef(new Animated.Value(0)).current;
   const contentAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
   const scrollRef = useRef<ScrollView>(null);
 
   const { data: metrics, isLoading, isError, refetch, isRefetching } = useQuery<ClientMetrics>({
@@ -109,6 +97,34 @@ export default function ClientMetricsScreen() {
     refetchOnWindowFocus: true,
     retry: 1,
   });
+
+  const { data: rewardsMini } = useQuery({ 
+    queryKey: ['rewardsMini'], 
+    queryFn: () => getLoyaltyRewards({ limit: 50 }), 
+    staleTime: 60000 
+  });
+
+  const nextRewardDelta = React.useMemo(() => { 
+    const balance = metrics?.points?.balance ?? 0; 
+    if (!Array.isArray(rewardsMini) || rewardsMini.length === 0) return null; 
+    let minAbove = Infinity; 
+    for (const r of rewardsMini) {
+      if (typeof (r as any).costPoints === 'number' && (r as any).costPoints > balance) {
+        minAbove = Math.min(minAbove, (r as any).costPoints);
+      }
+    }
+    if (!isFinite(minAbove)) return 0; 
+    return Math.max(0, minAbove - balance); 
+  }, [metrics?.points?.balance, rewardsMini]);
+
+  // MOVED UP: Mova esses para o topo para evitar hooks condicionais
+  const trend: Array<{ month: string; count: number }> = metrics?.bookings?.monthlyTrend || [];
+  const recentTrend = React.useMemo(() => (trend || []).slice(-6), [trend]);
+  const formatMonthLabel = React.useCallback((ym: string) => {
+    if (!ym) return '';
+    const [y, m] = ym.split('-');
+    return `${m}/${y}`; // MM/AAAA
+  }, []);
 
   useEffect(() => {
     if (isError) {
@@ -140,26 +156,11 @@ export default function ClientMetricsScreen() {
           delay: 200,
           useNativeDriver: true,
         }),
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(pulseAnim, {
-              toValue: 1.05,
-              duration: 2000,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(pulseAnim, {
-              toValue: 1,
-              duration: 2000,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ])
-        ),
       ]).start();
     }
   }, [isReducedMotion]);
 
+  // Agora o if de loading está após TODOS os hooks – seguro!
   if (isLoading && !isRefetching && !isRefreshing) {
     return (
       <View style={[styles.centeredFeedback, { backgroundColor: theme.background }]}>
@@ -172,62 +173,13 @@ export default function ClientMetricsScreen() {
     );
   }
 
-  const trend: Array<{ month: string; count: number }> = metrics?.bookings?.monthlyTrend || [];
-  const chartData = {
-    labels: trend.map(d => d.month?.slice(5, 7) || ''),
-    datasets: [
-      {
-        data: trend.map(d => d.count || 0),
-        color: (opacity = 1) => withAlpha(theme.primary, opacity),
-        strokeWidth: 2,
-        withDots: true,
-      },
-    ],
-    legend: [t('metrics.chart_legend', { defaultValue: 'Agendamentos' })],
-  };
-
-  const chartConfig = {
-    backgroundGradientFrom: theme.cardBackground || '#FFFFFF',
-    backgroundGradientTo: theme.cardBackground || '#FFFFFF',
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    style: { borderRadius: 16 },
-    propsForDots: {
-      r: '6',
-      strokeWidth: '2',
-      stroke: theme.primary,
-    },
-  };
-
+  // MOVED UP: Esses consts também foram movidos para cima, mas como não são hooks, era opcional
   const hasData = !!metrics && (
     (metrics.bookings?.total || 0) > 0 ||
     (metrics.points?.balance || 0) > 0 ||
     (metrics.missions?.total || 0) > 0 ||
     (metrics.coupons?.active?.length || 0) > 0
   );
-
-  // Subtle hero gradient (adapted from missions.tsx)
-  const heroGradient = [withAlpha(theme.cardBackground || '#FFFFFF', 1), withAlpha(theme.background || '#F6F8FB', 1)];
-  
-  const { data: rewardsMini } = useQuery({ 
-    queryKey: ['rewardsMini'], 
-    queryFn: () => getLoyaltyRewards({ limit: 50 }), 
-    staleTime: 60000 
-  });
-
-  const nextRewardDelta = React.useMemo(() => { 
-    const balance = metrics?.points?.balance ?? 0; 
-    if (!Array.isArray(rewardsMini) || rewardsMini.length === 0) return null; 
-    let minAbove = Infinity; 
-    for (const r of rewardsMini) {
-      if (typeof (r as any).costPoints === 'number' && (r as any).costPoints > balance) {
-        minAbove = Math.min(minAbove, (r as any).costPoints);
-      }
-    }
-    if (!isFinite(minAbove)) return 0; 
-    return Math.max(0, minAbove - balance); 
-  }, [metrics?.points?.balance, rewardsMini]);
 
   const spentTotal = (metrics?.bookings?.latest || []).reduce((acc: number, b: any) => acc + (b.totalPrice || 0), 0);
 
@@ -257,47 +209,6 @@ export default function ClientMetricsScreen() {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.heroWrapper}>
-          <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, { backgroundColor: heroGradient[0] }]}>
-            <View style={styles.heroTextWrap}>
-              <Text style={[styles.kicker, { color: withAlpha(theme.text, 0.6) }]}>{t('metrics.hero_kicker', { defaultValue: 'Seu desempenho' })}</Text>
-              <Text style={[styles.title, { color: theme.text }]}>{t('metrics.hero_title', { defaultValue: 'Acompanhe seu progresso e conquistas' })}</Text>
-
-              <TouchableOpacity 
-                style={[styles.cta, { backgroundColor: theme.primary }]} 
-                onPress={() => { 
-                  AnalyticsService.trackEvent('metrics_cta_tap');
-                  requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: HERO_HEIGHT, animated: true }));
-                }} 
-                accessibilityLabel={t('metrics.cta_label', { defaultValue: 'Ver Métricas' })}
-              >
-                <Text style={styles.ctaText}>{t('metrics.cta_text', { defaultValue: 'Ver métricas' })}</Text>
-                <Ionicons name="stats-chart" size={14} color="#FFF" />
-              </TouchableOpacity>
-
-              {/* Stepper for client progress (adapted from missions.tsx) */}
-              <View style={styles.stepper}>
-                {[
-                  { key: 'explore', label: t('metrics.steps.explore', { defaultValue: 'Explorar' }) },
-                  { key: 'book', label: t('metrics.steps.book', { defaultValue: 'Agendar' }) },
-                  { key: 'review', label: t('metrics.steps.review', { defaultValue: 'Avaliar' }) },
-                  { key: 'achieve', label: t('metrics.steps.achieve', { defaultValue: 'Conquistas' }) },
-                ].map((s, idx) => {
-                  const reached = idx <= 2; // Demo: first three steps reached
-                  return (
-                    <React.Fragment key={s.key}>
-                      <View style={[styles.stepCircle, { backgroundColor: reached ? theme.primary : withAlpha(theme.text, 0.12), borderColor: withAlpha(theme.text, 0.18) }]} />
-                      {idx < 3 && <View style={[styles.stepLine, { backgroundColor: reached ? withAlpha(theme.primary, 0.6) : withAlpha(theme.text, 0.08) }]} />}
-                    </React.Fragment>
-                  );
-                })}
-              </View>
-            </View>
-
-            <Animated.Image source={Icons3D.mascrank} style={[styles.heroMascot, { transform: [{ scale: pulseAnim }] }]} resizeMode="contain" />
-          </LinearGradient>
-        </View>
-
         <Animated.View style={[styles.panel, { transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
           {isError ? (
             <View style={[styles.errorContainer, { backgroundColor: theme.cardBackground }]}>
@@ -318,7 +229,7 @@ export default function ClientMetricsScreen() {
             />
           ) : (
             <>
-              {/* Summary Card (adapted from missions discountCard) */}
+              {/* Summary Card */}
               {metrics ? (
                 <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
                   <Text style={[styles.cardTitle, { color: theme.text }]}>
@@ -397,29 +308,26 @@ export default function ClientMetricsScreen() {
                 </View>
               )}
 
-              {/* Timeseries Chart (adapted from missions howCard style) */}
-              {(metrics?.bookings?.monthlyTrend?.length || 0) > 0 ? (
-                <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>
-                    {t('metrics.chart_title', { defaultValue: 'Agendamentos por mês' })}
-                  </Text>
-                  <LineChart
-                    data={chartData}
-                    width={SCREEN_WIDTH - 32}
-                    height={220}
-                    chartConfig={chartConfig}
-                    bezier
-                    style={styles.chart}
-                  />
-                </View>
-              ) : (
-                <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>
-                    {t('metrics.chart_title', { defaultValue: 'Agendamentos por mês' })}
-                  </Text>
-                  <Skeleton height={220} width="100%" radius={16} />
-                </View>
-              )}
+              {/* Bookings by Month (grid like Summary) */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
+                <Text style={[styles.cardTitle, { color: theme.text }]}>
+                  {t('metrics.chart_title', { defaultValue: 'Agendamentos por mês' })}
+                </Text>
+                {(recentTrend.length > 0) ? (
+                  <View style={styles.summaryGrid}>
+                    {recentTrend.map((d) => (
+                      <View key={d.month} style={[styles.summaryItem, { backgroundColor: theme.background }]}> 
+                        <KPIValue value={d.count ?? 0} style={[styles.summaryValue, { color: theme.primary }]} />
+                        <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>
+                          {formatMonthLabel(d.month)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Skeleton height={120} width="100%" radius={12} />
+                )}
+              </View>
 
               {/* Recent Bookings */}
               <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
@@ -461,15 +369,15 @@ export default function ClientMetricsScreen() {
               {/* Points History */}
               <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[styles.cardTitle, { color: theme.text }]}>
-                {t('metrics.points_section_title', { defaultValue: 'Pontos recentes' })}
-              </Text>
-              { typeof nextRewardDelta === "number" && nextRewardDelta > 0 && (
-                <Text style={[styles.nextRewardText, { color: theme.textMuted }]}>
-                  {t('metrics.next_reward', { defaultValue: 'Faltam' })} {nextRewardDelta} {t('metrics.points_section_title', { defaultValue: 'Pontos' }).toLowerCase()} {t('metrics.next_reward_suffix', { defaultValue: 'para a próxima recompensa' })}
-                </Text>
-              )}
-              <TouchableOpacity
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>
+                    {t('metrics.points_section_title', { defaultValue: 'Pontos recentes' })}
+                  </Text>
+                  {typeof nextRewardDelta === "number" && nextRewardDelta > 0 && (
+                    <Text style={[styles.nextRewardText, { color: theme.textMuted }]}>
+                      {t('metrics.next_reward', { defaultValue: 'Faltam' })} {nextRewardDelta} {t('metrics.points_section_title', { defaultValue: 'Pontos' }).toLowerCase()} {t('metrics.next_reward_suffix', { defaultValue: 'para a próxima recompensa' })}
+                    </Text>
+                  )}
+                  <TouchableOpacity
                     onPress={() => {
                       AnalyticsService.trackEvent('metrics_section_view_more', { section: 'points' });
                       router.push('/(client)/wallet/cashback');
@@ -484,7 +392,7 @@ export default function ClientMetricsScreen() {
                 {(metrics?.points?.history?.length || 0) > 0 ? (
                   (metrics.points?.history || []).slice(0, 5).map((h: any, idx: number) => (
                     <View key={h.id || idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
-                      <Text style={{ color: theme.text }}>{h.type}</Text>
+                      <Text style={{ color: theme.text }}>{getHistoryTypeLabel(h.type)}</Text>
                       <Text style={{ color: theme.textMuted }}>{h.points} pts</Text>
                     </View>
                   ))
@@ -609,12 +517,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
 
-  // Header (adapted from missions.tsx)
+  // Header
   header: {
     position: 'absolute',
     top: 0, left: 0, right: 0,
     zIndex: 30,
-    height: 76,
+    height: 136,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -626,43 +534,17 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '800', textAlign: 'center' },
 
   // Scroll
-  scrollContent: { paddingBottom: 40 },
+  scrollContent: { paddingBottom: 40, paddingTop: 100 }, // Ajustado para header
 
-  // Hero (from missions.tsx)
-  heroWrapper: { height: HERO_HEIGHT, width: '100%' },
-  hero: {
-    flex: 1,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingTop: 22,
-    overflow: 'hidden',
-    justifyContent: 'center',
-  },
-  heroTextWrap: { maxWidth: SCREEN_WIDTH * 0.62 },
-  kicker: { fontSize: 12, fontWeight: '700', marginBottom: 8 },
-  title: { fontSize: 24, fontWeight: '800', lineHeight: 30, marginBottom: 14 },
-  cta: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, alignSelf: 'flex-start' },
-  ctaText: { color: '#FFF', fontWeight: '800', marginRight: 8 },
-
-  stepper: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
-  stepCircle: { width: 10, height: 10, borderRadius: 8, borderWidth: 1 },
-  stepLine: { height: 2, flex: 1, marginHorizontal: 8, borderRadius: 2 },
-
-  heroMascot: { position: 'absolute', right: 18, top: 24, width: 140, height: 140 },
-
-  // Panel (from missions.tsx)
+  // Panel (conteúdo principal, sem hero)
   panel: {
-    marginTop: -24,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
     paddingTop: 20,
     paddingBottom: 36,
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
   },
 
-  // Error Container (simple card)
+  // Error Container
   errorContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -675,33 +557,29 @@ const styles = StyleSheet.create({
   retryButton: { marginTop: 20, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
   retryButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 
-  // Section Cards (from missions discountCard / howCard)
+  // Section Cards
   sectionCard: {
     marginHorizontal: 16,
-    marginTop: 6,
+    marginTop: 16, // Aumentado para espaçamento premium
     borderRadius: 16,
     backgroundColor: '#FFF',
-    padding: 16,
+    padding: 20, // Padding maior para premium feel
     shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 6,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', marginBottom: 15 },
+  cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 }, // Fonte maior
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   summaryItem: {
     width: '48%',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 10,
+    borderRadius: 12, // Bordas mais arredondadas
+    padding: 20, // Padding maior
+    marginBottom: 12,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1,
   },
-  summaryValue: { fontSize: 22, fontWeight: 'bold' },
-  summaryLabel: { fontSize: 13, textAlign: 'center', marginTop: 5 },
-  chart: { marginVertical: 8, borderRadius: 16 },
-  funnelItem: { marginBottom: 15 },
-  funnelLabel: { fontSize: 15, fontWeight: '600' },
-  funnelValue: { fontSize: 14, marginTop: 4 },
+  summaryValue: { fontSize: 24, fontWeight: 'bold' }, // Fonte maior para premium
+  summaryLabel: { fontSize: 14, textAlign: 'center', marginTop: 6 }, // Ajustado
+  chart: { marginVertical: 12, borderRadius: 16 },
   funnelProgressBarContainer: { height: 8, borderRadius: 4, marginTop: 8, overflow: 'hidden' },
   funnelProgressBar: { height: '100%', borderRadius: 4 },
 });
-
