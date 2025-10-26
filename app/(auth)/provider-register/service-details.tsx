@@ -434,27 +434,27 @@ export default function ServiceDetailsScreen() {
       // 2. AtualizaÃƒÂ§ÃƒÂ£o do Perfil (TEMP: anexa as ÃƒÂ¡reas no bio)
       const areasLine =
         formData.serviceAreas && formData.serviceAreas.length
-          ? `\n\nÃƒÂreas de atendimento: ${formData.serviceAreas.join(', ')}`
+          ? `Áreas de atendimento: ${formData.serviceAreas.join(', ')}`
           : '';
 
       const profileUpdateData = {
         avatarUrl: avatarUrl,
-        bio: `${formData.description}${areasLine}`, // TEMP: anexa as ÃƒÂ¡reas no bio
+        bio: `${formData.description}${areasLine}`, // TEMP: anexa as áreas no bio
         yearsOfExperience: parseInt(formData.yearsOfExperience, 10),
         pixKey: formData.pixKey,
-        // NÃƒÆ’O enviar serviceAreas enquanto o backend nÃƒÂ£o suportar
+        // Não enviar serviceAreas enquanto o backend não suportar
       };
       
       await updateMyProviderProfile(profileUpdateData);
 
-      // 3. AtualizaÃƒÂ§ÃƒÂ£o/CriaÃƒÂ§ÃƒÂ£o de ServiÃƒÂ§os
+      // 3. Atualização/Criação de Serviços
       const existingProviderServices = await getProviderServicesOffered(providerId);
 
       for (const specialty of formData.specialties) {
         const serviceId = serviceIdMap[specialty];
         if (!serviceId) {
           if (__DEV__) {
-            console.warn(`[ServiceDetails] ID de serviÃƒÂ§o nÃƒÂ£o encontrado para chave "${specialty}".`);
+            console.warn(`[ServiceDetails] ID de serviço não encontrado para chave "${specialty}".`);
           }
           continue;
         }
@@ -497,7 +497,7 @@ export default function ServiceDetailsScreen() {
         }
       }
 
-      // 4. AvanÃƒÂ§ar status de verificaÃƒÂ§ÃƒÂ£o
+      // 4. Avançar status de verificação
       await verificationService.advanceVerificationStatus(); 
 
       // 5. Atualizar estado local
