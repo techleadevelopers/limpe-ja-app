@@ -183,8 +183,7 @@ export default function ClientMissionsScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const isReducedMotion = useReducedMotion();
-  const { name, estimate } = useLocalSearchParams<{ name?: string; estimate?: string }>();
-  const userFirstName = (name && String(name).split(' ')[0]) || t?.('common.you', { defaultValue: 'você' }) || 'você';
+  const { estimate } = useLocalSearchParams<{ estimate?: string }>();
   const activeBg = withAlpha(theme.primary, 0.10);
 
   const [allMissions, setAllMissions] = useState<MissionItemType[]>([]);
@@ -268,13 +267,6 @@ export default function ClientMissionsScreen() {
   });
 
   const missionsReadyToClaim = allMissions.find((m) => m.canClaim && !m.isClaimed);
-  const steps = [
-    { key: 'onboard', label: t('missions.steps.onboard', { defaultValue: 'Cadastro' }) },
-    { key: 'book', label: t('missions.steps.book', { defaultValue: 'Agendar' }) },
-    { key: 'review', label: t('missions.steps.review', { defaultValue: 'Avaliar' }) },
-    { key: 'genius', label: t('missions.steps.genius', { defaultValue: 'Benefícios' }) },
-  ];
-  const stepIndex = missionsReadyToClaim ? 2 : allMissions.some((m) => m.isClaimed) ? 3 : allMissions.length > 0 ? 1 : 0;
 
   if (isLoading && !isRefreshing) {
     return (
@@ -317,27 +309,7 @@ export default function ClientMissionsScreen() {
       >
         <View style={styles.heroWrapper}>
           <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, { backgroundColor: heroGradient[0] }]}>
-            <View style={styles.heroTextWrap}>
-              <Text style={[styles.kicker, { color: withAlpha(theme.text, 0.6) }]}>MISSÕES</Text>
-              <Text style={[styles.title, { color: theme.text }]}>Economize como um gênio, {userFirstName}</Text>
-
-              <TouchableOpacity style={[styles.cta, { backgroundColor: theme.primary }]} onPress={() => { setActiveTab('ACTIVE'); requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: HERO_HEIGHT, animated: true })); }} accessibilityLabel="Começar">
-                <Text style={[styles.ctaText]}>COMEÇAR</Text>
-                <Ionicons name="play" size={14} color="#FFF" />
-              </TouchableOpacity>
-
-              <View style={styles.stepper}>
-                {steps.map((s, idx) => {
-                  const reached = idx <= stepIndex;
-                  return (
-                    <React.Fragment key={s.key}>
-                      <View style={[styles.stepCircle, { backgroundColor: reached ? theme.primary : withAlpha(theme.text, 0.12), borderColor: withAlpha(theme.text, 0.18) }]} />
-                      {idx < steps.length - 1 && <View style={[styles.stepLine, { backgroundColor: reached ? withAlpha(theme.primary, 0.6) : withAlpha(theme.text, 0.08) }]} />}
-                    </React.Fragment>
-                  );
-                })}
-              </View>
-            </View>
+            <View style={styles.heroTextWrap} />
 
             <Animated.Image source={Icons3D.mascrank} style={[styles.heroMascot, { transform: [{ scale: pulseAnim }] }]} resizeMode="contain" />
           </LinearGradient>
@@ -439,6 +411,7 @@ const styles = StyleSheet.create({
 
   priceRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
   priceCol: { flex: 1, alignItems: 'center' },
+  priceColRight: { flex: 1, alignItems: 'center' },
   counterRow: { flexDirection: 'row', alignItems: 'center' },
   counterBtn: { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 8 },
   priceValue: { fontSize: 16, fontWeight: '800', color: '#111827', minWidth: 90, textAlign: 'center', marginHorizontal: 12 },
@@ -466,6 +439,8 @@ const styles = StyleSheet.create({
   tabs: { flexDirection: 'row', marginHorizontal: 16, marginTop: 18, borderRadius: 12, padding: 6, alignItems: 'center', justifyContent: 'space-between' },
   tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10, marginHorizontal: 6 },
   tabText: { fontWeight: '700', color: '#374151' },
+
+  priceLabel: { fontSize: 14, color: '#6B7280', marginBottom: 8 },
 
   // mission list spacing is delegated to MissionList component
 });
