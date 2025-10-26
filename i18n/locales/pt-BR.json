@@ -95,7 +95,9 @@
     "points_section_title": "Pontos recentes",
     "missions_section_title": "Suas missões",
     "coupons_title": "Seus cupons",
-    "view_all": "Ver todos"
+    "view_all": "Ver todos",
+    "acceptance_rate": "Taxa de aceitação",
+    "avg_response_time": "Tempo médio de resposta"
   },
     "safety": {
       "panic": {
@@ -324,7 +326,7 @@
         "hour": "Por hora",
         "sqm": "Por m²"
       },
-      "from": "A partir de"
+      "from": "Por /h"
     },
     "filters": {
       "fastResponse": "Resposta \u003c 15 min",
