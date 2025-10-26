@@ -380,6 +380,18 @@ export default function SupportIndex() {
           </View>
           <Text style={styles.whatsappBtnTxt}>Fale pelo WhatsApp</Text>
         </TouchableOpacity>
+
+        {/* Botão de Mensagem no App (chat de suporte) */}
+        <TouchableOpacity
+          style={styles.chatBtn}
+          onPress={() => router.push('/(client)/messages/limpeja' as any)}
+          accessibilityRole="button"
+          accessibilityLabel="Conversar com o suporte"
+          accessibilityHint="Toque para abrir o chat de suporte dentro do app."
+        >
+          <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.chatBtnTxt}>Mensagem no App</Text>
+        </TouchableOpacity>
       </View>
       <View style={{ height: 10 }} />
       <Text style={styles.sectionTitle}>Meus tickets</Text>
@@ -397,8 +409,13 @@ export default function SupportIndex() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Stack.Screen options={{ headerShown: false }} />
-      <Header title="Suporte" onBack={() => router.back()} />
-      <AnimatedBackdrop />
+      <View style={styles.headerSimple}>
+        <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Voltar">
+          <Ionicons name="arrow-back" size={22} color="#1A2538" />
+        </TouchableOpacity>
+        <Text style={styles.headerSimpleTitle}>Suporte</Text>
+        <View style={{ width: 22 }} />
+      </View>
       {loading ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color="#4A90E2" />
@@ -412,7 +429,7 @@ export default function SupportIndex() {
           ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={Empty}
-          contentContainerStyle={{ paddingBottom: 38 }}
+          contentContainerStyle={{ paddingTop: 10, paddingBottom: 38, paddingHorizontal: 16 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           keyboardShouldPersistTaps="handled"
         />
@@ -433,6 +450,21 @@ function Badge({ label }: { label: string }) {
 }
 
 function ScrollPills<T extends string>({ items, value, onChange }: { items: T[]; value: T; onChange: (v: T) => void }) {
+  const prettyLabel = (raw: string) => {
+    const s = String(raw).normalize('NFD').replace(/[^\w]/g, '').toUpperCase();
+    // Severidades
+    if (s.includes('BAIX')) return 'Baixa (pode esperar)';
+    if (s.includes('MED') || s.includes('MDIA')) return 'Média (hoje)';
+    if (s.includes('ALTA')) return 'Alta (urgente)';
+    // Categorias
+    if (s.includes('PAGAMENT')) return 'Pagamentos';
+    if (s.includes('AGENDAMENT')) return 'Agendamentos';
+    if (s === 'CONTA') return 'Minha conta';
+    if (s.includes('TECN')) return 'Ajuda técnica';
+    if (s.includes('SEGURANC')) return 'Segurança';
+    if (s.includes('OUTRO')) return 'Outro';
+    return String(raw);
+  };
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
       {items.map((it) => {
@@ -446,9 +478,9 @@ function ScrollPills<T extends string>({ items, value, onChange }: { items: T[];
             }} 
             style={[styles.pill, active ? styles.pillActive : styles.pillGhost]}
             accessibilityRole="button"
-            accessibilityLabel={`Selecionar ${it}`}
+            accessibilityLabel={`Selecionar ${prettyLabel(String(it))}`}
           >
-            <Text style={[styles.pillTxt, active ? styles.pillTxtActive : styles.pillTxtGhost]}>{it}</Text>
+            <Text style={[styles.pillTxt, active ? styles.pillTxtActive : styles.pillTxtGhost]}>{prettyLabel(String(it))}</Text>
           </TouchableOpacity>
         );
       })}
@@ -488,6 +520,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F6F8FB', // Fundo suave premium
   },
+  headerSimple: { paddingTop: 70, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerSimpleTitle: { fontSize: 17, fontWeight: '800', color: '#1A2538' },
   scrollContent: {
     padding: 16,
     paddingBottom: 38,
@@ -664,6 +698,34 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   whatsappBtnTxt: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+
+  // Botão de chat interno (suporte no app)
+  chatBtn: {
+    marginTop: 10,
+    backgroundColor: '#0A84FF',
+    borderRadius: 14,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  chatBtnTxt: {
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 16,
