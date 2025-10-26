@@ -87,19 +87,33 @@ export interface ClaimMissionResponse {
 /** ==== Helpers internos ==== */
 const clamp = (n: number, min = 0, max = 100) => Math.max(min, Math.min(max, n));
 
+// Coerce possibly undefined/invalid numbers to safe finite values
+function toSafeNumber(value: any, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 function computeProgressPct(progress: MissionProgress | null, mission: Mission): number {
   if (!progress) return 0;
   if (progress.status === MissionStatus.CLAIMED) return 100;
-  const pct = (progress.currentValue / Math.max(1, mission.targetValue)) * 100;
-  return clamp(Math.round(pct));
+  const current = toSafeNumber(progress.currentValue, 0);
+  const targetRaw = toSafeNumber((mission as any)?.targetValue, 1);
+  const target = targetRaw > 0 ? targetRaw : 1;
+  const pct = (current / target) * 100;
+  const rounded = Number.isFinite(pct) ? Math.round(pct) : 0;
+  return clamp(rounded);
 }
 
 function computeProgressLabel(progress: MissionProgress | null, mission: Mission): string {
-  if (!progress) return `0/${mission.targetValue}`;
+  const targetRaw = toSafeNumber((mission as any)?.targetValue, 1);
+  const target = targetRaw > 0 ? targetRaw : 1;
+  const currentRaw = progress ? toSafeNumber(progress.currentValue, 0) : 0;
+  const current = Math.max(0, Math.min(currentRaw, target));
+
   if (mission.kind === MissionKind.STREAK_DAYS) {
-    return `${progress.currentValue} dia${progress.currentValue === 1 ? '' : 's'}`;
+    return `${current} dia${current === 1 ? '' : 's'}`;
   }
-  return `${Math.min(progress.currentValue, mission.targetValue)}/${mission.targetValue}`;
+  return `${current}/${target}`;
 }
 
 function deriveFlags(progress: MissionProgress | null): { canClaim: boolean; isClaimed: boolean } {
