@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios, { AxiosError } from 'axios';
 
 import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../utils/formatters';
+import { formatAddressCompact } from '../../../utils/address';
 import { normalizeBooking } from '../../../utils/normalize';
 
 import { useAuth } from '../../../hooks/useAuth';
@@ -36,6 +37,19 @@ import { AppColors, AppShadows } from '../../../constants/appStyles';
 import Navbar from '../../../components/client/explore/home/NavBar';
 import ScreenContainer from '@/components/layout/ScreenContainer';
 import { useDevice } from '@/utils/responsive';
+
+// Local light theme tokens for this screen only (UI refactor only)
+const UI = {
+  bg: '#f2f2f2',
+  card: '#FFFFFF',
+  textPrimary: '#1A1A1A',
+  textSecondary: '#6B7280',
+  divider: '#E5E7EB',
+  accent: '#2563EB',
+  success: '#16A34A',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+} as const;
 
 // Tipos e helpers
 const { highlightNew } = useLocalSearchParams<{ highlightNew?: string }>();
@@ -71,14 +85,15 @@ const getTranslatedStatus = (status: BookingStatus): string => {
   }
 };
 
+// Solid backgrounds for a clean status pill (no gradient look)
 const gradients = {
-  confirmed: ['#D4EDDA', '#C3E6CB'] as const,
-  pending: ['#FFF3CD', '#FFEAA7'] as const,
-  inProgress: ['#D1ECF1', '#B8E1E9'] as const,
-  completed: ['#F8F9FA', '#E9ECEF'] as const,
-  cancelled: ['#F8D7DA', '#F1B0B7'] as const,
-  other: ['#E2E3E5', '#DEE2E6'] as const,
-  rescheduled: ['#EAE6F3', '#D7CFF0'] as const,
+  confirmed: ['rgba(22,163,74,0.12)', 'rgba(22,163,74,0.12)'] as const,
+  pending: ['rgba(245,158,11,0.15)', 'rgba(245,158,11,0.15)'] as const,
+  inProgress: ['rgba(37,99,235,0.12)', 'rgba(37,99,235,0.12)'] as const,
+  completed: ['#F3F4F6', '#F3F4F6'] as const,
+  cancelled: ['rgba(239,68,68,0.12)', 'rgba(239,68,68,0.12)'] as const,
+  other: ['#F3F4F6', '#F3F4F6'] as const,
+  rescheduled: ['rgba(124,58,237,0.12)', 'rgba(124,58,237,0.12)'] as const,
 } as const;
 
 const renderProviderAvatar = (avatarUrl?: string | null, size: number = 60) => {
@@ -153,25 +168,25 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
   const getStatusStyle = (status: BookingStatus) => {
     switch (status) {
       case BookingStatus.CONFIRMED:
-        return { text: AppColors.successStandard, gradient: gradients.confirmed, icon: 'checkmark-circle-outline' as const, badgeIcon: 'checkmark-circle' as const };
+        return { text: UI.success, gradient: gradients.confirmed, icon: 'checkmark-circle-outline' as const, badgeIcon: 'checkmark-circle' as const };
       case BookingStatus.PENDING:
-        return { text: AppColors.warningYellow, gradient: gradients.pending, icon: 'time-outline' as const, badgeIcon: 'time' as const };
+        return { text: UI.warning, gradient: gradients.pending, icon: 'time-outline' as const, badgeIcon: 'time' as const };
       case BookingStatus.PENDING_PROVIDER_CONFIRMATION:
-        return { text: AppColors.warningYellow, gradient: gradients.pending, icon: 'hourglass-outline' as const, badgeIcon: 'hourglass' as const };
+        return { text: UI.warning, gradient: gradients.pending, icon: 'hourglass-outline' as const, badgeIcon: 'hourglass' as const };
       case BookingStatus.IN_PROGRESS:
-        return { text: AppColors.primaryInteractive, gradient: gradients.inProgress, icon: 'sync-circle-outline' as const, badgeIcon: 'sync' as const };
+        return { text: UI.accent, gradient: gradients.inProgress, icon: 'sync-circle-outline' as const, badgeIcon: 'sync' as const };
       case BookingStatus.COMPLETED:
-        return { text: AppColors.textAuxiliary, gradient: gradients.completed, icon: 'flag-outline' as const, badgeIcon: 'flag' as const };
+        return { text: UI.textSecondary, gradient: gradients.completed, icon: 'flag-outline' as const, badgeIcon: 'flag' as const };
       case BookingStatus.CANCELLED:
-        return { text: AppColors.errorRed, gradient: gradients.cancelled, icon: 'close-circle-outline' as const, badgeIcon: 'close-circle' as const };
+        return { text: UI.danger, gradient: gradients.cancelled, icon: 'close-circle-outline' as const, badgeIcon: 'close-circle' as const };
       case BookingStatus.REJECTED:
-        return { text: AppColors.textAuxiliary, gradient: gradients.other, icon: 'alert-circle-outline' as const, badgeIcon: 'alert-circle' as const };
+        return { text: UI.textSecondary, gradient: gradients.other, icon: 'alert-circle-outline' as const, badgeIcon: 'alert-circle' as const };
       case BookingStatus.RESCHEDULED:
-        return { text: '#6F42C1', gradient: gradients.rescheduled, icon: 'sync-outline' as const, badgeIcon: 'sync' as const };
+        return { text: '#7C3AED', gradient: gradients.rescheduled, icon: 'sync-outline' as const, badgeIcon: 'sync' as const };
       case BookingStatus.NO_SHOW:
-        return { text: AppColors.textBody, gradient: gradients.other, icon: 'person-remove-outline' as const, badgeIcon: 'person-remove' as const };
+        return { text: UI.textSecondary, gradient: gradients.other, icon: 'person-remove-outline' as const, badgeIcon: 'person-remove' as const };
       default:
-        return { text: AppColors.textAuxiliary, gradient: gradients.other, icon: 'help-circle-outline' as const, badgeIcon: 'help-circle' as const };
+        return { text: UI.textSecondary, gradient: gradients.other, icon: 'help-circle-outline' as const, badgeIcon: 'help-circle' as const };
     }
   };
 
@@ -227,13 +242,13 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
                 <View style={styles.itemAddressContainer}>
                   <Ionicons name="location-outline" size={13} color={AppColors.textAuxiliary} style={styles.metaIcon} />
                   <Text style={styles.itemAddressText} numberOfLines={2}>
-                    {formattedAddress}
+                    {(() => { const f = formatAddressCompact(item.address); return [f.line1, f.line2].filter(Boolean).join(', '); })()}
                   </Text>
                 </View>
               )}
 
               <View style={styles.itemPriceContainer}>
-                <MaterialCommunityIcons name="currency-usd" size={14} color={AppColors.primaryInteractive} />
+                <MaterialCommunityIcons name="currency-usd" size={14} color={UI.accent} />
                 <Text style={styles.itemPriceText}>{formatPriceBRL(item.totalPrice)}</Text>
               </View>
             </View>
@@ -517,14 +532,14 @@ export default function MyBookingsScreen() {
           title: headerTitle,
           headerShown: true,
           headerTitleAlign: 'center',
-          headerTitleStyle: { fontFamily: 'Montserrat-SemiBold', fontSize: 20, color: AppColors.textBody },
-          headerStyle: { backgroundColor: AppColors.white },
+          headerTitleStyle: { fontFamily: 'Montserrat-SemiBold', fontSize: 20, color: UI.textPrimary },
+          headerStyle: { backgroundColor: UI.card },
           headerShadowVisible: false,
           headerBackButtonDisplayMode: 'minimal',
-          headerTintColor: AppColors.primaryInteractive,
+          headerTintColor: UI.accent,
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()} style={{ paddingVertical: 10, paddingHorizontal: 12 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityRole="button" accessibilityLabel="Voltar">
-              <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
+              <Ionicons name="arrow-back" size={24} color={UI.accent} />
             </TouchableOpacity>
           ),
         }}
@@ -591,7 +606,7 @@ export default function MyBookingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: AppColors.backgroundLight },
+  container: { flex: 1, backgroundColor: UI.bg },
   navbarContainer: {
     position: 'absolute',
     bottom: 0,
@@ -660,7 +675,7 @@ const styles = StyleSheet.create({
 
   listContentContainer: { paddingVertical: 18, paddingHorizontal: 16 },
   itemCard: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: UI.card,
     borderRadius: 18,
     marginBottom: 20,
     overflow: 'hidden',
@@ -683,7 +698,7 @@ const styles = StyleSheet.create({
   itemAddressText: { fontSize: 13, color: AppColors.textAuxiliary, flex: 1, fontFamily: 'Montserrat-Regular', lineHeight: 18 },
 
   itemPriceContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  itemPriceText: { fontSize: 16, fontWeight: '700', color: AppColors.primaryInteractive, marginLeft: 6, fontFamily: 'Montserrat-SemiBold' },
+  itemPriceText: { fontSize: 16, fontWeight: '700', color: UI.accent, marginLeft: 6, fontFamily: 'Montserrat-SemiBold' },
 
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 16, alignSelf: 'flex-start' },
   statusBadgeAbsolute: { position: 'absolute', top: 12, right: 12 },
@@ -692,7 +707,7 @@ const styles = StyleSheet.create({
 
   itemChevron: { marginLeft: 8, alignSelf: 'flex-start' },
 
-  centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, backgroundColor: AppColors.backgroundLight },
+  centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, backgroundColor: UI.bg },
   loadingText: { fontSize: 15, color: AppColors.textAuxiliary, fontFamily: 'Montserrat-Regular', marginTop: 12 },
 
   emptyText: { fontSize: 20, fontWeight: '700', color: AppColors.textBody, textAlign: 'center', marginBottom: 10, fontFamily: 'Montserrat-SemiBold' },
