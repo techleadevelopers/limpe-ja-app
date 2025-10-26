@@ -180,8 +180,8 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>{`ServiÃ§o Ã s ${timeLabel}`}</Text>
-            <Text style={{ color: '#DCE7FF', marginLeft: 8, fontWeight: '600' }}>{`â€¢ ${cta}`}</Text>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>{`Serviço às ${timeLabel}`}</Text>
+            <Text style={{ color: '#DCE7FF', marginLeft: 8, fontWeight: '600' }}>{`• ${cta}`}</Text>
           </View>
           <AnimatedLinearGradient
             colors={['rgba(255,255,255,0.0)', 'rgba(255,255,255,0.25)', 'rgba(255,255,255,0.0)']}
