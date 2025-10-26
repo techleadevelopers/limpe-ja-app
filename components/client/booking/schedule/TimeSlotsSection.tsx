@@ -120,7 +120,7 @@ export default function TimeSlotsSection({
 
       {isLoading ? (
         <ActivityIndicator size="large" color={AppColors.primaryDark} style={{ marginVertical: 22 }} />
-      ) : sections.length ? (
+      ) : (displaySlotsInfo && displaySlotsInfo.length > 0) ? (
         <>
           {sections.map(section => (
             <View key={section.key} style={{ marginBottom: 6 }}>
@@ -239,10 +239,10 @@ const styles = StyleSheet.create({
   },
   empty: {
     textAlign: 'center',
-    color: AppColors.textAuxiliary,
-    fontSize: 13,
+    color: AppColors.errorRed,
+    fontSize: 14,
     marginVertical: 16,
-    fontStyle: 'italic',
+    fontWeight: '700',
   },
   // ✅ NOVO: Estilo para texto de lista vazia no FlatList
   emptySlotText: {
