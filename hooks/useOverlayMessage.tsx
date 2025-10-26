@@ -53,13 +53,14 @@ export function showOverlay(opts: ShowOverlayOpts) {
 
   // Dedupe simples por título em 3s (não reenvia se igual)
   const now = Date.now();
+  const key = `${payload.title}|${payload.subtitle ?? ''}|${payload.variant}`;
   if ((global as any).__overlay_last) {
-    const last = (global as any).__overlay_last as { time: number; title: string };
-    if (now - last.time < 3000 && last.title === payload.title) {
+    const last = (global as any).__overlay_last as { time: number; key: string };
+    if (now - last.time < 3000 && last.key === key) {
       return;
     }
   }
-  (global as any).__overlay_last = { time: now, title: payload.title };
+  (global as any).__overlay_last = { time: now, key };
 
   listeners.forEach((fn) => fn(payload));
 }
