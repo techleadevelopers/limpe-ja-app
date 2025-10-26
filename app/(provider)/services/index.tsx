@@ -1,4 +1,4 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+﻿import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,16 +21,16 @@ import {
 import ServiceItemSkeleton from '../../../components/ServiceItemSkeleton';
 import ToastMessage from '../../../components/ui/ToastMessage';
 import { formatDate } from '../../../utils/helpers';
+import Colors from '../../../constants/Colors';
 
-// --- Importações de SERVIÇOS e TIPAGENS REAIS do BACKEND ---
-import { getBookingsForUser } from '../../../services/bookingService';
+// --- ImportaÃ§Ãµes de SERVIÃ‡OS e TIPAGENS REAIS do BACKEND ---
+import { getBookingsForUser, updateBookingStatus } from '../../../services/bookingService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 // -------------------------------------------------------------
 
-// ===== Ícones 3D injetados (sem alterar layout) =====
+// ===== Ãcones 3D injetados (sem alterar layout) =====
 const Icons3D = {
-  avatar: require('/assets/images/3d/perfil.png'),
-  money: require('/assets/images/3d/cashback.png'),
+  money: require('/assets/images/3d/cashback3.png'),
   empty: require('/assets/images/3d/step1-card-profile.png'),
 } satisfies Record<string, ImageSourcePropType>;
 
@@ -38,32 +38,30 @@ const Icon3D = ({ src, size = 24, style }: { src: ImageSourcePropType; size?: nu
   <Image source={src} style={[{ width: size, height: size }, style]} resizeMode="contain" />
 );
 
-// Componente para cada item de serviço com animações - AGORA RECEBE BookingDetails (formato achatado)
-const AnimatedServiceItem: React.FC<{
-  item: BookingDetails; // AGORA RECEBE BookingDetails
-  onPress: (item: BookingDetails) => void; // AGORA RECEBE BookingDetails
+function useTheme() {
+  const scheme = (Colors as any)?.scheme || 'light';
+  const theme = (Colors as any)[scheme] || (Colors as any).light;
+  return theme as typeof Colors.light;
+}
+
+// Novo card â€œcompletoâ€ â€” com Aceitar/Rejeitar embutidos e badge movido para fora (absolute no topo)
+const BookingCardWithActions: React.FC<{
+  item: BookingDetails;
   delay: number;
-}> = ({ item, onPress, delay }) => {
+  onUpdate?: () => void;
+  onPress?: (item: BookingDetails) => void;
+}> = ({ item, delay, onUpdate, onPress }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque
+  const slideAnim = useRef(new Animated.Value(15)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        delay: delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 400,
-        delay: delay,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 450, delay, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 450, delay, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, slideAnim, delay]);
+  }, [delay]);
 
   const onPressInItem = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -74,15 +72,15 @@ const AnimatedServiceItem: React.FC<{
     Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
   };
 
-  // Adaptação de getStatusStyle para BookingStatus do backend
+  // AdaptaÃ§Ã£o de getStatusStyle para BookingStatus do backend (ajustado para maiÃºscula em PENDING/CONFIRMED)
   const getStatusStyle = (status: BookingStatus) => {
     switch (status) {
       case BookingStatus.PENDING:
-        return { text: '#FF6F00', background: '#FFF3E0', icon: 'clock-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Pendente' };
+        return { text: '#F57C00', background: 'rgba(255, 152, 0, 0.1)', icon: 'clock-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'PENDENTE' };
       case BookingStatus.CONFIRMED:
-        return { text: '#2E7D32', background: '#E8F5E9', icon: 'check-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Confirmado' };
+        return { text: '#2E7D32', background: 'rgba(46, 125, 50, 0.1)', icon: 'check-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'CONFIRMADO' };
       case BookingStatus.COMPLETED:
-        return { text: '#546E7A', background: '#ECEFF1', icon: 'check-all' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Concluído' };
+        return { text: '#546E7A', background: '#ECEFF1', icon: 'check-all' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'ConcluÃ­do' };
       case BookingStatus.CANCELLED:
         return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Cancelado' };
       case BookingStatus.REJECTED:
@@ -96,51 +94,112 @@ const AnimatedServiceItem: React.FC<{
 
   const statusStyle = getStatusStyle(item.status);
 
+  const handleUpdate = async (status: BookingStatus) => {
+    try {
+      setIsUpdating(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await updateBookingStatus(item.id, { status } as any);
+      onUpdate?.();
+    } catch (err) {
+      Alert.alert('Erro', 'Falha ao atualizar o serviÃ§o.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const isPendingOrConfirmed = item.status === BookingStatus.PENDING || item.status === BookingStatus.CONFIRMED;
+
   return (
     <Animated.View
       style={[
         styles.serviceCardWrapper,
-        { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }
+        { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] },
       ]}
     >
-      <TouchableOpacity
-        style={styles.serviceCard}
-        onPress={() => onPress(item)}
-        onPressIn={onPressInItem}
-        onPressOut={onPressOutItem}
-        activeOpacity={1}
-        accessibilityLabel={`Detalhes do serviço de ${item.serviceName} para ${item.clientFullName}`}
-        accessibilityHint="Toque para ver mais informações sobre o serviço"
-      >
-        {item.clientAvatarUrl ? (
-          <Image source={{ uri: item.clientAvatarUrl }} style={styles.clientAvatar} />
-        ) : (
-          <View style={styles.clientAvatarPlaceholder}>
-            {/* Ícone 3D no placeholder do avatar (mesmo tamanho) */}
-            <Icon3D src={Icons3D.avatar} size={24} />
+      {/* Container para card + badge absoluto (fora do middleCol) */}
+      <View style={styles.cardContainer}>
+        <TouchableOpacity
+          style={styles.serviceCard}
+          onPress={() => onPress?.(item)} // Chama navegaÃ§Ã£o se prop fornecida
+          onPressIn={onPressInItem}
+          onPressOut={onPressOutItem}
+          activeOpacity={1}
+          disabled={item.status === BookingStatus.PENDING} // Desabilita tap no card se PENDING (foco nos botÃµes)
+          accessibilityLabel={`Detalhes do serviÃ§o de ${item.serviceName} para ${item.clientFullName}`}
+          accessibilityHint="Toque para ver mais informaÃ§Ãµes sobre o serviÃ§o"
+        >
+          <View style={styles.middleCol}>
+            {/* Linha 1: ServiÃ§o (bold) - sem badge aqui */}
+            <Text style={styles.serviceType}>{item.serviceName}</Text>
+            
+            {/* Linha 2: Cliente */}
+            <Text style={styles.clientName}>Cliente: {item.clientFullName}</Text>
+            
+            {/* Linha 3: Data/Hora */}
+            <Text style={styles.serviceDate}>
+              <Ionicons name="calendar-outline" size={18} color="#6C757D" />{' '}
+              {formatDate(item.scheduledDate, { day: 'numeric', month: 'short', year: 'numeric' })} Ã s {item.scheduledTime || 'HorÃ¡rio nÃ£o definido'}
+            </Text>
+            
+            {/* Linha 4: PreÃ§o - Ajustado para View com row para alinhar Ã­cone e preÃ§o lado a lado */}
+            {item.totalPrice !== undefined && (
+              <View style={styles.servicePriceText}>
+                <Icon3D src={Icons3D.money} size={44} style={{ marginRight: 4 }} />
+                <Text style={styles.servicePriceTextInner}>
+                  R$ {item.totalPrice.toFixed(2).replace('.', ',')}
+                </Text>
+              </View>
+            )}
+
+            {/* Badge normal para outros status (dentro do middleCol, se nÃ£o PENDING/CONFIRMED) */}
+            {!isPendingOrConfirmed && (
+              <View style={styles.statusBadgeContainer}>
+                <BlurView intensity={25} tint="light" style={[styles.statusBadge, { backgroundColor: statusStyle.background }]}>
+                  <MaterialCommunityIcons name={statusStyle.icon} size={14} color={statusStyle.text} />
+                  <Text style={[styles.statusText, { color: statusStyle.text }]}>{statusStyle.display}</Text>
+                </BlurView>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Badge ABSOLUTO FORA DO CONTAINER - para PENDING/CONFIRMED, no topo direito */}
+        {isPendingOrConfirmed && (
+          <View style={styles.absoluteBadgeContainer}>
+            <BlurView intensity={25} tint="light" style={[styles.statusBadge, { backgroundColor: statusStyle.background }]}>
+              <MaterialCommunityIcons name={statusStyle.icon} size={14} color={statusStyle.text} />
+              <Text style={[styles.statusText, { color: statusStyle.text }]}>{statusStyle.display}</Text>
+            </BlurView>
           </View>
         )}
-        <View style={styles.serviceInfo}>
-          <Text style={styles.serviceType} numberOfLines={1}>{item.serviceName}</Text>
-          <Text style={styles.clientName} numberOfLines={1}>Cliente: {item.clientFullName}</Text>
-          <Text style={styles.serviceDate}>
-            <Ionicons name="calendar-outline" size={14} color="#6C757D" /> {formatDate(item.scheduledDate, { day: 'numeric', month: 'short' })}
-            {item.scheduledTime && <Text> às {item.scheduledTime}</Text>}
-          </Text>
-          {item.totalPrice !== undefined && (
-            <Text style={styles.servicePriceText}>
-              {/* Ícone 3D de dinheiro (mantendo tamanho 14 para não alterar layout) */}
-              <Icon3D src={Icons3D.money} size={14} style={{ marginRight: 4 }} />
-              R$ {item.totalPrice.toFixed(2).replace('.', ',')}
-            </Text>
-          )}
+      </View>
+
+      {/* BotÃµes Aceitar / Rejeitar (mantidos no final) */}
+      {item.status === BookingStatus.PENDING && (
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.primaryBtn, isUpdating && { opacity: 0.6 }]}
+            disabled={isUpdating}
+            onPress={() => handleUpdate(BookingStatus.CONFIRMED)}
+            accessibilityLabel="Aceitar solicitaÃ§Ã£o"
+            accessibilityRole="button"
+          >
+            <Ionicons name="checkmark" size={16} color="#fff" />
+            <Text style={styles.primaryBtnText}>Aceitar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.secondaryBtn, isUpdating && { opacity: 0.6 }]}
+            disabled={isUpdating}
+            onPress={() => handleUpdate(BookingStatus.REJECTED)}
+            accessibilityLabel="Rejeitar solicitaÃ§Ã£o"
+            accessibilityRole="button"
+          >
+            <Ionicons name="close" size={16} color="#007AFF" />
+            <Text style={styles.secondaryBtnText}>Rejeitar</Text>
+          </TouchableOpacity>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusStyle.background }]}>
-          <MaterialCommunityIcons name={statusStyle.icon} size={12} color={statusStyle.text} />
-          <Text style={[styles.statusText, { color: statusStyle.text }]}>{statusStyle.display}</Text>
-        </View>
-        <Ionicons name="chevron-forward-outline" size={24} color="#C7C7CC" />
-      </TouchableOpacity>
+      )}
     </Animated.View>
   );
 };
@@ -151,48 +210,21 @@ const CustomHeader: React.FC<{
   headerAnim: Animated.Value;
   onAddPress: () => void;
 }> = ({ headerTitle, headerAnim, onAddPress }) => {
-  const { width: SCREEN_WIDTH } = Dimensions.get('window');
-  const HEADER_TOP = Platform.OS === 'ios' ? 52 : 22;
-
-  const HERO_GRADIENT_START = '#FFFFFF';
-  const HERO_GRADIENT_MIDDLE = '#FFFFFF';
-  const HERO_GRADIENT_END = '#FFFFFF';
-
-  // Cores adaptadas (substitui AppColors.textBody por cor fixa, ajuste se necessário)
-  const TEXT_COLOR = '#000000'; // ou importe AppColors se disponível
+  const theme = useTheme();
 
   return (
     <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-      <LinearGradient
-        colors={[HERO_GRADIENT_START, HERO_GRADIENT_MIDDLE, HERO_GRADIENT_END]}
-        start={{ x: 0.0, y: 0.0 }}
-        end={{ x: 1.0, y: 1.0 }}
-        style={[
-          styles.headerGradient,
-          { width: SCREEN_WIDTH } // Garante largura total
-        ]}
-      >
-        <View style={{ height: HEADER_TOP }} />
-
-        <View style={styles.headerRow}>
-          {/* Placeholder para botão de voltar (vazio, pois não há back aqui) */}
-          <View style={styles.iconBtn} />
-
-          <Text numberOfLines={1} style={[styles.headerTitle, { color: TEXT_COLOR }]}>
-            {headerTitle}
-          </Text>
-
-          {/* Botão de adicionar no lugar do menu */}
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={onAddPress}
-            accessibilityLabel="Adicionar novo serviço"
-            accessibilityHint="Toque para gerenciar os tipos de serviços que você oferece"
-          >
-            <Ionicons name="add-circle-outline" size={24} color={TEXT_COLOR} />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
+      <View style={styles.simpleHeader}>
+        <View style={{ width: 22 }} />
+        <Text numberOfLines={1} style={[styles.simpleHeaderTitle, { color: theme.text }]}>{headerTitle}</Text>
+        <TouchableOpacity
+          onPress={onAddPress}
+          accessibilityLabel="Adicionar novo serviÃ§o"
+          accessibilityHint="Toque para gerenciar os tipos de serviÃ§os que vocÃª oferece"
+        >
+          <Ionicons name="add-circle-outline" size={22} color={theme.text} />
+        </TouchableOpacity>
+      </View>
     </Animated.View>
   );
 };
@@ -200,7 +232,7 @@ const CustomHeader: React.FC<{
 export default function ProviderServicesScreen() {
   const router = useRouter();
 
-  // >>> NOVO: lê o query param ?filter=... para abrir já filtrado
+  // >>> NOVO: lÃª o query param ?filter=... para abrir jÃ¡ filtrado
   const params = useLocalSearchParams<{ filter?: string }>();
   const initialFilter = (params.filter === 'upcoming' || params.filter === 'completed' || params.filter === 'requests')
     ? (params.filter as 'requests' | 'upcoming' | 'completed')
@@ -212,12 +244,12 @@ export default function ProviderServicesScreen() {
   const [filter, setFilter] = useState<'requests' | 'upcoming' | 'completed'>(initialFilter);
   const [toastMessage, setToastMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Animações
+  // AnimaÃ§Ãµes
   const headerAnim = useRef(new Animated.Value(0)).current;
   const filterAnim = useRef(new Animated.Value(0)).current;
   const contentAnim = useRef(new Animated.Value(0)).current;
 
-  // Mover a declaração de loadServices para antes do useEffect que a chama
+  // Mover a declaraÃ§Ã£o de loadServices para antes do useEffect que a chama
   const loadServices = useCallback(async (currentFilter: typeof filter, refreshing: boolean = false) => {
     if (!refreshing) setIsLoading(true);
     Animated.timing(contentAnim, {
@@ -260,11 +292,11 @@ export default function ProviderServicesScreen() {
         }
 
         setServices(data);
-        if (refreshing) setToastMessage({ message: "Serviços atualizados!", type: "success" });
+        if (refreshing) setToastMessage({ message: "ServiÃ§os atualizados!", type: "success" });
       } catch (err: any) {
-        console.error("[ProviderServicesScreen] Erro ao buscar serviços:", err.response?.data || err.message);
-        Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar seus serviços.");
-        setToastMessage({ message: "Erro ao carregar serviços.", type: "error" });
+        console.error("[ProviderServicesScreen] Erro ao buscar serviÃ§os:", err.response?.data || err.message);
+        Alert.alert("Erro", err.response?.data?.message || "NÃ£o foi possÃ­vel carregar seus serviÃ§os.");
+        setToastMessage({ message: "Erro ao carregar serviÃ§os.", type: "error" });
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -317,30 +349,30 @@ export default function ProviderServicesScreen() {
 
   const getHeaderTitle = () => {
     switch (filter) {
-      case 'requests': return 'Solicitações Pendentes';
-      case 'upcoming': return 'Próximos Agendamentos';
-      case 'completed': return 'Histórico de Serviços';
-      default: return 'Meus Serviços';
+      case 'requests': return 'SolicitaÃ§Ãµes Pendentes';
+      case 'upcoming': return 'PrÃ³ximos Agendamentos';
+      case 'completed': return 'HistÃ³rico de ServiÃ§os';
+      default: return 'Meus ServiÃ§os';
     }
   };
 
   const EmptyListFeedback = () => {
-    let title = "Nenhum serviço encontrado.";
-    let subText = "Ajuste o filtro ou aguarde novas solicitações!";
+    let title = "Nenhum serviÃ§o encontrado.";
+    let subText = "Ajuste o filtro ou aguarde novas solicitaÃ§Ãµes!";
     let ctaButton = null;
 
     if (filter === 'requests') {
-      title = "Nenhuma solicitação pendente.";
-      subText = "Configure seus serviços para receber mais pedidos ou verifique seus agendamentos confirmados.";
+      title = "Nenhuma solicitaÃ§Ã£o pendente.";
+      subText = "Configure seus serviÃ§os para receber mais pedidos ou verifique seus agendamentos confirmados.";
       ctaButton = (
         <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push('/(provider)/profile/edit-services' as any)}>
           <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.emptyStateButtonText}>Configurar Meus Serviços</Text>
+          <Text style={styles.emptyStateButtonText}>Configurar Meus ServiÃ§os</Text>
         </TouchableOpacity>
       );
     } else if (filter === 'upcoming') {
       title = "Nenhum agendamento futuro.";
-      subText = "Que tal verificar novas solicitações ou gerenciar sua disponibilidade?";
+      subText = "Que tal verificar novas solicitaÃ§Ãµes ou gerenciar sua disponibilidade?";
       ctaButton = (
         <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push('/(provider)/availability' as any)}>
           <Ionicons name="time-outline" size={20} color="#FFFFFF" />
@@ -348,13 +380,13 @@ export default function ProviderServicesScreen() {
         </TouchableOpacity>
       );
     } else if (filter === 'completed') {
-      title = "Seu histórico de serviços está vazio.";
-      subText = "Comece a agendar e concluir serviços para vê-los aqui!";
+      title = "Seu histÃ³rico de serviÃ§os estÃ¡ vazio.";
+      subText = "Comece a agendar e concluir serviÃ§os para vÃª-los aqui!";
     }
 
     return (
       <View style={styles.centeredFeedback}>
-        {/* Ícone 3D no estado vazio (mesma hierarquia visual) */}
+        {/* Ãcone 3D no estado vazio (mesma hierarquia visual) */}
         <Icon3D src={Icons3D.empty} size={64} />
         <Text style={styles.emptyText}>{title}</Text>
         <Text style={styles.emptySubText}>{subText}</Text>
@@ -378,26 +410,26 @@ export default function ProviderServicesScreen() {
         <TouchableOpacity
           style={[styles.filterButton, filter === 'requests' && styles.filterButtonActive]}
           onPress={() => handleFilterChange('requests')}
-          accessibilityLabel="Mostrar solicitações pendentes"
+          accessibilityLabel="Mostrar solicitaÃ§Ãµes pendentes"
           accessibilityRole="button"
         >
-          <Text style={[styles.filterButtonText, filter === 'requests' && styles.filterButtonTextActive]}>Solicitações</Text>
+          <Text style={[styles.filterButtonText, filter === 'requests' && styles.filterButtonTextActive]}>SolicitaÃ§Ãµes</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.filterButton, filter === 'upcoming' && styles.filterButtonActive]}
           onPress={() => handleFilterChange('upcoming')}
-          accessibilityLabel="Mostrar próximos agendamentos"
+          accessibilityLabel="Mostrar prÃ³ximos agendamentos"
           accessibilityRole="button"
         >
-          <Text style={[styles.filterButtonText, filter === 'upcoming' && styles.filterButtonTextActive]}>Próximos</Text>
+          <Text style={[styles.filterButtonText, filter === 'upcoming' && styles.filterButtonTextActive]}>PrÃ³ximos</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.filterButton, filter === 'completed' && styles.filterButtonActive]}
           onPress={() => handleFilterChange('completed')}
-          accessibilityLabel="Mostrar histórico de serviços"
+          accessibilityLabel="Mostrar histÃ³rico de serviÃ§os"
           accessibilityRole="button"
         >
-          <Text style={[styles.filterButtonText, filter === 'completed' && styles.filterButtonTextActive]}>Histórico</Text>
+          <Text style={[styles.filterButtonText, filter === 'completed' && styles.filterButtonTextActive]}>HistÃ³rico</Text>
         </TouchableOpacity>
       </Animated.View>
 
@@ -413,10 +445,11 @@ export default function ProviderServicesScreen() {
           <FlatList
             data={services}
             renderItem={({ item, index }) => (
-              <AnimatedServiceItem
+              <BookingCardWithActions
                 item={item}
-                onPress={handleServicePress}
                 delay={index * 70}
+                onUpdate={() => loadServices(filter, true)} // atualiza lista apÃ³s aÃ§Ã£o
+                onPress={handleServicePress} // passa a funÃ§Ã£o de navegaÃ§Ã£o
               />
             )}
             keyExtractor={(item) => item.id}
@@ -449,7 +482,7 @@ export default function ProviderServicesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: '#f2f2f2',
   },
   // Estilos adaptados do ScheduleHeader para o headerGradient e relacionados
   headerGradient: {
@@ -491,47 +524,43 @@ const styles = StyleSheet.create({
     }),
     includeFontPadding: false,
   },
+  simpleHeader: { paddingTop: 80, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  simpleHeaderTitle: { fontSize: 17, fontWeight: '800' },
   filterContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-    ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 2 },
-    }),
+    marginHorizontal: 26,
+    marginTop: 8,
+    backgroundColor: '#6c829118',
+    padding: 6,
+    borderRadius: 18,
+    alignSelf: 'center',
   },
   filterButton: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 8,
     alignItems: 'center',
-    borderRadius: 8,
-    marginHorizontal: 4,
-    backgroundColor: '#F7F8FA',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderRadius: 14,
+    marginHorizontal: 2,
+    backgroundColor: 'transparent',
   },
   filterButtonActive: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#007AFF',
+    backgroundColor: '#6395f1e2',
+    ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 }, android: { elevation: 2 } }),
   },
   filterButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#6C757D',
+    color: '#27292cff',
   },
   filterButtonTextActive: {
-    color: '#007AFF',
+    color: '#ffffffff',
   },
   contentArea: {
     flex: 1,
     paddingTop: 10,
   },
   listContentContainer: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
     paddingBottom: 20,
   },
   serviceCardWrapper: {
@@ -544,27 +573,19 @@ const styles = StyleSheet.create({
       android: { elevation: 2 },
     }),
   },
+  // Novo container para card + badge absoluto
+  cardContainer: {
+    position: 'relative', // Permite position absolute no badge
+    flex: 1,
+  },
   serviceCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Alinha itens ao topo para melhor distribuiÃ§Ã£o vertical
     padding: 15,
   },
-  clientAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  clientAvatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-    backgroundColor: '#007AFF', // Cor para avatar placeholder
-    justifyContent: 'center',
-    alignItems: 'center',
+  middleCol: { 
+    flex: 1,
+    // Alinhamento Ã  esquerda para o tÃ­tulo e outros textos
   },
   serviceInfo: {
     flex: 1,
@@ -575,35 +596,51 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#212529',
     marginBottom: 4,
+    textAlign: 'left', // Garante alinhamento Ã  esquerda
   },
   clientName: {
     fontSize: 14,
     color: '#495057',
     marginBottom: 4,
+    textAlign: 'left',
   },
   serviceDate: {
     fontSize: 13,
     color: '#6C757D',
+    textAlign: 'left',
   },
   servicePriceText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-    marginTop: 2,
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 4, // Pequeno espaÃ§amento apÃ³s data
+  },
+  servicePriceTextInner: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2c76e4ff',
+  },
+  // Estilos para badge normal (dentro middleCol, para outros status)
+  statusBadgeContainer: {
+    alignSelf: 'flex-end',
+    marginTop: 8, // EspaÃ§amento apÃ³s preÃ§o
+  },
+  // Estilos para badge absoluto (fora do container, para PENDING/CONFIRMED)
+  absoluteBadgeContainer: {
+    position: 'absolute',
+    top: 12, // Ajuste aqui: top=12 coloca no topo do card (aumente/diminua para mover verticalmente)
+    right: 15, // Ajuste aqui: right=15 coloca no lado direito (aumente para mais Ã  esquerda)
+    zIndex: 1, // Garante que fique sobre o conteÃºdo
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 15,
-    marginLeft: 10,
-    alignSelf: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    minWidth: 80, // Largura mÃ­nima para nÃ£o ficar apertado
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 'bold',
     textTransform: 'uppercase',
     marginLeft: 4,
@@ -611,6 +648,36 @@ const styles = StyleSheet.create({
   listSeparator: {
     height: 0,
   },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 25,
+    left: 0,
+    paddingBottom: 14,
+    paddingTop: 4,
+  },
+  primaryBtn: {
+    flex: 1,
+    backgroundColor: '#007AFF',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginRight: 6,
+  },
+  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  secondaryBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: '#007AFF',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  secondaryBtnText: { color: '#007AFF', fontWeight: '700', fontSize: 15 },
   centeredFeedback: {
     flex: 1,
     justifyContent: 'center',
