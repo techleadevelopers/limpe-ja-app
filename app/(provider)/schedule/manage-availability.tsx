@@ -75,7 +75,7 @@ import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 const Colors = {
   primary: '#4A90E2',
   primaryDark: '#2A72E7',
-  bgSoft: '#F0F7FF',
+  bgSoft: '#F7FAFF',
   surface: '#FFFFFF',
   border: '#E9ECEF',
   fieldBg: '#F8F9FA',
@@ -191,7 +191,7 @@ interface SpecificDateOverride {
   originalSlots?: string[];
 }
 
-type PresetKey = 'morning' | 'afternoon' | 'fullday';
+type PresetKey = 'morning' | 'afternoon' | 'evening' | 'fullday';
 
 interface TimeSlotButtonProps {
   time: string;
@@ -285,6 +285,22 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
   const todayDow = now.getDay();
   const isPastDay = dayOfWeek < todayDow; // dias anteriores a hoje
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const [showFullGrid, setShowFullGrid] = useState(false);
+
+  const currentPeriod = useMemo<PresetKey | 'custom' | 'off'>(() => {
+    if (!availability.isEnabled || availability.selectedSlots.length === 0) return 'off';
+    const s = availability.selectedSlots;
+    const eq = (a: string[], b: string[]) => a.length === b.length && a.every((v, i) => v === b[i]);
+    const m = generateTimeSlots(8, 12, 30);
+    const a = generateTimeSlots(13, 17, 30);
+    const e = generateTimeSlots(18, 21, 30);
+    const f = generateTimeSlots(8, 18, 30);
+    if (eq(s, m)) return 'morning';
+    if (eq(s, a)) return 'afternoon';
+    if (eq(s, e)) return 'evening';
+    if (eq(s, f)) return 'fullday';
+    return 'custom';
+  }, [availability.isEnabled, availability.selectedSlots]);
 
   useEffect(() => {
     Animated.timing(cardAnim, { toValue: 1, duration: 500, easing: easeOut, useNativeDriver: true }).start();
@@ -309,10 +325,56 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           accessibilityHint="Alterna disponibilidade para o dia"
         />
       </View>
-
-      <View style={styles.quickActionsRow}>
+      <View style={styles.periodRow}>
         <TouchableOpacity
-          style={styles.quickActionChip}
+          style={[styles.periodTile, currentPeriod === 'morning' && styles.periodTileActive]}
+          onPress={() => !isPastDay && onApplyPreset(dayOfWeek, 'morning')}
+          disabled={isPastDay}
+          accessibilityRole="button"
+          accessibilityLabel={`Definir manhã em ${dayName}`}
+        >
+          <Ionicons name="sunny-outline" size={18} color={currentPeriod === 'morning' ? '#fff' : Colors.primary} />
+          <Text style={[styles.periodTileText, currentPeriod === 'morning' && styles.periodTileTextActive]}>Manhã</Text>
+          <Text style={[styles.periodTileSub, currentPeriod === 'morning' && styles.periodTileTextActive]}>08–12</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.periodTile, currentPeriod === 'afternoon' && styles.periodTileActive]}
+          onPress={() => !isPastDay && onApplyPreset(dayOfWeek, 'afternoon')}
+          disabled={isPastDay}
+          accessibilityRole="button"
+          accessibilityLabel={`Definir tarde em ${dayName}`}
+        >
+          <Ionicons name="time-outline" size={18} color={currentPeriod === 'afternoon' ? '#fff' : Colors.primary} />
+          <Text style={[styles.periodTileText, currentPeriod === 'afternoon' && styles.periodTileTextActive]}>Tarde</Text>
+          <Text style={[styles.periodTileSub, currentPeriod === 'afternoon' && styles.periodTileTextActive]}>13–17</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.periodTile, currentPeriod === 'evening' && styles.periodTileActive]}
+          onPress={() => !isPastDay && onApplyPreset(dayOfWeek, 'evening')}
+          disabled={isPastDay}
+          accessibilityRole="button"
+          accessibilityLabel={`Definir noite em ${dayName}`}
+        >
+          <Ionicons name="moon-outline" size={18} color={currentPeriod === 'evening' ? '#fff' : Colors.primary} />
+          <Text style={[styles.periodTileText, currentPeriod === 'evening' && styles.periodTileTextActive]}>Noite</Text>
+          <Text style={[styles.periodTileSub, currentPeriod === 'evening' && styles.periodTileTextActive]}>18–21</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.personalizeButton}
+          onPress={() => setShowFullGrid((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel="Personalizar horários"
+        >
+          <Ionicons name="options-outline" size={16} color={Colors.primary} />
+          <Text style={styles.personalizeButtonText}>{showFullGrid ? 'Concluir' : 'Personalizar'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Correção aqui: Adicionei flexWrap, gap e justifyContent para responsividade */}
+      <View style={[styles.quickActionsRow, { flexWrap: 'wrap', gap: 4, justifyContent: 'space-around' }]}>
+        {/* Sobrescrevi width para 30% apenas nesses botões (corrige o overflow do "Dia todo") */}
+        <TouchableOpacity
+          style={[styles.quickTile, { width: '30%' }]}
           onPress={() => !isPastDay && onApplyPreset(dayOfWeek, 'morning')}
           disabled={isPastDay}
           accessibilityRole="button"
@@ -321,7 +383,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           <Text style={styles.quickActionText}>Manhã</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.quickActionChip}
+          style={[styles.quickTile, { width: '30%' }]}
           onPress={() => !isPastDay && onApplyPreset(dayOfWeek, 'afternoon')}
           disabled={isPastDay}
           accessibilityRole="button"
@@ -330,7 +392,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           <Text style={styles.quickActionText}>Tarde</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.quickActionChip}
+          style={[styles.quickTile, { width: '30%' }]}
           onPress={() => !isPastDay && onApplyPreset(dayOfWeek, 'fullday')}
           disabled={isPastDay}
           accessibilityRole="button"
@@ -340,7 +402,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
         </TouchableOpacity>
       </View>
 
-      {availability.isEnabled && !isPastDay && (
+      {availability.isEnabled && !isPastDay && showFullGrid && (
         <View>
           <View style={styles.timeSlotGrid}>
             {ALL_POSSIBLE_SLOTS.map((slot, index) => {
@@ -647,6 +709,7 @@ export default function ManageAvailabilityScreen() {
   const applyPresetSlots = useCallback((preset: PresetKey): string[] => {
     if (preset === 'morning') return generateTimeSlots(8, 12, 30);
     if (preset === 'afternoon') return generateTimeSlots(13, 17, 30);
+    if (preset === 'evening') return generateTimeSlots(18, 21, 30);
     return generateTimeSlots(8, 18, 30);
   }, []);
 
@@ -1079,9 +1142,9 @@ export default function ManageAvailabilityScreen() {
       >
         {activeTab === 'weekly' && (
           <>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginHorizontal: 20, marginTop: 8 }}>
+            <View style={styles.quickTilesRow}>
               <TouchableOpacity 
-                style={styles.quickActionChip} 
+                style={styles.quickTile} 
                 onPress={() => {
                   const today = new Date().getDay();
                   handleApplyPreset(today, 'morning');
@@ -1092,7 +1155,7 @@ export default function ManageAvailabilityScreen() {
                 <Text style={styles.quickActionText}>Disponível hoje 08-12</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.quickActionChip} 
+                style={styles.quickTile} 
                 onPress={() => {
                   const d = new Date(); 
                   const tomorrow = (d.getDay() + 1) % 7;
@@ -1104,7 +1167,7 @@ export default function ManageAvailabilityScreen() {
                 <Text style={styles.quickActionText}>Disponível amanhã 13-17</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.quickActionChip} 
+                style={styles.quickTile} 
                 onPress={() => {
                   const t = new Date().getDay();
                   handleClearSlots(t); 
@@ -1116,7 +1179,7 @@ export default function ManageAvailabilityScreen() {
                 <Text style={styles.quickActionText}>Bloquear hoje (folga)</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.quickActionChip} 
+                style={styles.quickTile} 
                 onPress={() => {
                   const base = new Date().getDay(); 
                   openCopyModal(base); 
@@ -1192,7 +1255,7 @@ export default function ManageAvailabilityScreen() {
                     </Text>
                   )}
                   {currentOverride?.type === 'blocked' && (
-                    <Text style={styles.blockedDayBadge}>🔒 Dia Bloqueado</Text>
+                    <Text style={styles.blockedDayBadge}>Dia Bloqueado</Text>
                   )}
 
                   <TouchableOpacity
@@ -1262,7 +1325,7 @@ export default function ManageAvailabilityScreen() {
           ) : (
             <View style={styles.saveButtonContent}>
               <MaterialCommunityIcons name="content-save" size={18} color="#FFFFFF" style={styles.saveButtonIcon} accessibilityHidden={true} />
-              <Text style={styles.stickySaveButtonText}>Salvar</Text>
+              <Text style={styles.stickySaveButtonText}>Salvar agora</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -1688,6 +1751,92 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: Spacing.sm,
   },
+  // Quick action tiles (top of weekly tab)
+  quickTilesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginTop: 8,
+  },
+  quickTile: {
+    width: '48%',
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.md,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    borderWidth: 0.5,
+    borderColor: Colors.border,
+    alignItems: 'flex-start',
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 }, android: { elevation: 2 } }),
+    gap: 3,
+  },
+  quickTileText: {
+    color: Colors.text,
+    fontWeight: '700',
+    fontSize: 16,
+    marginTop: 4,
+  },
+  quickTileSub: {
+    color: Colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  // Period toggles inside day card
+  periodRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: Spacing.sm,
+  },
+  periodTile: {
+    backgroundColor: Colors.fieldBg,
+    borderRadius: Radii.md,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginRight: Spacing.xs,
+    borderWidth: 0.5,
+    borderColor: Colors.border,
+    minWidth: 96,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  periodTileActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  periodTileText: {
+    marginTop: 4,
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  periodTileTextActive: {
+    color: '#fff',
+  },
+  periodTileSub: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  personalizeButton: {
+    backgroundColor: Colors.fieldBg,
+    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 0.5,
+    borderColor: Colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: -2,
+  },
+  personalizeButtonText: {
+    marginLeft: 6,
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
+  },
   quickActionChip: {
     backgroundColor: Colors.fieldBg,
     paddingVertical: 8,
@@ -1794,12 +1943,12 @@ const styles = StyleSheet.create({
     left: Spacing.md,
     right: Spacing.md,
     bottom: Spacing.md + 4,
-    backgroundColor: Colors.surface,
+    backgroundColor: 'rgba(37,99,235,0.10)',
     borderRadius: Radii.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: Spacing.md,
     ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16 }, android: { elevation: 10 } }),
   },
