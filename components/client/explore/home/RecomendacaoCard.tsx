@@ -24,7 +24,6 @@ import { ProviderServiceOffering } from '../../../../types/backend/provider-serv
 import { formatDistance } from '../../../../utils/formatters';
 import { getFormattedServicePrice, getNumericPriceValue } from '../../../../utils/service-helpers';
 
-
 const AnimatedCardBackground = AnimatedReanimated.createAnimatedComponent(LinearGradient);
 const AnimatedPlusButtonGradient = AnimatedReanimated.createAnimatedComponent(LinearGradient);
 
@@ -40,6 +39,9 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     console.warn('[RecomendacaoCard] Item inválido ou incompleto. Render ignorado:', item);
     return null;
   }
+
+  // NOVO: Extrair apenas o primeiro nome do fullName (split por espaço e pega o primeiro)
+  const firstName = item.fullName.split(' ')[0];
 
   // CORRIGIDO: Use Reanimated para scale (compatível com AnimatedCardBackground)
   const hoverScale = useSharedValue(1); // SharedValue do Reanimated para scale
@@ -108,27 +110,20 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   });
 
   const renderStars = (rating: number | undefined) => {
-    const stars = [];
-    const actualRating = rating ?? 0; // CORRIGIDO: Fallback para 0 se undefined
-    const fullStars = Math.floor(actualRating);
-    const hasHalfStar = actualRating % 1 !== 0;
-
-    for (let i = 0; i < 5; i++) {
-      let iconName: keyof typeof Ionicons.glyphMap = 'star-outline';
-      if (i < fullStars) iconName = 'star';
-      else if (hasHalfStar && i === fullStars) iconName = 'star-half';
-
-      stars.push(
-        <Ionicons
-          key={i}
-          name={iconName}
-          size={10.5}
-          color="#5da2ecff"
-          style={styles.ratingStarIcon}
-        />
+    // MODIFICADO: Agora renderiza apenas 1 estrela cheia, mantendo a cor original
+    if (rating && rating > 0) {
+      return (
+        <View style={styles.ratingStarContainer}>
+          <Ionicons
+            name="star"
+            size={14.5}
+            color="#5da2ecff"
+            style={styles.ratingStarIcon}
+          />
+        </View>
       );
     }
-    return <View style={styles.ratingStarContainer}>{stars}</View>;
+    return null; // Não renderiza se não houver rating
   };
 
   const handleCardPress = () => {
@@ -194,20 +189,65 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   );
 
   const categoriesToDisplay: string[] = [];
+  // NOVO: Extração robusta de categorias a partir de todos os serviços do provider
+  const normalizeText = (s: string) =>
+    s
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+  const extractCategoriesFromServices = (services: ProviderServiceOffering[]): string[] => {
+    const set = new Set<string>();
+    services.forEach((svc) => {
+      const nameRaw = svc?.service?.name || '';
+      if (!nameRaw) return;
+      const n = normalizeText(nameRaw);
+
+      // Detectores por substring (cobrem variações usuais)
+      if (/(comercial|empres|corporativ|industrial)/.test(n)) set.add('Comercial');
+      if (/(escritorio|escritorio)/.test(n) || /escritor/.test(n)) set.add('Escritório');
+      if (/(residencial|domest|casa|lar)/.test(n)) set.add('Residencial');
+      if (/obra/.test(n)) set.add('Obra');
+      if (/vidro|vidrac/.test(n)) set.add('Vidro');
+      if (/estofad|sofa|sof[aá]|poltrona|colch[aã]o/.test(n)) set.add('Estofados');
+      if (/passad|passar\s?roupa/.test(n)) set.add('Passadoria');
+      if (/limpeza\s?geral|pesad|profund/.test(n)) set.add('Limpeza Geral');
+    });
+    return Array.from(set);
+  };
+
+  const priorityOrder = [
+    'Comercial',
+    'Escritório',
+    'Residencial',
+    'Obra',
+    'Vidro',
+    'Estofados',
+    'Passadoria',
+    'Limpeza Geral',
+  ];
+
+  let detectedCategories: string[] = [];
   if (item.providerServices && item.providerServices.length > 0) {
-    if (mainServiceForDisplay?.service?.name) {
-      categoriesToDisplay.push(mainServiceForDisplay.service.name);
-    } else if (item.providerServices[0].service?.name) {
-      categoriesToDisplay.push(item.providerServices[0].service.name);
-    }
+    detectedCategories = extractCategoriesFromServices(item.providerServices);
   }
-  if (categoriesToDisplay.length === 0) {
-    if (item.bio?.toLowerCase().includes('comercial')) categoriesToDisplay.push('Comercial');
-    else if (item.bio?.toLowerCase().includes('escritórios')) categoriesToDisplay.push('Escritório');
-    else {
-      categoriesToDisplay.push('Limpeza Geral');
-    }
+
+  if (detectedCategories.length > 0) {
+    // Ordena por prioridade para destacar categorias mais relevantes
+    detectedCategories.sort(
+      (a, b) => priorityOrder.indexOf(a) - priorityOrder.indexOf(b)
+    );
+    categoriesToDisplay.push(...detectedCategories);
+  } else {
+    // Fallback antigo baseado na bio
+    const bioNorm = item.bio ? normalizeText(item.bio) : '';
+    if (bioNorm.includes('comercial')) categoriesToDisplay.push('Comercial');
+    else if (bioNorm.includes('escritorio')) categoriesToDisplay.push('Escritório');
+    else if (bioNorm.includes('residencial') || bioNorm.includes('domest')) categoriesToDisplay.push('Residencial');
+    else categoriesToDisplay.push('Limpeza Geral');
   }
+
   const displayedCategories = categoriesToDisplay.slice(0, 2); // Até 2 categorias
 
   // Teste visual rápido: Injeta distance: 4000 (4 km) em dev se não vier do backend
@@ -239,47 +279,48 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     if (!hasAcceptanceRate && !hasResponseTime) return null;
 
     return (
-      <View style={styles.metricTextContainer}>
+      <View style={[styles.metricTextContainer, { flexDirection: 'row', alignItems: 'center' }]}>
         {hasAcceptanceRate && (
-          <>
-            <Ionicons name="checkmark-done" size={12} color="#5da2ecff" />
+          <View style={[styles.metricRow, hasResponseTime && { marginRight: 3 }]}>
+            <Ionicons name="checkmark-done" size={12} color="#5da2ecff" /> {/* Reduzido para compactar */}
             <Text style={styles.metricValue} allowFontScaling={false}>{Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? 1))}%</Text>
-          </>
-        )}
-        {hasAcceptanceRate && hasResponseTime && (
-          <Text style={styles.metricSeparator} allowFontScaling={false}> • </Text>
+          </View>
         )}
         {hasResponseTime && (
-          <>
-            <Text style={[styles.metricIcon, { color: '#5da2ecff' }]} allowFontScaling={false}>•</Text>
-            <Ionicons name="time-outline" size={12} color="#5da2ecff" />
-          </>
+          <View style={styles.metricRow}>
+            <Ionicons name="time-outline" size={12} color="#5da2ecff" /> {/* Reduzido para compactar */}
+            <Text style={styles.metricValue} allowFontScaling={false}>{(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? 120)} min</Text>
+          </View>
         )}
       </View>
     );
   };
 
-  const renderMetricsPlus = () => {
-    if (!hasAcceptanceRate && !hasResponseTime) return null;
-    return (
-      <View style={styles.metricTextContainer}>
-        {hasAcceptanceRate && (
-          <>
-            <Ionicons name="checkmark-done" size={12} color="#5da2ecff" />
-            <Text style={styles.metricValue} allowFontScaling={false}>{Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? 1))}%</Text>
-          </>
-        )}
-        {hasAcceptanceRate && hasResponseTime && (
-          <Text style={styles.metricSeparator} allowFontScaling={false}>{' • '}</Text>
-        )}
-        {hasResponseTime && (
-          <>
-            <Ionicons name="time-outline" size={12} color="#5da2ecff" />
-            <Text style={styles.metricValue} allowFontScaling={false}>{(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? 120)} min</Text>
-          </>
-        )}
-      </View>
-    );
+  // NOVO: Função para mapear categoria para ícone (reutilizando os mesmos da CategoriaCard, mas mini e com tint sutil para diferenciar)
+  const getCategoryIconSource = (categoryName?: string) => {
+    if (!categoryName) return require('../../../../assets/images/icons/residencial.png'); // Default
+    const baseName = categoryName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim(); // Normaliza acentos e caixa
+    try {
+      switch (baseName) {
+        case 'residencial': return require('../../../../assets/images/icons/residencial.png');
+        case 'comercial': return require('../../../../assets/images/icons/comercial.png');
+        case 'obra': return require('../../../../assets/images/icons/obra.png');
+        case 'vidro': return require('../../../../assets/images/icons/vidro.png');
+        case 'escritorio':
+        case 'escritório': return require('../../../../assets/images/icons/escritorio.png');
+        case 'estofados': return require('../../../../assets/images/icons/estofados.png');
+        case 'passadoria': return require('../../../../assets/images/icons/passadoria.png');
+        case 'limpeza geral':
+        case 'limpeza': return require('../../../../assets/images/icons/residencial.png'); // Fallback para limpeza geral como residencial
+        default: return require('../../../../assets/images/icons/residencial.png');
+      }
+    } catch {
+      return require('../../../../assets/images/icons/residencial.png');
+    }
   };
 
   return (
@@ -291,15 +332,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
           <Ionicons name="location-outline" size={10} color="#5da2ecff" />
           <Text style={styles.distancePillSmallText} numberOfLines={1} allowFontScaling={false}>
             {distanceLabel}
-          </Text>
-        </View>
-      )}
-
-      {/* NOVO: Pill Residencial Absoluto e Independente (Flutuando sobre a imagem) */}
-      {displayedCategories.length > 0 && (
-        <View style={styles.mainCategoryPillAbsolute}>
-          <Text style={styles.categoryChipText} numberOfLines={1} allowFontScaling={false}>
-            {displayedCategories[0]}
           </Text>
         </View>
       )}
@@ -336,35 +368,46 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                   style={StyleSheet.absoluteFillObject}
                 />
               </AnimatedReanimated.View>
-              <Ionicons name="shield-checkmark" size={22} color="#ffffffc8" />
+              <Ionicons name="shield-checkmark" size={16} color="#ffffffc8" />
             </AnimatedPlusButtonGradient>
+            
           </View>
 
           <View style={styles.infoContainer}>
+            {/* Topo: Nome do provedor */}
             <View style={styles.providerNameContainer}>
-              <Text style={styles.providerName} numberOfLines={1} allowFontScaling={false}>{item.fullName}</Text>
+              <Text style={styles.providerName} numberOfLines={1} allowFontScaling={false}>{firstName}</Text>
             </View>
 
-            <Text style={styles.serviceDescription} numberOfLines={2} allowFontScaling={false}>
-              {item.bio || t('provider.no_description', { defaultValue: 'Nenhuma descrição disponível.' })}
-            </Text>
+            {/* Ícones de serviço (mantidos próximos ao nome) */}
+            {displayedCategories.length > 0 && (
+              <View style={styles.categoryIconsRow}>
+                <View style={styles.categoryIconContainer}>
+                  <Image source={getCategoryIconSource(displayedCategories[0])} style={styles.categoryIcon} resizeMode="contain" />
+                </View>
+                {displayedCategories.length > 1 && (
+                  <View style={styles.categoryIconContainer}>
+                    <Image source={getCategoryIconSource(displayedCategories[1])} style={styles.categoryIcon} resizeMode="contain" />
+                  </View>
+                )}
+              </View>
+            )}
 
-            {/* Métricas mini -- discretas, cor #6C757D */}
-            {renderMetricsPlus()}
-
-            {/* REMOVIDO: categoryChipsContainer antigo (centralizado) - agora movido para seções de preço/rating */}
-
-            <View style={styles.priceAndRatingSection}>
-              {/* Seção Esquerda: Preço - Com flex e marginRight para separação máxima (não mais "junto") */}
-              <View style={{ flex: 0.6, alignItems: 'flex-start', marginRight: 16 }}> {/* CORREÇÃO: flex + marginRight para isolar o preço */}
+            {/* Meio: Estratégia de Preço (seção isolada, centralizada, com badge sutil para destaque) */}
+            <View style={styles.priceRow}>
+              <Image 
+                source={require('../../../../assets/images/icon.png')} 
+                style={styles.priceLogo} 
+                resizeMode="contain" 
+              />
+              <View style={styles.priceSection}>
                 <Text style={styles.priceLabel} allowFontScaling={false}>{t('pricing.from', { defaultValue: 'A partir de' })}</Text>
-                <Text style={styles.priceValue} allowFontScaling={false}>{mainDisplayedPrice}</Text>
-
+                <View style={styles.priceBadge}>
+                  <Text style={styles.priceValue} allowFontScaling={false}>{mainDisplayedPrice}</Text>
+                </View>
                 {shouldShowMinHourlyPrice && minHourlyPrice !== null && (
                   <Text style={styles.hourlyPriceValue} allowFontScaling={false}>
-                    {t('common.or', { defaultValue: 'ou' })}
-                    {' '}
-                    {getFormattedServicePrice({
+                    {t('common.or', { defaultValue: 'ou' })} {getFormattedServicePrice({
                       id: '',
                       providerId: item.id || '',
                       serviceId: '',
@@ -379,21 +422,15 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                   </Text>
                 )}
               </View>
+            </View>
 
-              {/* Seção Direita: Rating individual - Com flex para ocupar só o necessário, centralizado e separado */}
-              <View style={{ flex: 0.4, alignItems: 'center' }}> {/* CORREÇÃO: flex para isolar o rating, sem junção com preço */}
-                {/* Chip de Categoria Secundária acima do rating */}
-                {displayedCategories.length > 1 && (
-                  <View style={styles.rightCategoryChip}>
-                    <Text style={styles.categoryChipText} numberOfLines={1} allowFontScaling={false}>
-                      {displayedCategories[1] || 'Especializado'}
-                    </Text>
-                  </View>
-                )}
-
+            {/* Fundo: Métricas + Ratings (agrupados juntos para proximidade) - REMOVIDO: premiumSeparator */}
+            <View style={styles.metricsAndRatingSection}> {/* NOVO: Container unificado para métricas e ratings */}
+              {renderMetrics()} {/* % e tempo agora aqui, colados às ratings */}
+              <View style={styles.ratingSection}>
                 {renderStars(item.averageRating)}
                 <Text style={styles.reviewsCountText} allowFontScaling={false}>
-                  {(item.reviewCount ?? 0)} Avaliações
+                  {`(${item.reviewCount ?? 0})`}
                 </Text>
               </View>
             </View>
@@ -406,8 +443,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardWrapperWithDistance: { // NOVO ESTILO: Container pai para posicionamento absoluto
-    width: 177,
-    height: 240,
+    width: 155,
+    height: 204, // REDUZIDO: De 260 para 220px (economia de 40px)
     marginRight: 15,
     marginBottom: 5,
     marginTop: 8,
@@ -434,13 +471,13 @@ const styles = StyleSheet.create({
   // NOVO ESTILO: Micro-Pill de Distância (Sutil e Compacto)
   distancePillSmall: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 10,
+    right: 5,
     zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6, // Padding 6x2
-    paddingVertical: 2, // Padding 6x2
+    paddingHorizontal: 3, // Padding 6x2
+    paddingVertical: 1, // Padding 6x2
     borderRadius: 12,
     maxWidth: '55%',
     overflow: 'hidden',
@@ -457,30 +494,9 @@ const styles = StyleSheet.create({
   },
   distancePillSmallText: {
     marginLeft: 4,
-    fontSize: 10, // Fonte 10
+    fontSize: 9, // Fonte 10
     fontWeight: '600',
     color: '#334155',
-  },
-
-  // NOVO ESTILO: Pill de Categoria Principal (Absoluto)
-  mainCategoryPillAbsolute: {
-    position: 'absolute',
-    top: 8, // Flutua 8px abaixo do topo do card (sobre a imagem)
-    left: 12, // 12px da esquerda
-    zIndex: 5, // Abaixo da distância, mas acima do conteúdo do card
-    
-    // Appearance
-    backgroundColor: '#E6EEF9',
-    borderRadius: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    
-    // Floating effect
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1, 
-    shadowRadius: 2,
-    elevation: 3,
   },
 
   cardContentWrapper: {
@@ -491,7 +507,7 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     width: '100%',
-    height: 100, // Foto 3:2 ou 16:9 (190x120 é aprox 16:10)
+    height: 80, // REDUZIDO: De 100 para 85px (economia de 15px)
     backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
@@ -504,20 +520,50 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   infoContainer: {
-    padding: 12,
+    padding: 8, // REDUZIDO: De 12 para 8px (economia de 8px totais)
   },
   providerNameContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    left: 6,
+    top: 2,
+    marginBottom: 2, // Reduzido para dar espaço ao pill abaixo
   },
   providerName: {
-    fontSize: 16, // Nome (16/700)
+    fontSize: 15, // Nome (16/700)
     fontFamily: 'Montserrat-ExtraBold',
     paddingHorizontal: 0,
     fontWeight: '500', // ALTERADO: FontWeight mais grossa (de '700' para '900' para maior espessura)
     color: '#627490ff',
     flexShrink: 1,
+  },
+  // ALTERADO: Estilo para row de ícones de categoria (mini, clean e premium)
+  categoryIconsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4, // Espaçamento abaixo dos ícones, acima das métricas (mantido)
+  },
+  // NOVO: Estilo para container de cada ícone de categoria (fundo sutil para diferenciar da CategoriaCard)
+  categoryIconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.4)', // Fundo azul translúcido premium (tint sutil para não ficar igual à CategoriaCard)
+    borderRadius: 14, // Bordas arredondadas menores
+    padding: 2, // Padding mínimo para "enquadrar" o ícone
+    marginRight: 4, // Espaçamento entre ícones
+    top: 23,
+    left: 8,
+    // Sombra ultra-sutil para premium feel
+    shadowColor: '#5da2ec',
+    shadowOffset: { width: 0, height: 0.5 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  // NOVO: Estilo para o ícone mini de categoria (economiza espaço, ~12px)
+  categoryIcon: {
+    width: 17,
+    height: 17,
+    
+    // Tint aplicado via overlay se necessário, mas como PNG, o fundo do container já diferencia
   },
   docCheckIcon: {
     position: 'absolute',
@@ -541,66 +587,99 @@ const styles = StyleSheet.create({
   metricTextContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: -2,
-    marginBottom: 4,
-    textAlign: 'left',
+    marginTop: 0, // REDUZIDO: De -2 para 0 (compactar)
+    marginBottom: 2, // REDUZIDO: Adicionado pequeno espaço para ratings
+    left: 5,
+    
+    bottom: 83, // REMOVIDO: Posicionamentos absolutos para fluxo natural
+  },
+  metricRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 1,
   },
   metricIcon: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginRight: 2,
+    
   },
   metricValue: {
-    fontSize: 10.5,
+    fontSize: 9, // REDUZIDO: De 10.5 para 10px (compactar)
     color: '#6C757D', // Métricas mini -- discretas, cor #6C757D
+    marginLeft: 2,
   },
   metricSeparator: {
     fontSize: 10,
     color: '#6C757D',
     marginHorizontal: 0,
   },
-  // Novos Styles para Chips Movidos (rightCategoryChip permanece no fluxo)
-  // leftCategoryChip foi substituído por mainCategoryPillAbsolute
-  rightCategoryChip: {
-    backgroundColor: '#E6EEF9',
-    borderRadius: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3, // Padding reduzido para compacto
-    marginBottom: 4, // Espaçamento acima das estrelas
-    alignSelf: 'center', // Centralizado na seção de rating
-  },
-  categoryChipText: {
-    fontSize: 9, // Fonte ligeiramente menor para chips
-    fontWeight: '600', // Destaque
-    color: '#000000',
+  // NOVO: Row para o logo e o container de preço (logo à esquerda do priceSection)
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    left: 28,
+    top: 25,
+    marginBottom: 4,
+    marginTop: 2,
   },
   // CORREÇÃO PRINCIPAL: Removida a lógica de "junção" - agora separação máxima com flex e margin
-  priceAndRatingSection: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start', // CORREÇÃO: Mudado de 'space-between' para alinhar à esquerda sem forçar junção
-    alignItems: 'flex-start', // Mantido: Alinha do topo
-    paddingHorizontal: 0, // CORREÇÃO: Removido padding para não apertar as seções
-    marginTop: 8, // CORREÇÃO: Aumentado para respirar das métricas
+  // NOVO: Seção de preço isolada (estratégia: centralizada, com badge para destaque) - agora sem left/top, pois herdado do row
+  priceSection: {
+    alignItems: 'center',
+    marginLeft: 4, // Pequeno espaçamento entre logo e preço
+    marginBottom: 4, // REDUZIDO: De 0 para 4px (espaço mínimo)
+    right: 50,
+    top: -5,
+  },
+  // NOVO: Estilo para o logo pequeno ao lado esquerdo do preço (fora do badge)
+  priceLogo: {
+    width: 34,
+    height: 34,
+    right: -70,
+    bottom: 140,
+  },
+  // NOVO: Badge para preço (gradiente sutil, economiza altura) - removido o row, pois logo agora fora
+  priceBadge: {
+    backgroundColor: 'rgba(93, 162, 236, 0.1)', // Fundo azul claro translúcido
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    marginTop: 2,
   },
   priceLabel: {
-    fontSize: 12,
+    fontSize: 10, // REDUZIDO: De 12 para 11px
     color: '#6C757D',
-    marginBottom: -2,
+    right: 20,
+    marginBottom: 0, // REDUZIDO: Eliminar margin para compactar
   },
   priceValue: {
-    fontSize: 15, // Preço "A partir de" (16/bold)
+    fontSize: 11, // Preço "A partir de" (16/bold) - mantido bold para destaque
     fontWeight: 'bold',
     color: '#838891ff',
   },
   hourlyPriceValue: {
-    fontSize: 11,
+    fontSize: 10, // REDUZIDO: De 11 para 10px
     fontWeight: 'normal',
     color: '#6C757D',
-    marginTop: 2,
+    marginTop: 0, // REDUZIDO: Espaço mínimo
   },
-  ratingSection: {
-    flexDirection: 'column',
+  // REMOVIDO: premiumSeparator style (não mais usado)
+  // NOVO: Container unificado para métricas e ratings (juntos, row para proximidade)
+  metricsAndRatingSection: {
+    flexDirection: 'row', // Row para colocar métricas à esquerda e ratings à direita
     alignItems: 'center',
+    justifyContent: 'space-between', // Espalha para usar largura
+    marginTop: 10, // Sem topo extra
+    right: 3,
+    top: 10,
+    paddingHorizontal: 2,
+  },
+  ratingSection: { // ALTERADO: Agora parte do container unificado
+    flexDirection: 'row', // MUDADO: Para row, para colocar estrela e count lado a lado
+    alignItems: 'center',
+    marginTop: 0, // Espaçamento acima do rating
+    flex: 1, // Ocupa espaço disponível
+    alignSelf: 'flex-end', // Alinha à direita no row
   },
   profileImage: {
     position: 'relative',
@@ -620,10 +699,10 @@ const styles = StyleSheet.create({
 
   plusButton: {
     position: 'absolute', // CORREÇÃO: Adicionado para permitir left/bottom funcionarem
-    width: 36,
-    height: 36,
-    left: 122, // RESTAURADO: Posicionamento horizontal
-    bottom: -25, // CORREÇÃO: Ajustado de 80 para 10 (cabe na imagem de 120px height; mude para 80 se quiser mais baixo)
+    width: 26,
+    height: 26,
+    left: 88, // RESTAURADO: Posicionamento horizontal
+    bottom: -320, // AJUSTADO: De -25 para -18 (adapta à imagem menor de 85px)
     borderRadius: 53,
     justifyContent: 'center',
     alignItems: 'center',
@@ -641,18 +720,21 @@ const styles = StyleSheet.create({
   },
   ratingStarContainer: {
     flexDirection: 'row',
-    marginBottom: 2,
+    marginTop: 1, // REDUZIDO: De 2 para 1px
+    bottom: 135,
+    left: -79,
+    
   },
   ratingStarIcon: {
-    marginRight: 2,
-    right: 4,
-    top: 3,
+    marginRight: 4, // AJUSTADO: Espaçamento menor para uma única estrela (era 12 para múltiplas)
   },
   reviewsCountText: {
-    fontSize: 8.1, // ALTERAÇÃO: Diminuído em 1% (de 10 para 9.9) para o título de avaliações abaixo das estrelas
+    fontSize: 8, // REDUZIDO: De 9.1 para 9px
     color: '#6C757D',
-    right: 6,
-    top: 3,
+    bottom: 104,
+    right: 0,
+    textAlign: 'right', // Alinha à direita no container row
+    marginLeft: 2, // Pequeno espaçamento entre estrela e count
   },
 });
 
