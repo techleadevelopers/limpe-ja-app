@@ -865,7 +865,7 @@ if (isAuthenticated && user?.id) {
                   iconName="time-outline"
                   text={`${
                     t('metrics.avg_response_time')
-                  }: ${providerMetrics.averageResponseTime} ${t('metrics.minutes_short')}`}
+                  }: ${providerMetrics.averageResponseTime} ${t('common.minutes_short')}`}
                 />
               )}
             </Animated.View>
