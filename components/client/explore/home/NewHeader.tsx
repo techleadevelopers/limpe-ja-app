@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import BubblesRN from '../../../../components/BubblesRN'; // ✅ import do componente de bolhas
 
 interface NewHeaderProps {
   userName: string;
@@ -24,12 +25,6 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
     router.push('/(client)/profile' as any);
   };
 
-  // const handleNotificationsPress = () => {
-  //   // Implemente a lógica de notificação aqui, por exemplo, navegar para uma tela de notificações
-  //   console.log('Notifications pressed');
-  //   // router.push('/(client)/notifications' as any); // Exemplo de navegação
-  // };
-
   const handleCategoryPress = () => {
     router.push('/(client)/explore/menu' as any);
   };
@@ -43,6 +38,18 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
       colors={['#4d8ce415', '#4d8ce415']}
       style={styles.container}
     >
+      {/* ✅ Bubbles por baixo de tudo */}
+      <BubblesRN
+        countMin={45}
+        countMax={68}
+        bubbleMin={5}
+        bubbleMax={14}
+        bubbleColor="rgba(29, 118, 242, 0.2)"
+        bubbleBorderColor="rgba(29,93,242,0.22)"
+        bubbleBorderWidth={0}
+        style={{ ...StyleSheet.absoluteFillObject, zIndex: -1 }}
+      />
+
       <View style={styles.leftContent}>
         <TouchableOpacity onPress={handleProfilePress} style={styles.profileImageContainer}>
           <Image source={avatarSource} style={styles.profileImage} />
@@ -59,7 +66,6 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
             style={styles.categoryIcon}
             resizeMode="contain"
           />
-          {/* <View style={styles.notificationBadge} /> */}
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -87,6 +93,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.17,
     shadowRadius: 9,
     elevation: 6,
+    overflow: 'hidden', // garante que as bolhas não escapem
   },
   leftContent: {
     flexDirection: 'row',
@@ -131,7 +138,6 @@ const styles = StyleSheet.create({
       android: 'bold'
     }),
   },
-  // userAddressText removido (não utilizado)
   rightContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -155,5 +161,3 @@ const styles = StyleSheet.create({
 });
 
 export default NewHeader;
-
-
