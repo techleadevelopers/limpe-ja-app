@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   unreadItem: {
-    backgroundColor: '#E6F2FF',
+    backgroundColor: '#FFFFFF',
   },
   iconContainer: {
     marginRight: 15,
