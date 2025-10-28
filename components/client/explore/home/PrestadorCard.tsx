@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View, Easing } from 'react-native';
 import AnimatedReanimated, { Keyframe as ReKeyframe } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient'; // Adicionado para o efeito de fade na lateral
 import { useTranslation } from 'react-i18next';
 
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
@@ -22,6 +23,7 @@ interface PrestadorCardProps {
 
 const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
+    const pulseScaleAnim = useRef(new Animated.Value(1)).current; // Novo Animated.Value só para o pulso do anel
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
     const { t } = useTranslation();
@@ -44,6 +46,28 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         ]).start();
     }, [fadeAnim, slideAnim]);
 
+    // Animação de pulso contínuo (só no anel, sem interferir no scale do card) - Ajustado para pulso mais sutil e menor (1.1 ao invés de 1.15)
+    useEffect(() => {
+        const pulse = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseScaleAnim, {
+                    toValue: 1.1,
+                    duration: 1500,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseScaleAnim, {
+                    toValue: 1,
+                    duration: 1500,
+                    easing: Easing.in(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ])
+        );
+        pulse.start();
+        return () => pulse.stop();
+    }, [pulseScaleAnim]);
+
     const onPressInCard = () => {
         Animated.spring(scaleAnim, {
             toValue: 0.96,
@@ -62,51 +86,12 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         }).start();
     };
 
-    // Helper para formatar proximos horários (discreto, baseado em data atual)
-    const formatNextAvailable = (next: { date: string; time: string } | undefined): string | null => {
-        if (!next) return null;
-        const today = new Date();
-        const nextDate = new Date(next.date);
-        const diffDays = Math.floor((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
-        if (diffDays === 0) return `Hoje, ${next.time}`;
-        if (diffDays === 1) return `Amanhã, ${next.time}`;
-        return `${days[nextDate.getDay()]} ${next.time}`;
-    };
+    const avatarSource = item.avatarUrl ? { uri: item.avatarUrl } : Icons3D.facial;
 
-    const renderStars = (rating: number | undefined) => {
-        const actualRating = rating ?? 0;
-        let iconName: keyof typeof Ionicons.glyphMap = 'star-outline';
-        if (actualRating >= 4) iconName = 'star';
-        else if (actualRating >= 3) iconName = 'star-half';
-        return (
-            <View style={styles.starContainer}>
-                <Ionicons
-                    name={iconName}
-                    size={16}
-                    color="#5da2ecff" // Mantendo o azul para consista?�ncia com o a?�cone de localizaa?�a?�o
-                    style={styles.starIcon}
-                />
-            </View>
-        );
-    };
-
-    const primaryService = item.providerServices && item.providerServices.length > 0 ? item.providerServices[0] : null;
-    const specialtyName = primaryService && primaryService.service ? primaryService.service.name : 'Serviço';
-
-    // Dista?�ncia: alinhar com RecomendacaoCard (sem injea?�a?�o __DEV__); fallback "0 km" quando ausente/<=0
+    // Distância: alinhar com RecomendacaoCard (sem injeâão __DEV__); fallback "0 km" quando ausente/<=0
     const distanceLabel = (typeof item.distance === 'number' && item.distance > 0)
         ? formatDistance(item.distance)
         : '0 km';
-
-    // Label para pra?�ximo hora?�rio
-    const nextAvailableLabel = formatNextAvailable(item.nextAvailable);
-
-    // Usar o helper getFormattedServicePrice
-    const servicePrice = primaryService ? getFormattedServicePrice(primaryService, t) : t('provider_details.price_not_available');
-    const avatarSource = item.avatarUrl ? { uri: item.avatarUrl } : Icons3D.facial;
-
-    // REMOVIDO: renderAbsoluteLocation()
 
     // Track impression (fire-and-forget)
     useEffect(() => {
@@ -115,7 +100,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         }
     }, [item?.id]);
 
-    // Efeito premium de aparia?�a?�o (inspirado em slide-in com leve rotate)
+    // Efeito premium de aparição (inspirado em slide-in com leve rotate)
     const hash = (item?.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
     const side = (hash % 2 === 0) ? 1 : -1; // direita/esquerda alternado
     const amp = (hash % 3) + 1; // 1..3
@@ -140,76 +125,37 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
 
-                <View style={styles.imageWrapper}>
-                    <Image source={avatarSource} style={styles.cardImage} />
-                </View>
+                {/* NOVO: Micro-Pill de Localização/Distância (Sutil e Compacto, flutuando no canto superior direito) */}
+                {distanceLabel && (
+                    <View style={styles.distancePillSmall}>
+                        <Ionicons name="location-outline" size={10} color="#5da2ecff" />
+                        <Text style={styles.distancePillSmallText} numberOfLines={1} allowFontScaling={false}>
+                            {distanceLabel}
+                        </Text>
+                    </View>
+                )}
 
-                {/* Selo Verificado: Movido para fora do imageWrapper, com zIndex alto para 100% visibilidade */}
+                {/* Selo Verificado: Movido para fora do LinearGradient para evitar corte por overflow: hidden */}
                 {item.verificationStatus === 'APPROVED' && (
                     <View style={styles.verifiedBadgeOutside}>
                         <Ionicons name="shield-checkmark" size={12} color="#5da2ecff" />
                     </View>
                 )}
 
-                <View style={styles.detailsContent}>
-                    {/* Linha com nome e distância (distância movida para cá, acima da sugestão de horário) */}
-                    <View style={styles.nameRow}>
-                        <Text style={styles.providerName} numberOfLines={1} allowFontScaling={false}>{item.fullName}</Text>
-                        {distanceLabel && (
-                            <View style={styles.distancePill}>
-                                <Ionicons name="location-outline" size={10} color="#5da2ecff" />
-                                <Text style={styles.distancePillText} numberOfLines={1} allowFontScaling={false}>{distanceLabel}</Text>
-                            </View>
-                        )}
+                {/* Adicionado: LinearGradient para o fade na lateral direita, degradando para '#F1F2F2' */}
+                <LinearGradient
+                    colors={['rgba(213, 220, 230, 0.41)', '#F1F2F2']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.gradientOverlay}
+                >
+                    <View style={styles.imageWrapper}>
+                        {/* Efeito de pulso premium (agora dentro do imageWrapper, partindo da borda da imagem) */}
+                        <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseScaleAnim }] }]} />
+                        <Image source={avatarSource} style={styles.cardImage} />
                     </View>
-                    <Text style={styles.specialtyText} numberOfLines={1} allowFontScaling={false}>{specialtyName}</Text>
+                </LinearGradient>
 
-                    {/* Badges premium: Verificado, Top 10%, Resposta ra?�pida (na?�o-intrusivos) */}
-                    <View style={styles.badgesRow}>
-                        {typeof item.averageRating === 'number' && item.averageRating >= 4.7 && (item.reviewCount ?? 0) >= 25 && (
-                            <View style={styles.badge}><Text style={styles.badgeText}>Top 10%</Text></View>
-                        )}
-                        {typeof item.averageResponseTime === 'number' && item.averageResponseTime > 0 && item.averageResponseTime <= 15 && (
-                            <View style={styles.badge}><Text style={styles.badgeText}>Resposta rapida</Text></View>
-                        )}
-                        {item.backgroundCheckResult ? (
-                            <View style={styles.badge}><Text style={styles.badgeText}>Segurança</Text></View>
-                        ) : null}
-                    </View>
-
-                    {/* COMENTADO: Linha de métricas (Aceitação, Tempo de Resposta - sem distância, que foi movida) - Remove 1% e 180min da interface */}
-                    {/* <View style={styles.metricsRow}>
-                        {item.acceptanceRate != null && (
-                            <>
-                    {`${Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? providerMetrics.acceptanceRate ?? 1))}%`}
-                                {/* Separador só se houver Tempo de Resposta */}
-
-                            {/* </> */}
-                        {/* )} */}
-                        
-                        {/* {item.averageResponseTime != null && (
-                    {`${(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? providerMetrics.averageResponseTime ?? 120)} min`}
-                        )} */}
-                    {/* </View> */}
-
-                    {/* COMENTADO: Pra?�ximo hora?�rio dispona?�vel (ex: "Dom 09:00") - Remove da interface */}
-                    {/* {nextAvailableLabel && (
-                        <View style={styles.ratingRow}>
-                            <Text style={styles.nextAvailableText} allowFontScaling={false}>{nextAvailableLabel}</Text>
-                        </View>
-                    )} */}
-
-                    <View style={styles.priceRow}>
-                        <Text style={styles.priceText} allowFontScaling={false}>{servicePrice}</Text>
-                        {item.averageRating !== undefined && item.reviewCount !== undefined && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
-                                {renderStars(item.averageRating)}
-                                <Text style={styles.reviewsText} allowFontScaling={false}>{`${item.reviewCount ?? 0} `}</Text>
-                            </View>
-                        )}
-                    </View>
-                </View>
-          
             </TouchableOpacity>
         </Animated.View>
         </AnimatedReanimated.View>
@@ -218,15 +164,12 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
 
 const styles = StyleSheet.create({
     animatedCardContainer: {
-        marginRight: 12,
+        marginRight: 10,
         marginBottom: 11,
         marginTop: 12,
-        borderRadius: 64,
+        borderRadius: 42,
         overflow: 'visible',
-        borderRightWidth: 1,
-        borderBottomWidth: 1.5,
-        borderLeftWidth: 1.1,
-        borderTopWidth: 0.2,
+   
         borderColor: '#9cb6df53',
         borderBottomColor: '#9cb6df53',
         borderTopStartRadius: 42,
@@ -235,201 +178,117 @@ const styles = StyleSheet.create({
         borderBottomEndRadius: 42,
     },
     cardContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: 240,
-        height: 60,
-        backgroundColor: 'rgba(213, 220, 230, 0.41)',
-        borderRadius: 40, // Raio do card 20
-        padding: 4, // Densidade maior (padding 8)
+        width: 74, // Reduzido para caber apenas a imagem (80 + padding mínimo)
+        height: 74, // Quadrado para fundo redondo
+        // Removido backgroundColor - agora gerenciado pelo LinearGradient
+        borderRadius: 42, // Full round (metade da width/height)
+        padding: 2, // Padding mínimo ao redor da imagem
         position: 'relative',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'visible', // Garantir que o pulso e badges cresçam para fora sem corte
     },
-    // REMOVIDO: distancePillTopRight (movido para inline com o nome)
-    
-    // Novo estilo para a linha do nome com dista?�ncia inline (acima da sugesta?�o de hora?�rio)
-    nameRow: {
+    // NOVO ESTILO: Micro-Pill de Distância (Sutil e Compacto, flutuando no topo direito)
+    distancePillSmall: {
+        position: 'absolute',
+        top: 69,
+        right: -11,
+        zIndex: 10,
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 2,
-    },
-    // Estilo do pill de dista?�ncia (agora inline, sem absolute)
-    distancePill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.8)',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 12,
+        paddingHorizontal: 3,
+        paddingVertical: 1,
+        borderRadius: 8,
+        maxWidth: '60%',
+        overflow: 'hidden',
+        ...Platform.select({
+            ios: { backgroundColor: 'rgba(255,255,255,0.75)' }, // Blur/white 70-80%
+            android: { backgroundColor: 'rgba(255,255,255,0.8)' },
+        }),
+        // sombra sutilíssima (shadowOpacity 0.06, elevation 2)
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.06,
         shadowRadius: 2,
         elevation: 2,
-        right: 8,
-        marginLeft: 8, // Espaçamento à esquerda do nome
     },
-    distancePillText: {
-        marginLeft: 2,
-        fontSize: 10,
+    distancePillSmallText: {
+        marginLeft: 1.5,
+        fontSize: 8, // Fonte pequena para caber no card reduzido
         fontWeight: '600',
         color: '#334155',
     },
-    
-    imageWrapper: {
-        width: 80, // Avatar maior: 64dp
-        height: 80, // Avatar maior: 64dp
-        borderRadius: 40,
-        overflow: 'hidden',
-        marginRight: 5,
-        backgroundColor: '#c1d8f1ff',
-        // Ring premium: 1.5dp branco + 0.5dp #E8EEF8
-        borderWidth: 2, 
-        borderColor: '#E8EEF8', 
-        padding: 1, // Simula o anel interno branco
-        position: 'relative', 
+    // NOVO ESTILO: Overlay de gradiente para fade na lateral direita
+    gradientOverlay: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 42,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden', // Para manter o formato arredondado do gradiente
+        position: 'relative',
     },
-    // REMOVIDO: verifiedBadge (antigo, dentro da imagem)
+    imageWrapper: {
+        width: 58,                // reduzido (antes 65)
+        height: 58,
+        borderRadius: 34,
+        overflow: 'visible',
+        backgroundColor: '#f8fbff', // tom neutro limpo de fundo
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 0.8,
+        borderColor: 'rgba(230,240,255,0.9)',
+        position: 'relative',
+        zIndex: 1,
+    },
+    pulseRing: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        width: 62, // Ajustado para iniciar exatamente na borda externa da imagem (58 + 2*2 para cobrir bordas internas/externas)
+        height: 62,
+        marginLeft: -31, // Centralizado precisamente para flush com a borda
+        marginTop: -31,
+        borderRadius: 31, // Matching com o novo size para bordas arredondadas perfeitas
+        backgroundColor: 'transparent', // Fundo transparente para só mostrar a borda
+        borderWidth: 1.2, // Ligeiramente mais grosso para visibilidade no pulso
+        borderColor: '#2dc4c475', // MESMA COR da borda da imagem, para harmonia perfeita
+        shadowColor: '#2dc4c475', // Ajustado para matching com a cor da borda (glow verde-azulado translúcido)
+        shadowOpacity: 0.4, // Aumentado para glow mais visível no pulso
+        shadowRadius: 12, // Raio maior para efeito de expansão suave
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 4, // Elevação Android para profundidade
+        zIndex: 0, // Fica POR TRÁS da imagem (zIndex 2), iniciando coberto e expandindo para fora
+    },
+    // ESTILO ATUALIZADO: Badge de Verificação - Posicionado fora do gradient para visibilidade total, no canto inferior direito da imagem para UI premium limpa (evita conflito com distance pill no topo)
     verifiedBadgeOutside: { 
         position: 'absolute',
-        top: -8, // Mesma posição relativa à imagem (ajustado para fora do container)
-        left: 62, // Posição para sobrepor a imagem (após marginRight:12 da imageWrapper)
-        zIndex: 10, // zIndex alto para ficar 100% acima do container
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        padding: 2,
-        elevation: 4,
+        bottom: 8, // Posicionado no inferior direito da imagem (espaçamento premium: 8px da borda)
+        right: 8, // Alinhado perfeitamente com a borda direita do card/imagem
+        zIndex: 20, // zIndex ainda mais alto para sobrepor tudo (incluindo gradient e pulse)
+        backgroundColor: 'rgba(255, 255, 255, 0.95)', // Fundo branco semi-translúcido para premium clean UI
+        borderRadius: 12, // Bordas mais arredondadas para look moderno e premium
+        padding: 3, // Padding ligeiramente maior para espaçamento interno clean
+        elevation: 6, // Sombra mais pronunciada no Android para profundidade
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15, // Sombra sutil mas visível para elevação premium
+        shadowRadius: 4,
+        // Borda sutil premium em todas as bordas do badge
+        borderWidth: 0.5,
+        borderColor: 'rgba(93, 162, 236, 0.3)', // Borda azul translúcida para harmonizar com o tema
+      
     },
     cardImage: {
         width: '100%',
         height: '100%',
         resizeMode: 'cover',
-   
         marginBottom: 2,
-        borderRadius: 42, // Para garantir que a imagem se encaixe no anel
-        borderWidth: 1.5, // Simula o anel interno branco
-        borderColor: '#FFF',
-    },
-    detailsContent: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    providerName: {
-        fontSize: 14,
-        fontWeight: '600', // Nome (15/600)
-        color: '#6b8299ff',
-        flex: 1, // Para permitir que o nome ocupe o espaço disponível
-    },
-    specialtyText: {
-        fontSize: 11,
-        color: '#666',
-        marginBottom: 2,
-    },
-    // Estilos da linha de métricas (agora com distância inline)
-    metricsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 2,
-        marginBottom: 0,       
-        flexWrap: 'wrap'
-        
-    },
-    metricText: {
-        fontSize: 9,
-        color: '#555',
-        fontWeight: '600', // Fonte 10/600
-    },
-    metricSep: {
-        fontSize: 9,
-        color: '#6C757D'
-    },
-    // REMOVIDO: metricInlineLoc (movido para absolute no canto)
-    badgesRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginBottom: 0,
-    },
-    badge: {
-        backgroundColor: '#E8EEF8',
-        borderRadius: 12,
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        marginRight: 6,
-        marginBottom: 6,
-    },
-    badgeText: {
-        fontSize: 9,
-        color: '#2C3E50',
-        fontWeight: '600',
-    },
-    // Fim dos estilos de métricas
-
-    ratingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 4,
-    },
-    starContainer: {
-        flexDirection: 'row',
-        marginRight: 2,
-    },
-    starIcon: {
-        marginRight: 1,
-        bottom: 2,
-    },
-    reviewsText: {
-        fontSize: 12,
-        color: '#888',
-        marginRight: 16,
-        bottom: 2,
-    },
-    priceText: {
-        fontSize: 14, // Preço grande (14--15/bold)
-        fontWeight: 'bold',
-        color: '#838891ff',
-    },
-    priceRow: { 
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    nextAvailableText: { // Chip Próximo Horário
-        fontSize: 10,
-        color: '#6C757D',
-        fontWeight: '600', // Fonte 10/600
-        backgroundColor: 'rgba(255,255,255,0.5)', // Fundo branco 40--50%
-        paddingHorizontal: 4,
-        paddingVertical: 2,
-        borderRadius: 8, // Borda-radius 8
-        marginLeft: 0,
-    },
-    goButton: {
-        backgroundColor: '#29a2e7b0',
-        borderRadius: 25,
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginLeft: 15,
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 3,
-            },
-            android: {
-                elevation: 4,
-            },
-        }),
+        borderRadius: 34, // Ajustado para matching exato com imageWrapper (antes 40, agora 34 para clean)
+        borderWidth: 1.5, // Simula o anel interno
+        borderColor: '#2dc4c475', // Cor solicitada na borda da imagem
+        zIndex: 2, // Acima do pulso para não interferir (pulso fica por trás)
     },
 });
 
 export default PrestadorCard;
-
-
-
-
