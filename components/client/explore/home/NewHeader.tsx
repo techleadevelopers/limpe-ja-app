@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import BubblesRN from '../../../../components/BubblesRN'; // ✅ import do componente de bolhas
 
 interface NewHeaderProps {
   userName: string;
@@ -38,17 +37,7 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
       colors={['#4d8ce415', '#4d8ce415']}
       style={styles.container}
     >
-      {/* ✅ Bubbles por baixo de tudo */}
-      <BubblesRN
-        countMin={45}
-        countMax={68}
-        bubbleMin={5}
-        bubbleMax={14}
-        bubbleColor="rgba(29, 118, 242, 0.2)"
-        bubbleBorderColor="rgba(29,93,242,0.22)"
-        bubbleBorderWidth={0}
-        style={{ ...StyleSheet.absoluteFillObject, zIndex: -1 }}
-      />
+      {/* Efeito BubbleRN removido – restante mantido */}
 
       <View style={styles.leftContent}>
         <TouchableOpacity onPress={handleProfilePress} style={styles.profileImageContainer}>
@@ -93,7 +82,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.17,
     shadowRadius: 9,
     elevation: 6,
-    overflow: 'hidden', // garante que as bolhas não escapem
+    overflow: 'hidden', // mantém cantos arredondados
   },
   leftContent: {
     flexDirection: 'row',
@@ -161,3 +150,4 @@ const styles = StyleSheet.create({
 });
 
 export default NewHeader;
+
