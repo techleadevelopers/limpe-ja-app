@@ -642,7 +642,7 @@ export default function ExploreClientScreen() {
                       onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
                       style={styles.viewAllButton}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Ionicons name="add" size={16} color="#398beeff" />
+                      <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />
                     </TouchableOpacity>
                   </View>
                   <SecaoContainer<Service>
@@ -739,12 +739,14 @@ export default function ExploreClientScreen() {
                     opacity: providersAnim,
                     transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
                   }}>
+                  <View style={styles.exploreMoreSpacing}>
                   <View style={styles.miniGridHeader}>
                     <Text style={styles.miniGridTitle} allowFontScaling={false}>
                       {t('explore_section.title')}
                     </Text>
                   </View>
                   <HorizontalMiniGrid />
+                  </View>
                 </Animated.View>
 
                 {/* Spacer para scroll extra (compensa absolutos) */}
@@ -874,7 +876,7 @@ export default function ExploreClientScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F2F2',
   },
   overlay: {
     flex: 1,
@@ -1001,7 +1003,7 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F2F2',
     marginHorizontal: 5,
   },
   scrollViewArea: {
@@ -1013,7 +1015,7 @@ const styles = StyleSheet.create({
   },
   contentWrapper: {
     flexGrow: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F1F2F2',
     paddingTop: 0,
     paddingBottom: 80,
     paddingHorizontal: 2,
@@ -1093,6 +1095,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 21,
     marginTop: 2,
   },
+  // Espaçamento adicional para manter a seção "Explore mais serviços" um pouco abaixo do carrossel
+  exploreMoreSpacing: {
+    marginTop: 16,
+  },
   miniGridTitle: {
     fontSize: 15,
     fontFamily: 'Montserrat-Regular',
@@ -1154,6 +1160,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 4,
+  },
+  // Desloca levemente o ícone "+" para baixo (~3px)
+  viewAllIcon: {
+    transform: [{ translateY: 3 }],
   },
   viewAllText: {
     fontSize: 11,
