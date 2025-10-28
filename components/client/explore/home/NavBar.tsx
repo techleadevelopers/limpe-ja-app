@@ -45,7 +45,7 @@ const NavBar: React.FC<NavBarProps> = ({
   const NAVBAR_HEIGHT = 60; // Altura da navbar existente
   const CURRENT_COLOR = '#4A5568'; // Cor neutra escura para item selecionado (substitui o azul)
   const LI_COLOR = '#969b9cff'; // Cor do texto para itens não selecionados (@li-color)
-  const BACKGROUND_COLOR = '#ffffffff'; // Cor de fundo da barra de navegação (@background-color do div.menu)
+  const BACKGROUND_COLOR = '#f5f5f5'; // Cor de fundo da barra de navegação (@background-color do div.menu)
 
   // Callback para obter a largura da barra de navegação após o layout (mantido para layout inicial)
   const onNavBarLayout = (event: LayoutChangeEvent) => {
