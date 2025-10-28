@@ -14,8 +14,8 @@ interface CategoriaCardProps {
   item: ServiceDetailsDto;
 }
 
-const TINT_GRADIENT_START = 'rgba(230, 240, 255, 0.7)';
-const TINT_GRADIENT_END = 'rgba(196, 197, 205, 0.23)';
+const TINT_GRADIENT_START = 'rgba(146, 210, 241, 0.45)';
+const TINT_GRADIENT_END = 'rgba(175, 183, 244, 0.12)';
 const BLUR_INTENSITY = Platform.OS === 'ios' ? 20 : 40;
 const BLUR_TINT = 'light';
 const TEXT_COLOR = 'rgba(54, 57, 60, 0.62)';
@@ -27,10 +27,10 @@ const PRIMARY_ELEVATION_ANDROID = 4; // mais suave (4–6)
 
 // Bordas
 const BORDER_COLOR_LIGHT = Platform.select({
-  ios: 'rgba(255, 255, 255, 1.0)',
+  ios: '#2dc4c475',
   android: 'rgba(255, 255, 255, 0.9)',
 });
-const BORDER_WIDTH = 1.5;
+const BORDER_WIDTH = 1.3;
 
 const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
   const router = useRouter();
@@ -154,7 +154,7 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
         <BlurView intensity={BLUR_INTENSITY} tint={BLUR_TINT} style={StyleSheet.absoluteFillObject} />
 
         {/* Fundo translúcido frio */}
-        <LinearGradient colors={['#F9FBFF', '#E6F0FF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+        <LinearGradient colors={['#F1F2F2', '#F1F2F2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
 
         {/* Tinta sutil do conteúdo */}
         <LinearGradient colors={[TINT_GRADIENT_START, TINT_GRADIENT_END]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.contentOverlay}>
@@ -191,9 +191,9 @@ const styles = StyleSheet.create({
   cardContainerWrapper: {
     width:  46,
     height: 40 + 15,
-    marginRight: 15,
-    right: 14,
-    borderRadius: 25,
+    marginRight: 11,
+    right: 8,
+    borderRadius: 45,
     marginBottom: -4,
     marginTop: 12,
     alignItems: 'center',
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   touchableSurface: {
     width: '100%',
     height: 45,
-    borderRadius: 15,
+    borderRadius: 45,
     overflow: 'hidden',
     borderWidth: BORDER_WIDTH,
     backgroundColor: 'rgba(255, 255, 255, 0.85)', // translúcido premium
