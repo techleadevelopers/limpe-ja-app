@@ -943,6 +943,213 @@ export async function main() {
     `Oferta de serviço para ${providerUser4.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
   );
 
+  // Garantir que TODAS as prestadoras atendam: Residencial, Comercial e Pós-Obra
+  // Sem alterar as ofertas já existentes (apenas upsert dos que faltarem)
+  const postConstructionService = createdServices['Pós-Obra'];
+
+  // Caroline: adicionar Pós-Obra (FIXED_PRICE)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser.provider.id,
+        serviceId: postConstructionService.id,
+        pricingType: PricingType.FIXED_PRICE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(300.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+    create: {
+      providerId: providerUser.provider.id,
+      serviceId: postConstructionService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(300.0),
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+  });
+  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser.fullName} criada/atualizada.`);
+
+  // Maria: garantir Comercial (HOURLY) e Pós-Obra (FIXED_PRICE)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser2.provider.id,
+        serviceId: commercialService.id,
+        pricingType: PricingType.HOURLY,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.HOURLY,
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+    create: {
+      providerId: providerUser2.provider.id,
+      serviceId: commercialService.id,
+      pricingType: PricingType.HOURLY,
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+  });
+  console.log(`Oferta de serviço Comercial (HOURLY) para ${providerUser2.fullName} criada/atualizada.`);
+
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser2.provider.id,
+        serviceId: postConstructionService.id,
+        pricingType: PricingType.FIXED_PRICE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(300.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+    create: {
+      providerId: providerUser2.provider.id,
+      serviceId: postConstructionService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(300.0),
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+  });
+  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser2.fullName} criada/atualizada.`);
+
+  // Joana: garantir Comercial (HOURLY) e Pós-Obra (FIXED_PRICE)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser3.provider.id,
+        serviceId: commercialService.id,
+        pricingType: PricingType.HOURLY,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.HOURLY,
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+    create: {
+      providerId: providerUser3.provider.id,
+      serviceId: commercialService.id,
+      pricingType: PricingType.HOURLY,
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+  });
+  console.log(`Oferta de serviço Comercial (HOURLY) para ${providerUser3.fullName} criada/atualizada.`);
+
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser3.provider.id,
+        serviceId: postConstructionService.id,
+        pricingType: PricingType.FIXED_PRICE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(300.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+    create: {
+      providerId: providerUser3.provider.id,
+      serviceId: postConstructionService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(300.0),
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+  });
+  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser3.fullName} criada/atualizada.`);
+
+  // Ana: garantir Comercial (HOURLY) e Pós-Obra (FIXED_PRICE)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser4.provider.id,
+        serviceId: commercialService.id,
+        pricingType: PricingType.HOURLY,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.HOURLY,
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+    create: {
+      providerId: providerUser4.provider.id,
+      serviceId: commercialService.id,
+      pricingType: PricingType.HOURLY,
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+  });
+  console.log(`Oferta de serviço Comercial (HOURLY) para ${providerUser4.fullName} criada/atualizada.`);
+
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser4.provider.id,
+        serviceId: postConstructionService.id,
+        pricingType: PricingType.FIXED_PRICE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(300.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+    create: {
+      providerId: providerUser4.provider.id,
+      serviceId: postConstructionService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(300.0),
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+  });
+  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser4.fullName} criada/atualizada.`);
+
   // Disponibilidade semanal do provedor existente (exemplo: seg/qua/sex 09:00-12:00)
   console.log('Criando/Atualizando disponibilidade do provedor...');
   const weekdays = [1, 3, 5]; // 1 = Segunda, 3 = Quarta, 5 = Sexta
