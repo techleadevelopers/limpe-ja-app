@@ -41,7 +41,7 @@ const SecaoContainer = <T extends { id: string | number }>({
         {horizontal && (
           <LinearGradient
             // PREMIUM: Gradiente mais suave com base no fundo branco
-            colors={['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.9)']}
+            colors={['rgba(255, 255, 255, 0)', '#F1F2F2']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.rightFade}
@@ -51,7 +51,7 @@ const SecaoContainer = <T extends { id: string | number }>({
         {/* PREMIUM: Ativado o fade da esquerda para simetria */}
         {horizontal && (
           <LinearGradient
-            colors={['rgba(255, 255, 255, 0.9)', 'rgba(255, 255, 255, 0)']}
+            colors={['#F1F2F2', 'rgba(255, 255, 255, 0)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.leftFade}
