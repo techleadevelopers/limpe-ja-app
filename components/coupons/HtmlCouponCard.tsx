@@ -1,20 +1,31 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Pressable, useColorScheme, Modal } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Pressable,
+  useColorScheme,
+  Modal,
+  Animated,
+  Easing,
+} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
-import Toast from '../Toast'; // Assuming Toast component is correctly imported
-import Colors from '../../constants/Colors'; // Assuming Colors is correctly imported
-import Button from '../common/Button'; // Assuming Button component is correctly imported
-import { BlurView } from 'expo-blur'; // Import BlurView for the blur effect
+import Toast from '../Toast';
+import Colors from '../../constants/Colors';
+import Button from '../common/Button';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 
-// Helper hook to get current theme colors
+// Helper hook to get theme colors
 function useTheme() {
   const scheme = useColorScheme?.() || 'light';
   const theme = (Colors as any)[scheme] || (Colors as any).light;
   return theme as typeof Colors.light;
 }
 
-// Props interface for the HtmlCouponCard component
 interface HtmlCouponCardProps {
   code: string;
   title: string;
@@ -23,7 +34,7 @@ interface HtmlCouponCardProps {
   logoUrl?: string;
   onUseNow: (code: string) => void;
   onDismiss: () => void;
-  isVisible: boolean; // New prop to control the visibility of the modal/overlay
+  isVisible: boolean;
 }
 
 export const HtmlCouponCard: React.FC<HtmlCouponCardProps> = ({
@@ -34,144 +45,278 @@ export const HtmlCouponCard: React.FC<HtmlCouponCardProps> = ({
   logoUrl,
   onUseNow,
   onDismiss,
-  isVisible, // Destructure the new isVisible prop
+  isVisible,
 }) => {
-  const [copyButtonText, setCopyButtonText] = useState('COPY CODE');
+  const [copyButtonText, setCopyButtonText] = useState('COPIAR');
   const theme = useTheme();
 
-  // Function to copy the coupon code to clipboard
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isVisible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 450,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 450,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(30);
+    }
+  }, [isVisible]);
+
+  // Pulso luminoso no botão principal
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.07,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
   const copyToClipboard = async () => {
     try {
       await Clipboard.setStringAsync(code);
-      setCopyButtonText('COPIED');
-      Toast.show({ type: 'info', text1: 'Código Copiado!', text2: 'Cole no seu aplicativo para usar.' });
-      setTimeout(() => setCopyButtonText('COPY CODE'), 3000); // Reset button text after 3 seconds
+      setCopyButtonText('COPIADO!');
+      Toast.show({
+        type: 'success',
+        text1: 'Código copiado!',
+        text2: 'Cole no campo de cupom para usar.',
+      });
+      setTimeout(() => setCopyButtonText('COPIAR'), 3000);
     } catch (e) {
-      console.error('Falha ao copiar para a área de transferência', e);
-      Toast.show({ type: 'error', text1: 'Erro ao Copiar', text2: 'Tente novamente.' });
+      Toast.show({ type: 'error', text1: 'Erro', text2: 'Não foi possível copiar o código.' });
     }
   };
 
-  // Memoized formatting for the expiration date
   const formattedExpiresAt = useMemo(() => {
     if (!expiresAt) return '';
     const date = new Date(expiresAt);
-    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
   }, [expiresAt]);
 
-  // Memoized image source for the logo
   const imageSource = useMemo(() => {
-    return logoUrl
-      ? { uri: logoUrl }
-      : require('../../assets/images/logo2.png'); // Fallback local image
+    return logoUrl ? { uri: logoUrl } : require('../../assets/images/logo2.png');
   }, [logoUrl]);
 
-  // Handler for the "Usar" (Use Now) button
-  const handleUseNow = (code: string) => {
-    onUseNow(code); // Call the provided onUseNow callback
-  };
-
   return (
-    // Modal component to display the coupon card as an overlay
     <Modal
-      visible={isVisible} // Control modal visibility with the isVisible prop
-      transparent // Allows the background to be seen through (for blur)
-      animationType="fade" // Smooth fade animation for modal appearance/disappearance
-      onRequestClose={onDismiss} // Callback when the user requests to close the modal (e.g., hardware back button on Android)
+      visible={isVisible}
+      transparent
+      animationType="none"
+      onRequestClose={onDismiss}
     >
-      {/* BlurView for the robust dark blur effect */}
-      <BlurView
-        intensity={80} // Adjust intensity for desired blur strength (e.g., 80 for robust blur)
-        tint="dark" // Apply a dark tint over the blur
-        style={styles.fullScreenBlur} // Style to make BlurView cover the entire screen
-      >
-        {/* Pressable wrapper to allow closing the modal by tapping outside the coupon card */}
+      <BlurView intensity={40} tint="light" style={styles.fullScreenBlur}>
         <Pressable style={styles.modalContentWrapper} onPress={onDismiss}>
-          {/* The actual coupon card content, wrapped in a Pressable to stop propagation of taps */}
-          <Pressable onPress={(e) => e.stopPropagation()} style={styles.couponCardContainer}>
-            {/* Close button for the coupon card */}
-            <Pressable onPress={onDismiss} style={styles.closeButton} accessibilityLabel="Fechar">
-              <Text style={[styles.closeButtonText, { color: '#fff' }]}>✕</Text>
+          <Animated.View
+            onStartShouldSetResponder={() => true}
+            style={[
+              styles.couponCardContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={['#D8F2FF', '#C6E8FF', '#FFFFFF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.gradientBackground}
+            />
+
+            {/* Botão fechar */}
+            <Pressable onPress={onDismiss} style={styles.closeButton}>
+              <Ionicons name="close" size={18} color="#4A90E2" />
             </Pressable>
 
-            {/* Logo image */}
+            {/* Logo */}
             <Image source={imageSource} style={styles.logo} />
 
-            {/* Title and optional subtitle */}
-            <Text style={styles.h3}>
-              {title}
-              {subtitle ? <Text style={styles.h3Subtitle}>{'\n'}{subtitle}</Text> : null}
-            </Text>
+            {/* Título */}
+            <Text style={styles.title}>{title}</Text>
+            {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
 
-            {/* Coupon code and copy button row */}
+            {/* Código e botão copiar */}
             <View style={styles.couponRow}>
-              <Text style={styles.cpnCode}>{code}</Text>
-              <TouchableOpacity onPress={copyToClipboard} style={styles.cpnBtn}>
-                <Text style={styles.cpnBtnText}>{copyButtonText}</Text>
+              <Text style={styles.couponCode}>{code}</Text>
+              <TouchableOpacity onPress={copyToClipboard} style={styles.copyButton}>
+                <Text style={styles.copyButtonText}>{copyButtonText}</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Expiration date */}
-            <Text style={styles.p}>Validade: {formattedExpiresAt}</Text>
+            {/* Validade */}
+            {formattedExpiresAt ? (
+              <Text style={styles.validityText}>Válido até {formattedExpiresAt}</Text>
+            ) : null}
 
-            {/* "Usar" (Use Now) button */}
-            <Button title="Usar" onPress={() => handleUseNow(code)} style={styles.useNowButton} />
+            {/* Botão principal com pulso */}
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <TouchableOpacity
+                style={styles.ctaButton}
+                onPress={() => onUseNow(code)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.ctaText}>Usar Agora</Text>
+              </TouchableOpacity>
+            </Animated.View>
 
-            {/* Decorative circles on the sides */}
-            <View style={[styles.circle, styles.circle1, { backgroundColor: theme.background }]} />
-            <View style={[styles.circle, styles.circle2, { backgroundColor: theme.background }]} />
-          </Pressable>
+            {/* Efeitos decorativos */}
+            <View style={styles.glowCircleLeft} />
+            <View style={styles.glowCircleRight} />
+          </Animated.View>
         </Pressable>
       </BlurView>
     </Modal>
   );
 };
 
-// Stylesheet for the component
 const styles = StyleSheet.create({
-  // Style for the full-screen blur overlay
   fullScreenBlur: {
     flex: 1,
-    // A slight background color on top of the blur can enhance the dark effect
-    backgroundColor: 'rgba(3, 3, 3, 0.1)',
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
-  // Wrapper to center the coupon card within the modal and handle taps outside
   modalContentWrapper: {
     flex: 1,
-    justifyContent: 'center', // Center vertically
-    alignItems: 'center', // Center horizontally
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  // Container style for the coupon card itself (replaces original couponCard positioning)
   couponCardContainer: {
-    backgroundColor: '#56c7f7ff',
-    paddingVertical: 10,
-    paddingHorizontal: 55,
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-    elevation: 5,
-    position: 'relative', // Keep relative for positioning inner elements like circles
-    width: '90%', // Make it responsive, take 90% of parent width
-    maxWidth: 400, // Limit max width for larger screens
-    alignItems: 'center', // Center content horizontally within the card
+    width: '85%',
+    maxWidth: 380,
+    borderRadius: 22,
+    paddingVertical: 25,
+    paddingHorizontal: 30,
+    alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: '#3ED6F8',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
   },
-  // Existing styles for internal elements, kept intact as requested
-  closeButton: { position: 'absolute', top: 8, right: 19, zIndex: 2, padding: 2 },
-  closeButtonText: { fontSize: 12, color: '#fff' },
-  logo: { width: 85, height: 40, right: 10, borderRadius: 8, marginBottom: 3, resizeMode: 'contain' },
-  h3: { fontSize: 18, fontWeight: 'bold', lineHeight: 12, color: '#fff', textAlign: 'center', marginBottom: 8 },
-  h3Subtitle: { fontSize: 13, fontFamily: 'Montserrat-Thin', fontWeight: 'normal', lineHeight: 15, color: '#fff' },
-  p: { fontSize: 11, color: '#174df0ff', marginBottom: 3, fontFamily: 'Montserrat-Thin', fontWeight: 'bold', left: 110, top: 38 },
-  couponRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 5 },
-  cpnCode: { borderWidth: 1, borderColor: '#fff', paddingVertical: 3, paddingHorizontal: 4, borderTopLeftRadius: 5, borderBottomLeftRadius: 5, borderRightWidth: 0, color: '#3647dfff', backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden', fontSize: 10 },
-  cpnBtn: { borderWidth: 1, borderColor: '#fff', backgroundColor: '#fff', paddingVertical: 3, paddingHorizontal: 8, borderTopRightRadius: 5, borderBottomRightRadius: 5 },
-  cpnBtnText: { color: '#5887feff', fontWeight: 'bold', fontSize: 10 },
-  circle: { width: 35, height: 35, borderRadius: 27.5, position: 'absolute', top: '50%', transform: [{ translateY: -7.5 }] },
-  circle1: { left: -7.5 },
-  circle2: { right: -7.5 },
-  useNowButton: { marginTop: -8, width: '40%', paddingVertical: 1, marginBottom: 15 },
+  gradientBackground: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 22,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 15,
+    zIndex: 10,
+  },
+  logo: {
+    width: 90,
+    height: 40,
+    resizeMode: 'contain',
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#316CDE',
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#3E5E7E',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  couponRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  couponCode: {
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+    fontWeight: '700',
+    color: '#3B6EF5',
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: '#C5E2FF',
+  },
+  copyButton: {
+    backgroundColor: '#3B6EF5',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  copyButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  validityText: {
+    fontSize: 12,
+    color: '#4A6EB0',
+    marginBottom: 15,
+  },
+  ctaButton: {
+    backgroundColor: '#3ED6F8',
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    borderRadius: 14,
+    shadowColor: '#3ED6F8',
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  ctaText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    textTransform: 'uppercase',
+  },
+  glowCircleLeft: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(62,214,248,0.25)',
+    left: -40,
+    top: 40,
+    blurRadius: 40,
+  },
+  glowCircleRight: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(173,216,255,0.25)',
+    right: -40,
+    bottom: 40,
+    blurRadius: 40,
+  },
 });
 
 export default HtmlCouponCard;
