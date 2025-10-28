@@ -51,7 +51,7 @@ export const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   scrollContentContainer: {
-    paddingBottom: 100, // Ajuste para dar espaço ao botão fixo "Agendar Serviço"
+    paddingBottom: 50, // Ajuste para dar espaço ao botão fixo "Agendar Serviço"
   },
 
   // --- Estilos para a Imagem do Provedor e o Card Principal (inspirado no Print 2) ---
