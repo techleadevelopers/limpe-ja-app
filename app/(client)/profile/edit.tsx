@@ -37,8 +37,10 @@ import Toast from '../../../components/Toast';
 import { Sheet } from '../../../components/Sheet';
 import { EmptyState } from '../../../components/EmptyState';
 import Colors from '../../../constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
-// Componente para exibir mensagens de erro inline com animação (mantido, mas com estilo premium)
+/* Animated error message (kept) */
 const AnimatedErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -67,7 +69,7 @@ const AnimatedErrorMessage: React.FC<{ message: string | null }> = ({ message })
   );
 };
 
-// Componente Button refatorado para premium (sem dependência externa, clean)
+/* Button component (kept, minor cosmetic) */
 interface ButtonProps {
   title: string;
   onPress: () => void;
@@ -178,6 +180,7 @@ const buttonStyles = StyleSheet.create({
 export default function EditClientProfileScreen() {
   const { user, updateUser } = useAuth() as { user: UserProfile | null, updateUser: (user: Partial<UserProfile>) => void };
   const router = useRouter();
+  const theme = useThemeForButton();
 
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -468,26 +471,29 @@ export default function EditClientProfileScreen() {
     >
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header premium - Branco com sombra */}
+      {/* Header premium - glass variant */}
       <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityLabel="Voltar">
-          <Ionicons name="arrow-back" size={24} color="#333333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Editar Meu Perfil</Text>
-        <View style={styles.headerActionIconPlaceholder} />
+        <LinearGradient colors={[theme.primaryLight || '#EAF3FF', theme.background || '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.headerGradient}>
+          {Platform.OS !== 'web' && <BlurView intensity={12} tint="light" style={styles.headerBlur} />}
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityLabel="Voltar">
+            <Ionicons name="arrow-back" size={24} color="#274B63" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Editar Meu Perfil</Text>
+          <View style={styles.headerActionIconPlaceholder} />
+        </LinearGradient>
       </Animated.View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Animated.View style={[styles.animatedContentWrapper, { opacity: contentAnim, transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-          {/* Avatar section - Card #F2F2F2 */}
+          {/* Avatar section */}
           <View style={styles.avatarSection}>
             <TouchableOpacity
               onPress={() => setShowAvatarSheet(true)}
               onPressIn={onPressInAvatar}
               onPressOut={onPressOutAvatar}
               style={[
-                styles.avatarContainer, 
-                { transform: [{ scale: avatarScaleAnim }] }, 
+                styles.avatarContainer,
+                { transform: [{ scale: avatarScaleAnim }] },
                 !avatarUri && styles.dashedBorder
               ]}
               disabled={isUploadingAvatar}
@@ -523,7 +529,7 @@ export default function EditClientProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Form section - Card #F2F2F2 para inputs */}
+          {/* Form section */}
           <View style={styles.formSection}>
             <Text style={styles.label}>Nome Completo *</Text>
             <Animated.View style={[styles.inputContainer, { borderColor: getInputBorderColor(fullNameBorderAnim, !!fullNameError) }]}>
@@ -574,7 +580,6 @@ export default function EditClientProfileScreen() {
             </Animated.View>
             <AnimatedErrorMessage message={phoneError} />
 
-            {/* Endereço - Inputs em cards individuais #F2F2F2 */}
             <Text style={styles.label}>Endereço</Text>
             {isAddressSectionIncomplete && (
               <EmptyState
@@ -648,7 +653,6 @@ export default function EditClientProfileScreen() {
             />
           </View>
 
-          {/* Link button - Clean */}
           <TouchableOpacity
             style={styles.linkButton}
             onPress={() => {
@@ -664,7 +668,6 @@ export default function EditClientProfileScreen() {
             <Text style={styles.linkButtonText}>Alterar Senha</Text>
           </TouchableOpacity>
 
-          {/* Save button - Premium com animação */}
           <TouchableOpacity
             style={[styles.saveButton, isLoading && styles.saveButtonDisabled, { transform: [{ scale: saveButtonScaleAnim }] }]}
             onPress={handleSaveChanges}
@@ -685,7 +688,6 @@ export default function EditClientProfileScreen() {
         </Animated.View>
       </ScrollView>
 
-      {/* Sheet premium para avatar */}
       <Sheet
         visible={showAvatarSheet}
         onClose={() => setShowAvatarSheet(false)}
@@ -719,7 +721,7 @@ export default function EditClientProfileScreen() {
 const styles = StyleSheet.create({
   keyboardAvoidingContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // Fundo branco premium
+    backgroundColor: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
@@ -733,27 +735,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
+  },
+  headerGradient: {
+    width: '100%',
     paddingHorizontal: 20,
     paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    borderRadius: 0,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.06,
         shadowRadius: 4,
       },
-      android: { elevation: 4 },
+      android: { elevation: 2 },
     }),
   },
+  headerBlur: { ...StyleSheet.absoluteFillObject },
   headerBackButton: {
     marginRight: 16,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#333333',
+    color: '#274B63',
     flex: 1,
     textAlign: 'center',
   },
@@ -764,14 +771,14 @@ const styles = StyleSheet.create({
   avatarSection: {
     alignItems: 'center',
     marginBottom: 32,
-    backgroundColor: '#F2F2F2', // Card para avatar
+    backgroundColor: '#F2F2F2',
     borderRadius: 16,
     padding: 20,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.06,
         shadowRadius: 4,
       },
       android: { elevation: 4 },
@@ -792,7 +799,7 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.06,
         shadowRadius: 8,
       },
       android: { elevation: 6 },
@@ -838,14 +845,14 @@ const styles = StyleSheet.create({
   },
   formSection: {
     marginBottom: 24,
-    backgroundColor: '#F2F2F2', // Card para form
+    backgroundColor: '#F2F2F2',
     borderRadius: 16,
     padding: 20,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.06,
         shadowRadius: 4,
       },
       android: { elevation: 4 },
@@ -872,13 +879,13 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.02,
         shadowRadius: 2,
       },
       android: { elevation: 2 },
     }),
   },
-  inputField: { // Inputs de endereço como mini-cards
+  inputField: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E5E5',
@@ -892,7 +899,7 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.02,
         shadowRadius: 2,
       },
       android: { elevation: 2 },
@@ -948,7 +955,7 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#007AFF',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.14,
         shadowRadius: 6,
       },
       android: { elevation: 6 },
