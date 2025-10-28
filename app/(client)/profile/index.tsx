@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,130 +8,108 @@ import {
   TouchableOpacity,
   Image,
   Platform,
-  Animated,
-  Easing,
-  TextInput,
-  ImageSourcePropType,
+  useColorScheme,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import Colors from '../../../constants/Colors';
 
-/** ----------------------------------------------------------------
- *  3D ICONS (absolute paths, ready for Metro bundler)
- *  ---------------------------------------------------------------- */
-const Icons3D = {
-  calendar: require('../../../assets/images/3d/calender.png'),
-  account: require('../../../assets/images/3d/perfil.png'),
-  notifications: require('../../../assets/images/3d/notification.png'),
-  safety: require('../../../assets/images/3d/security.png'),
-  terms: require('../../../assets/images/3d/policies.png'),
-  policy: require('../../../assets/images/3d/doc-check.png'),
-  support: require('../../../assets/images/3d/support.png'),
-} satisfies Record<string, ImageSourcePropType>;
+const AppLogo = require('../../../assets/images/logo.png');
 
-/** ================================================================
- * Animated Menu Item (supports 3D PNG icons)
- * ================================================================ */
-const AnimatedMenuItem: React.FC<{
-  label: string;
-  onPress: () => void;
-  delay: number;
-  icon3d?: ImageSourcePropType;
-  ionName?: keyof typeof Ionicons.glyphMap;
-  mciName?: keyof typeof MaterialCommunityIcons.glyphMap;
-  isDestructive?: boolean;
-  showChevron?: boolean;
-}> = ({
-  label,
-  onPress,
-  delay,
-  icon3d,
-  ionName,
-  mciName,
-  isDestructive,
-  showChevron = true,
-}) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+function useTheme() {
+  const scheme = useColorScheme?.() || 'light';
+  const theme = (Colors as any)[scheme] || (Colors as any).light;
+  return theme as typeof Colors.light;
+}
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        delay,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 400,
-        delay,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [fadeAnim, slideAnim, delay]);
-
-  const onPressInItem = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.98,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const onPressOutItem = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
-
+const ProfileHero: React.FC<{
+  name: string;
+  subtitle: string;
+  avatarUrl?: string | null;
+  onBack: () => void;
+  onSubtitlePress?: () => void;
+}> = ({ name, subtitle, avatarUrl, onBack, onSubtitlePress }) => {
+  const theme = useTheme();
   return (
-    <Animated.View
-      style={[
-        styles.menuItemWrapper,
-        { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] },
-      ]}
+    <LinearGradient
+      colors={[theme.primaryLight || '#EAF3FF', '#FFFFFF']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.hero}
     >
-      <TouchableOpacity
-        style={[styles.menuItem, isDestructive && styles.menuItemDestructive]}
-        onPress={onPress}
-        onPressIn={onPressInItem}
-        onPressOut={onPressOutItem}
-        activeOpacity={0.7}
-      >
-        {icon3d ? (
-          <Image source={icon3d} style={styles.menuItem3DIcon} resizeMode="contain" />
-        ) : mciName ? (
-          <MaterialCommunityIcons
-            name={mciName as any}
-            size={20} // Reduzido de 24 para 20
-            color={isDestructive ? '#D32F2F' : '#4682B4'}
-            style={styles.menuItemIcon}
-          />
-        ) : ionName ? (
-          <Ionicons
-            name={ionName as any}
-            size={20} // Reduzido de 24 para 20
-            color={isDestructive ? '#D32F2F' : '#4682B4'}
-            style={styles.menuItemIcon}
-          />
+      {Platform.OS !== 'web' && <BlurView intensity={10} tint="light" style={StyleSheet.absoluteFill} />}
+      <View style={styles.heroRow}>
+        <TouchableOpacity onPress={onBack} accessibilityLabel="Voltar" style={styles.heroBackBtn}>
+          <Ionicons name="arrow-back" size={22} color="#274B63" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.heroProfileRow}>
+        <View style={styles.heroAvatarWrap}>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.heroAvatarImg} />
+          ) : (
+            <View style={styles.heroAvatarPlaceholder}>
+              <Ionicons name="person" size={28} color="#8AAAE0" />
+            </View>
+          )}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.heroName}>{name}</Text>
+          <TouchableOpacity onPress={onSubtitlePress} accessibilityLabel="Seus cupons">
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.heroSubtitle}>{subtitle}</Text>
+              <Ionicons name="chevron-forward-outline" size={16} color="#6C6C6C" />
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </LinearGradient>
+  );
+};
+
+const ListRow: React.FC<{
+  label: string;
+  ionIcon?: keyof typeof Ionicons.glyphMap;
+  mciIcon?: keyof typeof MaterialCommunityIcons.glyphMap;
+  badge?: number;
+  onPress?: () => void;
+  destructive?: boolean;
+}> = ({ label, ionIcon, mciIcon, badge, onPress, destructive }) => {
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.row} activeOpacity={0.9}>
+      <View style={styles.rowLeft}>
+        {ionIcon ? (
+          <Ionicons name={ionIcon as any} size={20} color={destructive ? '#D32F2F' : '#2C3E50'} style={{ marginRight: 12 }} />
+        ) : mciIcon ? (
+          <MaterialCommunityIcons name={mciIcon as any} size={20} color={destructive ? '#D32F2F' : '#2C3E50'} style={{ marginRight: 12 }} />
         ) : null}
-
-        <Text style={[styles.menuItemText, isDestructive && styles.menuItemTextDestructive]}>
-          {label}
-        </Text>
-
-        {showChevron && !isDestructive && (
-          <Ionicons name="chevron-forward-outline" size={18} color="#C7C7CC" /> // Reduzido de 22 para 18
+        <Text style={[styles.rowLabel, destructive && { color: '#D32F2F', fontWeight: '600' }]}>{label}</Text>
+      </View>
+      <View style={styles.rowRight}>
+        {typeof badge === 'number' && badge > 0 && (
+          <View style={styles.badge}><Text style={styles.badgeText}>{badge}</Text></View>
         )}
-      </TouchableOpacity>
-    </Animated.View>
+        {!destructive && <Ionicons name="chevron-forward-outline" size={16} color="#C7C7CC" />}
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const PaymentCard: React.FC<{ onPress: () => void }> = ({ onPress }) => {
+  return (
+    <TouchableOpacity style={styles.paymentCard} onPress={onPress} activeOpacity={0.95}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Image source={AppLogo} style={{ width: 46, height: 18, resizeMode: 'contain', marginRight: 8 }} />
+        <View>
+          <Text style={styles.paymentTitle}>Pagamentos</Text>
+          <Text style={styles.paymentSubtitle}>Gerencie suas formas de pagamento ou pague na maquininha</Text>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward-outline" size={18} color="#C7C7CC" />
+    </TouchableOpacity>
   );
 };
 
@@ -139,53 +117,11 @@ export default function ClientProfileScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
 
-  // Simulated points/metrics
-  const [userPoints] = useState(1250);
-
-  // page animations
-  const headerAnim = useRef(new Animated.Value(0)).current;
-  const profileHeaderAnim = useRef(new Animated.Value(0)).current;
-  const avatarScaleAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.stagger(200, [
-      Animated.timing(headerAnim, {
-        toValue: 1,
-        duration: 500,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(profileHeaderAnim, {
-        toValue: 1,
-        duration: 700,
-        delay: 100,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [headerAnim, profileHeaderAnim]);
-
-  const onPressInAvatar = useCallback(() => {
-    Animated.spring(avatarScaleAnim, { toValue: 0.95, useNativeDriver: true }).start();
-  }, [avatarScaleAnim]);
-
-  const onPressOutAvatar = useCallback(() => {
-    Animated.spring(avatarScaleAnim, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  }, [avatarScaleAnim]);
-
-  // Modificação aqui: Removido o Alert.alert de confirmação e todos os console.log/console.error para evitar erro no LogBox.
-  // Se precisar debugar: if (__DEV__) console.log('[ClientProfileScreen] Logout executado');
   const handleLogout = async () => {
     try {
       await logout();
       router.replace('/(auth)/login' as any);
     } catch (error) {
-      // Removido: console.error para evitar LogBox error. Mantenha só o Alert para UX.
       Alert.alert('Erro ao Sair', 'Não foi possível sair da conta. Por favor, tente novamente.');
     }
   };
@@ -199,10 +135,7 @@ export default function ClientProfileScreen() {
       <View style={styles.centeredMessageContainer}>
         <Stack.Screen options={{ headerShown: false }} />
         <Text style={styles.loadingText}>Usuário não encontrado. Por favor, faça login novamente.</Text>
-        <TouchableOpacity
-          style={styles.simpleButton}
-          onPress={() => router.replace('/(auth)/login' as any)}
-        >
+        <TouchableOpacity style={styles.simpleButton} onPress={() => router.replace('/(auth)/login' as any)}>
           <Text style={styles.simpleButtonText}>Ir para Login</Text>
         </TouchableOpacity>
       </View>
@@ -210,129 +143,39 @@ export default function ClientProfileScreen() {
   }
 
   const userName = user.fullName || 'Usuário';
-  const userSlogan = 'Bio over here';
   const userAvatarUrl = user.avatarUrl;
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
-      <Animated.View
-        style={[
-          styles.customHeaderWrapper,
-          { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] },
-        ]}
-      >
-        <View style={styles.customHeader}>
-          <TouchableOpacity style={styles.headerIconLeft} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color="#2F4F4F" /> {/* Reduzido de 24 para 20 */}
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Perfil</Text>
-          <View style={styles.headerIconRightPlaceholder} />
-        </View>
-      </Animated.View>
+      <ProfileHero
+        name={userName}
+        subtitle={'usar cupons de até R$21,90'}
+        avatarUrl={userAvatarUrl}
+        onBack={() => router.back()}
+        onSubtitlePress={() => router.push('/(client)/profile/edit' as any)}
+      />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContentContainer}>
-        {/* User header card */}
-        <Animated.View
-          style={[
-            styles.profileHeader,
-            { opacity: profileHeaderAnim, transform: [{ translateY: profileHeaderAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={() => router.push('/(client)/profile/edit' as any)}
-            onPressIn={onPressInAvatar}
-            onPressOut={onPressOutAvatar}
-            style={[styles.avatarContainer, { transform: [{ scale: avatarScaleAnim }] }]}
-          >
-            {userAvatarUrl ? (
-              <Image source={{ uri: userAvatarUrl }} style={styles.avatarImage} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person-circle-outline" size={50} color="#69abeeff" /> {/* Reduzido de 70 para 50 */}
-              </View>
-            )}
-            <View style={styles.editIconBadge}>
-              <Ionicons name="pencil" size={12} color="#fff" /> {/* Reduzido de 14 para 12 */}
-            </View>
-          </TouchableOpacity>
+        <PaymentCard onPress={() => handleWIP('Pagamentos')} />
 
-          <View style={styles.userInfoTextContainer}>
-            <Text style={styles.userName}>{userName}</Text>
-            <Text style={styles.userSlogan}>{userSlogan}</Text>
-            <Text style={styles.userPointsText}>Pontos: {userPoints}</Text>
-          </View>
-
-          <TouchableOpacity onPress={() => handleWIP('QR Code')}>
-            <MaterialCommunityIcons name="qrcode-scan" size={20} color="#6C757D" /> {/* Reduzido de 24 para 20 */}
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Menu essencial */}
-        <View style={styles.menuSection}>
-          <AnimatedMenuItem
-            label="Meus Agendamentos"
-            icon3d={Icons3D.calendar}
-            onPress={() => router.push('/(client)/bookings' as any)}
-            delay={0}
-            showChevron={false}
-          />
-          <AnimatedMenuItem
-            label="Conta"
-            icon3d={Icons3D.account}
-            onPress={() => router.push('/(client)/profile/edit' as any)}
-            delay={50}
-            showChevron={false}
-          />
-          <AnimatedMenuItem
-            label="Notificações"
-            icon3d={Icons3D.notifications}
-            onPress={() => router.push('/(common)/notifications' as any)}
-            delay={100}
-            showChevron={false}
-          />
-          <AnimatedMenuItem
-            label="Segurança"
-            icon3d={Icons3D.safety}
-            onPress={() => router.push('/(common)/safety' as any)}
-            delay={150}
-            showChevron={false}
-          />
+        <View style={styles.section}>
+          <ListRow label="Conversas" ionIcon="chatbubble-outline" onPress={() => handleWIP('Conversas')} badge={2} />
+          <ListRow label="Notificações" ionIcon="notifications-outline" onPress={() => router.push('/(common)/notifications' as any)} />
+          <ListRow label="Dados da conta" ionIcon="person-outline" onPress={() => router.push('/(client)/profile/edit' as any)} />
+          <ListRow label="Clube" ionIcon="ribbon-outline" onPress={() => handleWIP('Clube')} />
+          <ListRow label="Cupons" ionIcon="pricetag-outline" onPress={() => handleWIP('Cupons')} />
+          <ListRow label="Código de entrega" ionIcon="qr-code-outline" onPress={() => handleWIP('Código de entrega')} />
+          <ListRow label="Comunidade" ionIcon="people-outline" onPress={() => handleWIP('Comunidade')} />
+          <ListRow label="Fidelidade" ionIcon="star-outline" onPress={() => handleWIP('Fidelidade')} />
         </View>
 
-        {/* Seção inferior (suporte/legal + sair) */}
-        <View style={styles.bottomSection}>
-          <AnimatedMenuItem
-            label="Suporte"
-            icon3d={Icons3D.support}
-            onPress={() => router.push('/(common)/help' as any)}
-            delay={200}
-            showChevron={false}
-          />
-          <AnimatedMenuItem
-            label="Termos de Serviço"
-            icon3d={Icons3D.terms}
-            onPress={() => router.push('/(common)/termos' as any)}
-            delay={250}
-            showChevron={false}
-          />
-          <AnimatedMenuItem
-            label="Política de Privacidade"
-            icon3d={Icons3D.policy}
-            onPress={() => router.push('/(common)/privacidade' as any)}
-            delay={300}
-            showChevron={false}
-          />
-          <AnimatedMenuItem
-            label="Sair da Conta"
-            ionName="log-out-outline"
-            onPress={handleLogout} 
-            isDestructive
-            delay={350}
-            showChevron={false}
-          />
+        <View style={styles.section}>
+          <ListRow label="Suporte" ionIcon="help-circle-outline" onPress={() => router.push('/(common)/help' as any)} />
+          <ListRow label="Termos de Serviço" ionIcon="document-text-outline" onPress={() => router.push('/(common)/termos' as any)} />
+          <ListRow label="Política de Privacidade" ionIcon="shield-checkmark-outline" onPress={() => router.push('/(common)/privacidade' as any)} />
+          <ListRow label="Sair" ionIcon="log-out-outline" destructive onPress={handleLogout} />
         </View>
       </ScrollView>
     </View>
@@ -340,131 +183,64 @@ export default function ClientProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#f2f2f2',
-   },
+  container: { flex: 1, backgroundColor: '#f7f7f7' },
   scrollView: { flex: 1 },
-  scrollViewContentContainer: { paddingBottom: 40,  paddingHorizontal: 15, }, // Reduzido de 20 para 15
+  scrollViewContentContainer: { paddingBottom: 40, paddingHorizontal: 12 },
 
   centeredMessageContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   simpleButton: { marginTop: 20, backgroundColor: '#007AFF', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
   simpleButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   loadingText: { fontSize: 16, color: '#6C757D', marginBottom: 10 },
 
-  customHeaderWrapper: {},
-  customHeader: {
+  // hero
+  hero: { paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 16, paddingHorizontal: 14 },
+  heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroBackBtn: { padding: 6 },
+  heroProfileRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center' },
+  heroAvatarWrap: { width: 42, height: 42, borderRadius: 21, overflow: 'hidden', backgroundColor: '#F0F2F5', marginRight: 10 },
+  heroAvatarImg: { width: '100%', height: '100%' },
+  heroAvatarPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  heroName: { fontSize: 18, fontWeight: '700', color: '#111' },
+  heroSubtitle: { fontSize: 13, color: '#6C6C6C', marginTop: 4 },
+
+  // cards/sections
+  paymentCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 12,
+    marginHorizontal: 4,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    backgroundColor: 'transparent',
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 6 }, android: { elevation: 3 } }),
   },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#2F4F4F', textAlign: 'center', flex: 1 },
-  headerIconLeft: { padding: 5, zIndex: 1 },
-  headerIconRightPlaceholder: { width: 34, zIndex: 1 },
+  paymentTitle: { fontSize: 16, color: '#111', fontWeight: '600' },
+  paymentSubtitle: { fontSize: 12, color: '#6C6C6C', marginTop: 2, maxWidth: 240 },
 
-  profileHeader: {
+  section: {
+    marginTop: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginHorizontal: 4,
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 6 }, android: { elevation: 2 } }),
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15, // Reduzido de 20 para 15
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: '#ECECEC',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginHorizontal: 15,
-    marginTop: 20,
-    marginBottom: 20,
-    paddingHorizontal: 15, // Reduzido de 20 para 15
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.08)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-      },
-      android: { elevation: 6 },
-    }),
   },
-
-  avatarContainer: {
-    position: 'relative',
-    width: 60, // Reduzido de 80 para 60
-    height: 60, // Reduzido de 80 para 60
-    borderRadius: 30, // Ajustado para 60/2
-    borderWidth: 3,
-    borderColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-    marginRight: 12, // Reduzido de 15 para 12
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.15)',
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.25,
-        shadowRadius: 10,
-      },
-      android: { elevation: 8 },
-    }),
-  },
-  avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  avatarPlaceholder: { width: '100%', height: '100%', backgroundColor: '#E9ECEF', justifyContent: 'center', alignItems: 'center' },
-  editIconBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#4A90E2',
-    padding: 5, // Reduzido de 6 para 5
-    borderRadius: 10, // Ajustado para menor
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-
-  userInfoTextContainer: { flex: 1 },
-  userName: { fontSize: 18, fontWeight: 'bold', color: '#739aeaff' },
-  userSlogan: { fontSize: 14, color: '#6C757D', marginTop: 4, fontStyle: 'italic' },
-  userPointsText: { fontSize: 14, fontWeight: 'bold', color: '#4CAF50', marginTop: 8 },
-
-  menuSection: {
-    marginTop: 15,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginHorizontal: 15,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.08)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-      },
-      android: { elevation: 6 },
-    }),
-  },
-  menuItemWrapper: {},
-  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 15 }, // Reduzido padding de 15/20 para 12/15
-  menuItemDestructive: { backgroundColor: 'rgba(211, 47, 47, 0.05)' },
-  menuItemIcon: { marginRight: 12 }, // Reduzido de 15 para 12
-  menuItem3DIcon: { width: 28, height: 28, marginRight: 12 }, // Reduzido de 36 para 28
-  menuItemText: { flex: 1, fontSize: 16, color: '#212529' }, // Reduzido de 18 para 16
-  menuItemTextDestructive: { color: '#D32F2F', fontWeight: '600' },
-
-  bottomSection: {
-    marginTop: 25,
-    marginBottom: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginHorizontal: 15,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.08)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-      },
-      android: { elevation: 6 },
-    }),
-  },
+  rowLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  rowRight: { flexDirection: 'row', alignItems: 'center' },
+  rowLabel: { fontSize: 15, color: '#1F2E35', flex: 1 },
+  badge: { backgroundColor: '#FF2D55', paddingHorizontal: 8, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  badgeText: { color: '#fff', fontWeight: '700', fontSize: 12 },
 });
+
