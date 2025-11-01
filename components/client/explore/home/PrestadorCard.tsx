@@ -164,7 +164,9 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
 
 const styles = StyleSheet.create({
     animatedCardContainer: {
-        marginRight: 10,
+        marginRight: 9,
+        left: 2,
+        top: 0,
         marginBottom: 11,
         marginTop: 12,
         borderRadius: 42,
@@ -178,12 +180,14 @@ const styles = StyleSheet.create({
         borderBottomEndRadius: 42,
     },
     cardContainer: {
-        width: 74, // Reduzido para caber apenas a imagem (80 + padding mínimo)
-        height: 74, // Quadrado para fundo redondo
+        width: 76, // Reduzido para caber apenas a imagem (80 + padding mínimo)
+        height: 76, // Quadrado para fundo redondo
         // Removido backgroundColor - agora gerenciado pelo LinearGradient
         borderRadius: 42, // Full round (metade da width/height)
         padding: 2, // Padding mínimo ao redor da imagem
         position: 'relative',
+        marginTop: -4,
+        marginBottom: -5,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'visible', // Garantir que o pulso e badges cresçam para fora sem corte
@@ -229,8 +233,8 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     imageWrapper: {
-        width: 58,                // reduzido (antes 65)
-        height: 58,
+        width: 62,                // reduzido (antes 65)
+        height: 62,
         borderRadius: 34,
         overflow: 'visible',
         backgroundColor: '#f8fbff', // tom neutro limpo de fundo
@@ -243,17 +247,17 @@ const styles = StyleSheet.create({
     },
     pulseRing: {
         position: 'absolute',
-        top: '50%',
+        top: '45%',
         left: '50%',
-        width: 62, // Ajustado para iniciar exatamente na borda externa da imagem (58 + 2*2 para cobrir bordas internas/externas)
-        height: 62,
+        width: 68, // Ajustado para iniciar exatamente na borda externa da imagem (58 + 2*2 para cobrir bordas internas/externas)
+        height: 68,
         marginLeft: -31, // Centralizado precisamente para flush com a borda
         marginTop: -31,
         borderRadius: 31, // Matching com o novo size para bordas arredondadas perfeitas
         backgroundColor: 'transparent', // Fundo transparente para só mostrar a borda
-        borderWidth: 1.2, // Ligeiramente mais grosso para visibilidade no pulso
-        borderColor: '#2dc4c475', // MESMA COR da borda da imagem, para harmonia perfeita
-        shadowColor: '#2dc4c475', // Ajustado para matching com a cor da borda (glow verde-azulado translúcido)
+        borderWidth: 0.8, // Ligeiramente mais grosso para visibilidade no pulso
+        borderColor: '#5dcdeca1', // MESMA COR da borda da imagem, para harmonia perfeita
+        shadowColor: '#5dbfecff', // Ajustado para matching com a cor da borda (glow verde-azulado translúcido)
         shadowOpacity: 0.4, // Aumentado para glow mais visível no pulso
         shadowRadius: 12, // Raio maior para efeito de expansão suave
         shadowOffset: { width: 0, height: 0 },
@@ -263,7 +267,7 @@ const styles = StyleSheet.create({
     // ESTILO ATUALIZADO: Badge de Verificação - Posicionado fora do gradient para visibilidade total, no canto inferior direito da imagem para UI premium limpa (evita conflito com distance pill no topo)
     verifiedBadgeOutside: { 
         position: 'absolute',
-        bottom: 8, // Posicionado no inferior direito da imagem (espaçamento premium: 8px da borda)
+        bottom: 118, // Posicionado no inferior direito da imagem (espaçamento premium: 8px da borda)
         right: 8, // Alinhado perfeitamente com a borda direita do card/imagem
         zIndex: 20, // zIndex ainda mais alto para sobrepor tudo (incluindo gradient e pulse)
         backgroundColor: 'rgba(255, 255, 255, 0.95)', // Fundo branco semi-translúcido para premium clean UI
