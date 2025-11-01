@@ -17,7 +17,7 @@ interface QuickActionsSectionProps {
 const QuickActionsSection: React.FC<QuickActionsSectionProps> = ({ contentAnim, actions, isLoading }) => {
   return (
     <Animated.View style={[styles.sectionContainer, { opacity: contentAnim }]}>
-      <Text style={styles.sectionTitle}>Ações Rápidas</Text>
+      <Text style={styles.sectionTitle}>Atalhos do Dia</Text>
       <View style={styles.actionsGrid}>
         {isLoading ? (
           // SEU ESQUELETO DE CARREGAMENTO AQUI
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     }),
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 15,
