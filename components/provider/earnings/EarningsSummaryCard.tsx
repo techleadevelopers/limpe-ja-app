@@ -50,7 +50,7 @@ const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData
             <Text style={styles.summaryCardSubtitle} accessibilityLabel={`Informação atualizada em ${formatDate(new Date().toISOString(), { day: '2-digit', month: 'short' })}`}>
                         {formatDate(new Date().toISOString(), { day: '2-digit', month: 'short' })}
                     </Text>
-            <Text style={styles.sectionTitle} accessibilityRole="header">Resumo Financeiro</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">Seus Ganhos</Text>
             <View style={styles.summaryGrid}>
                 {/* Saldo Disponível */}
                 <View style={styles.summaryCard}>
