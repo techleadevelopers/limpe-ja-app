@@ -240,11 +240,11 @@
     "provider_dashboard": {
       "greeting": "Olá, {{providerName}}!",
       "current_date": "{{date}}",
-      "financial_summary": "Resumo Financeiro",
+      "financial_summary": "Seus Ganhos",
       "total_earnings": "Ganhos Totais",
       "pending_withdrawals": "Saques Pendentes",
       "manage_earnings": "Gerenciar Ganhos",
-      "quick_actions": "Ações Rápidas",
+      "quick_actions": "Atalhos do Dia",
       "my_schedule": "Minha Agenda",
       "my_services": "Meus Serviços",
       "messages": "Mensagens",
