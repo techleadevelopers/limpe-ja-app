@@ -32,6 +32,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { Icons3D } from '../../../constants/icons3d';
+import { Asset } from 'expo-asset';
 
 import {
   getOffers,
@@ -197,7 +198,8 @@ export default function ExploreClientScreen() {
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const categoriesAnim = useRef(new Animated.Value(0)).current;
-  const bannerAnim = useRef(new Animated.Value(0)).current;
+  // Banner deve aparecer junto ao conteúdo; inicia visível
+  const bannerAnim = useRef(new Animated.Value(1)).current;
   const recommendationsAnim = useRef(new Animated.Value(0)).current;
   const providersAnim = useRef(new Animated.Value(0)).current;
   const navBarAnim = useRef(new Animated.Value(0)).current;
@@ -296,7 +298,15 @@ export default function ExploreClientScreen() {
       );
     }
 
-    if (isMounted.current) {
+    if (isMounted.current) {      // Precarregar imagens do banner e do DEFENSE_SOS para evitar atraso de decodifica��o
+      try {
+        await Asset.loadAsync([
+          require('../../../assets/images/banner6.png'),
+          require('../../../assets/images/banner4.png'),
+          require('../../../assets/images/banner3.png'),
+          Icons3D.support,
+        ] as any);
+      } catch {}
       const D = 240; // duração padrão
       const S = 60;  // passo de atraso
       if (reducedMotion) {
@@ -1053,7 +1063,7 @@ const styles = StyleSheet.create({
   },
   navBarContainer: {
     position: 'absolute',
-    bottom: -15, // AJUSTADO: De -28 para 0
+    bottom: -30, // AJUSTADO: De -28 para 0
     left: 0,
     right: 0,
     zIndex: 200,
@@ -1221,3 +1231,4 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
 });
+
