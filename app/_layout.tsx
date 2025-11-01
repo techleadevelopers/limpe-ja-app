@@ -438,7 +438,7 @@ function RootLayoutContent() {
                 return;
             }
 
-            // Removido: console.log de nenhuma aÃ§Ã£o necessÃ¡ria.
+            // Removido: console.log de nenhuma ação necessária.
         };
 
         decideAndRedirect();
