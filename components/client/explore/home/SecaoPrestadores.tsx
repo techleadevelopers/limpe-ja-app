@@ -101,6 +101,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 4,
+    transform: [{ translateY: 14 }], // desloca mais para baixo (~8px)
   },
   viewAllText: {
     fontSize: 12,
