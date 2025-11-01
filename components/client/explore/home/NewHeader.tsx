@@ -1,8 +1,11 @@
-import Constants from 'expo-constants';
+﻿import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Image, Platform } from 'react-native';
+import React, { useRef } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, Image, Platform, Animated, StyleProp, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface NewHeaderProps {
   userName: string;
@@ -12,6 +15,19 @@ interface NewHeaderProps {
 
 const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddress }) => {
   const router = useRouter();
+  const insets = useSafeAreaInsets?.() || { top: 0, bottom: 0, left: 0, right: 0 } as any;
+
+  // Press feedback
+  const avatarScale = useRef(new Animated.Value(1)).current;
+  const actionScale = useRef(new Animated.Value(1)).current;
+
+  const pressIn = (anim: Animated.Value) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    Animated.spring(anim, { toValue: 0.97, useNativeDriver: true, friction: 5 }).start();
+  };
+  const pressOut = (anim: Animated.Value) => {
+    Animated.spring(anim, { toValue: 1, useNativeDriver: true, friction: 5, tension: 120 }).start();
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -37,7 +53,7 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
       colors={['#4d8ce415', '#4d8ce415']}
       style={styles.container}
     >
-      {/* Efeito BubbleRN removido – restante mantido */}
+      {/* Efeito BubbleRN removido â€“ restante mantido */}
 
       <View style={styles.leftContent}>
         <TouchableOpacity onPress={handleProfilePress} style={styles.profileImageContainer}>
@@ -63,7 +79,7 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: Constants.statusBarHeight - 35,
+    paddingVertical: Constants.statusBarHeight - 40,
     left: 0,
     top: 2,
     marginHorizontal: 11,
@@ -82,15 +98,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.17,
     shadowRadius: 9,
     elevation: 6,
-    overflow: 'hidden', // mantém cantos arredondados
+    overflow: 'hidden', // mantÃ©m cantos arredondados
   },
   leftContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   profileImageContainer: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: 20,
     overflow: 'hidden',
     marginRight: 6,
@@ -104,7 +120,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   greetingText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: Platform.select({
       ios: 'Montserrat-ExtraBold',
       android: 'Montserrat-Regular'
@@ -116,14 +132,14 @@ const styles = StyleSheet.create({
     }),
   },
   userNameText: {
-    fontSize: 19,
+    fontSize: 20,
     fontFamily: Platform.select({
-      ios: 'Montserrat-ExtraBold',
+      ios: 'Roboto',
       android: 'Montserrat-Thin'
     }),
     color: '#7398b9ff',
     fontWeight: Platform.select({
-      ios: '300',
+      ios: '400',
       android: 'bold'
     }),
   },
@@ -150,4 +166,3 @@ const styles = StyleSheet.create({
 });
 
 export default NewHeader;
-
