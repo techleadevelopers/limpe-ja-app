@@ -1,6 +1,6 @@
 // TimeSlotsSection.tsx (ajustado para espaçamento lateral uniforme entre slots, sem alterar UI)
 import React from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import TimeSlotButton from './TimeSlotButton';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
@@ -26,7 +26,7 @@ interface TimeSlotsSectionProps {
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const numColumns = 3;
 
-const CARD_MARGIN_TOTAL = 26 * 2; // Ajustado: marginHorizontal=26 do card
+const CARD_MARGIN_TOTAL = 25 * 2; // Alinhado ao calendar: marginHorizontal=25 do card
 const CARD_PADDING_TOTAL = 24 * 2; // Ajustado: paddingHorizontal=24 do card
 const HORIZONTAL_GUTTER = CARD_MARGIN_TOTAL + CARD_PADDING_TOTAL;
 
@@ -198,13 +198,24 @@ export default function TimeSlotsSection({
 const styles = StyleSheet.create({
   card: {
     marginTop: 12,
-    marginHorizontal: 26,
+    marginHorizontal: 25, // mesmo padrão do calendar
     backgroundColor: AppColors.white,
-    borderRadius: 18,
+    borderRadius: 16, // igual ao Radii.md usado no calendar
+    overflow: 'hidden',
     paddingHorizontal: 24,
     paddingVertical: 18,
     paddingBottom: 20,
-    ...AppShadows.medium,
+    borderWidth: 0.9,
+    borderColor: 'rgba(24, 79, 230, 0.09)', // mesma borda sutil do calendar
+    ...Platform.select({
+      ios: {
+        shadowColor: '#45484b56',
+        shadowOffset: { width: -1, height: 1 },
+        shadowOpacity: 1.05,
+        shadowRadius: 9,
+      },
+      android: { elevation: 6 },
+    }),
   },
   title: {
     fontSize: 16,
