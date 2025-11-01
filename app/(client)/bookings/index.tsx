@@ -33,6 +33,7 @@ import { getBookingsForUser } from '../../../services/bookingService';
 import { getProviderAvatar } from '../../../services/providerService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { AppColors, AppShadows } from '../../../constants/appStyles';
+import Colors from '../../../constants/Colors';
 
 import Navbar from '../../../components/client/explore/home/NavBar';
 import ScreenContainer from '@/components/layout/ScreenContainer';
@@ -282,6 +283,9 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
 };
 
 export default function MyBookingsScreen() {
+  // Theme aligned with Cashback/Missions
+  const scheme = (Colors as any)?.scheme || 'light';
+  const theme = (Colors as any)[scheme] || (Colors as any).light;
   const router = useRouter();
   const { highlightNew } = useLocalSearchParams<{ highlightNew?: string }>();
   const { user } = useAuth();
@@ -526,49 +530,70 @@ export default function MyBookingsScreen() {
   };
 
   return (
-    <ScreenContainer style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 92 }]}>
-      <Stack.Screen
-        options={{
-          title: headerTitle,
-          headerShown: true,
-          headerTitleAlign: 'center',
-          headerTitleStyle: { fontFamily: 'Montserrat-SemiBold', fontSize: 20, color: UI.textPrimary },
-          headerStyle: { backgroundColor: UI.card },
-          headerShadowVisible: false,
-          headerBackButtonDisplayMode: 'minimal',
-          headerTintColor: UI.accent,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ paddingVertical: 10, paddingHorizontal: 12 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityRole="button" accessibilityLabel="Voltar">
-              <Ionicons name="arrow-back" size={24} color={UI.accent} />
+    <ScreenContainer style={[styles.container, { backgroundColor: theme.background, paddingTop: Platform.OS === 'ios' ? insets.top : 0, paddingBottom: insets.bottom + 92 }]}>
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Header temático (alinha com ScheduleHeader: vidro leve + cantos arredondados) */}
+      <Animated.View style={{ opacity: navbarFadeAnim, transform: [{ translateY: navbarSlideAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }] }}>
+        <View style={styles.thematicHeader}>
+          <BlurView intensity={Platform.OS === 'ios' ? 10 : 20} tint="light" style={StyleSheet.absoluteFillObject} />
+          <LinearGradient colors={[ theme.cardBackground as any, theme.cardBackground as any ]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.headerIconBtn} accessibilityRole="button" accessibilityLabel="Voltar">
+              <Ionicons name="arrow-back" size={22} color={(theme as any).text} />
             </TouchableOpacity>
-          ),
-        }}
-      />
-
-      {/* FILTROS: reposicionados logo abaixo do header com aparência premium */}
-      <View style={styles.filterHeaderRow}>
-        <View>
-          <Text style={styles.filterHeaderTitle}>Filtrar</Text>
-          <Text style={styles.filterHeaderSub}>Escolha uma opção</Text>
+            <Text style={[styles.headerTitle, { color: (theme as any).text }]}>{headerTitle}</Text>
+            <View style={styles.headerIconBtn} />
+          </View>
         </View>
-        <TouchableOpacity style={styles.filterHelp} onPress={() => Alert.alert('Filtros', 'Use os filtros para organizar seus agendamentos.')}>
-          <Ionicons name="information-circle-outline" size={18} color={AppColors.textAuxiliary} />
-        </TouchableOpacity>
-      </View>
+      </Animated.View>
 
-      <View style={[styles.filterContainer, { marginTop: 8 }]}>
+      {/* filtros: apenas botões de opções, sem o cabeçalho "Filtrar" */}
+
+      <View
+        style={[
+          styles.filterContainer,
+          {
+            marginTop: 8,
+            backgroundColor: (theme as any).cardBackground,
+            borderTopColor: (theme as any).borderSubtle || '#EEF3FA',
+            borderBottomColor: (theme as any).borderSubtle || '#E9F0FA',
+          },
+        ]}
+      >
         {filters.map((filterItem, index) => (
-          <Animated.View key={filterItem.value} style={{ transform: [{ scale: filterButtonAnims[index] }] }}>
+          <Animated.View
+            key={filterItem.value}
+            style={{ transform: [{ scale: filterButtonAnims[index] }] }}
+          >
             <TouchableOpacity
-              style={[styles.filterButton, rFilterBtn, activeFilter === filterItem.value && styles.filterButtonActive]}
+              style={[
+                styles.filterButton,
+                rFilterBtn,
+                activeFilter === filterItem.value && [
+                  styles.filterButtonActive,
+                  { backgroundColor: (theme as any).primary, borderColor: (theme as any).primary },
+                ],
+              ]}
               onPress={() => handleFilterChange(filterItem.value)}
               onPressIn={() => onPressInFilterButton(index)}
               onPressOut={onPressOutFilterButton}
               accessibilityRole="button"
               accessibilityLabel={`Filtrar por ${filterItem.label}`}
             >
-              <Ionicons name={filterItem.icon} size={13} color={activeFilter === filterItem.value ? AppColors.white : AppColors.textBody} style={styles.filterIcon} />
-              <Text style={[styles.filterButtonText, activeFilter === filterItem.value && styles.filterButtonTextActive]} numberOfLines={1}>
+              <Ionicons
+                name={filterItem.icon}
+                size={13}
+                color={activeFilter === filterItem.value ? '#FFFFFF' : AppColors.textBody}
+                style={styles.filterIcon}
+              />
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  activeFilter === filterItem.value && styles.filterButtonTextActive,
+                ]}
+                numberOfLines={1}
+              >
                 {filterItem.label}
               </Text>
             </TouchableOpacity>
@@ -607,6 +632,21 @@ export default function MyBookingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: UI.bg },
+  // Header temático (vidro leve + bordas arredondadas) alinhado ao ScheduleHeader
+  thematicHeader: {
+    marginHorizontal: 12,
+    marginTop: 6,
+    marginBottom: 6,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    overflow: 'hidden',
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }, android: { elevation: 3 } }),
+  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingVertical: 10 },
+  headerIconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: UI.textPrimary },
   navbarContainer: {
     position: 'absolute',
     bottom: 0,
@@ -616,8 +656,8 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     elevation: 20,
     ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.25, shadowRadius: 14 },
-      android: { elevation: 12 },
+      ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.18, shadowRadius: 12 },
+      android: { elevation: 10 },
     }),
   },
   filterHeaderRow: {
@@ -625,9 +665,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
-    paddingTop: 20,
-    marginTop: -60,
-    marginBottom: -10,
+    paddingTop: 12,
+    marginTop: 4,
+    marginBottom: 0,
     backgroundColor: AppColors.white,
     borderBottomColor: '#F1F6FB',
     borderBottomWidth: 1,
@@ -674,13 +714,13 @@ const styles = StyleSheet.create({
   filterButtonTextActive: { color: AppColors.white, fontWeight: '700', fontFamily: 'Montserrat-SemiBold' },
 
   listContentContainer: { paddingVertical: 18, paddingHorizontal: 16 },
-  itemCard: {
-    backgroundColor: UI.card,
-    borderRadius: 18,
-    marginBottom: 20,
-    overflow: 'hidden',
-    ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.28, shadowRadius: 14 }, android: { elevation: 8 } }),
-  },
+    itemCard: {
+      backgroundColor: UI.card,
+      borderRadius: 18,
+      marginBottom: 20,
+      overflow: 'hidden',
+      ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12 }, android: { elevation: 6 } }),
+    },
   itemCardContent: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, position: 'relative' },
   avatarContainer: { marginRight: 14, width: 60 },
   avatarImage: { borderWidth: 2, borderColor: AppColors.backgroundNeutral },
