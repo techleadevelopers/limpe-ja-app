@@ -111,20 +111,20 @@ const DEFENSE_SOS: React.FC<DefenseSOSProps> = ({ bottomOffset = 20 }) => {
 const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
-    right: 30,
+    right: 40,
     // Ajuste o zIndex para garantir que o FAB esteja acima de outros elementos
     zIndex: 1000, 
   },
   // Glow azul (confortável, suave) - Cor diferente do FAB_SOS, mas o efeito é o mesmo
   fabGlow: {
     position: 'absolute',
-    width: 54,
-    height: 54,
+    width: 69,
+    height: 69,
     borderRadius: 32,
-    backgroundColor: '#D0E8FF', // glow azul claro
+    backgroundColor: '#a0caf1ff', // glow azul claro
     alignSelf: 'center',
-    top: 0,
-    left: 0,
+    top: -2,
+    left: -3,
     right: 0,
     bottom: 0,
   },
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#97c3eeff', // azul principal (iOS-like)
+    backgroundColor: '#97c2ee5d', // azul principal (iOS-like)
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
