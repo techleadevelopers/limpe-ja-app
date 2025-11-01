@@ -23,6 +23,7 @@ import * as Clipboard from 'expo-clipboard';
 
 import BookServiceButton from '../../../components/client/explore/provider/BookServiceButton';
 import InfoChip from '../../../components/client/explore/provider/InfoChip';
+// ServiceCategoryBadges removido (voltando ao layout anterior)
 import ReviewCard from '../../../components/client/explore/provider/ReviewCard';
 import StarRating from '../../../components/client/explore/provider/StarRating';
 import SideIcon from '../../../components/client/explore/provider/SideIcon';
