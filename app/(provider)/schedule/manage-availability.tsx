@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -265,6 +265,7 @@ interface DayAvailabilityCardProps {
   onApplyPreset: (dayOfWeek: number, preset: PresetKey) => void;
   onCopyToOthers: (dayOfWeek: number) => void;
   onResetDay: (dayOfWeek: number) => void;
+  dateLabel?: string;
 }
 
 const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
@@ -279,6 +280,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
   onApplyPreset,
   onCopyToOthers,
   onResetDay,
+  dateLabel,
 }) => {
   const cardAnim = useRef(new Animated.Value(0)).current;
   const now = new Date();
@@ -309,7 +311,20 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
   return (
     <Animated.View style={[styles.dayCard, { opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
       <View style={styles.dayHeader}>
-        <Text style={styles.dayName}>{dayName}</Text>
+        <View style={styles.dayTitleRow}>
+          <Text style={styles.dayName}>{dayName}</Text>
+          {!!dateLabel && <Text style={styles.dayDate}>{dateLabel}</Text>}
+        </View>
+        <TouchableOpacity
+          style={styles.personalizeHeaderButton}
+          onPress={() => setShowFullGrid((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={showFullGrid ? 'Concluir personalização' : 'Personalizar horários'}
+        >
+          <Ionicons name="options-outline" size={14} color={Colors.primary} />
+          <Text style={styles.personalizeHeaderText}>{showFullGrid ? 'Concluir' : 'Personalizar'}</Text>
+        </TouchableOpacity>
+        <View style={styles.switchWrap}>
         <Switch
           trackColor={{ false: Colors.textMuted, true: Colors.primary }}
           thumbColor={Colors.surface}
@@ -324,6 +339,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           accessibilityLabel={`Ativar ${dayName.toLowerCase()}`}
           accessibilityHint="Alterna disponibilidade para o dia"
         />
+        </View>
       </View>
       <View style={styles.periodRow}>
         <TouchableOpacity
@@ -432,7 +448,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
             })}
           </View>
           <View style={styles.dayActions}>
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
               style={styles.actionButtonSecondary} 
               onPress={() => {
                 onSelectAll(dayOfWeek);
@@ -443,7 +459,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
             >
               <Ionicons name="checkmark-done-circle-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
               <Text style={styles.actionButtonSecondaryText}>Selecionar Tudo</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity 
               style={styles.actionButtonSecondary} 
               onPress={() => {
@@ -1142,7 +1158,7 @@ export default function ManageAvailabilityScreen() {
       >
         {activeTab === 'weekly' && (
           <>
-            <View style={styles.quickTilesRow}>
+            {false && <View style={styles.quickTilesRow}>
               <TouchableOpacity 
                 style={styles.quickTile} 
                 onPress={() => {
@@ -1190,8 +1206,8 @@ export default function ManageAvailabilityScreen() {
               >
                 <Text style={styles.quickActionText}>Repetir esta semana</Text>
               </TouchableOpacity>
-            </View>
-            <TouchableOpacity 
+            </View>}
+            {false && (<TouchableOpacity 
               style={styles.primaryCTAButton} 
               onPress={() => openSmartStep('weekly')} 
               accessibilityRole="button" 
@@ -1199,10 +1215,12 @@ export default function ManageAvailabilityScreen() {
             >
               <Ionicons name="flash-outline" size={18} color="#fff" style={{ marginRight: 8 }} accessibilityHidden={true} />
               <Text style={styles.primaryCTAButtonText}>Assistente de Horários</Text>
-            </TouchableOpacity>
+            </TouchableOpacity>)}
             <Text style={styles.sectionTitleImproved}>Disponibilidade Semanal</Text>
-            <InfoCard text="Defina seus horários fixos por dia. Use os presets e copie para acelerar." />
-            {weeklyAvailability.map(day => (
+            <InfoCard text="Defina seus horários da semana. Você pode usar horários prontos e copiar para os outros dias." />
+            {([...weeklyAvailability]
+              .sort((a, b) => ((a.dayOfWeek - new Date().getDay() + 7) % 7) - ((b.dayOfWeek - new Date().getDay() + 7) % 7)))
+              .map(day => (
               <DayAvailabilityCard
                 key={day.dayOfWeek}
                 dayName={dayNames[day.dayOfWeek]}
@@ -1216,6 +1234,7 @@ export default function ManageAvailabilityScreen() {
                 onApplyPreset={handleApplyPreset}
                 onCopyToOthers={openCopyModal}
                 onResetDay={handleResetDayToOriginal}
+                dateLabel={(function(){ const base=new Date(); const diffRaw=day.dayOfWeek - base.getDay(); const diff=((diffRaw%7)+7)%7; const d=new Date(base.getFullYear(), base.getMonth(), base.getDate()+diff); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yy=String(d.getFullYear()).slice(-2); return `${dd}/${mm}/${yy}`; })()}
               />
             ))}
           </>
@@ -1654,7 +1673,8 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
   },
   sectionTitleImproved: {
-    fontSize: 22,
+    fontSize: 18,
+    textAlign: 'center',
     fontWeight: '600',
     color: Colors.primaryDark,
     marginTop: Spacing.lg,
@@ -1747,6 +1767,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.md,
   },
+  dayTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  dayDate: {
+    marginLeft: 8,
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
   quickActionsRow: {
     flexDirection: 'row',
     marginBottom: Spacing.sm,
@@ -1787,7 +1817,9 @@ const styles = StyleSheet.create({
   periodRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    // Garantir 3 cards na primeira linha (sem quebra do "Noite")
+    gap: 0,
+    justifyContent: 'space-between',
     marginBottom: Spacing.sm,
   },
   periodTile: {
@@ -1795,9 +1827,11 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    marginRight: Spacing.xs,
+    marginRight: 0,
     borderWidth: 0.5,
     borderColor: Colors.border,
+    // 3 colunas fixas no topo: Manhã, Tarde, Noite
+    width: '32%',
     minWidth: 96,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1829,13 +1863,36 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: -2,
+    justifyContent: 'center',
+    // Escondido (botão movido para o cabeçalho)
+    display: 'none',
   },
   personalizeButtonText: {
     marginLeft: 6,
     color: Colors.primary,
     fontWeight: '700',
     fontSize: 13,
+  },
+  personalizeHeaderButton: {
+    backgroundColor: Colors.fieldBg,
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderWidth: 0.5,
+    borderColor: Colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 6,
+  },
+  personalizeHeaderText: {
+    marginLeft: 6,
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  switchWrap: {
+    transform: [{ scaleX: 0.92 }, { scaleY: 0.92 }],
+    marginLeft: 6,
   },
   quickActionChip: {
     backgroundColor: Colors.fieldBg,
