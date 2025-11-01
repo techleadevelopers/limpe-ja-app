@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
 import * as Haptics from 'expo-haptics';
@@ -370,6 +371,62 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
           style={styles.calendarStyle}
           accessibilityLabel="Calendário de agendamentos"
           accessibilityHint="Selecione uma data para agendamento"
+          dayComponent={({ date, state, marking, onPress }) => {
+            const dateStr = (date as any)?.dateString as string;
+            const selectedStr = safeISO(selectedDate ?? new Date()).split('T')[0];
+            const isSelected = dateStr === selectedStr;
+            const isDisabled = (marking as any)?.disabled || state === 'disabled';
+
+            const popAnim = React.useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+            React.useEffect(() => {
+              Animated.timing(popAnim, {
+                toValue: isSelected ? 1 : 0,
+                duration: 180,
+                easing: easeOut,
+                useNativeDriver: true,
+              }).start();
+            }, [isSelected]);
+
+            const scale = popAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
+            const opacity = popAnim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] });
+
+            const handlePress = () => {
+              if (!isDisabled && typeof onPress === 'function') onPress({ dateString: dateStr } as any);
+            };
+
+            return (
+              <Animated.View style={{ alignItems: 'center', justifyContent: 'center', transform: [{ scale }], opacity }}>
+                <TouchableOpacity
+                  onPress={handlePress}
+                  activeOpacity={0.9}
+                  disabled={isDisabled}
+                  style={{
+                    width: 36,
+                    height: 32,
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {isSelected ? (
+                    <LinearGradient
+                      colors={[ 'rgba(90,160,236,0.18)', 'rgba(90,160,236,0.35)' ]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                  ) : null}
+                  <Text style={{
+                    color: isDisabled ? Colors.textMuted : isSelected ? '#1f2d3d' : Colors.text,
+                    fontWeight: isSelected ? '700' : '600',
+                  }}>
+                    {(date as any).day}
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          }}
         />
       </View>
     </Animated.View>
