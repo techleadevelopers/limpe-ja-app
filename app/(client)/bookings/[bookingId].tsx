@@ -31,6 +31,7 @@ import { cancelBooking, getBookingDetails } from '../../../services/bookingServi
 
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { AppColors, AppShadows } from '../../../constants/appStyles';
+import Colors from '../../../constants/Colors';
 import { useDevice } from '@/utils/responsive';
 
 // Novos imports para integração
@@ -57,13 +58,13 @@ const isCompletedStatus = (status: BookingStatus): status is BookingStatus.COMPL
 
 // Solid backgrounds for a clean status pill (no gradient look)
 const gradients = {
-  confirmed: ['rgba(22,163,74,0.12)', 'rgba(22,163,74,0.12)'] as const,
-  pending: ['rgba(245,158,11,0.15)', 'rgba(245,158,11,0.15)'] as const,
+  confirmed: ['rgba(42,114,231,0.12)', 'rgba(42,114,231,0.12)'] as const,
+  pending: ['rgba(90,140,245,0.14)', 'rgba(90,140,245,0.14)'] as const,
   inProgress: ['rgba(37,99,235,0.12)', 'rgba(37,99,235,0.12)'] as const,
   completed: ['#F3F4F6', '#F3F4F6'] as const,
   cancelled: ['rgba(239,68,68,0.12)', 'rgba(239,68,68,0.12)'] as const,
   other: ['#F3F4F6', '#F3F4F6'] as const,
-  rescheduled: ['rgba(124,58,237,0.12)', 'rgba(124,58,237,0.12)'] as const,
+  rescheduled: ['rgba(96, 125, 255, 0.12)', 'rgba(96,125,255,0.12)'] as const,
 } as const;
 
 type GradientKey = keyof typeof gradients;
@@ -87,11 +88,11 @@ const statusToKey = (s?: BookingStatus | null): GradientKey => {
 const getStatusStyle = (status: BookingStatus) => {
   switch (status) {
     case BookingStatus.CONFIRMED:
-      return { text: 'CONFIRMADO', color: AppColors.successStandard, gradient: gradients.confirmed, icon: 'checkmark-circle-outline' as const };
+      return { text: 'CONFIRMADO', color: AppColors.primaryInteractive, gradient: gradients.confirmed, icon: 'checkmark-circle-outline' as const };
     case BookingStatus.PENDING:
-      return { text: 'PENDENTE', color: AppColors.warningYellow, gradient: gradients.pending, icon: 'time-outline' as const };
+      return { text: 'PENDENTE', color: AppColors.primaryInteractive, gradient: gradients.pending, icon: 'time-outline' as const };
     case BookingStatus.PENDING_PROVIDER_CONFIRMATION:
-      return { text: 'AGUARDANDO', color: AppColors.warningYellow, gradient: gradients.pending, icon: 'hourglass-outline' as const };
+      return { text: 'AGUARDANDO', color: AppColors.primaryInteractive, gradient: gradients.pending, icon: 'hourglass-outline' as const };
     case BookingStatus.IN_PROGRESS:
       return { text: 'EM ANDAMENTO', color: AppColors.primaryInteractive, gradient: gradients.inProgress, icon: 'sync-circle-outline' as const };
     case BookingStatus.COMPLETED:
@@ -101,7 +102,7 @@ const getStatusStyle = (status: BookingStatus) => {
     case BookingStatus.REJECTED:
       return { text: 'REJEITADO', color: AppColors.textAuxiliary, gradient: gradients.other, icon: 'alert-circle-outline' as const };
     case BookingStatus.RESCHEDULED:
-      return { text: 'REAGENDADO', color: '#6F42C1', gradient: gradients.rescheduled, icon: 'sync-outline' as const };
+      return { text: 'REAGENDADO', color: AppColors.primaryInteractive, gradient: gradients.rescheduled, icon: 'sync-outline' as const };
     case BookingStatus.NO_SHOW:
       return { text: 'NÃO COMPARECEU', color: AppColors.textBody, gradient: gradients.other, icon: 'person-remove-outline' as const };
     default:
@@ -129,34 +130,33 @@ const renderProviderAvatar = (avatarUrl?: string | null, size: number = 80) => {
 };
 
 // Subcomponente: HeaderBar (voltar + título + status pill)
-function HeaderBar({ booking, router, insets }: { booking: BookingDetails; router: any; insets: any }) {
+function HeaderBar({ booking, router, insets, theme }: { booking: BookingDetails; router: any; insets: any; theme: any }) {
   const statusInfo = getStatusStyle(booking.status);
   const rCard: StyleProp<ViewStyle> = useDevice().isLargePhone
     ? { alignSelf: 'center' as ViewStyle['alignSelf'], width: '100%', maxWidth: 820 }
     : undefined;
 
   return (
-    <View style={[styles.headerBar, rCard]}>
-      <TouchableOpacity onPress={() => router.back()} style={{ paddingVertical: 10, paddingHorizontal: 12 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityRole="button" accessibilityLabel="Voltar">
-        <Ionicons name="arrow-back" size={22} color={UI.textPrimary} />
-      </TouchableOpacity>
-      <Text style={{ fontSize: 17, fontWeight: '800', color: UI.textPrimary }}>Detalhes do agendamento</Text>
-      <View style={{ backgroundColor: gradients[statusToKey(booking?.status)][0] || 'rgba(0,0,0,0.04)', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
-        <Ionicons name={statusInfo.icon} size={16} color={statusInfo.color} />
-        <Text style={{ marginLeft: 6, color: statusInfo.color, fontWeight: '700', fontSize: 13 }} numberOfLines={1}>
-          {statusInfo.text}
-        </Text>
+    <View style={[styles.thematicHeader, rCard]}>
+      <BlurView intensity={Platform.OS === 'ios' ? 10 : 20} tint="light" style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={[ theme.cardBackground as any, theme.cardBackground as any ]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+      <View style={styles.headerBar}>
+        <TouchableOpacity onPress={() => router.back()} style={{ paddingVertical: 10, paddingHorizontal: 12 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityRole="button" accessibilityLabel="Voltar">
+          <Ionicons name="arrow-back" size={22} color={(theme as any).text} />
+        </TouchableOpacity>
+        <Text style={{ fontSize: 17, fontWeight: '800', color: (theme as any).text }}>Detalhes do agendamento</Text>
+        <View style={{ width: 22 }} />
       </View>
     </View>
   );
 }
 
 // Subcomponente: ProviderHeaderCard (avatar + serviço + provider + pill)
-function ProviderHeaderCard({ booking, providerSectionAnim, providerFloatAnim, rCard, rTitle }: { booking: BookingDetails; providerSectionAnim: any; providerFloatAnim: any; rCard: any; rTitle: any }) {
+function ProviderHeaderCard({ booking, providerSectionAnim, providerFloatAnim, rCard, rTitle, theme }: { booking: BookingDetails; providerSectionAnim: any; providerFloatAnim: any; rCard: any; rTitle: any; theme: any }) {
   const statusInfo = getStatusStyle(booking.status);
 
   return (
-    <Animated.View style={[styles.card, rCard, styles.providerSectionCard, { opacity: providerSectionAnim, transform: [{ translateY: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { scale: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: providerFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) }] }]}>
+    <Animated.View style={[styles.card, rCard, styles.providerSectionCard, { backgroundColor: (theme as any).cardBackground, opacity: providerSectionAnim, transform: [{ translateY: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { scale: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: providerFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) }] }]}>
       <BlurView intensity={Platform.OS === 'ios' ? 18 : 36} tint="light" style={StyleSheet.absoluteFillObject} />
       <LinearGradient colors={['#FFFFFF', '#F5FAFF'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
       <View style={styles.providerSection}>
@@ -169,19 +169,16 @@ function ProviderHeaderCard({ booking, providerSectionAnim, providerFloatAnim, r
             {`com ${sanitizeText(booking.providerFullName)}`}
           </Text>
         </View>
-        <LinearGradient colors={statusInfo.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.statusBadge}>
-          <Ionicons name={statusInfo.icon} size={16} color={statusInfo.color} />
-          <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.text}</Text>
-        </LinearGradient>
+        
       </View>
     </Animated.View>
   );
 }
 
 // Subcomponente: DetailsCard (data/hora, endereço, valor, notas)
-function DetailsCard({ booking, detailsCardAnim, detailsFloatAnim, rCard, rDetails, handleCopyAddress, handleOpenInMaps }: { booking: BookingDetails; detailsCardAnim: any; detailsFloatAnim: any; rCard: any; rDetails: any; handleCopyAddress: () => void; handleOpenInMaps: () => void }) {
+function DetailsCard({ booking, detailsCardAnim, detailsFloatAnim, rCard, rDetails, handleCopyAddress, handleOpenInMaps, theme }: { booking: BookingDetails; detailsCardAnim: any; detailsFloatAnim: any; rCard: any; rDetails: any; handleCopyAddress: () => void; handleOpenInMaps: () => void; theme: any }) {
   return (
-    <Animated.View style={[styles.card, rCard, { opacity: detailsCardAnim, transform: [{ scale: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { translateY: detailsFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }] }]}>
+    <Animated.View style={[styles.card, rCard, { backgroundColor: (theme as any).cardBackground, opacity: detailsCardAnim, transform: [{ scale: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { translateY: detailsFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }] }]}>
       <BlurView intensity={Platform.OS === 'ios' ? 18 : 36} tint="light" style={StyleSheet.absoluteFillObject} />
       <LinearGradient colors={['#FFFFFF', '#F5FAFF'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
       <View style={styles.sectionTitleContainer}>
@@ -216,7 +213,7 @@ function DetailsCard({ booking, detailsCardAnim, detailsFloatAnim, rCard, rDetai
       <View style={styles.detailRow}>
         <Ionicons name="cash-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
         <Text style={styles.detailLabel}>Valor</Text>
-        <Text style={[styles.detailValue, styles.priceText]}>{formatPriceBRL(booking.totalPrice)}</Text>
+          <Text style={[styles.detailValue, styles.priceText, { color: (theme as any).primary }]}>{formatPriceBRL(booking.totalPrice)}</Text>
       </View>
       {booking.notes && (
         <View style={styles.detailRow}>
@@ -248,7 +245,8 @@ function ActionsCard({
   reviewButtonScaleAnim,
   profileButtonScaleAnim,
   onPressInButton,
-  onPressOutButton 
+  onPressOutButton,
+  theme,
 }: { 
   booking: BookingDetails; 
   actionsCardAnim: any; 
@@ -268,11 +266,12 @@ function ActionsCard({
   profileButtonScaleAnim: any;
   onPressInButton: (anim: any) => void;
   onPressOutButton: (anim: any) => void;
+  theme: any;
 }) {
   const statusInfo = getStatusStyle(booking.status);
 
   return (
-    <Animated.View style={[styles.actionsCard, rCard, { opacity: actionsCardAnim, transform: [{ scale: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { translateY: actionsFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -1] }) }] }]}>
+    <Animated.View style={[styles.actionsCard, rCard, { backgroundColor: (theme as any).cardBackground, opacity: actionsCardAnim, transform: [{ scale: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { translateY: actionsFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -1] }) }] }]}>
       <BlurView intensity={Platform.OS === 'ios' ? 18 : 36} tint="light" style={StyleSheet.absoluteFillObject} />
       <LinearGradient colors={['#FFFFFF', '#F5FAFF'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
       <View style={styles.sectionTitleContainer}>
@@ -286,24 +285,24 @@ function ActionsCard({
           </TouchableOpacity>
         </AnimatedLinearGradient>
       )}
-      <AnimatedLinearGradient colors={['#2DBF8A', '#1E9B73'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButton, rActionBtn, { transform: [{ scale: contactButtonScaleAnim }] }]}>
+      <AnimatedLinearGradient colors={['#3B82F6', '#2563EB'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButton, rActionBtn, { transform: [{ scale: contactButtonScaleAnim }] }]}>
         <TouchableOpacity style={styles.actionButtonInner} onPress={handleContactProvider} onPressIn={() => onPressInButton(contactButtonScaleAnim)} onPressOut={() => onPressOutButton(contactButtonScaleAnim)} activeOpacity={1}>
           <Ionicons name="chatbubble-ellipses-outline" size={20} color={AppColors.white} />
           <Text style={styles.actionButtonText}>Contatar {sanitizeText(booking.providerFullName.split(' ')[0])}</Text>
         </TouchableOpacity>
       </AnimatedLinearGradient>
       {isCompletedStatus(booking.status) && !isReviewed && (
-        <AnimatedLinearGradient colors={['#FFD453', '#FFB84D'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButton, rActionBtn, styles.reviewButton, { transform: [{ scale: reviewButtonScaleAnim }] }]}>
+        <AnimatedLinearGradient colors={['#60A5FA', '#3B82F6'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButton, rActionBtn, styles.reviewButton, { transform: [{ scale: reviewButtonScaleAnim }] }]}>
           <TouchableOpacity style={styles.actionButtonInner} onPress={handleReviewService} onPressIn={() => onPressInButton(reviewButtonScaleAnim)} onPressOut={() => onPressOutButton(reviewButtonScaleAnim)} activeOpacity={1}>
             <Ionicons name="star-outline" size={20} color={AppColors.white} />
             <Text style={styles.actionButtonText}>Avaliar serviço</Text>
           </TouchableOpacity>
         </AnimatedLinearGradient>
       )}
-      <AnimatedLinearGradient colors={['#667EEA', '#764BA2'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButtonOutline, rActionBtn, { transform: [{ scale: profileButtonScaleAnim }] }]}>
+      <AnimatedLinearGradient colors={['#667EEA', '#764BA2'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButtonOutline, rActionBtn, { borderColor: (theme as any).primary, transform: [{ scale: profileButtonScaleAnim }] }]}>
         <TouchableOpacity style={[styles.actionButtonInner, styles.actionButtonOutlineInner]} onPress={handleViewProviderProfile} onPressIn={() => onPressInButton(profileButtonScaleAnim)} onPressOut={() => onPressOutButton(profileButtonScaleAnim)} activeOpacity={1}>
-          <Ionicons name="person-circle-outline" size={20} color={AppColors.primaryInteractive} />
-          <Text style={[styles.actionButtonText, styles.actionButtonOutlineText]}>Ver perfil de {sanitizeText(booking.providerFullName.split(' ')[0])}</Text>
+          <Ionicons name="person-circle-outline" size={20} color={(theme as any).primary} />
+          <Text style={[styles.actionButtonText, styles.actionButtonOutlineText, { color: (theme as any).primary }]}>Ver perfil de {sanitizeText(booking.providerFullName.split(' ')[0])}</Text>
         </TouchableOpacity>
       </AnimatedLinearGradient>
     </Animated.View>
@@ -342,6 +341,9 @@ function ReviewSheet({ showReviewSheet, setShowReviewSheet, booking, router }: {
 }
 
 export default function BookingDetailsScreen() {
+  // Theme aligned with Cashback/Missions
+  const scheme = (Colors as any)?.scheme || 'light';
+  const theme = (Colors as any)[scheme] || (Colors as any).light;
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -589,32 +591,40 @@ export default function BookingDetailsScreen() {
 
   return (
     <>
-      <ScrollView style={[styles.scrollViewContainer, { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 20 }]}>
+      <ScrollView style={[styles.scrollViewContainer, { backgroundColor: (theme as any).background, paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 20 }]}>
         <Stack.Screen options={{ headerShown: false }} />
         {/* Subcomponentes no ScrollView */}
-        <HeaderBar booking={booking} router={router} insets={insets} />
-        <ProviderHeaderCard booking={booking} providerSectionAnim={providerSectionAnim} providerFloatAnim={providerFloatAnim} rCard={rCard} rTitle={rTitle} />
-        <DetailsCard 
-          booking={booking} 
-          detailsCardAnim={detailsCardAnim} 
-          detailsFloatAnim={detailsFloatAnim} 
-          rCard={rCard} 
-          rDetails={rDetails} 
-          handleCopyAddress={handleCopyAddress} 
-          handleOpenInMaps={handleOpenInMaps} 
+        <HeaderBar booking={booking} router={router} insets={insets} theme={theme} />
+        <ProviderHeaderCard
+          booking={booking}
+          providerSectionAnim={providerSectionAnim}
+          providerFloatAnim={providerFloatAnim}
+          rCard={rCard}
+          rTitle={rTitle}
+          theme={theme}
         />
-        <ActionsCard 
-          booking={booking} 
-          actionsCardAnim={actionsCardAnim} 
-          actionsFloatAnim={actionsFloatAnim} 
-          rCard={rCard} 
-          rActionBtn={rActionBtn} 
-          isCancellableStatus={isCancellableStatus} 
+        <DetailsCard
+          booking={booking}
+          detailsCardAnim={detailsCardAnim}
+          detailsFloatAnim={detailsFloatAnim}
+          rCard={rCard}
+          rDetails={rDetails}
+          handleCopyAddress={handleCopyAddress}
+          handleOpenInMaps={handleOpenInMaps}
+          theme={theme}
+        />
+        <ActionsCard
+          booking={booking}
+          actionsCardAnim={actionsCardAnim}
+          actionsFloatAnim={actionsFloatAnim}
+          rCard={rCard}
+          rActionBtn={rActionBtn}
+          isCancellableStatus={isCancellableStatus}
           isCompletedStatus={isCompletedStatus}
           isReviewed={isReviewed}
-          handleCancelBooking={handleCancelBooking} 
-          handleContactProvider={handleContactProvider} 
-          handleReviewService={handleReviewService} 
+          handleCancelBooking={handleCancelBooking}
+          handleContactProvider={handleContactProvider}
+          handleReviewService={handleReviewService}
           handleViewProviderProfile={handleViewProviderProfile}
           cancelButtonScaleAnim={cancelButtonScaleAnim}
           contactButtonScaleAnim={contactButtonScaleAnim}
@@ -622,6 +632,7 @@ export default function BookingDetailsScreen() {
           profileButtonScaleAnim={profileButtonScaleAnim}
           onPressInButton={onPressInButton}
           onPressOutButton={onPressOutButton}
+          theme={theme}
         />
         {/* Novo: ProviderServicesInline para upsell */}
         <ProviderServicesInline
@@ -641,15 +652,16 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 16, fontSize: 15, color: AppColors.textAuxiliary, fontFamily: 'Montserrat-Regular' },
   errorText: { fontSize: 16, color: AppColors.errorRed, textAlign: 'center', marginBottom: 24, fontFamily: 'Montserrat-Regular', lineHeight: 22 },
 
-  // Novo estilo para HeaderBar
+  // Header temático (vidro leve + bordas arredondadas) alinhado ao tema do Schedule
+  thematicHeader: { marginHorizontal: 12, marginBottom: 6, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, borderTopLeftRadius: 8, borderTopRightRadius: 8, overflow: 'hidden', ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }, android: { elevation: 3 } }) },
   headerBar: { paddingTop: 8, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
-  actionButton: { borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.12)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.32, shadowRadius: 10 }, android: { elevation: 8 } }) },
+  actionButton: { borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.12)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 10 }, android: { elevation: 6 } }) },
   actionButtonInner: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20 },
   actionButtonText: { color: AppColors.white, fontSize: 17, fontWeight: '600', marginLeft: 12, fontFamily: 'Montserrat-SemiBold' },
 
-  card: { backgroundColor: UI.card, borderRadius: 18, padding: 20, marginHorizontal: 16, marginTop: 16, marginBottom: 12, overflow: 'hidden', ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.28, shadowRadius: 12 }, android: { elevation: 8 } }) },
-  providerSectionCard: { paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: 'relative' },
+  card: { backgroundColor: UI.card, borderRadius: 18, padding: 20, marginHorizontal: 16, marginTop: 16, marginBottom: 12, overflow: 'hidden', ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12 }, android: { elevation: 6 } }) },
+  providerSectionCard: { paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', position: 'relative' },
   providerSection: { flexDirection: 'row', alignItems: 'center', flex: 1 },
 
   photoPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF', borderWidth: 2, borderColor: UI.divider },
@@ -662,21 +674,26 @@ const styles = StyleSheet.create({
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, alignSelf: 'flex-start', marginLeft: 12 },
   statusText: { fontSize: 13, fontWeight: '700', marginLeft: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Montserrat-SemiBold' },
 
-  sectionTitleContainer: { marginBottom: 16, borderBottomWidth: 1, borderBottomColor: AppColors.backgroundNeutral, paddingBottom: 10 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: AppColors.textBody, fontFamily: 'Montserrat-SemiBold' },
+  sectionTitleContainer: { marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: AppColors.backgroundNeutral },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: AppColors.textBody, fontFamily: 'Montserrat-SemiBold', letterSpacing: 0.2 },
 
-  detailRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14 },
-  icon: { marginRight: 12, marginTop: 2 },
-  detailLabel: { fontSize: 15, color: AppColors.textAuxiliary, fontWeight: '600', marginRight: 8, width: 110, fontFamily: 'Montserrat-Regular' },
-  detailValue: { fontSize: 15, color: AppColors.textBody, flex: 1, fontFamily: 'Montserrat-Regular', lineHeight: 22 },
-  detailValueAddress: { fontSize: 15, color: AppColors.textBody, flex: 1, lineHeight: 22, fontFamily: 'Montserrat-Regular' },
+  detailRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, marginBottom: 6 },
+  icon: { width: 24, textAlign: 'center' as any, marginRight: 12, marginTop: 2 },
+  detailLabel: { width: 108, fontSize: 14.5, color: AppColors.textAuxiliary, fontWeight: '600', marginRight: 8, fontFamily: 'Montserrat-Regular', letterSpacing: 0.2, marginTop: 2 },
+  detailValue: { flex: 1, fontSize: 16, color: AppColors.textBody, fontFamily: 'Montserrat-Regular', lineHeight: 22, paddingTop: 2 },
+  detailValueAddress: { flex: 1, fontSize: 16, color: AppColors.textBody, lineHeight: 22, fontFamily: 'Montserrat-Regular', paddingTop: 2 },
 
   priceText: { fontWeight: '700', color: UI.accent, fontFamily: 'Montserrat-SemiBold', textShadowColor: 'rgba(0,0,0,0.06)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1, fontSize: 16 },
 
-  actionsCard: { backgroundColor: UI.card, borderRadius: 18, padding: 20, marginHorizontal: 16, marginTop: 16, marginBottom: 40, overflow: 'hidden', ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.28, shadowRadius: 12 }, android: { elevation: 8 } }) },
+  actionsCard: { backgroundColor: UI.card, borderRadius: 18, padding: 20, marginHorizontal: 16, marginTop: 16, marginBottom: 40, overflow: 'hidden', ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12 }, android: { elevation: 6 } }) },
   cancelButton: {},
   reviewButton: {},
-  actionButtonOutline: { borderRadius: 14, borderWidth: 2, borderColor: UI.accent, marginBottom: 16, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 }, android: { elevation: 6 } }) },
+  actionButtonOutline: { borderRadius: 14, borderWidth: 2, borderColor: UI.accent, marginBottom: 16, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 6 }, android: { elevation: 4 } }) },
   actionButtonOutlineInner: { backgroundColor: 'transparent', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20 },
   actionButtonOutlineText: { color: UI.accent, marginLeft: 12, fontFamily: 'Montserrat-SemiBold', fontSize: 16 },
 });
+
+
+
+
+
