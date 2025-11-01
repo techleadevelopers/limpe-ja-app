@@ -10,6 +10,8 @@ interface BookServiceButtonProps {
   router: Router; // Usar o tipo Router do expo-router para melhor tipagem
   bookNowButtonAnim: Animated.Value;
   servicePrice?: number; // <--- CORREÇÃO: Adicionada a propriedade servicePrice como número opcional
+  sticky?: boolean; // Torna o botão fixo na parte inferior (barra)
+  safeBottomInset?: number; // Ajuste opcional para área segura inferior
 }
 
 const BookServiceButton: React.FC<BookServiceButtonProps> = ({
@@ -18,17 +20,22 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
   router,
   bookNowButtonAnim,
   servicePrice, // <--- CORREÇÃO: Desestruturada a nova prop
+  sticky = false,
+  safeBottomInset = 0,
 }) => {
   return (
-    <Animated.View style={[
-      localStyles.buttonContainer, // Estilo renomeado e modificado
-      {
-        opacity: bookNowButtonAnim,
-        transform: [{
-          translateY: bookNowButtonAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] })
-        }],
-      }
-    ]}>
+    <Animated.View
+      style={[
+        sticky ? localStyles.stickyContainer : localStyles.buttonContainer,
+        sticky && { paddingBottom: Math.max(8, safeBottomInset) },
+        {
+          opacity: bookNowButtonAnim,
+          transform: [{
+            translateY: bookNowButtonAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] })
+          }],
+        }
+      ]}
+    >
       <LinearGradient
         colors={['#A8D8FF', '#4A90E2']}
         start={{ x: 0, y: 0 }}
@@ -67,6 +74,17 @@ const localStyles = StyleSheet.create({
     alignSelf: 'center', // Centraliza o botão horizontalmente dentro do seu container pai
     width: '90%', // Define a largura do botão para 90% do container pai
     maxWidth: 400, // Opcional: limita a largura máxima para telas maiores
+  },
+  stickyContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    backgroundColor: 'rgba(255,255,255,0.85)', // Barra sutil translúcida
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.06)',
   },
   bookServiceButtonGradient: {
     borderRadius: 12,
