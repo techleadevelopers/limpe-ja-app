@@ -1,4 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -96,10 +97,10 @@ const headerStyles = StyleSheet.create({
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 },
+      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 6 },
       android: { elevation: 8 },
     }),
-    marginBottom: 20,
+    marginBottom: 24,
   },
   greetingContainer: {
     flex: 1,
@@ -150,8 +151,13 @@ const FinancialSummaryCard: React.FC<{
   const formattedPendingWithdrawals = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pendingWithdrawals || 0);
 
   return (
-    <View style={summaryStyles.summaryCard}>
-      <Text style={summaryStyles.cardTitle}>Resumo Financeiro</Text>
+    <LinearGradient
+      colors={['rgba(74,144,226,0.88)', '#2A72E7']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={summaryStyles.summaryCard}
+    >
+      <Text style={summaryStyles.cardTitle}>Seus Ganhos</Text>
       <View style={summaryStyles.metricsGrid}>
         <View style={summaryStyles.metricItem}>
           <Text style={summaryStyles.metricLabel}>Ganhos Totais</Text>
@@ -173,19 +179,19 @@ const FinancialSummaryCard: React.FC<{
         <Text style={summaryStyles.viewEarningsButtonText}>Gerenciar Ganhos</Text>
         <Ionicons name="chevron-forward-outline" size={20} color={WHITE} />
       </TouchableOpacity>
-    </View>
+    </LinearGradient>
   );
 };
 
 const summaryStyles = StyleSheet.create({
   summaryCard: {
-    backgroundColor: ICON_PRIMARY, // Usar cor primária para destaque
     borderRadius: 18,
-    padding: 20,
-    marginBottom: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    marginBottom: 24,
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 },
-      android: { elevation: 10 },
+      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.1, shadowRadius: 20 },
+      android: { elevation: 12 },
     }),
   },
   cardTitle: {
@@ -197,7 +203,7 @@ const summaryStyles = StyleSheet.create({
   metricsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   metricItem: {
     alignItems: 'center',
@@ -248,21 +254,21 @@ const QuickActionsSection: React.FC<{
 
   return (
     <View style={quickActionStyles.sectionContainer}>
-      <Text style={quickActionStyles.sectionTitle}>Ações Rápidas</Text>
+      <Text style={quickActionStyles.sectionTitle}>Atalhos do Dia</Text>
       <View style={quickActionStyles.grid}>
         <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s1 }] }]}
           onPress={onManageAvailability} onPressIn={p1} onPressOut={o1}>
-          <Ionicons name="calendar-outline" size={30} color={ICON_PRIMARY} />
+          <Ionicons name="calendar-outline" size={28} color={ICON_PRIMARY} style={{ textShadowColor: 'rgba(255,255,255,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }} />
           <Text style={quickActionStyles.gridItemText}>Minha Agenda</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s2 }] }]}
           onPress={onViewAllServicesPress} onPressIn={p2} onPressOut={o2}>
-          <Ionicons name="briefcase-outline" size={30} color={ICON_PRIMARY} />
+          <Ionicons name="briefcase-outline" size={28} color={ICON_PRIMARY} style={{ textShadowColor: 'rgba(255,255,255,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }} />
           <Text style={quickActionStyles.gridItemText}>Meus Serviços</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s3 }] }]}
           onPress={onViewAllMessagesPress} onPressIn={p3} onPressOut={o3}>
-          <Ionicons name="chatbubbles-outline" size={30} color={ICON_PRIMARY} />
+          <Ionicons name="chatbubbles-outline" size={28} color={ICON_PRIMARY} style={{ textShadowColor: 'rgba(255,255,255,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }} />
           <Text style={quickActionStyles.gridItemText}>Mensagens</Text>
         </TouchableOpacity>
         {/* Adicione mais ações rápidas conforme necessário, ex: "Meu Perfil", "Ajuda" */}
@@ -276,14 +282,14 @@ const quickActionStyles = StyleSheet.create({
     backgroundColor: WHITE,
     borderRadius: 18,
     padding: 20, // Manter ou ajustar este padding se o espaço lateral geral da caixa é o que te incomoda
-    marginBottom: 20,
+    marginBottom: 24,
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 },
+      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 6 },
       android: { elevation: 8 },
     }),
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: TEXT_DARK,
     marginBottom: 15,
@@ -298,7 +304,7 @@ const quickActionStyles = StyleSheet.create({
   gridItem: {
     // ATENÇÃO AQUI: Para 3 itens por linha, você PRECISA de uma largura menor.
     // 30% x 3 = 90%. Sobram 10% para gaps.
-    width: '30%', // <--- MUDANÇA ESSENCIAL AQUI para 3 itens por linha!
+    width: '28.5%', // <--- MUDANÇA ESSENCIAL AQUI para 3 itens por linha!
     aspectRatio: 1, // Para manter quadrado
     backgroundColor: BACKGROUND_ALT,
     borderRadius: 12,
@@ -306,7 +312,7 @@ const quickActionStyles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15, // Espaçamento vertical entre as linhas
     padding: 10,
-    borderWidth: 1,
+    borderWidth: 0.3,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3 },
@@ -656,6 +662,30 @@ export default function ProviderDashboardScreen() {
     );
   }
 
+  // Avatar do cabeçalho: normaliza e busca na melhor fonte disponível
+  const sanitizeUrl = (v: any) => (typeof v === 'string' && v.trim().length > 0 ? v.trim() : undefined);
+  const headerAvatarUrl =
+    sanitizeUrl((dashboardData as any)?.avatarUrl)
+    || sanitizeUrl((dashboardData as any)?.profileImageUrl)
+    || sanitizeUrl((dashboardData as any)?.profilePhotoUrl)
+    || sanitizeUrl((dashboardData as any)?.user?.avatarUrl)
+    || sanitizeUrl((dashboardData as any)?.user?.profile?.avatarUrl)
+    || sanitizeUrl((dashboardData as any)?.provider?.avatarUrl)
+    || sanitizeUrl((dashboardData as any)?.userProfile?.avatarUrl)
+    || sanitizeUrl((dashboardData as any)?.userProfile?.providerDetails?.avatarUrl)
+    || sanitizeUrl(user?.avatarUrl)
+    || sanitizeUrl((user as any)?.userProfile?.avatarUrl)
+    || sanitizeUrl((user as any)?.providerDetails?.avatarUrl)
+    || sanitizeUrl((user as any)?.profileImageUrl)
+    || sanitizeUrl((user as any)?.profilePhotoUrl)
+    || sanitizeUrl((user as any)?.avatar)
+    || undefined;
+
+  const headerProviderName = (dashboardData as any)?.fullName
+    || (dashboardData as any)?.userProfile?.fullName
+    || user?.fullName
+    || undefined;
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -666,8 +696,8 @@ export default function ProviderDashboardScreen() {
       >
         {/* NOVO: Dashboard Header com nome do provedor e avatar */}
         <DashboardHeader
-          providerName={dashboardData?.fullName}
-          avatarUrl={user?.avatarUrl} // Assumindo que user.avatarUrl vem do AuthContext
+          providerName={headerProviderName}
+          avatarUrl={headerAvatarUrl}
           onProfilePress={() => router.push('/(provider)/profile' as any)}
         />
 
@@ -844,7 +874,7 @@ const styles = StyleSheet.create({
     backgroundColor: WHITE,
     borderRadius: 18,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 24,
     ...Platform.select({
       ios: {
         shadowColor: SHADOW_COLOR_SECTION,
@@ -860,11 +890,11 @@ const styles = StyleSheet.create({
   sectionHeaderWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
     justifyContent: 'center',
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
     color: TEXT_DARK,
     textAlign: 'center',
@@ -916,7 +946,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
+    borderWidth: 0.3,
     borderColor: BORDER_SUBTLE,
     position: 'relative',
     overflow: 'hidden',
@@ -1036,7 +1066,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: 0.3,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
@@ -1075,7 +1105,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginTop: 15,
-    borderWidth: 1,
+    borderWidth: 0.3,
     borderColor: BORDER_SUBTLE,
       ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
@@ -1116,7 +1146,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: 0.3,
     borderColor: BORDER_SUBTLE,
   },
   reviewText: {
@@ -1152,7 +1182,7 @@ const styles = StyleSheet.create({
       paddingVertical: 12,
       paddingHorizontal: 16,
       marginTop: 20,
-      borderWidth: 1,
+      borderWidth: 0.3,
       borderColor: BORDER_SUBTLE,
       flexDirection: 'row',
       alignItems: 'center',
@@ -1166,3 +1196,4 @@ const styles = StyleSheet.create({
       marginLeft: 12,
   },
 });
+
