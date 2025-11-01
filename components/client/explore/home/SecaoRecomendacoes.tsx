@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useRef } from 'react';
+import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 
 interface SecaoRecomendacoesProps {
@@ -24,6 +25,16 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
 }) => {
   const safeData = Array.isArray(data) ? data.filter((item) => item && item.fullName) : [];
 
+  // Parâmetros do carrossel (alinhados ao RecomendacaoCard)
+  // Ajuste fino: refletir largura e espaçamento reais do RecomendacaoCard (com escala de 7%)
+  const CARD_SCALE = 1.07;
+  const CARD_BASE_WIDTH = 115 * CARD_SCALE; // ~123.05
+  const CARD_MARGIN_RIGHT = 15 * CARD_SCALE; // ~16.05 (combina com marginRight atual do card)
+  const ITEM_FULL_SIZE = CARD_BASE_WIDTH + CARD_MARGIN_RIGHT; // passo de snap
+
+  // Animated scroll value para aplicar escala/opacidade por item
+  const scrollX = useRef(new Animated.Value(0)).current;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -35,24 +46,83 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
         )}
       </View>
 
-      <ScrollView
-        horizontal={horizontal}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.cardsScrollContainer}
-      >
-        {safeData.length > 0 ? (
-          safeData.map((item, index) => {
-            try {
-              return renderItem({ item, index });
-            } catch (err) {
-              console.error(`[SecaoRecomendacoes] Erro ao renderizar item no índice ${index}:`, err);
-              return null;
-            }
-          })
-        ) : (
-          <Text style={styles.emptyText}>{noDataText}</Text>
-        )}
-      </ScrollView>
+      {/* Scroll premium com snap, escala central e fade nas bordas */}
+      <View style={styles.carouselWrapper}>
+        <Animated.ScrollView
+          horizontal={horizontal}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cardsScrollContainer}
+          decelerationRate="fast"
+          snapToInterval={ITEM_FULL_SIZE}
+          snapToAlignment="start"
+          disableIntervalMomentum
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+            { useNativeDriver: true }
+          )}
+          scrollEventThrottle={16}
+        >
+          {safeData.length > 0 ? (
+            safeData.map((item, index) => {
+              try {
+                const inputRange = [
+                  (index - 1) * ITEM_FULL_SIZE,
+                  index * ITEM_FULL_SIZE,
+                  (index + 1) * ITEM_FULL_SIZE,
+                ];
+                const scale = scrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.94, 1.02, 0.94],
+                  extrapolate: 'clamp',
+                });
+                const translateY = scrollX.interpolate({
+                  inputRange,
+                  outputRange: [2, 0, 2],
+                  extrapolate: 'clamp',
+                });
+                const opacity = scrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.9, 1, 0.9],
+                  extrapolate: 'clamp',
+                });
+
+                return (
+                  <Animated.View
+                    key={item.id}
+                    style={[
+                      styles.itemWrapper,
+                      { transform: [{ translateY }, { scale }], opacity },
+                    ]}
+                  >
+                    {renderItem({ item, index })}
+                  </Animated.View>
+                );
+              } catch (err) {
+                console.error(`[SecaoRecomendacoes] Erro ao renderizar item no índice ${index}:`, err);
+                return null;
+              }
+            })
+          ) : (
+            <Text style={styles.emptyText}>{noDataText}</Text>
+          )}
+        </Animated.ScrollView>
+
+        {/* Fade lateral sutil para conforto visual */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={["rgba(241,242,241,1)", "rgba(241,242,241,0.94)", "rgba(241,242,241,0)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[styles.edgeFade, styles.edgeLeft]}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={["rgba(241,242,241,0)", "rgba(241,242,241,0.94)", "rgba(241,242,241,1)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[styles.edgeFade, styles.edgeRight]}
+        />
+      </View>
     </View>
   );
 };
@@ -86,6 +156,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 1,
+    transform: [{ translateY: 14 }], // desloca mais para baixo (~8px)
   },
   viewAllText: {
     fontSize: 1,
@@ -96,6 +167,28 @@ const styles = StyleSheet.create({
   cardsScrollContainer: {
     paddingHorizontal: 15,
     paddingBottom: 10,
+  },
+  carouselWrapper: {
+    position: 'relative',
+  },
+  itemWrapper: {
+    // Mantém o espaçamento original do card
+    marginRight: 0, // o RecomendacaoCard já tem marginRight interno
+    
+  },
+  edgeFade: {
+    position: 'absolute',
+    top: 8, // alinha com a altura do conteúdo (ajuste fino)
+    bottom: 10,
+    width: 28,
+    zIndex: 2,
+  },
+  edgeLeft: {
+    left: 0,
+    bottom: 0,
+  },
+  edgeRight: {
+    right: 0,
   },
   emptyText: {
     flex: 1,
