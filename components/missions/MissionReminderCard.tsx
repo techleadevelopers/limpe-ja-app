@@ -107,7 +107,13 @@ const MissionReminderCardComp: React.FC<MissionReminderCardProps> = ({
   useEffect(() => {
     if (reduced) return;
     const loop = Animated.loop(
-      Animated.timing(ribbonAnim, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.linear), useNativeDriver: true })
+      Animated.timing(ribbonAnim, {
+        toValue: 1,
+        duration: 1800,
+        easing: Easing.inOut(Easing.linear),
+        // shimmer view uses width/background styles; keep JS driver
+        useNativeDriver: false,
+      })
     );
     loop.start();
     return () => loop.stop();
