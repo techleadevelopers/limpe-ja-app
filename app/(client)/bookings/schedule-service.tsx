@@ -209,9 +209,9 @@ const BookingSummaryPreview = ({
 
     return (
         <Animated.View style={[styles.card, rCard, { marginTop: 20 }, reviewCardAnim]}>
-            <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitlePlain}>
-                    {t('schedule_service.review_booking_title', { defaultValue: 'Revisar Agendamento' })}
+            <View style={[styles.sectionHeaderRow, { justifyContent: 'center' }]}>
+                <Text style={[styles.sectionTitlePlain, { textAlign: 'center' }]}>
+                    {t('schedule_service.review_booking_title', { defaultValue: 'Revise seu agendamento' })}
                 </Text>
             </View>
 
@@ -1365,33 +1365,35 @@ export default function ScheduleServiceScreen() {
                     fadeAnim={fadeAnim}
                     slideUpAnim={slideUpAnim}
                 />
-                <View style={styles.stepsPill}>
-                    <View key="step1" style={[
-                        styles.stepItem, 
-                        styles.stepItemGhost, 
-                        { marginRight: 6 },
-                        currentStep === 1 ? styles.stepItemActive : null
-                    ]}>
-                        <Text style={[
-                            styles.stepGhostText,
-                            currentStep === 1 ? styles.stepActiveText : null
-                        ]} numberOfLines={1}>
-                            <Text>{stepTitles[0]}</Text>
-                        </Text>
+                {currentStep === 1 && (
+                    <View style={styles.stepsPill}>
+                        <View key="step1" style={[
+                            styles.stepItem, 
+                            styles.stepItemGhost, 
+                            { marginRight: 6 },
+                            currentStep === 1 ? styles.stepItemActive : null
+                        ]}>
+                            <Text style={[
+                                styles.stepGhostText,
+                                currentStep === 1 ? styles.stepActiveText : null
+                            ]} numberOfLines={1}>
+                                <Text>{stepTitles[0]}</Text>
+                            </Text>
+                        </View>
+                        <View key="step2" style={[
+                            styles.stepItem, 
+                            currentStep === 2 ? styles.stepItemActive : styles.stepItemGhost,
+                            { marginRight: 6 }
+                        ]}>
+                            <Text style={[
+                                styles.stepGhostText,
+                                currentStep === 2 ? styles.stepActiveText : null
+                            ]} numberOfLines={1}>
+                                <Text>{stepTitles[1]}</Text>
+                            </Text>
+                        </View>
                     </View>
-                    <View key="step2" style={[
-                        styles.stepItem, 
-                        currentStep === 2 ? styles.stepItemActive : styles.stepItemGhost,
-                        { marginRight: 6 }
-                    ]}>
-                        <Text style={[
-                            styles.stepGhostText,
-                            currentStep === 2 ? styles.stepActiveText : null
-                        ]} numberOfLines={1}>
-                            <Text>{stepTitles[1]}</Text>
-                        </Text>
-                    </View>
-                </View>
+                )}
 
                 <Animated.ScrollView
                     ref={scrollViewRef}
