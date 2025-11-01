@@ -16,6 +16,7 @@ import {
   AccessibilityInfo, // Importar AccessibilityInfo
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { showOverlay } from '../../../hooks/useOverlayMessage';
@@ -306,6 +307,11 @@ export default function MyScheduleScreen() {
   const agendaHeaderAnim = useRef(new Animated.Value(0)).current;
   const feedbackAnim = useRef(new Animated.Value(0)).current;
 
+  // Coach (manual prático) – guia leve para 30–70 anos
+  const [coachVisible, setCoachVisible] = useState(false);
+  const [coachStep, setCoachStep] = useState<1 | 2 | 3 | 4>(1);
+  const [coachDontShow, setCoachDontShow] = useState(false);
+
   // Quick Availability step
   const [qaVisible, setQaVisible] = useState(false);
   const [qaStep, setQaStep] = useState<1 | 2 | 3>(1);
@@ -323,7 +329,7 @@ export default function MyScheduleScreen() {
       setAllAppointments(data);
 
       const animationDuration = isReducedMotionEnabled ? 0 : 160; // Suave iOS
-      const staggerDelay = isReducedMotionEnabled ? 0 : 160;
+      const staggerDelay = isReducedMotionEnabled ? 0 : 60; // Sequência mais natural (60ms)
 
       Animated.stagger(staggerDelay, [
         Animated.timing(calendarAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
@@ -343,6 +349,17 @@ export default function MyScheduleScreen() {
     const animationDuration = isReducedMotionEnabled ? 0 : 600; // Confortável iOS
     Animated.timing(headerAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }).start();
     loadAppointments();
+    // Exibir guia na primeira visita
+    (async () => {
+      try {
+        const seen = await AsyncStorage.getItem('provider_schedule_coach_v1');
+        if (!seen) {
+          setCoachVisible(true);
+          setCoachStep(1);
+          AccessibilityInfo.announceForAccessibility('Bem-vindo! Toque em continuar para aprender a editar seus horários.');
+        }
+      } catch {}
+    })();
   }, [headerAnim, isReducedMotionEnabled]);
 
   const onRefresh = () => {
@@ -385,8 +402,8 @@ export default function MyScheduleScreen() {
   const onDayPress = (day: DateData) => {
     const todayStr = new Date().toISOString().split('T')[0];
     if (day.dateString < todayStr) {
-      // Ignora seleção de datas passadas
-      AccessibilityInfo.announceForAccessibility('Data indisponível. Selecione hoje ou uma data futura.');
+      // Ignora seleção de datas passadas (mensagem mais empática)
+      AccessibilityInfo.announceForAccessibility('Escolha uma data de hoje pra frente, tá bom?');
       return;
     }
     setSelectedDate(day.dateString);
@@ -459,10 +476,10 @@ export default function MyScheduleScreen() {
           style={styles.quickCTAButton}
           onPress={() => { setQaStep(1); setQaVisible(true); if (Platform.OS==='ios') Haptics.selectionAsync(); }}
           accessibilityRole="button"
-          accessibilityLabel="Disponibilidade rápida"
+          accessibilityLabel="Ajuda para montar meus horários"
         >
           <Ionicons name="flash-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.quickCTAButtonText}>Disponibilidade rápida</Text>
+          <Text style={styles.quickCTAButtonText}>Ajuda para montar meus horários</Text>
         </TouchableOpacity>
       </View>
 
@@ -512,7 +529,7 @@ export default function MyScheduleScreen() {
         <FlatList
           data={appointmentsForSelectedDate}
           renderItem={({ item, index }) => (
-            <AnimatedAppointmentItem item={item} onPress={handleAppointmentPress} delay={index * 80} isReducedMotionEnabled={isReducedMotionEnabled} /> // Delay suave
+            <AnimatedAppointmentItem item={item} onPress={handleAppointmentPress} delay={index * 60} isReducedMotionEnabled={isReducedMotionEnabled} /> // Delay suave (60ms)
           )}
           keyExtractor={(item) => item.id}
           style={styles.listStyle}
@@ -569,10 +586,22 @@ export default function MyScheduleScreen() {
               <View>
                 <Text style={styles.stepTitle}>Qual horário?</Text>
                 <View style={styles.modalChipsRow}>
-                  <TouchableOpacity style={[styles.modalChip, qaPreset==='morning' && styles.modalChipActive]} onPress={() => setQaPreset('morning')}><Text style={[styles.modalChipText, qaPreset==='morning' && styles.modalChipTextActive]}>Manhã (08–12)</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalChip, qaPreset==='afternoon' && styles.modalChipActive]} onPress={() => setQaPreset('afternoon')}><Text style={[styles.modalChipText, qaPreset==='afternoon' && styles.modalChipTextActive]}>Tarde (13–17)</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalChip, qaPreset==='fullday' && styles.modalChipActive]} onPress={() => setQaPreset('fullday')}><Text style={[styles.modalChipText, qaPreset==='fullday' && styles.modalChipTextActive]}>Dia todo (08–18)</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalChip, qaPreset==='off' && styles.modalChipActive]} onPress={() => setQaPreset('off')}><Text style={[styles.modalChipText, qaPreset==='off' && styles.modalChipTextActive]}>Folga</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalChip, qaPreset==='morning' && styles.modalChipActive]} onPress={() => setQaPreset('morning')}>
+                    <Ionicons name="sunny-outline" size={16} color={qaPreset==='morning' ? '#fff' : Colors.text} style={{ marginRight: 6 }} />
+                    <Text style={[styles.modalChipText, qaPreset==='morning' && styles.modalChipTextActive]}>Manhã (08–12)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalChip, qaPreset==='afternoon' && styles.modalChipActive]} onPress={() => setQaPreset('afternoon')}>
+                    <Ionicons name="partly-sunny-outline" size={16} color={qaPreset==='afternoon' ? '#fff' : Colors.text} style={{ marginRight: 6 }} />
+                    <Text style={[styles.modalChipText, qaPreset==='afternoon' && styles.modalChipTextActive]}>Tarde (13–17)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalChip, qaPreset==='fullday' && styles.modalChipActive]} onPress={() => setQaPreset('fullday')}>
+                    <Ionicons name="time-outline" size={16} color={qaPreset==='fullday' ? '#fff' : Colors.text} style={{ marginRight: 6 }} />
+                    <Text style={[styles.modalChipText, qaPreset==='fullday' && styles.modalChipTextActive]}>Dia todo (08–18)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalChip, qaPreset==='off' && styles.modalChipActive]} onPress={() => setQaPreset('off')}>
+                    <Ionicons name="moon-outline" size={16} color={qaPreset==='off' ? '#fff' : Colors.text} style={{ marginRight: 6 }} />
+                    <Text style={[styles.modalChipText, qaPreset==='off' && styles.modalChipTextActive]}>Folga</Text>
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.modalActions}>
                   <TouchableOpacity style={[styles.modalButton, styles.modalCancel]} onPress={() => setQaStep(1)}><Text style={styles.modalButtonText}>Voltar</Text></TouchableOpacity>
@@ -645,6 +674,108 @@ export default function MyScheduleScreen() {
               >
                 <Text style={styles.modalButtonText}>Recusar</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Botão discreto para reabrir o guia (não atrapalha a visão) */}
+      {!qaVisible && !rrVisible && !coachVisible && (
+        <TouchableOpacity
+          style={styles.coachFab}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir guia rápido"
+          onPress={() => {
+            setCoachStep(1);
+            setCoachVisible(true);
+            if (Platform.OS === 'ios') Haptics.selectionAsync();
+            AccessibilityInfo.announceForAccessibility('Guia rápido aberto.');
+          }}
+        >
+          <Ionicons name="help-circle-outline" size={22} color={Colors.primary} />
+        </TouchableOpacity>
+      )}
+
+      {/* Coach Overlay: manual prático (primeiro acesso) */}
+      {coachVisible && !qaVisible && !rrVisible && (
+        <View style={styles.coachOverlay} accessible accessibilityViewIsModal>
+          <View style={styles.coachCard}>
+            {coachStep === 1 && (
+              <>
+                <Text style={styles.coachTitle}>Bem-vindo à sua agenda</Text>
+                <Text style={styles.coachText}>
+                  Toque no calendário para escolher o dia. Você só edita hoje ou datas futuras.
+                </Text>
+              </>
+            )}
+            {coachStep === 2 && (
+              <>
+                <Text style={styles.coachTitle}>Horários prontos</Text>
+                <Text style={styles.coachText}>
+                  Use “Ajuda para montar meus horários” para aplicar manhã, tarde ou dia todo e repetir em outros dias.
+                </Text>
+              </>
+            )}
+            {coachStep === 3 && (
+              <>
+                <Text style={styles.coachTitle}>Editar com detalhes</Text>
+                <Text style={styles.coachText}>
+                  Precisa ajustar finamente? Toque em “Disponibilidade” no topo para abrir a tela de edição.
+                </Text>
+              </>
+            )}
+            {coachStep === 4 && (
+              <>
+                <Text style={styles.coachTitle}>Pronto!</Text>
+                <Text style={styles.coachText}>
+                  Quando terminar, seus clientes já verão seus horários. Você pode desfazer alterações depois.
+                </Text>
+              </>
+            )}
+
+            <View style={styles.coachCheckboxRow}>
+              <TouchableOpacity
+                onPress={() => setCoachDontShow(prev => !prev)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: coachDontShow }}
+              >
+                <Text style={styles.coachCheckboxText}>{coachDontShow ? '☑ ' : '☐ '}Não mostrar novamente</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.coachActions}>
+              {coachStep > 1 ? (
+                <TouchableOpacity
+                  style={[styles.coachButton, styles.coachSecondaryButton]}
+                  onPress={() => { setCoachStep((s) => (s > 1 ? ((s - 1) as any) : s)); if (Platform.OS==='ios') Haptics.selectionAsync(); }}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.coachSecondaryText}>Voltar</Text>
+                </TouchableOpacity>
+              ) : (
+                <View />
+              )}
+              {coachStep < 4 ? (
+                <TouchableOpacity
+                  style={styles.coachButton}
+                  onPress={() => { setCoachStep((s) => ((s + 1) as any)); AccessibilityInfo.announceForAccessibility('Continuar'); if (Platform.OS==='ios') Haptics.selectionAsync(); }}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.coachButtonText}>Continuar</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.coachButton}
+                  onPress={async () => {
+                    if (coachDontShow) { try { await AsyncStorage.setItem('provider_schedule_coach_v1', '1'); } catch {} }
+                    setCoachVisible(false);
+                    AccessibilityInfo.announceForAccessibility('Guia concluído.');
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.coachButtonText}>Começar</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -810,8 +941,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4, // Mais espaço
   },
-  appointmentTime: { fontSize: 14, color: Colors.textMuted, fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System' },
-  appointmentAddress: { fontSize: 14, color: Colors.textMuted, fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System' },
+  appointmentTime: { fontSize: 15, color: Colors.textMuted, fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System' },
+  appointmentAddress: { fontSize: 15, color: Colors.textMuted, fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System' },
   appointmentStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -905,6 +1036,33 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   quickCTAButtonText: { color: '#fff', fontWeight: '700' },
+  // Coach styles
+  coachOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 18 },
+  coachCard: { backgroundColor: Colors.surface, borderRadius: Radii.md, padding: 18, width: '88%', maxWidth: 520, ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width:0, height:8 }, shadowOpacity: 0.18, shadowRadius: 18 }, android: { elevation: 14 } }) },
+  coachTitle: { fontSize: 18, fontWeight: '800', color: Colors.text, marginBottom: 8 },
+  coachText: { fontSize: 16, color: Colors.textMuted, lineHeight: 22 },
+  coachCheckboxRow: { marginTop: 10, marginBottom: 6 },
+  coachCheckboxText: { color: Colors.textSubtle, fontSize: 14 },
+  coachActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  coachButton: { backgroundColor: Colors.primary, paddingVertical: 12, paddingHorizontal: 18, borderRadius: Radii.pill, minWidth: 120, alignItems: 'center' },
+  coachButtonText: { color: '#fff', fontWeight: '700' },
+  coachSecondaryButton: { backgroundColor: Colors.fieldBg },
+  coachSecondaryText: { color: Colors.text, fontWeight: '700' },
+  coachFab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    ...Platform.select({
+      ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 8 },
+      android: { elevation: 8 },
+    }),
+  },
   modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end', padding: 18 },
   modalCard: { backgroundColor: Colors.surface, borderRadius: Radii.md, padding: 18, ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width:0, height:8 }, shadowOpacity: 0.15, shadowRadius: 18 }, android: { elevation: 12 } }) },
   modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 6 },
