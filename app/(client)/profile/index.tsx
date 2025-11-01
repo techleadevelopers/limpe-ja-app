@@ -17,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Colors from '../../../constants/Colors';
 
-const AppLogo = require('../../../assets/images/logo.png');
+const AppLogo = require('../../../assets/images/logo2.png');
 
 function useTheme() {
   const scheme = useColorScheme?.() || 'light';
@@ -65,6 +65,7 @@ const ProfileHero: React.FC<{
             </View>
           </TouchableOpacity>
         </View>
+        <Image source={AppLogo} style={styles.heroLogo} />
       </View>
     </LinearGradient>
   );
@@ -78,6 +79,9 @@ const ListRow: React.FC<{
   onPress?: () => void;
   destructive?: boolean;
 }> = ({ label, ionIcon, mciIcon, badge, onPress, destructive }) => {
+  if (typeof label === 'string' && label.toLowerCase().includes('entrega')) {
+    return null;
+  }
   return (
     <TouchableOpacity onPress={onPress} style={styles.row} activeOpacity={0.9}>
       <View style={styles.rowLeft}>
@@ -102,7 +106,6 @@ const PaymentCard: React.FC<{ onPress: () => void }> = ({ onPress }) => {
   return (
     <TouchableOpacity style={styles.paymentCard} onPress={onPress} activeOpacity={0.95}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Image source={AppLogo} style={{ width: 46, height: 18, resizeMode: 'contain', marginRight: 8 }} />
         <View>
           <Text style={styles.paymentTitle}>Pagamentos</Text>
           <Text style={styles.paymentSubtitle}>Gerencie suas formas de pagamento ou pague na maquininha</Text>
@@ -196,6 +199,7 @@ const styles = StyleSheet.create({
   hero: { paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 16, paddingHorizontal: 14 },
   heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroBackBtn: { padding: 6 },
+  heroLogo: { width: 40, height: 16, resizeMode: 'contain', marginLeft: 8 },
   heroProfileRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center' },
   heroAvatarWrap: { width: 42, height: 42, borderRadius: 21, overflow: 'hidden', backgroundColor: '#F0F2F5', marginRight: 10 },
   heroAvatarImg: { width: '100%', height: '100%' },
@@ -243,4 +247,3 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: '#FF2D55', paddingHorizontal: 8, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   badgeText: { color: '#fff', fontWeight: '700', fontSize: 12 },
 });
-
