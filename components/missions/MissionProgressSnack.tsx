@@ -98,14 +98,16 @@ const MissionProgressSnackComp: React.FC<MissionProgressSnackProps> = ({
         toValue: 1,
         duration: 1600,
         easing: Easing.inOut(Easing.linear),
-        useNativeDriver: true,
+        // width/position styles are used on this Animated.View; keep JS driver
+        useNativeDriver: false,
       })
     ).start();
 
     Animated.loop(
       Animated.sequence([
-        Animated.timing(sparkPulse, { toValue: 1.12, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(sparkPulse, { toValue: 1.0, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        // The spark view has static width/height; keep JS driver to avoid native-width error
+        Animated.timing(sparkPulse, { toValue: 1.12, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.timing(sparkPulse, { toValue: 1.0, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
       ])
     ).start();
   }, [pct, widthAnim, shimmerAnim, sparkPulse]);
