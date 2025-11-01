@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { ActivityIndicator, Animated, Dimensions, Easing, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Svg, Rect } from 'react-native-svg';
 
 import { usePaymentIntent, usePixActions } from '../../../../app/(client)/bookings/paymentIntentHooks';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
@@ -15,6 +16,49 @@ interface SuccessPixInfoProps {
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+
+// Mock QR (visual, não escaneável) gerado por SVG, sem dependências externas
+function MockQRCode({ size = 240, seed = 'mock', modules = 21, quietZone = 4, dark = '#1f2937', light = '#FFFFFF' }: { size?: number; seed?: string; modules?: number; quietZone?: number; dark?: string; light?: string }) {
+  const lcg = (s: number) => () => (s = (s * 1664525 + 1013904223) >>> 0);
+  const hash = Array.from(seed).reduce((acc, ch) => ((acc << 5) - acc + ch.charCodeAt(0)) >>> 0, 2166136261) >>> 0;
+  const rnd = lcg(hash || 1);
+  const total = modules + quietZone * 2;
+  const cell = size / total;
+  const off = quietZone * cell;
+
+  const blocks: React.ReactNode[] = [];
+  blocks.push(<Rect key="bg" x={0} y={0} width={size} height={size} fill={light} />);
+
+  const drawFinder = (x0: number, y0: number) => {
+    blocks.push(<Rect key={`f7-${x0}-${y0}`} x={x0} y={y0} width={7 * cell} height={7 * cell} fill={dark} />);
+    blocks.push(<Rect key={`f5-${x0}-${y0}`} x={x0 + cell} y={y0 + cell} width={5 * cell} height={5 * cell} fill={light} />);
+    blocks.push(<Rect key={`f3-${x0}-${y0}`} x={x0 + 2 * cell} y={y0 + 2 * cell} width={3 * cell} height={3 * cell} fill={dark} />);
+  };
+
+  // Finder patterns nos 3 cantos
+  drawFinder(off, off);
+  drawFinder(off + (modules - 7) * cell, off);
+  drawFinder(off, off + (modules - 7) * cell);
+
+  // Padrão pseudo-aleatório para módulos restantes
+  for (let y = 0; y < modules; y++) {
+    for (let x = 0; x < modules; x++) {
+      const inTL = x < 7 && y < 7;
+      const inTR = x >= modules - 7 && y < 7;
+      const inBL = x < 7 && y >= modules - 7;
+      if (inTL || inTR || inBL) continue;
+      const r = rnd();
+      const bit = ((r >>> ((x + y) % 24)) & 1) === 1;
+      if (bit) {
+        const rx = off + x * cell;
+        const ry = off + y * cell;
+        blocks.push(<Rect key={`m-${x}-${y}`} x={rx} y={ry} width={cell} height={cell} fill={dark} />);
+      }
+    }
+  }
+
+  return <Svg width={size} height={size}>{blocks}</Svg>;
+}
 
 export default function SuccessPixInfo({ bookingId, fallback, onRegenerate, regenerating }: SuccessPixInfoProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -80,13 +124,7 @@ export default function SuccessPixInfo({ bookingId, fallback, onRegenerate, rege
     );
   }
 
-  if (!pixCode && !qrCodeImage) {
-    return null;
-  }
-
-  const qrCodeSource = qrCodeImage
-    ? { uri: qrCodeImage.startsWith('data:') ? qrCodeImage : `data:image/png;base64,${qrCodeImage}` }
-    : require('../../../../assets/images/pix.png');
+  // Usa QR real se disponível; caso contrário, renderiza QR MOCK em SVG (sem imagem externa)
 
   return (
     <Animated.View
@@ -103,7 +141,14 @@ export default function SuccessPixInfo({ bookingId, fallback, onRegenerate, rege
       ]}
     >
       <View style={styles.qrCodeContainer}>
-        <Image source={qrCodeSource} style={styles.qrCodeImage} />
+        {qrCodeImage ? (
+          <Image
+            source={{ uri: qrCodeImage.startsWith('data:') ? qrCodeImage : `data:image/png;base64,${qrCodeImage}` }}
+            style={styles.qrCodeImage}
+          />
+        ) : (
+          <MockQRCode size={240} seed={pixCode || bookingId} />
+        )}
       </View>
       <TouchableOpacity
         style={[styles.copyPixButton, { transform: [{ scale: buttonScaleAnim }] }]}
