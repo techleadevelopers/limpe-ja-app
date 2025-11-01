@@ -686,17 +686,7 @@ export default function EditProviderServicesScreen() {
             { opacity: formAnim, transform: [{ translateY: formAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] as any },
           ]}
         >
-          {!isEditing && (
-            <TouchableOpacity
-              style={styles.assistantCTA}
-              onPress={() => { setSsStep(1); setSsVisible(true); if (Platform.OS === 'ios') Haptics.selectionAsync(); }}
-              accessibilityRole="button"
-              accessibilityLabel="Configurar meu serviço em 2 minutos"
-            >
-              <Ionicons name="flash-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.assistantCTAText}>Configurar meu serviço em 2 minutos</Text>
-            </TouchableOpacity>
-          )}
+          
           <Text style={styles.formTitle}>{isEditing ? 'Editar Serviço Existente' : 'Adicionar Novo Serviço'}</Text>
 
           <View style={styles.inputLabelRow}>
