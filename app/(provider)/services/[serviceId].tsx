@@ -33,7 +33,7 @@ export default function ProviderServiceDetailsScreen() {
         const d = await getBookingDetails(String(serviceId));
         if (mounted) setData(d);
       } catch (e: any) {
-        setError(e?.message || 'NÃ£o foi possÃ­vel carregar o serviÃ§o.');
+        setError(e?.message || 'Não foi possível carregar o serviço.');
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -51,7 +51,7 @@ export default function ProviderServiceDetailsScreen() {
       case BookingStatus.IN_PROGRESS:
         return { text: '#007AFF', bg: '#E3F2FD', icon: 'sync-circle-outline' as const, label: 'Em andamento' };
       case BookingStatus.COMPLETED:
-        return { text: '#546E7A', bg: '#ECEFF1', icon: 'check-all' as const, label: 'ConcluÃ­do' };
+        return { text: '#546E7A', bg: '#ECEFF1', icon: 'check-all' as const, label: 'Concluído' };
       case BookingStatus.CANCELLED:
         return { text: '#D32F2F', bg: '#FFEBEE', icon: 'close-circle-outline' as const, label: 'Cancelado' };
       case BookingStatus.REJECTED:
@@ -97,7 +97,7 @@ export default function ProviderServiceDetailsScreen() {
         <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Voltar">
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>Detalhes do serviÃ§o</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>Detalhes do serviço</Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -109,7 +109,7 @@ export default function ProviderServiceDetailsScreen() {
       ) : error || !data ? (
         <View style={styles.centered}>
           <Ionicons name="alert-circle-outline" size={36} color={theme.primary} />
-          <Text style={{ marginTop: 8, color: theme.text }}>{error || 'NÃ£o foi possÃ­vel carregar.'}</Text>
+          <Text style={{ marginTop: 8, color: theme.text }}>{error || 'Não foi possível carregar.'}</Text>
         </View>
       ) : (
         <View style={styles.content}>
@@ -179,5 +179,3 @@ const styles = StyleSheet.create({
   secondaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1 },
   secondaryBtnText: { fontWeight: '800' },
 });
-
-
