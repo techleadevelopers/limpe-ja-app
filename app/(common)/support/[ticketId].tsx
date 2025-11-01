@@ -10,6 +10,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     SafeAreaView,
+    Dimensions,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -232,6 +233,8 @@ export default function TicketDetailsScreen() {
     );
 }
 
+const BOTTOM_RAISE = Math.round(Dimensions.get('window').height * 0.08);
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -366,6 +369,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: '#E0E0E0',
         backgroundColor: '#FFFFFF',
+        marginBottom: BOTTOM_RAISE,
     },
     messageInput: {
         flex: 1,
