@@ -245,7 +245,7 @@ const ReviewsScreen: React.FC = () => {
           accessibilityLabel="Voltar"
         >
           <Animated.View style={{ transform: [{ scale: headerTouch.scaleAnim }] }}>
-            <Ionicons name="arrow-back" size={24} color={WHITE} />
+            <Ionicons name="arrow-back" size={24} color={TEXT_DARK} />
           </Animated.View>
         </TouchableOpacity>
 
@@ -318,7 +318,7 @@ export default ReviewsScreen;
 const localStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.bgSoft,
+    backgroundColor: '#f1f2f1', // alinhado ao fundo da dashboard
   },
   customHeader: {
     ...Platform.select({
@@ -328,7 +328,7 @@ const localStyles = StyleSheet.create({
     }),
     paddingBottom: 14,
     paddingHorizontal: Spacing.sm,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#F2F1F2', // header com fundo claro para consistência
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -340,10 +340,10 @@ const localStyles = StyleSheet.create({
   headerBackButton: {
     padding: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
   },
   headerTitle: {
-    color: WHITE,
+    color: TEXT_DARK,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -352,7 +352,7 @@ const localStyles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.bgSoft,
+    backgroundColor: '#f1f2f1',
   },
   loadingText: { marginTop: 8, color: TEXT_MEDIUM },
 
