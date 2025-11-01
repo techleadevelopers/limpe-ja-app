@@ -1496,7 +1496,7 @@ const styles = StyleSheet.create({
     logoContainer: {
         alignItems: 'center',
         marginBottom: 20, // Logo mais próxima
-        top: 140,
+        top: 110,
         right: 10,
     },
     logo: {

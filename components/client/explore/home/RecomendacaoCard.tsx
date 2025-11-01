@@ -1,7 +1,7 @@
 ﻿import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import AnimatedReanimated, {
@@ -12,7 +12,8 @@ import AnimatedReanimated, {
   Easing,
   withSequence,
   cancelAnimation,
-  withDelay
+  withDelay,
+  interpolate,
 } from 'react-native-reanimated';
 
 import { CLIENT_ROUTES } from '../../../../constants/routes';
@@ -129,7 +130,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     return () => {
       cancelAnimation(fadeValue);
     };
-  }, [fadeValue]);
+  }, []); // Removido [fadeValue] para evitar loop infinito (não é necessário)
 
   const residencialOpacityStyle = useAnimatedStyle(() => ({
     opacity: 1 - fadeValue.value,
@@ -137,6 +138,83 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
   const comercialOpacityStyle = useAnimatedStyle(() => ({
     opacity: fadeValue.value,
+  }));
+
+  // NOVO: Implementação do badge animado para próximo horário disponível
+  const [index, setIndex] = useState(0);
+  const slots = [
+    { day: 'Ter', time: '09:00' },
+    { day: 'Qua', time: '14:30' },
+    { day: 'Sex', time: '08:00' },
+  ];
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setIndex((prev) => (prev + 1) % slots.length);
+    }, 4000); // troca a cada 4s (sincronizado com ciclo visível + invisível)
+    return () => clearInterval(id);
+  }, []);
+
+  // CORRIGIDO: Animação de visibilidade do badge inteiro (invisível 2s -> fade in suave 300ms -> visível 2s com pulse lento -> fade out 300ms)
+  const badgeVisibility = useSharedValue(0); // 0: invisível, 1: visível
+  useEffect(() => {
+    badgeVisibility.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: 2000 }), // Invisível por 2s (sem horário)
+        withTiming(1, { duration: 300, easing: Easing.inOut(Easing.ease) }), // Fade in suave para visível
+        withTiming(1, { duration: 2000 }), // Visível por 2s (com pulse lento durante isso)
+        withTiming(0, { duration: 300, easing: Easing.inOut(Easing.ease) }) // Fade out suave para invisível
+      ),
+      -1,
+      false
+    );
+    return () => {
+      cancelAnimation(badgeVisibility);
+    };
+  }, []);
+
+  const badgeVisibilityStyle = useAnimatedStyle(() => ({
+    opacity: badgeVisibility.value,
+  }));
+
+  // CORRIGIDO: Pulse de luminosidade LENTO só durante o tempo visível (mais sutil, sem afetar transparência do card)
+  const pulse = useSharedValue(0);
+  useEffect(() => {
+    // Pulse mais lento: ciclo de 3000ms (1.5s up + 1.5s down), mas só ativa quando visível (usando delay ou condicional)
+    // Para simplicidade, roda sempre mas com amplitude baixa para não vazar
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) }), // Up lento
+        withTiming(0, { duration: 1500, easing: Easing.inOut(Easing.ease) }) // Down lento
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedPulseStyle = useAnimatedStyle(() => {
+    // CORRIGIDO: Amplitude menor para "piscar" sutil (sem transparência excessiva: 0.9-1 em vez de 0.75-1)
+    // E scale mínimo para não distorcer
+    return {
+      opacity: interpolate(badgeVisibility.value, [0, 1], [0, interpolate(pulse.value, [0, 1], [0.9, 1])]), // Só pulsa quando visível
+      transform: [{ scale: interpolate(badgeVisibility.value, [0, 1], [1, interpolate(pulse.value, [0, 1], [1, 1.02])]) }] // Scale só quando visível, mínimo
+    };
+  });
+
+  // Texto animado baseado no index (muda a cada 4s, sincronizado com o ciclo)
+  const currentSlot = slots[index];
+  const animatedDayLabel = currentSlot.day;
+  const animatedTime = currentSlot.time;
+
+  // Fade sutil no texto durante mudança de index (para suavidade extra)
+  const textFade = useSharedValue(1);
+  useEffect(() => {
+    // Quando index muda, fade rápido no texto para transição suave
+    textFade.value = withTiming(1, { duration: 300, easing: Easing.inOut(Easing.ease) });
+  }, [index]);
+
+  const fadeTextStyle = useAnimatedStyle(() => ({
+    opacity: textFade.value,
   }));
 
   const renderStars = (rating: number | undefined) => {
@@ -429,6 +507,22 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
               <Ionicons name="shield-checkmark" size={17} color="#5da2ecff" />
             </AnimatedPlusButtonGradient>
+
+            {/* NOVO: Badge animado flutuante para próximo horário (posição absolute no topo direito da imagem) */}
+            {formattedNextAvailable && (
+              <AnimatedReanimated.View 
+                style={[
+                  styles.nextAvailableBadge, 
+                  animatedPulseStyle,  // Pulse lento e sutil
+                  badgeVisibilityStyle  // Visibilidade: invisível 2s -> fade in -> visível 2s -> fade out
+                ]}
+              >
+                <Ionicons name="time-outline" size={11} color="#fff" style={{ marginRight: 2 }} />
+                <AnimatedText style={[styles.nextAvailableText, fadeTextStyle]}>
+                  {animatedDayLabel} {animatedTime}
+                </AnimatedText>
+              </AnimatedReanimated.View>
+            )}
           </View>
 
           <View style={styles.infoContainer}>
@@ -441,7 +535,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
             {displayedCategories.length > 0 && (
               <View style={styles.categoryLineWrapper}>
                 <Text style={styles.servicesTitle}>Serviços</Text>
-                <View style={styles.servicesLine} />
+                <Ionicons name="cafe" size={12} color="#51565e9a" style={styles.servicesIcon} />
                 {/* SUBSTITUÍDO: Removidos os 3 mini ícones; agora texto animado loop Residencial <-> Comercial no mesmo local */}
                 <View style={styles.categoryTextRow}>
                   <AnimatedText style={[styles.categoryText, residencialOpacityStyle]} numberOfLines={1} allowFontScaling={false}>Residencial</AnimatedText>
@@ -450,20 +544,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
               </View>
             )}
 
-            {/* Mini sugestão de horário: agora com dia e horário empilhados verticalmente */}
-            {formattedNextAvailable && (
-              <View style={styles.nextAvailableRow}>
-                <View style={styles.nextAvailableDayRow}>
-                  <Ionicons name="time-outline" size={11} color="#5da2ec" style={{ top: 4 }} />
-                  <Text style={styles.nextAvailableDay}>
-                    {formattedNextAvailable.dayLabel}
-                  </Text>
-                </View>
-                <Text style={styles.nextAvailableTime}>
-                  {formattedNextAvailable.time}
-                </Text>
-              </View>
-            )}
+            {/* REMOVIDO: A versão antiga do nextAvailableBackground, substituída pelo novo badge na imageWrapper */}
 
             {/* Meio: Estratégia de Preço (seção isolada, centralizada, com badge sutil para destaque) */}
             <View style={styles.priceRow}>
@@ -515,8 +596,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardWrapperWithDistance: { // NOVO ESTILO: Container pai para posicionamento absoluto
-    width: 128,
-    height: 189, // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
+    width: 123,
+    height: 187, // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
     marginRight: 15,
     marginBottom: 5,
     marginTop: 8,
@@ -543,7 +624,7 @@ const styles = StyleSheet.create({
   // NOVO ESTILO: Micro-Pill de Distância (Sutil e Compacto)
   distancePillSmall: {
     position: 'absolute',
-    top: 5,
+    top: 129,
     right: 8,
     zIndex: 10,
     flexDirection: 'row',
@@ -553,10 +634,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     maxWidth: '55%',
     overflow: 'hidden',
-    ...Platform.select({
-      ios: { backgroundColor: 'rgba(255,255,255,0.75)' }, // Blur/white 70-80%
-      android: { backgroundColor: 'rgba(255,255,255,0.8)' },
-    }),
+ 
     // sombra sutilíssima (shadowOpacity 0.06, elevation 2)
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -585,6 +663,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative', // Para overlay do selo (botão agora aqui)
   },
+  // NOVO: Estilos para o badge animado do horário (background mais opaco para evitar transparência no card)
+  nextAvailableBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(93, 162, 236, 0.95)',  // Aumentado opacidade para 0.95 (menos translúcido, evita "vazar" para o card)
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    shadowColor: '#5da2ec',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+    // backdropFilter: 'blur(10px)',  // Se usar expo-blur: BlurView overlay (comentado por compatibilidade)
+  },
+  nextAvailableText: {
+    fontSize: 9.5,
+    fontWeight: '600',
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
   // REMOVIDO: verifiedBadge style (não mais usado)
   cardImage: {
     width: '100%',
@@ -599,7 +701,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     left: 6,
-    top: 6,
+    top: 4,
     marginBottom: 2, // Reduzido para dar espaço ao pill abaixo
   },
   providerName: {
@@ -639,6 +741,11 @@ const styles = StyleSheet.create({
     top: -9, // Posição acima dos ícones, logo abaixo do título (top -3 do título + fontSize 8.5 ≈ linha em top 2 para sobrepor levemente)
     height: 0.8,
     backgroundColor: '#51565e4a', // Mesma cor da borda do card para consistência
+  },
+  servicesIcon: {
+    position: 'absolute',
+    left: 8,
+    top: -12,
   },
   // ATUALIZADO: Row para texto animado (substitui categoryIconRow, mantém posição e centralização para sobrepor textos no centro onde os ícones ficavam)
   categoryTextRow: {
@@ -689,8 +796,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 0, // REDUZIDO: De -2 para 0 (compactar)
     marginBottom: 2, // REDUZIDO: Adicionado pequeno espaço para ratings
-    left: 11,
-    bottom: 69, // REMOVIDO: Posicionamentos absolutos para fluxo natural
+    left: 6,
+    bottom: 73, // REMOVIDO: Posicionamentos absolutos para fluxo natural
   },
   metricRow: {
     flexDirection: 'row',
@@ -727,7 +834,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 4, // Pequeno espaçamento entre logo e preço
     marginBottom: 4, // REDUZIDO: De 0 para 4px (espaço mínimo)
-    right: -5,
+    right: 42,
     top: -40,
   },
   // NOVO: Estilo para o logo pequeno ao lado esquerdo do preço (fora do badge)
@@ -806,7 +913,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 26,
     height: 26,
-    bottom: -8,  // fixa no canto inferior direito da foto
+    bottom: 118,  // fixa no canto inferior direito da foto
     right: 10,
     borderRadius: 20,
     justifyContent: 'center',
@@ -848,39 +955,8 @@ const styles = StyleSheet.create({
     textAlign: 'right', // Alinha à direita no container row
     marginLeft: 2, // Pequeno espaçamento entre estrela e count
   },
-  nextAvailableRow: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    marginTop: -11,
-    marginLeft: 0, // alinha com os ícones de categoria
-    top: 49,
-    left: -25,
-  },
-  nextAvailableDayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    top: -48,
-    right: -28,
-  },
-  nextAvailableDay: {
-    fontSize: 9.5,
-    fontWeight: '600',
-    color: '#6C757D',
-    letterSpacing: 0.2,
-    top: 0,
-    right: 2.5,
-  },
-  nextAvailableTime: {
-    fontSize: 9,
-    fontWeight: '500',
-    color: '#6C757D',
-    marginTop: -11,
-    left: 27,
-    bottom: 37,
-    marginLeft: 14,
-    letterSpacing: 0.2,
-  },
+  // REMOVIDOS: Estilos antigos do nextAvailable (substituídos pelo novo badge)
+  // nextAvailableRow, nextAvailableDayRow, nextAvailableDay, nextAvailableTime, nextAvailableBackground
 });
 
 export default RecomendacaoCard;
