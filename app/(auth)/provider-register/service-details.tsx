@@ -122,8 +122,8 @@ export default function ServiceDetailsScreen() {
         }
       } catch (error) {
         if (isMounted) {
-          console.error('[ServiceDetails] Falha ao carregar catalogo de servicos:', error);
-          setGeneralError('Nao foi possivel sincronizar o catalogo de servicos. Tente novamente em instantes.');
+          console.error('[ServiceDetails] Falha ao carregar catálogo de serviços:', error);
+          setGeneralError('Não foi possível sincronizar o catálogo de serviços. Tente novamente em instantes.');
         }
       }
     };
@@ -238,7 +238,7 @@ export default function ServiceDetailsScreen() {
             priceUnit: loadedData.priceUnit || null,
           });
           setCurrentServiceSubStep(loadedData.currentServiceSubStep || 1);
-          setGeneralError("Dados carregados automaticamente. Continue preenchendo seus detalhes de serviÃƒÂ§o.");
+          setGeneralError("Dados carregados automaticamente. Continue preenchendo seus detalhes de serviço.");
         }
       } catch (e) {
         console.error("Failed to load service details form data from AsyncStorage", e);
@@ -252,7 +252,7 @@ export default function ServiceDetailsScreen() {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permissionResult.granted === false) {
-        Alert.alert('PermissÃƒÂ£o necessÃƒÂ¡ria', 'Ãƒâ€° preciso permitir acesso ÃƒÂ  galeria para continuar.');
+        Alert.alert('Permissão necessária', 'É preciso permitir acesso à galeria para continuar.');
         return;
       }
       
@@ -270,7 +270,7 @@ export default function ServiceDetailsScreen() {
         setProfilePhotoError(null);
       }
     } catch (error) {
-      Alert.alert('Erro', 'NÃƒÂ£o foi possÃƒÂ­vel selecionar a imagem.');
+      Alert.alert('Erro', 'Não foi possível selecionar a imagem.');
     }
   };
 
@@ -285,7 +285,7 @@ export default function ServiceDetailsScreen() {
       isValid = false;
     }
     if (!formData.description.trim()) {
-      setDescriptionError('A descriÃƒÂ§ÃƒÂ£o do serviÃƒÂ§o ÃƒÂ© obrigatÃƒÂ³ria.');
+      setDescriptionError('A descrição do serviço é obrigatória.');
       isValid = false;
     }
     return isValid;
@@ -298,11 +298,11 @@ export default function ServiceDetailsScreen() {
 
     const years = parseInt(formData.yearsOfExperience);
     if (!formData.yearsOfExperience.trim() || isNaN(years) || years < 0) {
-      setYearsOfExperienceError('Os anos de experiÃƒÂªncia sÃƒÂ£o obrigatÃƒÂ³rios e devem ser um nÃƒÂºmero vÃƒÂ¡lido.');
+      setYearsOfExperienceError('Os anos de experiência são obrigatórios e devem ser um número válido.');
       isValid = false;
     }
     if (formData.specialties.length === 0) {
-      setSpecialtiesError('Por favor, selecione pelo menos um tipo de serviÃƒÂ§o.');
+      setSpecialtiesError('Por favor, selecione pelo menos um tipo de serviço.');
       isValid = false;
     }
     return isValid;
@@ -314,12 +314,12 @@ export default function ServiceDetailsScreen() {
     setBasePriceError(null);
 
     if (!formData.priceUnit) {
-      setPriceUnitError('Por favor, selecione um tipo de precificaÃƒÂ§ÃƒÂ£o.');
+      setPriceUnitError('Por favor, selecione um tipo de precificação.');
       isValid = false;
     }
     const price = parseFloat(formData.basePrice.replace(',', '.'));
     if (!formData.basePrice.trim() || isNaN(price) || price <= 0) {
-      setBasePriceError('O preÃƒÂ§o base ÃƒÂ© obrigatÃƒÂ³rio e deve ser um nÃƒÂºmero maior que zero.');
+      setBasePriceError('O preço base é obrigatório e deve ser um número maior que zero.');
       isValid = false;
     }
     return isValid;
@@ -331,7 +331,7 @@ export default function ServiceDetailsScreen() {
     setServiceAreasError(null);
 
     if (!formData.pixKey.trim()) {
-      setPixKeyError('A chave PIX ÃƒÂ© obrigatÃƒÂ³ria para que vocÃƒÂª possa receber pagamentos.');
+      setPixKeyError('A chave PIX é obrigatória para que você possa receber pagamentos.');
       isValid = false;
     }
     // Temporariamente opcional enquanto o backend não suporta o campo:
@@ -349,25 +349,25 @@ export default function ServiceDetailsScreen() {
       if (validateSubStep1()) {
         setCurrentServiceSubStep(2);
       } else {
-        setGeneralError('Por favor, preencha todos os campos obrigatÃƒÂ³rios da etapa atual.');
+        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
       }
     } else if (currentServiceSubStep === 2) {
       if (validateSubStep2()) {
         setCurrentServiceSubStep(3);
       } else {
-        setGeneralError('Por favor, preencha todos os campos obrigatÃƒÂ³rios da etapa atual.');
+        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
       }
     } else if (currentServiceSubStep === 3) {
       if (validateSubStep3()) {
         setCurrentServiceSubStep(4);
       } else {
-        setGeneralError('Por favor, preencha todos os campos obrigatÃƒÂ³rios da etapa atual.');
+        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
       }
     } else if (currentServiceSubStep === 4) {
       if (validateSubStep4()) {
         handleFinalSubmission();
       } else {
-        setGeneralError('Por favor, preencha todos os campos obrigatÃƒÂ³rios da etapa atual.');
+        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
       }
     }
   };
@@ -397,17 +397,17 @@ export default function ServiceDetailsScreen() {
 
   const handleFinalSubmission = async () => {
     if (!user || !user.token || !user.providerDetails?.id) {
-        Alert.alert('Erro de autenticaÃƒÂ§ÃƒÂ£o', 'UsuÃƒÂ¡rio nÃƒÂ£o logado ou detalhes do provedor ausentes. Por favor, faÃƒÂ§a login novamente.');
+        Alert.alert('Erro de autenticação', 'Usuário não logado ou detalhes do provedor ausentes. Por favor, faça login novamente.');
         return;
     }
 
     if (!validateSubStep1() || !validateSubStep2() || !validateSubStep3() || !validateSubStep4()) {
-      setGeneralError('Por favor, preencha todos os campos obrigatÃƒÂ³rios corretamente antes de finalizar.');
+      setGeneralError('Por favor, preencha todos os campos obrigatórios corretamente antes de finalizar.');
       return;
     }
 
     if (!servicesLoaded || Object.keys(serviceIdMap).length === 0) {
-      setGeneralError('Nao foi possivel sincronizar o catalogo de servicos. Tente novamente em instantes.');
+      setGeneralError('Não foi possível sincronizar o catálogo de serviços. Tente novamente em instantes.');
       return;
     }
 
@@ -417,21 +417,20 @@ export default function ServiceDetailsScreen() {
       const providerId = user.providerDetails.id;
       let avatarUrl: string | null | undefined = user.providerDetails.avatarUrl;
 
-      // 1. Upload da foto, se for uma URI local
-      if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
-        try {
-          const uploadResponse = await verificationService.uploadAvatar(formData.profilePhoto);
-          if (uploadResponse && uploadResponse.url) {
-            avatarUrl = uploadResponse.url;
-          } else {
-            throw new Error('O serviÃƒÂ§o de upload de avatar nÃƒÂ£o retornou uma URL vÃƒÂ¡lida.');
-          }
-        } catch (uploadError: any) {
-          throw new Error("NÃƒÂ£o foi possÃƒÂ­vel fazer o upload da foto de perfil.");
-        }
-      }
-
-      // 2. AtualizaÃƒÂ§ÃƒÂ£o do Perfil (TEMP: anexa as ÃƒÂ¡reas no bio)
+  // 1. Upload da foto, se for uma URI local
+if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
+  try {
+    const uploadResponse = await verificationService.uploadAvatar(formData.profilePhoto);
+    if (uploadResponse && uploadResponse.url) {
+      avatarUrl = uploadResponse.url;
+    } else {
+      throw new Error('O serviço de upload de avatar não retornou uma URL válida.');
+    }
+  } catch (uploadError: any) {
+    throw new Error("Não foi possível fazer o upload da foto de perfil.");
+  }
+}
+      // 2. Atualização do Perfil (TEMP: anexa as áreas no bio)
       const areasLine =
         formData.serviceAreas && formData.serviceAreas.length
           ? `Áreas de atendimento: ${formData.serviceAreas.join(', ')}`
@@ -508,11 +507,11 @@ export default function ServiceDetailsScreen() {
           : (user?.providerDetails as any),
       } as any);
 
-      // 6. FinalizaÃƒÂ§ÃƒÂ£o e NavegaÃƒÂ§ÃƒÂ£o (Requisito 3: Sem Alert de sucesso)
+      // 6. Finalização e Navegação (Requisito 3: Sem Alert de sucesso)
       setIsRegistrationInProgress(false);
       await AsyncStorage.removeItem('serviceDetailsFormData');
       
-      // NavegaÃƒÂ§ÃƒÂ£o direta, sem alert
+      // Navegação direta, sem alert
       router.push('/provider-register/verify-account');
 
     } catch (error: any) {
@@ -576,31 +575,30 @@ export default function ServiceDetailsScreen() {
       case 'quarto':
         return 'Ex: 150,00 (por quarto)';
       case 'metragem':
-        return 'Ex: 5,00 (por mÃ‚Â²)';
+        return 'Ex: 5,00 (por m²)';
       default:
-        return 'PreÃƒÂ§o base';
+        return 'Preço base';
     }
   };
+const getSubStepTitle = () => {
+  switch (currentServiceSubStep) {
+    case 1: return '1. Foto e Descrição';
+    case 2: return '2. Experiência e Especialidades';
+    case 3: return '3. Preço e Unidade';
+    case 4: return '4. Chave PIX e Áreas de Atendimento';
+    default: return 'Detalhes do Serviço';
+  }
+};
 
-  const getSubStepTitle = () => {
-    switch (currentServiceSubStep) {
-      case 1: return '1. Foto e DescriÃƒÂ§ÃƒÂ£o';
-      case 2: return '2. ExperiÃƒÂªncia e Especialidades';
-      case 3: return '3. PreÃƒÂ§o e Unidade';
-      case 4: return '4. Chave PIX e ÃƒÂreas de Atendimento';
-      default: return 'Detalhes do ServiÃƒÂ§o';
-    }
-  };
-
-  const getMicrocopyText = () => {
-    switch (currentServiceSubStep) {
-      case 1: return 'Sua foto e uma breve descriÃƒÂ§ÃƒÂ£o ajudam os clientes a te conhecerem.';
-      case 2: return 'Conte-nos sobre sua experiÃƒÂªncia e os servicos que vocÃƒÂª oferece.';
-      case 3: return 'Defina como vocÃƒÂª precifica seus servicos.';
-      case 4: return 'Para receber pagamentos e informar suas ÃƒÂ¡reas de atuaÃƒÂ§ÃƒÂ£o.';
-      default: return '';
-    }
-  };
+const getMicrocopyText = () => {
+  switch (currentServiceSubStep) {
+    case 1: return 'Sua foto e uma breve descrição ajudam os clientes a te conhecerem.';
+    case 2: return 'Conte-nos sobre sua experiência e os serviços que você oferece.';
+    case 3: return 'Defina como você precifica seus serviços.';
+    case 4: return 'Para receber pagamentos e informar suas áreas de atuação.';
+    default: return '';
+  }
+};
 
   const getBackButtonText = () => {
     if (currentServiceSubStep === 1) return 'Voltar para Cadastro';
@@ -610,8 +608,8 @@ export default function ServiceDetailsScreen() {
   const serviceOptions = [
     { id: 'residencial', label: 'Residencial', icon: 'home', set: 'ion' },
     { id: 'comercial',   label: 'Comercial',   icon: 'office-building', set: 'mci' },
-    { id: 'escritorio',  label: 'EscritÃƒÂ³rio',  icon: 'desktop-outline', set: 'ion' },
-    { id: 'pos_obra',    label: 'PÃƒÂ³s-Obra',    icon: 'hammer-wrench', set: 'mci' },
+    { id: 'escritorio',  label: 'Escritório',  icon: 'desktop-outline', set: 'ion' },
+    { id: 'pos_obra',    label: 'Pós-Obra',    icon: 'hammer-wrench', set: 'mci' },
   ];
 
   return (
@@ -641,7 +639,7 @@ export default function ServiceDetailsScreen() {
                   <Ionicons name="arrow-back-outline" size={24} color="#2C3E50" />
                   <Text style={styles.backButtonHeaderText}>{getBackButtonText()}</Text>
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Detalhes do ServiÃƒÂ§o</Text>
+              <Text style={styles.headerTitle}>Detalhes do Serviço</Text>
             </View>
             
             {/* Progress Bar */}
@@ -685,8 +683,8 @@ export default function ServiceDetailsScreen() {
 
 
                 {renderInputSection(
-                  'DescriÃƒÂ§ÃƒÂ£o do ServiÃƒÂ§o',
-                  'Descreva sua experiÃƒÂªncia e especialidades...',
+                  'Descrição do Serviço',
+                  'Descreva sua experiência e especialidades...',
                   formData.description,
                   (text) => { setFormData(prev => ({ ...prev, description: text })); setDescriptionError(null); },
                   'default',
@@ -703,7 +701,7 @@ export default function ServiceDetailsScreen() {
             {currentServiceSubStep === 2 && (
               <View style={styles.formContainer}>
                 {renderInputSection(
-                  'Anos de ExperiÃƒÂªncia',
+                  'Anos de Experiência',
                   'Ex: 5',
                   formData.yearsOfExperience,
                   (text) => { setFormData(prev => ({ ...prev, yearsOfExperience: text.replace(/[^0-9]/g, '') })); setYearsOfExperienceError(null); },
@@ -718,7 +716,7 @@ export default function ServiceDetailsScreen() {
                 {/* Service Type Selection (Using PremiumServiceChip) */}
                 <View style={styles.serviceTypeContainer}>
                   <Text style={styles.sectionTitle}>
-                    <Ionicons name="home-outline" size={16} color="#2C3E50" /> Tipo de ServiÃƒÂ§o
+                    <Ionicons name="home-outline" size={16} color="#2C3E50" /> Tipo de Serviço
                   </Text>
                   <View style={styles.serviceTypeGrid}>
                     {serviceOptions.map((s, index) => {
@@ -763,13 +761,13 @@ export default function ServiceDetailsScreen() {
               <View style={styles.formContainer}>
                 <View style={styles.priceTypeContainer}>
                   <Text style={styles.sectionTitle}>
-                    <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Tipo de PrecificaÃƒÂ§ÃƒÂ£o
+                    <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Tipo de Precificação
                   </Text>
                   <View style={styles.priceTypeGrid}>
                     {[
                       { id: 'hora', label: 'Por Hora' },
                       { id: 'quarto', label: 'Por Quarto' },
-                      { id: 'metragem', label: 'Por mÃ‚Â²' }
+                      { id: 'metragem', label: 'Por m²' }
                     ].map((priceOption) => (
                       <TouchableOpacity
                         key={priceOption.id}
@@ -796,7 +794,7 @@ export default function ServiceDetailsScreen() {
                 </View>
 
                 {renderInputSection(
-                  `PreÃƒÂ§o Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do ServiÃƒÂ§o'})`,
+                  `Preço Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do Serviço'})`,
                   getPriceInputPlaceholder(formData.priceUnit),
                   formData.basePrice,
                   (text) => { setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.,]/g, '') })); setBasePriceError(null); },
@@ -815,7 +813,7 @@ export default function ServiceDetailsScreen() {
               <View style={styles.formContainer}>
                 {renderInputSection(
                   'Chave PIX',
-                  'Ex: seuemail@email.com ou 000.000.000-00',
+                  'Ex: seuemail@... ou 000.000.000-00',
                   formData.pixKey,
                   (text) => { setFormData(prev => ({ ...prev, pixKey: text })); setPixKeyError(null); },
                   'default',
@@ -827,8 +825,8 @@ export default function ServiceDetailsScreen() {
                 )}
 
                 {renderInputSection(
-                  'ÃƒÂreas de Atendimento',
-                  'Ex: Campinas (Centro, CambuÃƒÂ­), Valinhos, Vinhedo',
+                  'Áreas de Atendimento',
+                  'Ex: Campinas (Centro, Cambuí), Valinhos, Vinhedo',
                   formData.serviceAreas.join(', '),
                   (text) => { setFormData(prev => ({ ...prev, serviceAreas: text.split(',').map(s => s.trim()).filter(s => s) })); setServiceAreasError(null); },
                   'default',
@@ -842,7 +840,7 @@ export default function ServiceDetailsScreen() {
             )}
             {generalError && <Text style={styles.inlineErrorMessageCentered}>{generalError}</Text>}
 
-            {/* 2) BotÃƒÂµes inferiores (premium clean) */}
+            {/* 2) Botões inferiores (premium clean) */}
             <View style={styles.navigationButtonsContainer}>
               {currentServiceSubStep > 1 && (
                 <TouchableOpacity
@@ -870,7 +868,7 @@ export default function ServiceDetailsScreen() {
                   ) : (
                     <>
                       <Text style={btn.primaryText}>
-                        {currentServiceSubStep === totalSteps ? 'Finalizar' : 'PrÃƒÂ³ximo'}
+                        {currentServiceSubStep === totalSteps ? 'Finalizar' : 'Próximo'}
                       </Text>
                       <Ionicons
                         name={currentServiceSubStep === totalSteps ? 'checkmark-circle' : 'arrow-forward'}
@@ -890,7 +888,7 @@ export default function ServiceDetailsScreen() {
   );
 }
 
-// Styles dos botÃƒÂµes
+// Styles dos botões
 const btn = StyleSheet.create({
   backGlass: {
     flex: 1, marginRight: 10, borderRadius: 14, overflow: 'hidden',
