@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greetingText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#E0EFFF', // Um branco azulado mais suave
     fontWeight: 'normal',
   },
