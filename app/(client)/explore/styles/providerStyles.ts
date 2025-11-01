@@ -183,7 +183,6 @@ export const styles = StyleSheet.create({
     marginBottom: 15,
     marginTop: -10,
     paddingHorizontal: 10,
-    
   },
   infoChip: {
     flexDirection: 'row',
