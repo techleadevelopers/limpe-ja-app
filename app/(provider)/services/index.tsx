@@ -23,12 +23,12 @@ import ToastMessage from '../../../components/ui/ToastMessage';
 import { formatDate } from '../../../utils/helpers';
 import Colors from '../../../constants/Colors';
 
-// --- ImportaÃ§Ãµes de SERVIÃ‡OS e TIPAGENS REAIS do BACKEND ---
+// --- Importações de SERVIÇOS e TIPAGENS REAIS do BACKEND ---
 import { getBookingsForUser, updateBookingStatus } from '../../../services/bookingService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 // -------------------------------------------------------------
 
-// ===== Ãcones 3D injetados (sem alterar layout) =====
+// ===== Ícones 3D injetados (sem alterar layout) =====
 const Icons3D = {
   money: require('/assets/images/3d/cashback3.png'),
   empty: require('/assets/images/3d/step1-card-profile.png'),
@@ -44,7 +44,7 @@ function useTheme() {
   return theme as typeof Colors.light;
 }
 
-// Novo card â€œcompletoâ€ â€” com Aceitar/Rejeitar embutidos e badge movido para fora (absolute no topo)
+// Novo card “completo” — com Aceitar/Rejeitar embutidos e badge movido para fora (absolute no topo)
 const BookingCardWithActions: React.FC<{
   item: BookingDetails;
   delay: number;
@@ -72,7 +72,7 @@ const BookingCardWithActions: React.FC<{
     Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
   };
 
-  // AdaptaÃ§Ã£o de getStatusStyle para BookingStatus do backend (ajustado para maiÃºscula em PENDING/CONFIRMED)
+  // Adaptação de getStatusStyle para BookingStatus do backend (ajustado para maiúscula em PENDING/CONFIRMED)
   const getStatusStyle = (status: BookingStatus) => {
     switch (status) {
       case BookingStatus.PENDING:
@@ -80,7 +80,7 @@ const BookingCardWithActions: React.FC<{
       case BookingStatus.CONFIRMED:
         return { text: '#2E7D32', background: 'rgba(46, 125, 50, 0.1)', icon: 'check-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'CONFIRMADO' };
       case BookingStatus.COMPLETED:
-        return { text: '#546E7A', background: '#ECEFF1', icon: 'check-all' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'ConcluÃ­do' };
+        return { text: '#546E7A', background: '#ECEFF1', icon: 'check-all' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Concluído' };
       case BookingStatus.CANCELLED:
         return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Cancelado' };
       case BookingStatus.REJECTED:
@@ -101,7 +101,7 @@ const BookingCardWithActions: React.FC<{
       await updateBookingStatus(item.id, { status } as any);
       onUpdate?.();
     } catch (err) {
-      Alert.alert('Erro', 'Falha ao atualizar o serviÃ§o.');
+      Alert.alert('Erro', 'Falha ao atualizar o serviço.');
     } finally {
       setIsUpdating(false);
     }
@@ -120,16 +120,16 @@ const BookingCardWithActions: React.FC<{
       <View style={styles.cardContainer}>
         <TouchableOpacity
           style={styles.serviceCard}
-          onPress={() => onPress?.(item)} // Chama navegaÃ§Ã£o se prop fornecida
+          onPress={() => onPress?.(item)} // Chama navegação se prop fornecida
           onPressIn={onPressInItem}
           onPressOut={onPressOutItem}
           activeOpacity={1}
-          disabled={item.status === BookingStatus.PENDING} // Desabilita tap no card se PENDING (foco nos botÃµes)
-          accessibilityLabel={`Detalhes do serviÃ§o de ${item.serviceName} para ${item.clientFullName}`}
-          accessibilityHint="Toque para ver mais informaÃ§Ãµes sobre o serviÃ§o"
+          disabled={item.status === BookingStatus.PENDING} // Desabilita tap no card se PENDING (foco nos botões)
+          accessibilityLabel={`Detalhes do serviço de ${item.serviceName} para ${item.clientFullName}`}
+          accessibilityHint="Toque para ver mais informações sobre o serviço"
         >
           <View style={styles.middleCol}>
-            {/* Linha 1: ServiÃ§o (bold) - sem badge aqui */}
+            {/* Linha 1: Serviço (bold) - sem badge aqui */}
             <Text style={styles.serviceType}>{item.serviceName}</Text>
             
             {/* Linha 2: Cliente */}
@@ -138,10 +138,10 @@ const BookingCardWithActions: React.FC<{
             {/* Linha 3: Data/Hora */}
             <Text style={styles.serviceDate}>
               <Ionicons name="calendar-outline" size={18} color="#6C757D" />{' '}
-              {formatDate(item.scheduledDate, { day: 'numeric', month: 'short', year: 'numeric' })} Ã s {item.scheduledTime || 'HorÃ¡rio nÃ£o definido'}
+              {formatDate(item.scheduledDate, { day: 'numeric', month: 'short', year: 'numeric' })} às {item.scheduledTime || 'Horário não definido'}
             </Text>
             
-            {/* Linha 4: PreÃ§o - Ajustado para View com row para alinhar Ã­cone e preÃ§o lado a lado */}
+            {/* Linha 4: Preço - Ajustado para View com row para alinhar ícone e preço lado a lado */}
             {item.totalPrice !== undefined && (
               <View style={styles.servicePriceText}>
                 <Icon3D src={Icons3D.money} size={44} style={{ marginRight: 4 }} />
@@ -151,7 +151,7 @@ const BookingCardWithActions: React.FC<{
               </View>
             )}
 
-            {/* Badge normal para outros status (dentro do middleCol, se nÃ£o PENDING/CONFIRMED) */}
+            {/* Badge normal para outros status (dentro do middleCol, se não PENDING/CONFIRMED) */}
             {!isPendingOrConfirmed && (
               <View style={styles.statusBadgeContainer}>
                 <BlurView intensity={25} tint="light" style={[styles.statusBadge, { backgroundColor: statusStyle.background }]}>
@@ -174,14 +174,14 @@ const BookingCardWithActions: React.FC<{
         )}
       </View>
 
-      {/* BotÃµes Aceitar / Rejeitar (mantidos no final) */}
+      {/* Botões Aceitar / Rejeitar (mantidos no final) */}
       {item.status === BookingStatus.PENDING && (
         <View style={styles.actionsRow}>
           <TouchableOpacity
             style={[styles.primaryBtn, isUpdating && { opacity: 0.6 }]}
             disabled={isUpdating}
             onPress={() => handleUpdate(BookingStatus.CONFIRMED)}
-            accessibilityLabel="Aceitar solicitaÃ§Ã£o"
+            accessibilityLabel="Aceitar solicitação"
             accessibilityRole="button"
           >
             <Ionicons name="checkmark" size={16} color="#fff" />
@@ -192,7 +192,7 @@ const BookingCardWithActions: React.FC<{
             style={[styles.secondaryBtn, isUpdating && { opacity: 0.6 }]}
             disabled={isUpdating}
             onPress={() => handleUpdate(BookingStatus.REJECTED)}
-            accessibilityLabel="Rejeitar solicitaÃ§Ã£o"
+            accessibilityLabel="Rejeitar solicitação"
             accessibilityRole="button"
           >
             <Ionicons name="close" size={16} color="#007AFF" />
@@ -219,8 +219,8 @@ const CustomHeader: React.FC<{
         <Text numberOfLines={1} style={[styles.simpleHeaderTitle, { color: theme.text }]}>{headerTitle}</Text>
         <TouchableOpacity
           onPress={onAddPress}
-          accessibilityLabel="Adicionar novo serviÃ§o"
-          accessibilityHint="Toque para gerenciar os tipos de serviÃ§os que vocÃª oferece"
+          accessibilityLabel="Adicionar novo serviço"
+          accessibilityHint="Toque para gerenciar os tipos de serviços que você oferece"
         >
           <Ionicons name="add-circle-outline" size={22} color={theme.text} />
         </TouchableOpacity>
@@ -232,7 +232,7 @@ const CustomHeader: React.FC<{
 export default function ProviderServicesScreen() {
   const router = useRouter();
 
-  // >>> NOVO: lÃª o query param ?filter=... para abrir jÃ¡ filtrado
+  // >>> NOVO: lê o query param ?filter=... para abrir já filtrado
   const params = useLocalSearchParams<{ filter?: string }>();
   const initialFilter = (params.filter === 'upcoming' || params.filter === 'completed' || params.filter === 'requests')
     ? (params.filter as 'requests' | 'upcoming' | 'completed')
@@ -244,12 +244,12 @@ export default function ProviderServicesScreen() {
   const [filter, setFilter] = useState<'requests' | 'upcoming' | 'completed'>(initialFilter);
   const [toastMessage, setToastMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // AnimaÃ§Ãµes
+  // Animações
   const headerAnim = useRef(new Animated.Value(0)).current;
   const filterAnim = useRef(new Animated.Value(0)).current;
   const contentAnim = useRef(new Animated.Value(0)).current;
 
-  // Mover a declaraÃ§Ã£o de loadServices para antes do useEffect que a chama
+  // Mover a declaração de loadServices para antes do useEffect que a chama
   const loadServices = useCallback(async (currentFilter: typeof filter, refreshing: boolean = false) => {
     if (!refreshing) setIsLoading(true);
     Animated.timing(contentAnim, {
@@ -292,11 +292,11 @@ export default function ProviderServicesScreen() {
         }
 
         setServices(data);
-        if (refreshing) setToastMessage({ message: "ServiÃ§os atualizados!", type: "success" });
+        if (refreshing) setToastMessage({ message: "Serviços atualizados!", type: "success" });
       } catch (err: any) {
-        console.error("[ProviderServicesScreen] Erro ao buscar serviÃ§os:", err.response?.data || err.message);
-        Alert.alert("Erro", err.response?.data?.message || "NÃ£o foi possÃ­vel carregar seus serviÃ§os.");
-        setToastMessage({ message: "Erro ao carregar serviÃ§os.", type: "error" });
+        console.error("[ProviderServicesScreen] Erro ao buscar serviços:", err.response?.data || err.message);
+        Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar seus serviços.");
+        setToastMessage({ message: "Erro ao carregar serviços.", type: "error" });
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -349,30 +349,30 @@ export default function ProviderServicesScreen() {
 
   const getHeaderTitle = () => {
     switch (filter) {
-      case 'requests': return 'SolicitaÃ§Ãµes Pendentes';
-      case 'upcoming': return 'PrÃ³ximos Agendamentos';
-      case 'completed': return 'HistÃ³rico de ServiÃ§os';
-      default: return 'Meus ServiÃ§os';
+      case 'requests': return 'Solicitações Pendentes';
+      case 'upcoming': return 'Próximos Agendamentos';
+      case 'completed': return 'Histórico de Serviços';
+      default: return 'Meus Serviços';
     }
   };
 
   const EmptyListFeedback = () => {
-    let title = "Nenhum serviÃ§o encontrado.";
-    let subText = "Ajuste o filtro ou aguarde novas solicitaÃ§Ãµes!";
+    let title = "Nenhum serviço encontrado.";
+    let subText = "Ajuste o filtro ou aguarde novas solicitações!";
     let ctaButton = null;
 
     if (filter === 'requests') {
-      title = "Nenhuma solicitaÃ§Ã£o pendente.";
-      subText = "Configure seus serviÃ§os para receber mais pedidos ou verifique seus agendamentos confirmados.";
+      title = "Nenhuma solicitação pendente.";
+      subText = "Configure seus serviços para receber mais pedidos ou verifique seus agendamentos confirmados.";
       ctaButton = (
         <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push('/(provider)/profile/edit-services' as any)}>
           <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.emptyStateButtonText}>Configurar Meus ServiÃ§os</Text>
+          <Text style={styles.emptyStateButtonText}>Configurar Meus Serviços</Text>
         </TouchableOpacity>
       );
     } else if (filter === 'upcoming') {
       title = "Nenhum agendamento futuro.";
-      subText = "Que tal verificar novas solicitaÃ§Ãµes ou gerenciar sua disponibilidade?";
+      subText = "Que tal verificar novas solicitações ou gerenciar sua disponibilidade?";
       ctaButton = (
         <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push('/(provider)/availability' as any)}>
           <Ionicons name="time-outline" size={20} color="#FFFFFF" />
@@ -380,13 +380,13 @@ export default function ProviderServicesScreen() {
         </TouchableOpacity>
       );
     } else if (filter === 'completed') {
-      title = "Seu histÃ³rico de serviÃ§os estÃ¡ vazio.";
-      subText = "Comece a agendar e concluir serviÃ§os para vÃª-los aqui!";
+      title = "Seu histórico de serviços está vazio.";
+      subText = "Comece a agendar e concluir serviços para vê-los aqui!";
     }
 
     return (
       <View style={styles.centeredFeedback}>
-        {/* Ãcone 3D no estado vazio (mesma hierarquia visual) */}
+        {/* Ícone 3D no estado vazio (mesma hierarquia visual) */}
         <Icon3D src={Icons3D.empty} size={64} />
         <Text style={styles.emptyText}>{title}</Text>
         <Text style={styles.emptySubText}>{subText}</Text>
@@ -410,26 +410,26 @@ export default function ProviderServicesScreen() {
         <TouchableOpacity
           style={[styles.filterButton, filter === 'requests' && styles.filterButtonActive]}
           onPress={() => handleFilterChange('requests')}
-          accessibilityLabel="Mostrar solicitaÃ§Ãµes pendentes"
+          accessibilityLabel="Mostrar solicitações pendentes"
           accessibilityRole="button"
         >
-          <Text style={[styles.filterButtonText, filter === 'requests' && styles.filterButtonTextActive]}>SolicitaÃ§Ãµes</Text>
+          <Text style={[styles.filterButtonText, filter === 'requests' && styles.filterButtonTextActive]}>Solicitações</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.filterButton, filter === 'upcoming' && styles.filterButtonActive]}
           onPress={() => handleFilterChange('upcoming')}
-          accessibilityLabel="Mostrar prÃ³ximos agendamentos"
+          accessibilityLabel="Mostrar próximos agendamentos"
           accessibilityRole="button"
         >
-          <Text style={[styles.filterButtonText, filter === 'upcoming' && styles.filterButtonTextActive]}>PrÃ³ximos</Text>
+          <Text style={[styles.filterButtonText, filter === 'upcoming' && styles.filterButtonTextActive]}>Próximos</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.filterButton, filter === 'completed' && styles.filterButtonActive]}
           onPress={() => handleFilterChange('completed')}
-          accessibilityLabel="Mostrar histÃ³rico de serviÃ§os"
+          accessibilityLabel="Mostrar histórico de serviços"
           accessibilityRole="button"
         >
-          <Text style={[styles.filterButtonText, filter === 'completed' && styles.filterButtonTextActive]}>HistÃ³rico</Text>
+          <Text style={[styles.filterButtonText, filter === 'completed' && styles.filterButtonTextActive]}>Histórico</Text>
         </TouchableOpacity>
       </Animated.View>
 
@@ -448,8 +448,8 @@ export default function ProviderServicesScreen() {
               <BookingCardWithActions
                 item={item}
                 delay={index * 70}
-                onUpdate={() => loadServices(filter, true)} // atualiza lista apÃ³s aÃ§Ã£o
-                onPress={handleServicePress} // passa a funÃ§Ã£o de navegaÃ§Ã£o
+                onUpdate={() => loadServices(filter, true)} // atualiza lista após ação
+                onPress={handleServicePress} // passa a função de navegação
               />
             )}
             keyExtractor={(item) => item.id}
@@ -580,12 +580,12 @@ const styles = StyleSheet.create({
   },
   serviceCard: {
     flexDirection: 'row',
-    alignItems: 'flex-start', // Alinha itens ao topo para melhor distribuiÃ§Ã£o vertical
+    alignItems: 'flex-start', // Alinha itens ao topo para melhor distribuição vertical
     padding: 15,
   },
   middleCol: { 
     flex: 1,
-    // Alinhamento Ã  esquerda para o tÃ­tulo e outros textos
+    // Alinhamento à esquerda para o título e outros textos
   },
   serviceInfo: {
     flex: 1,
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#212529',
     marginBottom: 4,
-    textAlign: 'left', // Garante alinhamento Ã  esquerda
+    textAlign: 'left', // Garante alinhamento à esquerda
   },
   clientName: {
     fontSize: 14,
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
   servicePriceText: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4, // Pequeno espaÃ§amento apÃ³s data
+    marginTop: 4, // Pequeno espaçamento após data
   },
   servicePriceTextInner: {
     fontSize: 16,
@@ -622,14 +622,14 @@ const styles = StyleSheet.create({
   // Estilos para badge normal (dentro middleCol, para outros status)
   statusBadgeContainer: {
     alignSelf: 'flex-end',
-    marginTop: 8, // EspaÃ§amento apÃ³s preÃ§o
+    marginTop: 8, // Espaçamento após preço
   },
   // Estilos para badge absoluto (fora do container, para PENDING/CONFIRMED)
   absoluteBadgeContainer: {
     position: 'absolute',
     top: 12, // Ajuste aqui: top=12 coloca no topo do card (aumente/diminua para mover verticalmente)
-    right: 15, // Ajuste aqui: right=15 coloca no lado direito (aumente para mais Ã  esquerda)
-    zIndex: 1, // Garante que fique sobre o conteÃºdo
+    right: 15, // Ajuste aqui: right=15 coloca no lado direito (aumente para mais à esquerda)
+    zIndex: 1, // Garante que fique sobre o conteúdo
   },
   statusBadge: {
     flexDirection: 'row',
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
-    minWidth: 80, // Largura mÃ­nima para nÃ£o ficar apertado
+    minWidth: 80, // Largura mínima para não ficar apertado
   },
   statusText: {
     fontSize: 12,
