@@ -98,7 +98,7 @@ const TEXT_MEDIUM = '#4A5568';
 const TEXT_MUTED = '#7A8599';
 const ICON_PRIMARY = '#007AFF';
 const SUCCESS_GREEN = '#28a745';
-const DANGER_RED = '#dc3545';
+const DANGER_RED = '#f1ebebff';
 const WARNING_YELLOW = '#FFC107';
 const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
 const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
@@ -209,7 +209,7 @@ const headerStyles = StyleSheet.create({
     flex: 1,
   },
   greetingText: {
-    fontSize: 24,
+    fontSize: 18.8,
     fontWeight: 'bold',
     color: TEXT_DARK,
   },
@@ -222,9 +222,9 @@ const headerStyles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   avatarButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 40.5,
+    height: 40.5,
+    borderRadius: 23.75,
     overflow: 'hidden',
     marginLeft: Spacing.sm,
   },
@@ -235,7 +235,7 @@ const headerStyles = StyleSheet.create({
   avatarPlaceholder: {
     width: '100%',
     height: '100%',
-    borderRadius: 25,
+    borderRadius: 23.75,
     backgroundColor: ICON_PRIMARY,
     justifyContent: 'center',
     alignItems: 'center',
@@ -263,7 +263,7 @@ const FinancialSummaryCard: React.FC<{
         transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
       }
     ]}>
-      <Text style={summaryStyles.cardTitle}>Resumo Financeiro</Text>
+      <Text style={summaryStyles.cardTitle}>Seus Ganhos</Text>
       <View style={summaryStyles.metricsGrid}>
         <View style={summaryStyles.metricItem}>
           <Text style={summaryStyles.metricLabel}>Ganhos Totais</Text>
@@ -286,9 +286,9 @@ const FinancialSummaryCard: React.FC<{
         accessibilityLabel="Ver todos os meus ganhos"
         accessibilityHint="Navegue para a tela de ganhos para mais detalhes."
       >
-        <Ionicons name="wallet-outline" size={20} color={WHITE} style={summaryStyles.buttonIcon} accessibilityHidden={true} />
+        <Ionicons name="wallet-outline" size={18} color={WHITE} style={summaryStyles.buttonIcon} accessibilityHidden={true} />
         <Text style={summaryStyles.viewEarningsButtonText}>Gerenciar Ganhos</Text>
-        <Ionicons name="chevron-forward-outline" size={20} color={WHITE} accessibilityHidden={true} />
+        <Ionicons name="chevron-forward-outline" size={18} color={WHITE} accessibilityHidden={true} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -298,8 +298,8 @@ const summaryStyles = StyleSheet.create({
   summaryCard: {
     backgroundColor: ICON_PRIMARY,
     borderRadius: Radii.xl,
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
+    padding: 18, // ~10% menor
+    marginBottom: 18,
     ...Platform.select({
       ios: {
         shadowColor: SHADOW_COLOR_SECTION,
@@ -314,31 +314,31 @@ const summaryStyles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: WHITE,
-    marginBottom: Spacing.md,
+    marginBottom: 14,
     textAlign: 'center', // Clean centralizado
   },
   metricsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: Spacing.lg,
+    marginBottom: 18,
   },
   metricItem: {
     alignItems: 'center',
   },
   metricLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.8)', // Suavizado para legibilidade
-    marginBottom: Spacing.xs,
+    marginBottom: 6,
     textAlign: 'center',
   },
   metricValuePrimary: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: WHITE,
     textAlign: 'center',
   },
   metricValueWarning: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: WARNING_YELLOW,
     textAlign: 'center',
@@ -349,13 +349,13 @@ const summaryStyles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: Radii.pill,
-    paddingVertical: Spacing.sm,
+    paddingVertical: 9,
   },
   viewEarningsButtonText: {
     color: WHITE,
     fontSize: 16,
     fontWeight: '600',
-    marginHorizontal: Spacing.sm,
+    marginHorizontal: 8,
   },
   buttonIcon: {
     marginRight: Spacing.xs,
@@ -391,6 +391,8 @@ const QuickActionsSection: React.FC<{
   isReducedMotionEnabled,
 }) => {
   const router = useRouter();
+  // Garantir que o wrapper condicional compile mesmo sem prop
+  const showShortcuts = true;
   // Cria instâncias de animação para cada item (até 9)
   const mk = () => useAnimatedTouch();
   const a1 = mk(), a2 = mk(), a3 = mk(), a4 = mk(), a5 = mk(), a6 = mk(), a7 = mk(), a8 = mk(), a9 = mk();
@@ -410,7 +412,7 @@ const QuickActionsSection: React.FC<{
       accessibilityLabel={`${label}. Toque para abrir.`.replace(' ', ' ')}
       accessibilityHint={`Navegue para a seção de ${label.toLowerCase()}.`}
     >
-      <Ionicons name={icon} size={30} color={ICON_PRIMARY} accessibilityHidden={true} />
+      <Ionicons name={icon} size={27} color={ICON_PRIMARY} accessibilityHidden={true} />
       <Text style={quickActionStyles.gridItemText} numberOfLines={1}>{label}</Text>
     </TouchableOpacity>
   );
@@ -423,7 +425,8 @@ const QuickActionsSection: React.FC<{
         transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
       }
     ]}>
-      <Text style={quickActionStyles.sectionTitle}>Ações Rápidas</Text>
+      {showShortcuts && (<>
+      <Text style={quickActionStyles.sectionTitle}>Atalhos do Dia</Text>
       <View style={quickActionStyles.grid}>
         <Item icon="calendar-outline" label="Minha Agenda" anim={a1} onPress={onManageAvailability} />
         <Item icon="file-tray-outline" label="Solicitações" anim={a2} onPress={onOpenRequests} />
@@ -436,9 +439,10 @@ const QuickActionsSection: React.FC<{
         <Item icon="analytics-outline" label="Avaliações" anim={a8} onPress={onOpenReviews} />
         <Item icon="wallet-outline" label="Ganhos" anim={a9} onPress={onOpenEarnings} />
       </View>
+      </>)}
 
       {/* Bloco refinado para horários rápidos (substituindo os chips antigos) */}
-      <Text style={[quickActionStyles.sectionTitle, { fontSize: 18, marginTop: Spacing.lg, marginBottom: Spacing.md }]}>Seus horários rápidos</Text>
+      <Text style={[quickActionStyles.sectionTitle, { fontSize: 18, marginTop: Spacing.lg, marginBottom: Spacing.md }]}>Edite seus horários</Text>
       <View style={quickActionStyles.quickChipsRow}>
         <TouchableOpacity
           style={quickActionStyles.quickChipBlock}
@@ -450,11 +454,19 @@ const QuickActionsSection: React.FC<{
           accessibilityLabel="Definir turno de hoje"
           accessibilityHint="Escolha entre manhã, tarde ou dia todo para definir sua disponibilidade."
         >
-          <Ionicons name="briefcase-outline" size={22} color={ICON_PRIMARY} />
+          <Ionicons name="briefcase-outline" size={20} color={ICON_PRIMARY} />
           <View>
             <Text style={quickActionStyles.quickChipTitle}>Definir turno de hoje</Text>
             <Text style={quickActionStyles.quickChipSubtitle}>Manhã, tarde ou dia todo</Text>
           </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=today-morning' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -467,11 +479,19 @@ const QuickActionsSection: React.FC<{
           accessibilityLabel="Agendar amanhã"
           accessibilityHint="Marque o próximo dia disponível."
         >
-          <Ionicons name="calendar-outline" size={22} color={ICON_PRIMARY} />
+          <Ionicons name="calendar-outline" size={20} color={ICON_PRIMARY} />
           <View>
             <Text style={quickActionStyles.quickChipTitle}>Agendar amanhã</Text>
             <Text style={quickActionStyles.quickChipSubtitle}>Escolha seus horários</Text>
           </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=tomorrow-afternoon' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -484,11 +504,19 @@ const QuickActionsSection: React.FC<{
           accessibilityLabel="Folga hoje"
           accessibilityHint="Tire um dia de descanso."
         >
-          <Ionicons name="bed-outline" size={22} color={ICON_PRIMARY} />
+          <Ionicons name="bed-outline" size={20} color={ICON_PRIMARY} />
           <View>
             <Text style={quickActionStyles.quickChipTitle}>Folga hoje</Text>
             <Text style={quickActionStyles.quickChipSubtitle}>Tire um dia de descanso</Text>
           </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=block-today' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -501,16 +529,24 @@ const QuickActionsSection: React.FC<{
           accessibilityLabel="Copiar semana padrão"
           accessibilityHint="Replique os horários da última semana."
         >
-          <Ionicons name="repeat-outline" size={22} color={ICON_PRIMARY} />
+          <Ionicons name="repeat-outline" size={20} color={ICON_PRIMARY} />
           <View>
             <Text style={quickActionStyles.quickChipTitle}>Copiar semana padrão</Text>
             <Text style={quickActionStyles.quickChipSubtitle}>Replique os horários da última semana</Text>
           </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=repeat-week' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
         </TouchableOpacity>
       </View>
 
       {/* Seção Financeiro com Saque Rápido */}
-      <Text style={[quickActionStyles.sectionTitle, { fontSize: 18, marginTop: Spacing.lg, marginBottom: Spacing.md }]}>Financeiro</Text>
+      
       <TouchableOpacity
         style={quickActionStyles.withdrawCta}
         onPress={onQuickWithdraw}
@@ -521,11 +557,78 @@ const QuickActionsSection: React.FC<{
         accessibilityHint="Solicite um saque rápido dos ganhos disponíveis."
       >
         <Animated.View style={{ transform: [{ scale: a9.scaleAnim }], flexDirection: 'row', alignItems: 'center' }}>
-          <Ionicons name="cash-outline" size={22} color={WHITE} accessibilityHidden={true} />
+          <Ionicons name="cash-outline" size={20} color={WHITE} accessibilityHidden={true} />
           <Text style={quickActionStyles.withdrawCtaText}>Saque Rápido</Text>
-          <Ionicons name="chevron-forward-outline" size={20} color={WHITE} accessibilityHidden={true} />
+          <Ionicons name="chevron-forward-outline" size={18} color={WHITE} accessibilityHidden={true} />
         </Animated.View>
       </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+// Seção isolada: apenas "Atalhos do Dia"
+const ShortcutsGrid: React.FC<{
+  onViewAllServicesPress: () => void;
+  onViewAllMessagesPress: () => void;
+  onManageAvailability: () => void;
+  onOpenRequests: () => void;
+  onOpenUpcoming: () => void;
+  onOpenCompleted: () => void;
+  onOpenNotifications: () => void;
+  onOpenReviews: () => void;
+  onOpenEarnings: () => void;
+  animation: Animated.Value;
+  isReducedMotionEnabled: boolean;
+}> = ({
+  onViewAllServicesPress,
+  onViewAllMessagesPress,
+  onManageAvailability,
+  onOpenRequests,
+  onOpenUpcoming,
+  onOpenCompleted,
+  onOpenNotifications,
+  onOpenReviews,
+  onOpenEarnings,
+  animation,
+}) => {
+  const mk = () => useAnimatedTouch();
+  const a1 = mk(), a2 = mk(), a3 = mk(), a4 = mk(), a5 = mk(), a6 = mk(), a7 = mk(), a8 = mk(), a9 = mk();
+
+  const Item = ({ icon, label, anim, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; anim: ReturnType<typeof useAnimatedTouch>; onPress: () => void }) => (
+    <TouchableOpacity
+      style={[quickActionStyles.gridItem, { transform: [{ scale: anim.scaleAnim }] }]}
+      onPress={onPress}
+      onPressIn={anim.onPressIn}
+      onPressOut={anim.onPressOut}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}. Toque para abrir.`}
+      accessibilityHint={`Navegue para a seção de ${label.toLowerCase()}.`}
+    >
+      <Ionicons name={icon} size={27} color={ICON_PRIMARY} accessibilityHidden={true} />
+      <Text style={[quickActionStyles.gridItemText, { display: 'flex' }]} numberOfLines={1}>{label}</Text>
+    </TouchableOpacity>
+  );
+
+  return (
+    <Animated.View style={[
+      quickActionStyles.sectionContainer,
+      {
+        opacity: animation,
+        transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+      }
+    ]}>
+      <Text style={[quickActionStyles.sectionTitle, { display: 'flex' }]}>Atalhos do Dia</Text>
+      <View style={[quickActionStyles.grid, { display: 'flex' }]}>
+        <Item icon="calendar-outline" label="Minha Agenda" anim={a1} onPress={onManageAvailability} />
+        <Item icon="file-tray-outline" label="Solicitações" anim={a2} onPress={onOpenRequests} />
+        <Item icon="calendar-outline" label="Próximos" anim={a3} onPress={onOpenUpcoming} />
+        <Item icon="checkmark-done-outline" label="Concluídos" anim={a4} onPress={onOpenCompleted} />
+        <Item icon="briefcase-outline" label="Meus Serviços" anim={a5} onPress={onViewAllServicesPress} />
+        <Item icon="chatbubbles-outline" label="Mensagens" anim={a6} onPress={onViewAllMessagesPress} />
+        <Item icon="notifications-outline" label="Notificações" anim={a7} onPress={onOpenNotifications} />
+        <Item icon="analytics-outline" label="Avaliações" anim={a8} onPress={onOpenReviews} />
+        <Item icon="wallet-outline" label="Ganhos" anim={a9} onPress={onOpenEarnings} />
+      </View>
     </Animated.View>
   );
 };
@@ -540,8 +643,8 @@ const quickActionStyles = StyleSheet.create({
       ios: {
         shadowColor: SHADOW_COLOR_SECTION,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1, // Suavizado
-        shadowRadius: 6
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
       },
       android: { elevation: 8 },
     }),
@@ -551,7 +654,7 @@ const quickActionStyles = StyleSheet.create({
     fontWeight: 'bold',
     color: TEXT_DARK,
     marginBottom: Spacing.md,
-    textAlign: 'center', // Clean centralizado
+    textAlign: 'center',
   },
   grid: {
     flexDirection: 'row',
@@ -559,7 +662,6 @@ const quickActionStyles = StyleSheet.create({
     justifyContent: 'space-around',
     width: '100%',
   },
-  // Estilos atualizados para blocos verticais (substituindo quickChip e quickChipsRow)
   quickChipsRow: {
     flexDirection: 'column',
     gap: Spacing.sm,
@@ -571,6 +673,7 @@ const quickActionStyles = StyleSheet.create({
     backgroundColor: WHITE,
     borderRadius: Radii.md,
     padding: Spacing.sm,
+    paddingRight: Spacing.lg, // espaço para o botão +
     borderWidth: 1,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
@@ -578,7 +681,7 @@ const quickActionStyles = StyleSheet.create({
         shadowColor: SHADOW_COLOR_CARD,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
-        shadowRadius: 3
+        shadowRadius: 3,
       },
       android: { elevation: 2 },
     }),
@@ -594,7 +697,6 @@ const quickActionStyles = StyleSheet.create({
     color: TEXT_MUTED,
     marginLeft: Spacing.sm,
   },
-  // Estilos antigos removidos ou depreciados (quickChip e quickChipText não são mais usados)
   gridItem: {
     width: '30%',
     aspectRatio: 1,
@@ -610,8 +712,8 @@ const quickActionStyles = StyleSheet.create({
       ios: {
         shadowColor: SHADOW_COLOR_CARD,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05, // Suavizado para iOS
-        shadowRadius: 3
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
       },
       android: { elevation: 2 },
     }),
@@ -624,7 +726,7 @@ const quickActionStyles = StyleSheet.create({
     textAlign: 'center',
   },
   withdrawCta: {
-    marginTop: Spacing.sm,
+    marginTop: 20,
     backgroundColor: ICON_PRIMARY,
     borderRadius: Radii.pill,
     paddingVertical: Spacing.sm,
@@ -636,6 +738,17 @@ const quickActionStyles = StyleSheet.create({
     fontWeight: '700',
     marginHorizontal: Spacing.sm,
     fontSize: 15,
+  },
+  plusButton: {
+    marginLeft: 'auto',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: ICON_PRIMARY,
+    backgroundColor: WHITE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
@@ -672,71 +785,37 @@ const RequestItem: React.FC<{
     ]}>
       <View style={styles.requestItemPendingIndicator} />
       <View style={styles.requestItemHeader}>
-        <View style={styles.clientAvatarPlaceholder}>
-          <Ionicons name="person-outline" size={20} color={TEXT_MEDIUM} accessibilityHidden={true} />
-        </View>
         <Text style={styles.requestServiceName} numberOfLines={1}>{item.serviceName}</Text>
-        <TouchableOpacity
-          style={styles.acceptButtonCorner}
-          onPress={() => {
-            if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // CORREÇÃO: Usar ImpactFeedbackStyle.Medium para sucesso
-            onAccept && onAccept(item.id);
-          }}
-          onPressIn={acceptTouchAnimation.onPressIn}
-          onPressOut={acceptTouchAnimation.onPressOut}
-          accessibilityRole="button"
-          accessibilityLabel={`Aceitar solicitação de ${item.serviceName}`}
-          accessibilityHint="Confirme para aceitar o agendamento."
-        >
-          <Animated.View style={{ transform: [{ scale: acceptTouchAnimation.scaleAnim }] }}>
-            <Ionicons name="checkmark-circle" size={32} color={SUCCESS_GREEN} accessibilityHidden={true} />
-          </Animated.View>
-        </TouchableOpacity>
+        <Image
+          source={require('../../assets/images/icon.png')}
+          style={[styles.serviceLogo, { display: 'none' }]}
+          resizeMode="contain"
+        />
+        {item.totalPrice != null && !isNaN(Number(item.totalPrice)) && (
+          <Text style={styles.priceCornerText}>+ R$ {Number(item.totalPrice).toFixed(2).replace('.', ',')}</Text>
+        )}
+        {/* Aceitar removido do canto; passa a ser botão na barra inferior */}
       </View>
 
-      <Text style={styles.requestClientName}>Solicitado por: {clientName}</Text>
+      <Text style={styles.requestClientName}>Cliente: {clientName}</Text>
 
-      {item.totalPrice != null && !isNaN(Number(item.totalPrice)) ? (
-        <Text style={styles.requestPrice}>
-          Valor: R$ {Number(item.totalPrice).toFixed(2).replace('.', ',')}
-        </Text>
-      ) : (
-        <Text style={styles.requestPrice}>Valor: N/A</Text>
+      {false && item.totalPrice != null && !isNaN(Number(item.totalPrice)) && (
+        <View style={styles.priceCornerRow}>
+          <Text style={[styles.requestPrice, styles.priceHighlight, { color: ICON_PRIMARY }]}>+ R$ {Number(item.totalPrice).toFixed(2).replace('.', ',')}</Text>
+        </View>
       )}
       <View style={styles.requestInfoRow}>
-        <Ionicons name="calendar-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} accessibilityHidden={true} />
+        <Ionicons name="calendar-outline" size={15} color={TEXT_MUTED} style={styles.infoIcon} accessibilityHidden={true} />
         <Text style={styles.requestInfoText}>
-          {scheduledDate}
-        </Text>
-        <Ionicons name="time-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} accessibilityHidden={true} />
-        <Text style={styles.requestInfoText}>
-          {scheduledTime}
+          {scheduledDate}, {scheduledTime}
         </Text>
       </View>
-      <View style={styles.requestInfoRow}>
-        <Ionicons name="location-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} accessibilityHidden={true} />
+      {false && (<View style={styles.requestInfoRow}>
+        <Text style={[styles.requestInfoText, { marginRight: Spacing.xs }]}>Endereço de Serviço:</Text>
         <Text style={styles.requestInfoText} numberOfLines={1}>{item.address?.street}, {item.address?.number}</Text>
-      </View>
+      </View>)}
 
       <View style={styles.requestActionsRow}>
-        {onChat && clientId && (
-          <TouchableOpacity
-            style={[styles.actionButtonBase, styles.chatButton]}
-            onPress={() => {
-              if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onChat(clientId, clientName);
-            }}
-            onPressIn={chatTouchAnimation.onPressIn}
-            onPressOut={chatTouchAnimation.onPressOut}
-            accessibilityRole="button"
-            accessibilityLabel={`Conversar com ${clientName}`}
-            accessibilityHint="Inicie um chat com o cliente."
-          >
-            <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: chatTouchAnimation.scaleAnim }] }]}>
-              <Ionicons name="chatbubble-ellipses-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />
-            </Animated.View>
-          </TouchableOpacity>
-        )}
         <TouchableOpacity
           style={[styles.actionButtonBase, styles.rejectButton]}
           onPress={() => {
@@ -750,25 +829,25 @@ const RequestItem: React.FC<{
           accessibilityHint="Rejeite o agendamento."
         >
           <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: rejectTouchAnimation.scaleAnim }] }]}>
-            <Ionicons name="close-circle-outline" size={20} color={WHITE} accessibilityHidden={true} />
-            <Text style={styles.actionButtonTextWhite}>Recusar</Text>
+            <Ionicons name="close" size={16} color={ICON_PRIMARY} accessibilityHidden={true} />
+            <Text style={styles.actionButtonTextPrimary}>Rejeitar</Text>
           </Animated.View>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.actionButtonBase, styles.detailsButton]}
+          style={[styles.actionButtonBase, styles.acceptButton]}
           onPress={() => {
-            if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            onDetails(item.id);
+            if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            onAccept && onAccept(item.id);
           }}
-          onPressIn={detailsTouchAnimation.onPressIn}
-          onPressOut={detailsTouchAnimation.onPressOut}
+          onPressIn={acceptTouchAnimation.onPressIn}
+          onPressOut={acceptTouchAnimation.onPressOut}
           accessibilityRole="button"
-          accessibilityLabel={`Ver detalhes da solicitação de ${item.serviceName}`}
-          accessibilityHint="Veja mais informações sobre o agendamento."
+          accessibilityLabel={`Aceitar solicitação de ${item.serviceName}`}
+          accessibilityHint="Confirme para aceitar o agendamento."
         >
-          <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: detailsTouchAnimation.scaleAnim }] }]}>
-            <Ionicons name="eye-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />
-            <Text style={styles.actionButtonTextPrimary}>Detalhes</Text>
+          <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: acceptTouchAnimation.scaleAnim }] }]}>
+            <Ionicons name="checkmark" size={16} color={WHITE} accessibilityHidden={true} />
+            <Text style={styles.actionButtonTextWhite}>Aceitar</Text>
           </Animated.View>
         </TouchableOpacity>
       </View>
@@ -881,9 +960,14 @@ export default function ProviderDashboardScreen() {
 
       setDashboardData(dashboard);
 
-      // Usar os dados recebidos do dashboard para popular os estados
-      setPendingRequests(dashboard.upcomingBookings.filter(b => b.status === BookingStatus.PENDING));
-      setUpcomingServices(dashboard.upcomingBookings.filter(b => b.status === BookingStatus.CONFIRMED || b.status === BookingStatus.IN_PROGRESS));
+      // Buscar listas reais como no (provider)/index.tsx
+      const pendingBookings = await getBookingsForUser(BookingStatus.PENDING);
+      const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
+
+      const toTs = (b: BookingDetails) => new Date(`${b.scheduledDate}T${b.scheduledTime}:00`).getTime();
+
+      setPendingRequests([...pendingBookings].sort((a, b) => toTs(a) - toTs(b)));
+      setUpcomingServices([...confirmedBookings].sort((a, b) => toTs(a) - toTs(b)));
 
       // Animate sections in stagger (respeitando reduced motion)
       const animationDuration = isReducedMotionEnabled ? 0 : 300;
@@ -934,7 +1018,30 @@ export default function ProviderDashboardScreen() {
         staggerAnimationRef.current.stop();
       }
     };
-  }, [authLoading, user, fetchData]); // Removidas as dependências individuais das Animated.Value, pois a animação composta é controlada por staggerAnimationRef
+  }, [authLoading, user, fetchData]);
+  // ===== Header data normalization (avatar + name) injected from provider/index.tsx logic =====
+  const sanitizeUrl = (v: any) => (typeof v === 'string' && v.trim().length > 0 ? v.trim() : undefined);
+  const headerAvatarUrl =
+    sanitizeUrl((dashboardData as any)?.avatarUrl) ||
+    sanitizeUrl((dashboardData as any)?.profileImageUrl) ||
+    sanitizeUrl((dashboardData as any)?.profilePhotoUrl) ||
+    sanitizeUrl((dashboardData as any)?.user?.avatarUrl) ||
+    sanitizeUrl((dashboardData as any)?.user?.profile?.avatarUrl) ||
+    sanitizeUrl((dashboardData as any)?.provider?.avatarUrl) ||
+    sanitizeUrl((dashboardData as any)?.userProfile?.avatarUrl) ||
+    sanitizeUrl((dashboardData as any)?.userProfile?.providerDetails?.avatarUrl) ||
+    sanitizeUrl(user?.avatarUrl) ||
+    sanitizeUrl((user as any)?.userProfile?.avatarUrl) ||
+    sanitizeUrl((user as any)?.providerDetails?.avatarUrl) ||
+    sanitizeUrl((user as any)?.profileImageUrl) ||
+    sanitizeUrl((user as any)?.profilePhotoUrl) ||
+    sanitizeUrl((user as any)?.avatar) ||
+    undefined;
+
+  const headerProviderName = (dashboardData as any)?.fullName
+    || (dashboardData as any)?.userProfile?.fullName
+    || user?.fullName
+    || undefined; // Removidas as dependências individuais das Animated.Value, pois a animação composta é controlada por staggerAnimationRef
 
   const onRefresh = useCallback(() => {
     console.log("[DashboardScreen] onRefresh: Iniciando refresh.");
@@ -1114,8 +1221,8 @@ export default function ProviderDashboardScreen() {
         keyboardShouldPersistTaps="handled" // Premium UX para iOS
       >
         <DashboardHeader
-          providerName={dashboardData?.fullName}
-          avatarUrl={user?.avatarUrl}
+          providerName={headerProviderName || dashboardData?.fullName}
+          avatarUrl={headerAvatarUrl}
           onProfilePress={() => router.push('/(provider)/profile' as any)}
           isReducedMotionEnabled={isReducedMotionEnabled}
         />
@@ -1126,21 +1233,21 @@ export default function ProviderDashboardScreen() {
           animation={financialSummaryAnim}
           isReducedMotionEnabled={isReducedMotionEnabled}
         />
-        <QuickActionsSection
+        {/* Atalhos do Dia (grid) */}
+        <ShortcutsGrid
           onViewAllServicesPress={handleViewAllServicesPress}
           onViewAllMessagesPress={handleViewAllMessagesPress}
           onManageAvailability={() => router.push('/(provider)/schedule/manage-availability' as any)}
-
           onOpenRequests={goRequests}
           onOpenUpcoming={goUpcoming}
           onOpenCompleted={goCompleted}
           onOpenNotifications={goNotifications}
           onOpenReviews={goReviews}
           onOpenEarnings={goEarnings}
-          onQuickWithdraw={goWithdraw}
           animation={quickActionsAnim}
           isReducedMotionEnabled={isReducedMotionEnabled}
         />
+        {/** QuickActionsSection movido para abaixo das seções de solicitações */}
         <Animated.View style={[
           styles.subsectionWrapper,
           {
@@ -1150,7 +1257,7 @@ export default function ProviderDashboardScreen() {
         ]}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
-              <Ionicons name="hourglass-outline" size={20} color={WARNING_YELLOW} accessibilityHidden={true} />{' '}Novas Solicitações
+              <Ionicons name="hourglass-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}Novas Solicitações
             </Text>
             {pendingRequests.length > 2 && (
               <TouchableOpacity
@@ -1183,6 +1290,7 @@ export default function ProviderDashboardScreen() {
             renderEmptyState("Nenhuma nova solicitação de agendamento.", "checkmark-done-circle-outline")
           )}
         </Animated.View>
+        <EditHoursSection animation={quickActionsAnim} onQuickWithdraw={goWithdraw} isReducedMotionEnabled={isReducedMotionEnabled} />
         <Animated.View style={[
           styles.subsectionWrapper,
           {
@@ -1409,14 +1517,16 @@ const styles = StyleSheet.create({
     }),
   },
   requestItemPendingIndicator: {
+    // removido o risco lateral
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
-    width: 6,
-    backgroundColor: WARNING_YELLOW,
-    borderTopLeftRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
-    borderBottomLeftRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    width: 0,
+    backgroundColor: 'transparent',
+    borderTopLeftRadius: Radii.md,
+    borderBottomLeftRadius: Radii.md,
+    display: 'none',
   },
   requestItemHeader: {
     flexDirection: 'row',
@@ -1424,30 +1534,59 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   clientAvatarPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E9ECEF',
+    width: 20, // ~10% menor
+    height: 20, // ~10% menor
+    borderRadius: 16,
+    backgroundColor: `${ICON_PRIMARY}1A`,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.sm,
+    borderWidth: 1,
+    borderColor: BORDER_SUBTLE,
   },
   requestServiceName: {
-    fontSize: 17,
+    fontSize: 15, // ~10% menor
     fontWeight: '700',
     color: TEXT_DARK,
     flex: 1,
+    paddingRight: 23 + Spacing.sm, // reserva espaço para logo absoluta
+  },
+  serviceLogo: {
+    width: 53,
+    height: 53,
+    position: 'absolute',
+    right: Spacing.sm,
+    top: 56,
+    zIndex: 1,
+    pointerEvents: 'none',
   },
   requestClientName: {
-    fontSize: 14,
+    fontSize: 13,
     color: TEXT_MEDIUM,
     marginBottom: Spacing.xs,
   },
   requestPrice: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    color: SUCCESS_GREEN,
     marginBottom: Spacing.xs,
+  },
+  priceCornerText: {
+    position: 'absolute',
+    right: Spacing.sm,
+    top: 6,
+    color: ICON_PRIMARY,
+    fontWeight: '700',
+    fontSize: 15.4, // +10%
+  },
+  // Preço destacado no canto (Novas Solicitações)
+  priceCornerRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
+  priceHighlight: {
+    fontSize: 15.4, // +10% sobre 14
   },
   requestInfoRow: {
     flexDirection: 'row',
@@ -1464,15 +1603,16 @@ const styles = StyleSheet.create({
   },
   requestActionsRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-end', // Recusar ao lado do Aceitar, alinhados à direita
     marginTop: Spacing.sm,
     gap: Spacing.sm,
   },
   actionButtonBase: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    
     borderRadius: Radii.pill, // CORREÇÃO: Usar Radii.pill (já definido)
-    minWidth: 60,
+    minWidth: 90,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1488,30 +1628,35 @@ const styles = StyleSheet.create({
   },
   rejectButton: {
     backgroundColor: DANGER_RED,
+    // ~5% menor que o padrão
+    minWidth: 85,
+    paddingHorizontal: 9,
+    paddingVertical: Spacing.xs,
   },
   detailsButton: {
-    backgroundColor: BACKGROUND_ALT,
+    backgroundColor: WHITE, // Outline azul como no Próximos Serviços
     borderWidth: 1.5,
     borderColor: ICON_PRIMARY,
+    paddingHorizontal: Spacing.sm,
   },
   actionButtonTextWhite: {
     color: WHITE,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     marginLeft: Spacing.xs,
   },
   actionButtonTextPrimary: {
     color: ICON_PRIMARY,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     marginLeft: Spacing.xs,
   },
   acceptButtonCorner: {
-    position: 'absolute',
-    top: Spacing.sm,
-    right: Spacing.sm,
-    zIndex: 1,
-    padding: Spacing.xs,
+    display: 'none',
+  },
+  acceptButton: {
+    backgroundColor: ICON_PRIMARY,
+    paddingHorizontal: Spacing.sm,
   },
   serviceItem: {
     backgroundColor: WHITE,
@@ -1692,3 +1837,139 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.sm,
   },
 });
+
+
+
+
+
+
+
+
+
+
+
+// Seção isolada: apenas a parte "Edite seus horários" + Financeiro
+const EditHoursSection: React.FC<{
+  onQuickWithdraw: () => void;
+  animation: Animated.Value;
+  isReducedMotionEnabled: boolean;
+}> = ({ onQuickWithdraw, animation, isReducedMotionEnabled }) => {
+  const router = useRouter();
+  const a9 = useAnimatedTouch();
+  return (
+    <Animated.View style={[
+      quickActionStyles.sectionContainer,
+      {
+        opacity: animation,
+        transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+      }
+    ]}>
+      <Text style={[quickActionStyles.sectionTitle, { fontSize: 18, marginTop: Spacing.lg, marginBottom: Spacing.md }]}>Edite seus horários</Text>
+      <View style={quickActionStyles.quickChipsRow}>
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=today-morning' as any); }}
+          accessibilityRole="button"
+          accessibilityLabel="Definir turno de hoje"
+          accessibilityHint="Escolha entre manhã, tarde ou dia todo para definir sua disponibilidade."
+        >
+          <Ionicons name="briefcase-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Definir turno de hoje</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Manhã, tarde ou dia todo</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=today-morning' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=tomorrow-afternoon' as any); }}
+          accessibilityRole="button"
+          accessibilityLabel="Agendar amanhã"
+          accessibilityHint="Marque o próximo dia disponível."
+        >
+          <Ionicons name="calendar-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Agendar amanhã</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Escolha seus horários</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=tomorrow-afternoon' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=block-today' as any); }}
+          accessibilityRole="button"
+          accessibilityLabel="Folga hoje"
+          accessibilityHint="Tire um dia de descanso."
+        >
+          <Ionicons name="bed-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Folga hoje</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Tire um dia de descanso</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=block-today' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=repeat-week' as any); }}
+          accessibilityRole="button"
+          accessibilityLabel="Copiar semana padrão"
+          accessibilityHint="Replique os horários da última semana."
+        >
+          <Ionicons name="repeat-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Copiar semana padrão</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Replique os horários da última semana</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=repeat-week' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity
+        style={quickActionStyles.withdrawCta}
+        onPress={onQuickWithdraw}
+        onPressIn={a9.onPressIn}
+        onPressOut={a9.onPressOut}
+        accessibilityRole="button"
+        accessibilityLabel="Saque Rápido"
+        accessibilityHint="Solicite um saque rápido dos ganhos disponíveis."
+      >
+        <Animated.View style={{ transform: [{ scale: a9.scaleAnim }], flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="cash-outline" size={20} color={WHITE} accessibilityHidden={true} />
+          <Text style={quickActionStyles.withdrawCtaText}>Saque Rápido</Text>
+          <Ionicons name="chevron-forward-outline" size={18} color={WHITE} accessibilityHidden={true} />
+        </Animated.View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
