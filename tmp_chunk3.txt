@@ -1,0 +1,250 @@
+  const formattedNextAvailable = item.nextAvailable ? formatNextAvailable(item.nextAvailable) : null;
+
+  return (
+    // NOVO: Wrapper com position: 'relative' para posicionar a distância absolutamente
+    <View style={styles.cardWrapperWithDistance}>
+      {/* NOVO: Micro-Pill de Localização/Distância (Sutil e Compacto) */}
+      {distanceLabel && (
+        <View style={styles.distancePillSmall}>
+          <Ionicons name="location-outline" size={11} color="#5da2ecff" />
+          <Text style={styles.distancePillSmallText} numberOfLines={1} allowFontScaling={false}>
+            {distanceLabel}
+          </Text>
+        </View>
+      )}
+
+      {/* CORRIGIDO: Aplica hoverScaleStyle (Reanimated) ao AnimatedCardBackground para compatibilidade */}
+      <AnimatedCardBackground
+        colors={['rgba(230, 240, 255, 0.7)', 'rgba(196, 197, 205, 0.23)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={[styles.animatedCardContainer, hoverScaleStyle, animatedBorderStyle]}
+      >
+        <TouchableOpacity
+          style={styles.cardContentWrapper}
+          onPress={handleCardPress}
+          onPressIn={onPressInCard}
+          onPressOut={onPressOutCard}
+          activeOpacity={1}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <View style={styles.imageWrapper}>
+            <Image source={avatarSource} style={styles.cardImage} />
+            {/* SEL0 DE SEGURANÇA REFINADO */}
+            <AnimatedPlusButtonGradient
+              colors={['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.38)']}
+              style={[styles.securityBadge, subtleTrembleAnimatedStyle]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <AnimatedReanimated.View style={[styles.reflectionOverlay, animatedReflectionStyle]}>
+                <LinearGradient
+                  colors={['transparent', 'rgba(172, 206, 246, 1)', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+              </AnimatedReanimated.View>
+
+              <Ionicons name="shield-checkmark" size={17} color="#5da2ecff" />
+            </AnimatedPlusButtonGradient>
+
+            {hasRating && (
+              <View style={styles.ratingBadge}>
+                <Ionicons name="star" size={11} color="#5da2ecff" style={{ marginRight: 3 }} />
+                <Text style={styles.ratingBadgeText} allowFontScaling={false}>{String(item.reviewCount ?? 0)}</Text>
+              </View>
+            )}
+
+            {/* NOVO: Badge animado flutuante para próximo horário (posição absolute no topo direito da imagem) */}
+            {formattedNextAvailable && (
+              <AnimatedReanimated.View 
+                style={[
+                  styles.nextAvailableBadge, 
+                  animatedPulseStyle,  // Pulse lento e sutil (agora mais suave)
+                  badgeVisibilityStyle  // Visibilidade: invisível 2s -> fade in 600ms -> visível 2s -> fade out 600ms
+                ]}
+              >
+                <View style={styles.nextAvailableCircle}>
+                  <AnimatedText style={[styles.nextAvailableCircleDay, fadeTextStyle]}>
+                    {animatedDayLabel}
+                  </AnimatedText>
+                </View>
+                <AnimatedText style={[styles.nextAvailableTimeBelow, fadeTextStyle]}>
+                  {animatedTime}
+                </AnimatedText>
+              </AnimatedReanimated.View>
+            )}
+          </View>
+
+          <View style={styles.infoContainer}>
+            {/* Topo: Nome do provedor */}
+            <View style={styles.providerNameContainer}>
+              <Text style={styles.providerName} numberOfLines={1} allowFontScaling={false}>{firstName}</Text>
+            </View>
+
+            {/* Novo bloco compacto horizontal para categorias (sem textos) - ATUALIZADO SEM BOLINHAS CONECTORAS E COM TÍTULO "SERVIÇOS" ACIMA */}
+            {displayedCategories.length > 0 && (
+              <View style={styles.categoryLineWrapper}>
+                <Text style={styles.servicesTitle}>Serviços</Text>
+                <View style={styles.servicesLine} />
+                {/* SUBSTITUÍDO: Removidos os 3 mini ícones; agora texto animado loop Residencial <-> Comercial no mesmo local */}
+                <View style={styles.categoryTextRow}>
+                  <AnimatedText style={[styles.categoryText, residencialOpacityStyle]} numberOfLines={1} allowFontScaling={false}>Residencial</AnimatedText>
+                  <AnimatedText style={[styles.categoryText, comercialOpacityStyle]} numberOfLines={1} allowFontScaling={false}>Comercial</AnimatedText>
+                </View>
+              </View>
+            )}
+
+            {/* REMOVIDO: A versão antiga do nextAvailableBackground, substituída pelo novo badge na imageWrapper */}
+
+            {/* Meio: Estratégia de Preço (seção isolada, centralizada, com badge sutil para destaque) */}
+            <View style={styles.priceRow}>
+              <Image 
+                source={require('../../../../assets/images/icon.png')} 
+                style={styles.priceLogo} 
+                resizeMode="contain" 
+              />
+              <View style={styles.priceSection}>
+                <Text style={styles.priceLabel} allowFontScaling={false}>{t('pricing.from', { defaultValue: 'A partir de' })}</Text>
+                <View style={styles.priceBadge} onLayout={(e) => setPriceBadgeWidth(e.nativeEvent.layout.width)}>
+                  {/* Reflexo animado sutil sobre o preço */}
+                  <AnimatedPriceReflection
+                    pointerEvents="none"
+                    colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.priceReflectionStripe, priceReflectionStyle]}
+                  />
+                  <Text style={styles.priceValue} allowFontScaling={false}>{mainDisplayedPrice}</Text>
+                </View>
+                {shouldShowMinHourlyPrice && minHourlyPrice !== null && (
+                  <Text style={styles.hourlyPriceValue} allowFontScaling={false}>
+                    {t('common.or', { defaultValue: 'ou' })} {getFormattedServicePrice({
+                      id: '',
+                      providerId: item.id || '',
+                      serviceId: '',
+                      service: { id: '', name: 'Serviço Horário' } as any,
+                      pricingType: PricingType.HOURLY,
+                      price: minHourlyPrice!,
+                      durationMinutes: 60,
+                      description: null,
+                      pricePerSquareMeter: null,
+                      pricePerRoom: null,
+                    } as ProviderServiceOffering, t)}
+                  </Text>
+                )}
+              </View>
+            </View>
+
+            {/* Fundo: Métricas + Ratings (agrupados juntos para proximidade) - REMOVIDO: premiumSeparator */}
+            <View style={styles.metricsAndRatingSection}> {/* NOVO: Container unificado para métricas e ratings */}
+              {renderMetrics()} {/* % e tempo agora aqui, colados às ratings */}
+              {!hasRating && (
+                <View style={styles.ratingSection}>
+                  {renderStars(item.averageRating)}
+                  <Text style={styles.reviewsCountText} allowFontScaling={false}>
+                    {String(item.reviewCount ?? 0)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </AnimatedCardBackground>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  cardWrapperWithDistance: { // NOVO ESTILO: Container pai para posicionamento absoluto
+    width: 115,
+    height: 170, // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
+    marginRight: 14,
+    marginBottom: -2,
+    marginTop: 8,
+    left: -2,
+    position: 'relative', // Essencial
+  },
+  animatedCardContainer: {
+    width: '100%', // Preenche o wrapper
+    height: '100%', // Preenche o wrapper
+    overflow: 'hidden',
+    // Margins removidos daqui e movidos para cardWrapperWithDistance
+    borderRightWidth: 1,
+    borderBottomWidth: 0.5,
+    
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+    borderColor: '#d1d5db53',
+    borderRadius: 12,
+    borderTopStartRadius: 20, // Cantos 22
+    borderBottomStartRadius: 20,
+    borderTopEndRadius: 20, // Cantos 22
+    borderBottomEndRadius: 20,
+    borderBottomColor: '#d1d5db53',
+  },
+  // NOVO ESTILO: Micro-Pill de Distância (Sutil e Compacto)
+  distancePillSmall: {
+    position: 'absolute',
+    top: 10,
+    right: 81,
+    zIndex: 10,
+    backgroundColor: '#F1f2f1',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 2, // Padding 6x2
+    paddingVertical: 0.5, // Padding 6x2
+    borderRadius: 12,
+    maxWidth: '55%',
+    overflow: 'hidden',
+ 
+    // sombra sutilíssima (shadowOpacity 0.06, elevation 2)
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  distancePillSmallText: {
+    marginLeft: 1,
+    fontSize: 9, // Fonte 10
+    fontWeight: '600',
+    color: '#334155',
+  },
+
+  cardContentWrapper: {
+    width: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    zIndex: 1,
+  },
+  imageWrapper: {
+    width: '100%',
+    height: 65, // Mantido: 75px (sem mudança, espaço extra vem do height total)
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative', // Para overlay do selo (botão agora aqui)
+  },
+  // NOVO: Estilos para o badge animado do horário (background mais opaco para evitar transparência no card)
+  nextAvailableBadge: {
+    position: 'absolute',
+    top: 95,                // distância consistente do topo
+    right: 16,              // mesma distância do topo para margem lateral
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    borderRadius: 8,
+    shadowColor: '#5da2ec',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+    overflow: 'hidden',
+    transform: [{ scale: 0.95 }], // redução de ~5% apenas no badge de horário
+  },
+  nextAvailableCircle: {
