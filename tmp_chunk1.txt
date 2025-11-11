@@ -1,250 +1,250 @@
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import AnimatedReanimated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  TextInput,
+  Platform,
+  Animated,
+  Alert,
+  Dimensions,
+  ActivityIndicator,
   Easing,
-  withSequence,
-  cancelAnimation,
-  withDelay,
-  interpolate,
-  interpolateColor,
-} from 'react-native-reanimated';
+} from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { saveProviderSettings, bulkSetAvailability, TimeRange } from '../../../services/providerSettingsService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CLIENT_ROUTES } from '../../../../constants/routes';
-import { ProviderDisplayInfo } from '../../../../types/backend/providers';
-import { Icons3D } from '../../../../constants/icons3d';
-import { PricingType } from '../../../../types/backend/services';
-import { ProviderServiceOffering } from '../../../../types/backend/provider-service';
-// Importar os novos formatadores e helpers
-import { formatDistance } from '../../../../utils/formatters';
-import { getFormattedServicePrice, getNumericPriceValue } from '../../../../utils/service-helpers';
+// IMPORTAÃ‡ÃƒO DO COMPONENTE PREMIUM SERVICE CHIP (Assumindo o caminho fornecido)
+import { PremiumServiceChip } from '../../../components/auth/PremiumServiceChip';
 
-const AnimatedCardBackground = AnimatedReanimated.createAnimatedComponent(LinearGradient);
-const AnimatedPlusButtonGradient = AnimatedReanimated.createAnimatedComponent(LinearGradient);
-const AnimatedPriceReflection = AnimatedReanimated.createAnimatedComponent(LinearGradient);
-const AnimatedText = AnimatedReanimated.createAnimatedComponent(Text);
+import { useAuth } from '../../../hooks/useAuth';
+import { VerificationStatus } from '../../../types/backend/auth';
+import {
+  updateMyProviderProfile,
+  addProviderServiceOffering,
+  updateProviderServiceOffering,
+  getProviderServicesOffered,
+  listAllServices,
+} from '../../../services/providerService';
+import verificationService from '../../../services/verificationService';
+import axios from 'axios';
 
-interface RecomendacaoCardProps {
-  item: ProviderDisplayInfo;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+enum PricingType {
+  FIXED_PRICE = 'FIXED_PRICE',
+  HOURLY = 'HOURLY',
+  BY_SIZE = 'BY_SIZE',
+  CUSTOM_QUOTE = 'CUSTOM_QUOTE',
 }
 
-const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
+type PriceUnit = 'hora' | 'quarto' | 'metragem' | null;
+
+interface ServiceDetailsFormData {
+  profilePhoto: string | null;
+  description: string;
+  yearsOfExperience: string;
+  basePrice: string;
+  pixKey: string;
+  specialties: string[];
+  serviceAreas: string[];
+  priceUnit: PriceUnit;
+}
+
+export default function ServiceDetailsScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { user, updateUser, setIsRegistrationInProgress } = useAuth();
 
-  if (!item || !item.id || !item.fullName) {
-    console.warn('[RecomendacaoCard] Item inválido ou incompleto. Render ignorado:', item);
-    return null;
-  }
+  const [formData, setFormData] = useState<ServiceDetailsFormData>({
+    profilePhoto: null,
+    description: '',
+    yearsOfExperience: '',
+    basePrice: '',
+    pixKey: '',
+    specialties: [],
+    serviceAreas: [],
+    priceUnit: null,
+  });
 
-  // NOVO: Extrair apenas o primeiro nome do fullName (split por espaço e pega o primeiro)
-  const firstName = item.fullName.split(' ')[0];
+  const [serviceIdMap, setServiceIdMap] = useState<Record<string, string>>({});
+  const [servicesLoaded, setServicesLoaded] = useState(false);
 
-  // CORRIGIDO: Use Reanimated para scale (compatível com AnimatedCardBackground)
-  const hoverScale = useSharedValue(1); // SharedValue do Reanimated para scale
+  const [currentServiceSubStep, setCurrentServiceSubStep] = useState(1);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const onPressInCard = () => {
-    hoverScale.value = withTiming(1.03, { duration: 200, easing: Easing.out(Easing.ease) });
+  // Cobertura (raio) e Disponibilidades â€“ inline abaixo do preÃ§o (sub-step 3)
+  const [radiusKm, setRadiusKm] = useState<number>(15);
+  const upcoming = React.useMemo(() => {
+    const base = new Date();
+    return new Array(10).fill(null).map((_, idx) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() + idx);
+      return d;
+    });
+  }, []);
+  const [selectedDays, setSelectedDays] = useState<Record<string, { morning: boolean; afternoon: boolean }>>({});
+  const toggleDay = (dateKey: string, key: 'morning'|'afternoon') => {
+    setSelectedDays(prev => ({
+      ...prev,
+      [dateKey]: { morning: prev[dateKey]?.morning ?? false, afternoon: prev[dateKey]?.afternoon ?? false, [key]: !(prev[dateKey]?.[key] ?? false) },
+    }));
+    try { Haptics.selectionAsync(); } catch {}
   };
+  const onMinusKm = () => { setRadiusKm(v => Math.max(1, v - (v >= 20 ? 5 : 1))); try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {} };
+  const onPlusKm  = () => { setRadiusKm(v => Math.min(60, v + (v >= 20 ? 5 : 1))); try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {} };
 
-  const onPressOutCard = () => {
-    hoverScale.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) });
-  };
-
-  // Estilo animado para scale - CORRIGIDO: Usa interpolate implícito via useAnimatedStyle para número puro
-  const hoverScaleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: hoverScale.value }], // Garante número puro (Reanimated extruda automaticamente)
-  }));
-
-  const reflectionTranslateX = useSharedValue(-60);
+  // Error states for inline validation
+  const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null);
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
+  const [yearsOfExperienceError, setYearsOfExperienceError] = useState<string | null>(null);
+  const [specialtiesError, setSpecialtiesError] = useState<string | null>(null);
+  const [priceUnitError, setPriceUnitError] = useState<string | null>(null);
+  const [basePriceError, setBasePriceError] = useState<string | null>(null);
+  const [pixKeyError, setPixKeyError] = useState<string | null>(null);
+  const [serviceAreasError, setServiceAreasError] = useState<string | null>(null);
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
   useEffect(() => {
-    reflectionTranslateX.value = withRepeat(
-      withTiming(38 + 60, {
-        duration: 1500,
-        easing: Easing.linear
+    let isMounted = true;
+
+    const loadServices = async () => {
+      try {
+        const services = await listAllServices();
+        const normalizeKey = (value: string) =>
+          value
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_')
+            .replace(/[^a-z0-9_]/g, '');
+
+        const map: Record<string, string> = {};
+        services.forEach((service) => {
+          const key = normalizeKey(service.name || '');
+          if (key) {
+            map[key] = service.id;
+          }
+        });
+
+        if (isMounted) {
+          setServiceIdMap(map);
+          setServicesLoaded(true);
+          if (__DEV__) {
+            console.log('[ServiceDetails] serviceIdMap sync:', map);
+          }
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('[ServiceDetails] Falha ao carregar catÃ¡logo de serviÃ§os:', error);
+          setGeneralError('NÃ£o foi possÃ­vel sincronizar o catÃ¡logo de serviÃ§os. Tente novamente em instantes.');
+        }
+      }
+    };
+
+    loadServices();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // AnimaÃ§Ãµes de transiÃ§Ã£o de passo
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const avatarScaleAnim = useRef(new Animated.Value(1)).current;
+
+  // AnimaÃ§Ãµes para o Stagger dos chips (4 chips)
+  const chipAnimations = useRef(
+    [...Array(4)].map(() => new Animated.Value(0))
+  ).current;
+
+  const totalSteps = 5;
+  const progress = currentServiceSubStep / totalSteps;
+
+  // Efeito para transiÃ§Ã£o de passo
+  useEffect(() => {
+    // Reset values for transition effect
+    fadeAnim.setValue(0);
+    slideAnim.setValue(50);
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 260, // Requisito 4: 200-260ms
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic), // Requisito 4: Easing consistente
       }),
-      -1,
-      false
-    );
-  }, []);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 260, // Requisito 4: 200-260ms
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic), // Requisito 4: Easing consistente
+      }),
+    ]).start();
+  }, [currentServiceSubStep]);
 
-  const animatedReflectionStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: reflectionTranslateX.value }],
+  // Efeito para animaÃ§Ãµes Stagger dos chips
+  useEffect(() => {
+    if (currentServiceSubStep === 2) {
+      // Reset chips to initial state (opacity 0, translateY 20)
+      chipAnimations.forEach(anim => anim.setValue(0));
+
+      // Requisito 4: Stagger nos chips: 50ms entre itens.
+      Animated.stagger(50, serviceOptions.map((_: any, index: number) =>
+        Animated.timing(chipAnimations[index], {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        })
+      )).start();
+    }
+  }, [currentServiceSubStep]);
+
+
+  const onPressInAvatar = () => {
+    Animated.spring(avatarScaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOutAvatar = () => {
+    Animated.spring(avatarScaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // Auto-save to AsyncStorage
+  useEffect(() => {
+    const saveFormData = async () => {
+      try {
+        const dataToSave = { ...formData, currentServiceSubStep };
+        await AsyncStorage.setItem('serviceDetailsFormData', JSON.stringify(dataToSave));
+      } catch (e) {
+        console.error("Failed to save service details form data to AsyncStorage", e);
+      }
     };
-  });
+    const handler = setTimeout(() => {
+      saveFormData();
+    }, 500); // Debounce saving
+    return () => clearTimeout(handler);
+  }, [formData, currentServiceSubStep]);
 
-  const subtleTrembleValue = useSharedValue(0);
-
+  // Load from AsyncStorage on component mount
   useEffect(() => {
-    const SHAKE_AMOUNT = 0.5;
-    const SHAKE_DURATION = 50;
-
-    subtleTrembleValue.value = withRepeat(
-      withSequence(
-        withTiming(SHAKE_AMOUNT, { duration: SHAKE_DURATION, easing: Easing.linear }),
-        withTiming(-SHAKE_AMOUNT, { duration: SHAKE_DURATION, easing: Easing.linear }),
-        withTiming(0, { duration: SHAKE_DURATION, easing: Easing.linear }),
-        withTiming(0, { duration: 4000, easing: Easing.linear })
-      ),
-      -1,
-      false
-    );
-
-    return () => {
-      cancelAnimation(subtleTrembleValue);
-    };
-  }, []);
-
-  const subtleTrembleAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: subtleTrembleValue.value },
-        { translateY: subtleTrembleValue.value },
-      ],
-    };
-  });
-
-  // NOVO: Animação de loop para texto (Residencial <-> Comercial a cada 4s com fade)
-  const fadeValue = useSharedValue(0); // 0: Residencial visível, 1: Comercial visível
-
-  useEffect(() => {
-    // Inicia com Residencial (fadeValue = 0)
-    fadeValue.value = withRepeat(
-      withSequence(
-        withTiming(0, { duration: 4000 }), // Hold Residencial por 4s (fadeValue fica em 0)
-        withTiming(1, { duration: 300, easing: Easing.inOut(Easing.ease) }), // Fade para Comercial em 300ms
-        withTiming(1, { duration: 4000 }), // Hold Comercial por 4s
-        withTiming(0, { duration: 300, easing: Easing.inOut(Easing.ease) }) // Fade de volta para Residencial em 300ms
-      ),
-      -1,
-      false
-    );
-
-    return () => {
-      cancelAnimation(fadeValue);
-    };
-  }, []); // Removido [fadeValue] para evitar loop infinito (não é necessário)
-
-  const residencialOpacityStyle = useAnimatedStyle(() => ({
-    opacity: 1 - fadeValue.value,
-  }));
-
-  const comercialOpacityStyle = useAnimatedStyle(() => ({
-    opacity: fadeValue.value,
-  }));
-
-  // NOVO: Implementação do badge animado para próximo horário disponível
-  const [index, setIndex] = useState(0);
-  const slots = [
-    { day: 'Ter', time: '09:00' },
-    { day: 'Qua', time: '14:30' },
-    { day: 'Sex', time: '08:00' },
-  ];
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setIndex((prev) => (prev + 1) % slots.length);
-    }, 4000); // troca a cada 4s (sincronizado com ciclo visível + invisível)
-    return () => clearInterval(id);
-  }, []);
-
-  // CORRIGIDO: Animação de visibilidade do badge inteiro (invisível 2s -> fade in suave 600ms -> visível 2s com pulse lento -> fade out 600ms)
-  const badgeVisibility = useSharedValue(0); // 0: invisível, 1: visível
-  useEffect(() => {
-    badgeVisibility.value = withRepeat(
-      withSequence(
-        withTiming(0, { duration: 2000 }), // Invisível por 2s (sem horário)
-        withTiming(1, { duration: 600, easing: Easing.inOut(Easing.cubic) }), // Fade in mais lento e suave (600ms, cubic para fluidez)
-        withTiming(1, { duration: 2000 }), // Visível por 2s (com pulse lento durante isso)
-        withTiming(0, { duration: 600, easing: Easing.inOut(Easing.cubic) }) // Fade out mais lento e suave (600ms, cubic)
-      ),
-      -1,
-      false
-    );
-    return () => {
-      cancelAnimation(badgeVisibility);
-    };
-  }, []);
-
-  const badgeVisibilityStyle = useAnimatedStyle(() => ({
-    opacity: badgeVisibility.value,
-  }));
-
-  // CORRIGIDO: Pulse de luminosidade LENTO só durante o tempo visível (mais sutil, sem afetar transparência do card)
-  const pulse = useSharedValue(0);
-  useEffect(() => {
-    // Pulse mais lento: ciclo de 4000ms (2s up + 2s down), amplitude baixa para suavidade
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }), // Up mais lento (2s)
-        withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.ease) }) // Down mais lento (2s)
-      ),
-      -1,
-      true
-    );
-  }, []);
-
-  const animatedPulseStyle = useAnimatedStyle(() => {
-    // CORRIGIDO: Amplitude menor para "piscar" sutil (sem transparência excessiva: 0.9-1 em vez de 0.75-1)
-    // E scale mínimo para não distorcer
-    return {
-      opacity: interpolate(badgeVisibility.value, [0, 1], [0, interpolate(pulse.value, [0, 1], [0.9, 1])]), // Só pulsa quando visível
-      transform: [{ scale: interpolate(badgeVisibility.value, [0, 1], [1, interpolate(pulse.value, [0, 1], [1, 1.02])]) }] // Scale só quando visível, mínimo
-    };
-  });
-
-  // Borda viva: leve pulsar de cor na borda do card (suave, não intrusivo)
-  const borderPulse = useSharedValue(0);
-  useEffect(() => {
-    borderPulse.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0, { duration: 2400, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      false
-    );
-  }, []);
-
-  const animatedBorderStyle = useAnimatedStyle(() => {
-    const c = interpolateColor(borderPulse.value, [0, 1], ['#d1d5db53', '#7aa7ff55']);
-    return { borderColor: c, borderBottomColor: c };
-  });
-
-  // Reflexo sobre o preço (robusto, baseado na largura real do badge)
-  const [priceBadgeWidth, setPriceBadgeWidth] = useState(0);
-  const priceReflectionX = useSharedValue(-50);
-  useEffect(() => {
-    // Reinicia o loop quando a largura estiver disponível
-    priceReflectionX.value = withRepeat(
-      withTiming(priceBadgeWidth + 50, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      false
-    );
-    return () => {
-      cancelAnimation(priceReflectionX);
-    };
-  }, [priceBadgeWidth]);
-
-  const priceReflectionStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: priceReflectionX.value }],
-  }));
-
-  // Texto animado baseado no index (muda a cada 4s, sincronizado com o ciclo)
-  const currentSlot = slots[index];
-  const animatedDayLabel = currentSlot.day;
-  const animatedTime = currentSlot.time;
-
-  // Fade sutil no texto durante mudança de index (para suavidade extra)
-  const textFade = useSharedValue(1);
-  useEffect(() => {
-    // Quando index muda, fade rápido no texto para transição suave (aumentado para 400ms para combinar com fade geral)
+    const loadFormData = async () => {
+      try {
+        const savedData = await AsyncStorage.getItem('serviceDetailsFormData');
+        if (savedData) {
