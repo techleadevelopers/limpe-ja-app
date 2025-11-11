@@ -16,9 +16,10 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { saveProviderSettings, bulkSetAvailability, TimeRange } from '../../../services/providerSettingsService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -36,6 +37,7 @@ import {
 } from '../../../services/providerService';
 import verificationService from '../../../services/verificationService';
 import axios from 'axios';
+import ServiceDetailsStep5Premium from '../../../components/auth/ServiceDetailsStep5Premium';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -79,6 +81,27 @@ export default function ServiceDetailsScreen() {
 
   const [currentServiceSubStep, setCurrentServiceSubStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Cobertura (raio) e Disponibilidades – inline abaixo do preço (sub-step 3)
+  const [radiusKm, setRadiusKm] = useState<number>(15);
+  const upcoming = React.useMemo(() => {
+    const base = new Date();
+    return new Array(10).fill(null).map((_, idx) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() + idx);
+      return d;
+    });
+  }, []);
+  const [selectedDays, setSelectedDays] = useState<Record<string, { morning: boolean; afternoon: boolean }>>({});
+  const toggleDay = (dateKey: string, key: 'morning'|'afternoon') => {
+    setSelectedDays(prev => ({
+      ...prev,
+      [dateKey]: { morning: prev[dateKey]?.morning ?? false, afternoon: prev[dateKey]?.afternoon ?? false, [key]: !(prev[dateKey]?.[key] ?? false) },
+    }));
+    try { Haptics.selectionAsync(); } catch {}
+  };
+  const onMinusKm = () => { setRadiusKm(v => Math.max(1, v - (v >= 20 ? 5 : 1))); try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {} };
+  const onPlusKm  = () => { setRadiusKm(v => Math.min(60, v + (v >= 20 ? 5 : 1))); try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {} };
 
   // Error states for inline validation
   const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null);
@@ -144,7 +167,16 @@ export default function ServiceDetailsScreen() {
     [...Array(4)].map(() => new Animated.Value(0))
   ).current;
 
-  const totalSteps = 4;
+  // Animação de entrada por linha de disponibilidade (para Step 5)
+  // Opções de serviço usadas na animação (precisa estar antes do useEffect abaixo)
+  const serviceOptions = [
+    { id: 'residencial', label: 'Residencial', icon: 'home', set: 'ion' },
+    { id: 'comercial',   label: 'Comercial',   icon: 'office-building', set: 'mci' },
+    { id: 'escritorio',  label: 'Escritório',  icon: 'desktop-outline', set: 'ion' },
+    { id: 'pos_obra',    label: 'Pós-Obra',    icon: 'hammer-wrench', set: 'mci' },
+  ];
+
+  const totalSteps = 5;
   const progress = currentServiceSubStep / totalSteps;
 
   // Efeito para transição de passo
@@ -176,7 +208,7 @@ export default function ServiceDetailsScreen() {
       chipAnimations.forEach(anim => anim.setValue(0));
 
       // Requisito 4: Stagger nos chips: 50ms entre itens.
-      Animated.stagger(50, serviceOptions.map((_, index) =>
+      Animated.stagger(50, serviceOptions.map((_: any, index: number) =>
         Animated.timing(chipAnimations[index], {
           toValue: 1,
           duration: 250,
@@ -187,7 +219,7 @@ export default function ServiceDetailsScreen() {
     }
   }, [currentServiceSubStep]);
 
-
+  // Microanima��o do Step 5 � gerenciada no componente premium
   const onPressInAvatar = () => {
     Animated.spring(avatarScaleAnim, {
       toValue: 0.95,
@@ -272,6 +304,7 @@ export default function ServiceDetailsScreen() {
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível selecionar a imagem.');
     }
+  
   };
 
   // Validation functions
@@ -365,12 +398,14 @@ export default function ServiceDetailsScreen() {
       }
     } else if (currentServiceSubStep === 4) {
       if (validateSubStep4()) {
-        handleFinalSubmission();
+        setCurrentServiceSubStep(5);
       } else {
         setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
       }
+    } else if (currentServiceSubStep === 5) {
+      handleFinalSubmission();
     }
-  };
+    };
 
  const handleBackSubStep = () => {
     setGeneralError(null);
@@ -499,7 +534,30 @@ if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
       // 4. Avançar status de verificação
       await verificationService.advanceVerificationStatus(); 
 
-      // 5. Atualizar estado local
+      // 5. Persistir raio e disponibilidades (não bloqueante)
+      try {
+        await saveProviderSettings({ serviceRadiusKm: radiusKm });
+      } catch (e) {
+        console.warn('[ServiceDetails] Falha ao salvar raio de atendimento:', e);
+      }
+
+      try {
+        const dates = Object.keys(selectedDays)
+          .filter(k => selectedDays[k]?.morning || selectedDays[k]?.afternoon)
+          .map(k => {
+            const ranges: TimeRange[] = [];
+            if (selectedDays[k]?.morning) ranges.push({ start: '08:00', end: '12:00' });
+            if (selectedDays[k]?.afternoon) ranges.push({ start: '14:00', end: '18:00' });
+            return { date: k, ranges };
+          });
+        if (dates.length) {
+          await bulkSetAvailability({ dates });
+        }
+      } catch (e) {
+        console.warn('[ServiceDetails] Falha ao salvar disponibilidades:', e);
+      }
+
+      // 6. Atualizar estado local
       await updateUser({
         avatarUrl: avatarUrl ?? user?.avatarUrl ?? null,
         providerDetails: user?.providerDetails
@@ -512,7 +570,7 @@ if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
       await AsyncStorage.removeItem('serviceDetailsFormData');
       
       // Navegação direta, sem alert
-      router.push('/provider-register/verify-account');
+      router.push('/(auth)/provider-register/verify-account' as any);
 
     } catch (error: any) {
       console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message);
@@ -580,7 +638,7 @@ if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
         return 'Preço base';
     }
   };
-const getSubStepTitle = () => {
+  const getSubStepTitle = () => {
   switch (currentServiceSubStep) {
     case 1: return '1. Foto e Descrição';
     case 2: return '2. Experiência e Especialidades';
@@ -604,13 +662,6 @@ const getMicrocopyText = () => {
     if (currentServiceSubStep === 1) return 'Voltar para Cadastro';
     return 'Voltar';
   };
-
-  const serviceOptions = [
-    { id: 'residencial', label: 'Residencial', icon: 'home', set: 'ion' },
-    { id: 'comercial',   label: 'Comercial',   icon: 'office-building', set: 'mci' },
-    { id: 'escritorio',  label: 'Escritório',  icon: 'desktop-outline', set: 'ion' },
-    { id: 'pos_obra',    label: 'Pós-Obra',    icon: 'hammer-wrench', set: 'mci' },
-  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -667,7 +718,7 @@ const getMicrocopyText = () => {
                   activeOpacity={0.8}
                 >
                   {formData.profilePhoto ? (
-                    <Image source={{ uri: formData.profilePhoto }} style={styles.uploadedImage} />
+                    <Image source={formData.profilePhoto ? { uri: formData.profilePhoto } : undefined} style={styles.uploadedImage} />
                   ) : (
                     <View style={styles.imagePlaceholder}>
                       <Ionicons name="camera-outline" size={40} color="#A0D2EB" />
@@ -805,6 +856,40 @@ const getMicrocopyText = () => {
                   basePriceError,
                   validateSubStep3
                 )}
+                {/* Cobertura (km) e Disponibilidades abaixo do preço */}
+                {false && (<>
+                <Text style={styles.sectionTitle}>Cobertura (km)</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                  <TouchableOpacity onPress={onMinusKm} activeOpacity={0.9} style={[btn.backGlassInner, { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]}>
+                    <Text style={{ color: '#1F2A37', fontSize: 18, fontWeight: '800' }}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={{ marginHorizontal: 12, fontSize: 16, fontWeight: '800', color: '#2C3E50' }}>{radiusKm} km</Text>
+                  <TouchableOpacity onPress={onPlusKm} activeOpacity={0.9} style={[btn.backGlassInner, { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]}>
+                    <Text style={{ color: '#1F2A37', fontSize: 18, fontWeight: '800' }}>+</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.sectionTitle}>Disponibilidades (próximos dias)</Text>
+                {upcoming.map(d => {
+                  const key = d.toISOString().slice(0, 10);
+                  const s = selectedDays[key] ?? { morning: false, afternoon: false };
+                  const dayLabel = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d.getDay()];
+                  const dd = String(d.getDate()).padStart(2, '0');
+                  const mm = String(d.getMonth() + 1).padStart(2, '0');
+                  return (
+                    <View key={key} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E0E0E0' }}>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#3F4A5A' }}>{`${dayLabel} ${dd}/${mm}`}</Text>
+                      <View style={{ flexDirection: 'row' }}>
+                        <TouchableOpacity onPress={() => toggleDay(key, 'morning')} activeOpacity={0.9} style={[styles.priceTypeCard, s.morning && styles.priceTypeCardSelected, { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, marginRight: 6 }]}>
+                          <Text style={[styles.priceTypeLabel, s.morning && styles.priceTypeLabelSelected]}>08–12</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => toggleDay(key, 'afternoon')} activeOpacity={0.9} style={[styles.priceTypeCard, s.afternoon && styles.priceTypeCardSelected, { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 }]}>
+                          <Text style={[styles.priceTypeLabel, s.afternoon && styles.priceTypeLabelSelected]}>14–18</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+                </>)}
               </View>
             )}
 
@@ -824,7 +909,7 @@ const getMicrocopyText = () => {
                   validateSubStep4
                 )}
 
-                {renderInputSection(
+                {false && renderInputSection(
                   'Áreas de Atendimento',
                   'Ex: Campinas (Centro, Cambuí), Valinhos, Vinhedo',
                   formData.serviceAreas.join(', '),
@@ -836,6 +921,18 @@ const getMicrocopyText = () => {
                   serviceAreasError,
                   validateSubStep4
                 )}
+              </View>
+            )}
+            {/* Sub-step 5: Cobertura & Agenda (Premium Component) */}
+            {currentServiceSubStep === 5 && (
+              <View style={styles.formContainer}>
+                <ServiceDetailsStep5Premium
+                  radiusKm={radiusKm}
+                  setRadiusKm={setRadiusKm}
+                  selectedDays={selectedDays}
+                  toggleDay={toggleDay}
+                  upcoming={upcoming}
+                />
               </View>
             )}
             {generalError && <Text style={styles.inlineErrorMessageCentered}>{generalError}</Text>}
@@ -868,7 +965,7 @@ const getMicrocopyText = () => {
                   ) : (
                     <>
                       <Text style={btn.primaryText}>
-                        {currentServiceSubStep === totalSteps ? 'Finalizar' : 'Próximo'}
+                        {currentServiceSubStep === totalSteps ? 'Concluir cadastro' : 'Continuar'}
                       </Text>
                       <Ionicons
                         name={currentServiceSubStep === totalSteps ? 'checkmark-circle' : 'arrow-forward'}
@@ -916,6 +1013,55 @@ const btn = StyleSheet.create({
 
 
 const styles = StyleSheet.create({
+  headerGlass: {
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    overflow: 'hidden',
+    shadowColor: '#3B82F6',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    marginBottom: 16,
+  },
+  headerGradient: {
+    ...StyleSheet.absoluteFillObject as any,
+  },
+  stepTitle: { fontWeight: '700', color: '#1E293B', fontSize: 15 },
+  stepSubtitle: { color: '#64748B', fontSize: 13, marginTop: 4 },
+  sliderWrap: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 16,
+    marginBottom: 14,
+    overflow: 'hidden',
+  },
+  dayCard: {
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 14,
+    padding: 10,
+    marginVertical: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+  },
+  dayLabel: { fontSize: 13, fontWeight: '600', color: '#3F4A5A', marginBottom: 6 },
+  slotRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+  slotChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(59,130,246,0.25)',
+    marginLeft: 8,
+    backgroundColor: 'rgba(255,255,255,0.6)'
+  },
+  slotChipActive: {
+    backgroundColor: '#3B82F6',
+    shadowColor: '#3B82F6',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  slotText: { fontWeight: '600', color: '#1E293B', fontSize: 13 },
+  slotTextActive: { color: '#fff' },
   safeArea: {
     flex: 1,
     backgroundColor: '#F4F7FC',
@@ -1160,3 +1306,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 });
+
+// Ensure all blocks are closed
+
+
+
+
+
+
+
+
