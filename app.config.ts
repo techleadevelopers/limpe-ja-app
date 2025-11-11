@@ -93,8 +93,8 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     extra: {
       ...config.extra,
       backendApiUrl:
-        process.env.EXPO_PUBLIC_API_BASE_URL ??
-        'https://limpeja-backend-production.up.railway.app/',
+        // Prefer env when provided; fallback to the new cloud URL
+        process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://limpeja-backend-production-edfa.up.railway.app',
       environment: process.env.NODE_ENV || 'production',
       router: {},
       eas: {
