@@ -128,7 +128,7 @@ export default function LimpejaSupportChatScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { paddingTop: 80, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  header: { paddingTop: 80, paddingHorizontal: 16, paddingBottom: 12, top: -15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle: { fontSize: 17, fontWeight: '800', color: '#1A2538' },
   listContent: { paddingHorizontal: 12, paddingBottom: 12 },
   bubble: { alignSelf: 'flex-start', maxWidth: '80%', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 14, marginVertical: 6 },
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   bubbleTheirs: { backgroundColor: '#F2F4F7', borderTopLeftRadius: 4 },
   bubbleText: { fontSize: 14 },
   bubbleTime: { fontSize: 10, marginTop: 4, opacity: 0.7 },
-  inputBar: { flexDirection: 'row', alignItems: 'center', padding: 10, gap: 8, borderTopWidth: 1, borderTopColor: '#E9ECEF' },
+  inputBar: { flexDirection: 'row', alignItems: 'center', top:'-30', padding: 10, gap: 8, borderTopWidth: 1, borderTopColor: '#E9ECEF' },
   input: { flex: 1, backgroundColor: '#F8F9FA', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#1A2538', borderWidth: 1, borderColor: '#E9ECEF' },
   sendBtn: { backgroundColor: '#0A84FF', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12 },
 });
