@@ -721,13 +721,14 @@ export default function EditClientProfileScreen() {
 const styles = StyleSheet.create({
   keyboardAvoidingContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f7f7f7', // alinhado com Profile
   },
   scrollView: {
     flex: 1,
   },
   container: {
-    padding: 24,
+    paddingHorizontal: 12, // igual ao Profile
+    paddingTop: 12,
     paddingBottom: 40,
   },
   animatedContentWrapper: {},
@@ -739,7 +740,7 @@ const styles = StyleSheet.create({
   },
   headerGradient: {
     width: '100%',
-    paddingHorizontal: 20,
+    paddingHorizontal: 14, // igual ao Profile.hero
     paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     borderRadius: 0,
@@ -771,7 +772,7 @@ const styles = StyleSheet.create({
   avatarSection: {
     alignItems: 'center',
     marginBottom: 32,
-    backgroundColor: '#F2F2F2',
+    backgroundColor: '#FFFFFF', // cartões em branco como no Profile
     borderRadius: 16,
     padding: 20,
     ...Platform.select({
