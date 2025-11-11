@@ -687,10 +687,13 @@ export class ProvidersService {
               a.city,
               a.state,
               a."providerId",
-              ST_X(a.location) AS longitude_val,
-              ST_Y(a.location) AS latitude_val,
+              COALESCE(ST_X(a.location), a.longitude::double precision) AS longitude_val,
+              COALESCE(ST_Y(a.location), a.latitude::double precision) AS latitude_val,
               ST_DistanceSphere(
-                  a.location,
+                  COALESCE(
+                    a.location,
+                    ST_SetSRID(ST_MakePoint(a.longitude::double precision, a.latitude::double precision), 4326)
+                  ),
                   ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
               ) AS distance_m,  -- CORREÇÃO: Em metros (não km), pra consistência
               COALESCE(AVG(r.rating), 0)::numeric AS "averageRating",
@@ -736,8 +739,14 @@ export class ProvidersService {
                 "Review" r ON p.id = r."providerId"
             WHERE
                 p."verificationStatus" = ${Prisma.raw(`'${VerificationStatus.APPROVED}'`)} AND
-                a.location IS NOT NULL AND
-                ST_DWithin(a.location, ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326), ${radius * 1000})
+                ST_DWithin(
+                  COALESCE(
+                    a.location,
+                    ST_SetSRID(ST_MakePoint(a.longitude::double precision, a.latitude::double precision), 4326)
+                  ),
+                  ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326),
+                  ${radius * 1000}
+                )
                 ${searchTerm ? Prisma.sql`AND (p."fullName" ILIKE ${'%' + searchTerm + '%'} OR u.email ILIKE ${'%' + searchTerm + '%'} OR p.bio ILIKE ${'%' + searchTerm + '%'} OR s.name ILIKE ${'%' + searchTerm + '%'})` : Prisma.empty}
                 ${serviceId ? Prisma.sql`AND ps."serviceId" = ${serviceId}` : Prisma.empty}
                 ${location ? Prisma.sql`AND (a.city ILIKE ${'%' + location + '%'} OR a.state ILIKE ${'%' + location + '%'} OR a.street ILIKE ${'%' + location + '%'} OR a.neighborhood ILIKE ${'%' + location + '%'})` : Prisma.empty}
@@ -984,10 +993,13 @@ export class ProvidersService {
           a.city,
           a.state,
           a."providerId",
-          ST_X(a.location) AS longitude_val,
-          ST_Y(a.location) AS latitude_val,
+          COALESCE(ST_X(a.location), a.longitude::double precision) AS longitude_val,
+          COALESCE(ST_Y(a.location), a.latitude::double precision) AS latitude_val,
           ST_DistanceSphere(
-              a.location,
+              COALESCE(
+                a.location,
+                ST_SetSRID(ST_MakePoint(a.longitude::double precision, a.latitude::double precision), 4326)
+              ),
               ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
           ) AS distance_m,  -- Em metros
           COALESCE(AVG(r.rating), 0)::numeric AS "averageRating",
@@ -1032,8 +1044,7 @@ export class ProvidersService {
         LEFT JOIN
             "Review" r ON p.id = r."providerId"
         WHERE
-            p."verificationStatus" = ${Prisma.raw(`'${VerificationStatus.APPROVED}'`)} AND
-            a.location IS NOT NULL  -- Só providers com localização
+            p."verificationStatus" = ${Prisma.raw(`'${VerificationStatus.APPROVED}'`)}
         GROUP BY
             p.id, u.email, u.role, u."isVerified", u."fullName", a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount", p.badges, p."acceptanceRate", p."averageResponseTime", p."verificationStatus"
         ORDER BY
