@@ -63,13 +63,7 @@ export default () => ({
     dsn: process.env.SENTRY_DSN || undefined,
   },
 
-  // Google Cloud Storage
-  googleCloudStorage: {
-    projectId: process.env.GCS_PROJECT_ID,
-    // aceita conteúdo JSON direto ou base64 (decodifica se necessário)
-    keyFile: decodeMaybeBase64(process.env.GCS_KEY),
-    bucketName: process.env.GCS_BUCKET_NAME,
-  },
+  // Upload storage is handled by UploadThing (no GCS config)
 
   // APIs de terceiros
   thirdPartyApis: {
