@@ -247,13 +247,11 @@ const styles = StyleSheet.create({
     },
     pulseRing: {
         position: 'absolute',
-        top: '45%',
-        left: '50%',
-        width: 68, // Ajustado para iniciar exatamente na borda externa da imagem (58 + 2*2 para cobrir bordas internas/externas)
-        height: 68,
-        marginLeft: -31, // Centralizado precisamente para flush com a borda
-        marginTop: -31,
-        borderRadius: 31, // Matching com o novo size para bordas arredondadas perfeitas
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        borderRadius: 34, // mesmo arredondamento do imageWrapper/cardImage
         backgroundColor: 'transparent', // Fundo transparente para só mostrar a borda
         borderWidth: 0.8, // Ligeiramente mais grosso para visibilidade no pulso
         borderColor: '#5dcdeca1', // MESMA COR da borda da imagem, para harmonia perfeita
