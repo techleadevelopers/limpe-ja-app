@@ -1,5 +1,3 @@
-// LimpeJaApp/app/(client)/explore/[providerId]/styles/providerStyles.ts
-
 import { StyleSheet, Dimensions, Platform } from 'react-native';
 import { AppColors, AppShadows, SCREEN_WIDTH, SCREEN_HEIGHT } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
@@ -51,7 +49,7 @@ export const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   scrollContentContainer: {
-    paddingBottom: 50, // Ajuste para dar espaço ao botão fixo "Agendar Serviço"
+    paddingBottom: 30, // Ajuste para dar espaço ao botão fixo "Agendar Serviço"
   },
 
   // --- Estilos para a Imagem do Provedor e o Card Principal (inspirado no Print 2) ---
@@ -181,7 +179,7 @@ export const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 4,
     marginBottom: 15,
-    marginTop: -10,
+    marginTop: -1,
     paddingHorizontal: 10,
   },
   infoChip: {
@@ -192,8 +190,50 @@ export const styles = StyleSheet.create({
     borderRadius: 20,
 
   },
+  priceDropContainer: {
+  position: 'absolute',
+  right: 20,
+  top: 110, // Ajustado para flutuar na lateral superior da imagem (altura header ~60 + offset 50 para topo da foto)
+  zIndex: 10,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+priceDropContent: {
+  width: 90,
+  height: 90,
+  alignItems: 'center',
+  justifyContent: 'center',
+  transform: [{ rotate: '0deg' }],
+},
+
+priceDropInner: {
+  position: 'absolute',
+  top: 24,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+priceDropLogo: {
+  width: 26,
+  height: 26,
+  resizeMode: 'contain',
+  marginBottom: 2,
+},
+
+priceDropText: {
+  color: '#fff',
+  fontSize: 13,
+  fontWeight: '700',
+  textAlign: 'center',
+  textShadowColor: 'rgba(0,0,0,0.25)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 2,
+},
+
+  
   infoChipText: {
-    fontSize: 10,
+    fontSize: 11,
     color: AppColors.textAuxiliary, // Usando AppColors
     marginLeft: 6,
     fontWeight: '500',
@@ -460,6 +500,38 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
     bottom: 20,
   },
+  priceBackgroundWrapper: {
+  alignSelf: 'flex-start',
+  marginTop: 4,
+  marginBottom: 6,
+},
+
+locationDistanceText: {
+  color: '#7C8590',
+  fontSize: 14,
+  fontWeight: '500',
+},
+
+
+priceBackground: {
+  paddingVertical: 8,
+  paddingHorizontal: 19,
+  borderRadius: 14,
+  right: 30,
+  backgroundColor: '#EAF4FF',
+  ...Platform.select({
+    ios: {
+      shadowColor: '#A2CFFF',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+    },
+    android: {
+      elevation: 3,
+    },
+  }),
+},
+
   photoSectionTitle: {
     fontSize: 15,
     fontWeight: '700',
