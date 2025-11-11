@@ -35,7 +35,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
-import { Multer } from 'multer';
+import type { Express } from 'express';
 
 import { SortByOption } from '../search/dto/search-query.dto';
 
@@ -47,13 +47,18 @@ import { ProviderWithCalculatedRating, ProviderMetrics } from './providers.servi
 import { OfferDetailsDto } from '../offers/dto/offer-details.dto'; // Verifique o caminho relativo!
 
 import { ProviderMetricsDto } from './dto/provider-metrics.dto';
+import { SettingsService } from '../settings/settings.service';
+import { ProviderSettingsDto } from './dto/provider-settings.dto';
 
 @ApiTags('providers')
 @Controller('providers')
 export class ProvidersController {
   private readonly logger = new Logger(ProvidersController.name);
 
-  constructor(private readonly providersService: ProvidersService) {}
+  constructor(
+    private readonly providersService: ProvidersService,
+    private readonly settingsService: SettingsService,
+  ) {}
 
   // =================================================================================================
   // ROTAS PÚBLICAS (Sem autenticação) - ORDEM AJUSTADA: Rotas fixas antes de rotas com parâmetros
@@ -208,7 +213,7 @@ export class ProvidersController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadAvatar(
     @Req() req: ExpressRequest,
-    @UploadedFile() file: Multer.File,
+    @UploadedFile() file: Express.Multer.File,
   ) {
     const userId = req.user['userId'];
     if (!file) {
@@ -244,6 +249,43 @@ export class ProvidersController {
     // ADICIONADO: Mapeamento para converter objetos Offer do Prisma para OfferDetailsDto
     // AQUI, 'offer' agora será do tipo PrismaOffer devido à correção no serviço.
     return offers.map(offer => new OfferDetailsDto(offer)); 
+  }
+
+  // =============== Provider settings (radius) ===============
+  @Put('me/settings')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Salvar configurações do provedor autenticado (raio de atendimento)' })
+  @ApiResponse({ status: 200, description: 'Configurações salvas.' })
+  async saveMySettings(
+    @Req() req: ExpressRequest,
+    @Body() body: ProviderSettingsDto,
+  ) {
+    const userId = req.user['userId'];
+    const me = await this.providersService.findByUserId(userId);
+    if (!me) throw new NotFoundException('Provedor não encontrado.');
+    if (typeof body.serviceRadiusKm === 'number') {
+      const clamped = Math.max(1, Math.min(200, Math.floor(body.serviceRadiusKm)));
+      await this.settingsService.setProviderRadiusKm(me.id, clamped);
+    }
+    return { ok: true };
+  }
+
+  @Get('me/settings')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obter configurações do provedor autenticado (raio de atendimento)' })
+  @ApiResponse({ status: 200, description: 'Configurações atuais.' })
+  async getMySettings(
+    @Req() req: ExpressRequest,
+  ) {
+    const userId = req.user['userId'];
+    const me = await this.providersService.findByUserId(userId);
+    if (!me) throw new NotFoundException('Provedor não encontrado.');
+    const serviceRadiusKm = await this.settingsService.getProviderRadiusKm(me.id, 15);
+    return { serviceRadiusKm };
   }
 
   // ADMIN: Atualizar perfil de um provedor por ID
