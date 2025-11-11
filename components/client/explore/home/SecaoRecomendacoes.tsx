@@ -110,7 +110,12 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
         {/* Fade lateral sutil para conforto visual */}
         <LinearGradient
           pointerEvents="none"
-          colors={["rgba(241,242,241,1)", "rgba(241,242,241,0.94)", "rgba(241,242,241,0)"]}
+          // Aumenta a opacidade do fade da esquerda (mais marcante)
+          colors={[
+            "rgba(241,242,241,1)",
+            "rgba(241,242,241,0.98)",
+            "rgba(241,242,241,0.14)"
+          ]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[styles.edgeFade, styles.edgeLeft]}
@@ -184,11 +189,11 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   edgeLeft: {
-    left: 0,
+    left: -16, // empurra o fade mais para fora à esquerda
     bottom: 0,
   },
   edgeRight: {
-    right: 0,
+    right: -16, // empurra o fade mais para fora à direita
   },
   emptyText: {
     flex: 1,
