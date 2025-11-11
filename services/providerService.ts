@@ -1,6 +1,7 @@
 // app/services/providerService.ts
 import axios, { AxiosResponse } from 'axios';
 import { api } from './api';
+import { getCurrentPosition } from './locationService';
 
 // Importa o serviço de reviews do frontend
 import { ReviewService as FrontendReviewService } from './reviewService'; // Renomeado para evitar conflito
@@ -541,36 +542,21 @@ export async function deleteProviderServiceOffering(providerId: string, serviceO
  */
 export async function getRecommendedProviders(params?: { latitude?: number; longitude?: number }): Promise<ProviderDisplayInfo[]> {
   try {
-    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/recommended', {
-      params: params || {},
-      headers: { 'X-Silent': '1' },
-    });
-    return response.data;
-  } catch (error: any) {
-    const payload = error?.response?.data || error?.message;
-    console.warn('[providerService] Falha ao buscar provedores recomendados, aplicando fallback local:', payload);
-    if (axios.isAxiosError(error) && error.response) {
-      const status = error.response.status;
-      if (status && status >= 400 && status < 600) {
-        return FALLBACK_RECOMMENDED_PROVIDERS;
+    let finalParams = params || {};
+    if (finalParams.latitude == null || finalParams.longitude == null) {
+      try {
+        const coords = await getCurrentPosition();
+        if (coords) {
+          finalParams = { latitude: coords.latitude, longitude: coords.longitude };
+        }
+      } catch {
+        // ignore location failure
       }
     }
-    return FALLBACK_RECOMMENDED_PROVIDERS;
-  }
-}
-
-/**
- * @function getNearbyProviders
- * Obtém uma lista de provedores próximos para a tela inicial.
- * Chama o endpoint GET /providers/nearby.
- * @param latitude Latitude da localização atual para busca.
- * @param longitude Longitude da localização atual para busca.
- * @returns Uma Promise que resolve para um array de provedores (ProviderDisplayInfo para frontend).
- */
-export async function getNearbyProviders(latitude?: number, longitude?: number): Promise<ProviderDisplayInfo[]> {
-  try {
-    const params = (latitude !== undefined && longitude !== undefined) ? { latitude, longitude } : {};
-    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/nearby', { params, headers: { 'X-Silent': '1' } });
+    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/recommended', {
+      params: finalParams,
+      headers: { 'X-Silent': '1' },
+    });
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar provedores próximos:', error.response?.data || error.message);
@@ -758,3 +744,4 @@ export async function uploadMyAvatar(fileUri: string): Promise<{ url: string }> 
     throw new Error('Erro de rede ou servidor ao fazer upload do avatar.');
   }
 }
+
