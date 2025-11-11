@@ -23,6 +23,12 @@ export async function saveProviderSettings(payload: ProviderSettingsPayload) {
   });
 }
 
+export async function getProviderSettings(): Promise<{ serviceRadiusKm?: number }> {
+  return fetchApi('/providers/me/settings', {
+    method: 'GET',
+  });
+}
+
 export async function bulkSetAvailability(payload: BulkAvailabilityPayload) {
   return fetchApi('/providers/me/availability/bulk', {
     method: 'POST',
@@ -36,4 +42,3 @@ export async function generateSlotsFromWeeklyTemplate(monthIso: string) {
     method: 'POST',
   });
 }
-
