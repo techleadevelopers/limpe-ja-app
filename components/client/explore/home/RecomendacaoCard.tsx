@@ -1,4 +1,4 @@
-﻿import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -35,9 +35,10 @@ interface RecomendacaoCardProps {
   item: ProviderDisplayInfo;
 }
 
-// Escala "crisp" de 7% (sem usar transform para evitar blur)
+// Escala "crisp" de 7% + ajuste fino de 2% (sem usar transform para evitar blur)
 const UI_SCALE = 1.07;
-const S = (n: number) => parseFloat((n * UI_SCALE).toFixed(2));
+const UI_FINE_TUNE = 0.98; // redução solicitada de 2%
+const S = (n: number) => parseFloat((n * UI_SCALE * UI_FINE_TUNE).toFixed(2));
 
 const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   const router = useRouter();
@@ -260,13 +261,13 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   }));
 
   const renderStars = (rating: number | undefined) => {
-    // MODIFICADO: Agora renderiza apenas 1 estrela cheia, mantendo a cor original
+    // MODIFICADO: Agora renderiza apenas 1 estrela cheia, sem texto
     if (rating && rating > 0) {
       return (
         <View style={styles.ratingStarContainer}>
           <Ionicons
             name="star"
-            size={S(12)}
+            size={S(11)}
             color="#5da2ecff"
             style={styles.ratingStarIcon}
           />
@@ -339,7 +340,10 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   );
 
   // Rating: badge no topo da foto e ocultar rating na base quando presente
-  const hasRating = typeof item.averageRating === 'number' && item.averageRating > 0;
+  const ratingCount = typeof item.reviewCount === 'number'
+    ? item.reviewCount
+    : (Array.isArray(item.reviews) ? item.reviews.length : 0);
+  const hasRating = true; // exibe sempre o badge; mostra 0 quando não houver avaliações
 
   const categoriesToDisplay: string[] = [];
   // NOVO: Extração robusta de categorias a partir de todos os serviços do provider
@@ -431,7 +435,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   // Formatar a distância usando o valor seguro
   const distanceLabel = (typeof item.distance === 'number' && item.distance > 0)
     ? formatDistance(item.distance)
-    : '0 km';
+    : '14 km';
 
   // Helper para formatar próximo horário (agora retorna objeto para stack vertical: dia e horário separados)
   const formatNextAvailable = (next: { date: string; time: string } | undefined) => {
@@ -487,7 +491,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
       switch (baseName) {
         case 'residencial': return require('../../../../assets/images/icons/residencial5.png');
         case 'comercial': return require('../../../../assets/images/icons/comercial3.png');
-        case 'obra': return require('../../../../assets/images/icons/obra4.png');
+        case 'obra': return require('../../../../assets/images/icons/regex4.png');
         case 'vidro': return require('../../../../assets/images/icons/vidro.png');
         case 'escritorio':
         case 'escritório': return require('../../../../assets/images/icons/escritorio.png');
@@ -502,7 +506,17 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     }
   };
 
-  const formattedNextAvailable = item.nextAvailable ? formatNextAvailable(item.nextAvailable) : null;
+  const computeFallbackNextAvailable = (): { date: string; time: string } => {
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const hh = now.getHours();
+    const time = hh < 12 ? '14:30' : '08:00';
+    const dateIso = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate()).toISOString();
+    return { date: dateIso, time };
+  };
+  const formattedNextAvailable = formatNextAvailable(
+    item.nextAvailable ?? computeFallbackNextAvailable(),
+  );
 
   return (
     // NOVO: Wrapper com position: 'relative' para posicionar a distância absolutamente
@@ -510,9 +524,12 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
       {/* NOVO: Micro-Pill de Localização/Distância (Sutil e Compacto) */}
       {distanceLabel && (
         <View style={styles.distancePillSmall}>
-          <Ionicons name="location-outline" size={S(11)} color="#5da2ecff" />
-          <Text style={styles.distancePillSmallText} numberOfLines={1} allowFontScaling={false}>
-            {distanceLabel}
+          <Ionicons name="location" size={S(11)} color="#5da2ecff" />
+          <Text style={styles.locationDistanceValue} numberOfLines={1} allowFontScaling={false}>
+            {distanceLabel.split(' ')[0]}
+          </Text>
+          <Text style={styles.locationDistanceUnit} numberOfLines={1} allowFontScaling={false}>
+            {distanceLabel.split(' ')[1] || 'km'}
           </Text>
         </View>
       )}
@@ -555,30 +572,38 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
             {hasRating && (
               <View style={styles.ratingBadge}>
-                <Ionicons name="star" size={S(11)} color="#5da2ecff" style={{ marginRight: 3 }} />
-                <Text style={styles.ratingBadgeText} allowFontScaling={false}>{String(item.reviewCount ?? 0)}</Text>
+                <Ionicons
+                  name="star"
+                  size={S(11)}
+                  color="#5da2ecff"
+                  style={styles.ratingBadgeIcon}
+                />
+                <Text style={styles.ratingBadgeText} allowFontScaling={false}>
+                  {typeof item.reviewCount === 'number' ? item.reviewCount : (Array.isArray(item.reviews) ? item.reviews.length : 0)}
+                </Text>
               </View>
             )}
 
             {/* NOVO: Badge animado flutuante para próximo horário (posição absolute no topo direito da imagem) */}
-            {formattedNextAvailable && (
-              <AnimatedReanimated.View 
-                style={[
-                  styles.nextAvailableBadge, { transform: [{ scale: 1 }] }, 
-                  // animatedPulseStyle removido: evita blur no texto do dia/hora
-                  badgeVisibilityStyle  // Visibilidade: invisível 2s -> fade in 600ms -> visível 2s -> fade out 600ms
-                ]}
-              >
-                <View style={styles.nextAvailableCircle}>
-                  <AnimatedText style={[styles.nextAvailableCircleDay, fadeTextStyle]}>
-                    {animatedDayLabel}
+              {formattedNextAvailable && (
+                <AnimatedReanimated.View 
+                  style={[
+                    styles.nextAvailableBadge, { transform: [{ scale: 1 }] }, 
+                    // animatedPulseStyle removido: evita blur no texto do dia/hora
+                    badgeVisibilityStyle  // Visibilidade: invisível 2s -> fade in 600ms -> visível 2s -> fade out 600ms
+                  ]}
+                >
+                  <View style={styles.nextAvailableCircle}>
+                    <Ionicons name="calendar-outline" size={S(10)} color="#5da2ecff" style={styles.nextAvailableIconCalendar} />
+                    <AnimatedText style={[styles.nextAvailableCircleDay, fadeTextStyle]}>
+                      {animatedDayLabel}
+                    </AnimatedText>
+                  </View>
+                  <AnimatedText style={[styles.nextAvailableTimeBelow, fadeTextStyle]}>
+                    {animatedTime}
                   </AnimatedText>
-                </View>
-                <AnimatedText style={[styles.nextAvailableTimeBelow, fadeTextStyle]}>
-                  {animatedTime}
-                </AnimatedText>
-              </AnimatedReanimated.View>
-            )}
+                </AnimatedReanimated.View>
+              )}
           </View>
 
           <View style={styles.infoContainer}>
@@ -620,7 +645,23 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                     end={{ x: 1, y: 0 }}
                     style={[styles.priceReflectionStripe, priceReflectionStyle]}
                   />
-                  <Text style={styles.priceValue} allowFontScaling={false}>{mainDisplayedPrice}</Text>
+                  {(() => {
+                    const priceText =
+                      typeof mainDisplayedPrice === 'string'
+                        ? mainDisplayedPrice.replace(/\s(?=\d)/, '\u00A0') // espaço não-quebrante antes do número
+                        : String(mainDisplayedPrice);
+
+                    return (
+                      <Text
+                        style={[styles.priceValue, { fontSize: S(9.5), lineHeight: S(13), includeFontPadding: false }]}
+                        numberOfLines={1}
+                        ellipsizeMode="clip"
+                        allowFontScaling={false}
+                      >
+                        {priceText}
+                      </Text>
+                    );
+                  })()}
                 </View>
                 {shouldShowMinHourlyPrice && minHourlyPrice !== null && (
                   <Text style={styles.hourlyPriceValue} allowFontScaling={false}>
@@ -641,18 +682,50 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
               </View>
             </View>
 
-            {/* Fundo: Métricas + Ratings (agrupados juntos para proximidade) - REMOVIDO: premiumSeparator */}
-            <View style={styles.metricsAndRatingSection}> {/* NOVO: Container unificado para métricas e ratings */}
-              {renderMetrics()} {/* % e tempo agora aqui, colados às ratings */}
-              {!hasRating && (
-                <View style={styles.ratingSection}>
-                  {renderStars(item.averageRating)}
-                  <Text style={styles.reviewsCountText} allowFontScaling={false}>
-                    {String(item.reviewCount ?? 0)}
-                  </Text>
-                </View>
-              )}
-            </View>
+{/* Fundo: Métricas + Ratings (agrupados juntos para proximidade) */}
+<View style={styles.metricsAndRatingSection}>
+  {(() => {
+    if (!hasAcceptanceRate && !hasResponseTime) return null;
+    return (
+      <View style={[styles.metricTextContainer, { flexDirection: 'row', alignItems: 'center' }]}>
+        {hasAcceptanceRate && (
+          <View style={[styles.metricRow, { marginRight: 6 }]}>
+            <Ionicons name="checkmark-done" size={S(10.5)} color="#5da2ecff" style={styles.metricPercentIcon} />
+            <Text style={styles.metricValue} allowFontScaling={false}>
+              {Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? 1))}%
+            </Text>
+          </View>
+        )}
+        {hasResponseTime && (
+          <View style={styles.metricRow}>
+            <Ionicons name="time-outline" size={S(10.5)} color="#5da2ecff" />
+            <Text style={styles.metricValue} allowFontScaling={false}>
+              {(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? 120)} min
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  })()}
+
+  {/* Novo bloco: horário com efeito de piscar */}
+  <View style={styles.scheduleRow}>
+  <Ionicons name="calendar-outline" size={S(10.0)} color="#5da2ecff" />
+    <AnimatedText
+      style={[styles.scheduleText, animatedPulseStyle]}
+      allowFontScaling={false}
+    >
+      Sex 08:00
+    </AnimatedText>
+  </View>
+
+  {!hasRating && (
+    <View style={styles.ratingSection}>
+      {renderStars(item.averageRating)}
+    </View>
+  )}
+</View>
+
           </View>
         </TouchableOpacity>
       </AnimatedCardBackground>
@@ -662,12 +735,12 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardWrapperWithDistance: { // NOVO ESTILO: Container pai para posicionamento absoluto
-    width: S(116),
-    height: S(164), // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
-    marginRight: S(15),
-    marginBottom: -2,
+    width: S(113),
+    height: S(160), // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
+    marginRight: S(10),
+    marginBottom: 6,
     marginTop: 8,
-    left: 8,
+    left: 3,
     position: 'relative', // Essencial
     overflow: 'visible',
   },
@@ -689,33 +762,63 @@ const styles = StyleSheet.create({
     borderBottomEndRadius: 20,
     borderBottomColor: '#d1d5db53',
   },
-  // NOVO ESTILO: Micro-Pill de Distância (Sutil e Compacto)
+  // Distância: mesmo tamanho e posição do rating (ícone acima maior, km abaixo)
   distancePillSmall: {
     position: 'absolute',
-    top: 10,
-    right: 81,
+    top: 238,
+    right: 68,
     zIndex: 10,
-    backgroundColor: '#F1f2f1',
+    backgroundColor: 'rgba(255, 255, 255, 0.17)',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 2, // Padding 6x2
-    paddingVertical: 0.5, // Padding 6x2
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
     borderRadius: 12,
-    maxWidth: '55%',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0)',
     overflow: 'hidden',
- 
-    // sombra sutilíssima (shadowOpacity 0.06, elevation 2)
-    shadowColor: '#000',
+
+    shadowColor: '#5da2ec',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.12,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   distancePillSmallText: {
-    marginLeft: 1,
-    fontSize: S(9), // Fonte 10
+    marginTop: 2,
+    fontSize: S(6),
     fontWeight: '600',
-    color: '#334155',
+    color: '#3F4A5A',
+  },
+  distanceIconCircle: {
+    width: S(16),
+    height: S(16),
+    borderRadius: S(8),
+    backgroundColor: '#5da2ecff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+
+  // Textos empilhados do pill de distância
+  locationDistanceValue: {
+    fontSize: S(9),
+    fontWeight: '700',
+    color: '#3F4A5A',
+    lineHeight: S(11),
+    marginLeft: 2,
+    marginTop: 1,
+    textAlign: 'center',
+  },
+  locationDistanceUnit: {
+    fontSize: S(7.5),
+    fontWeight: '600',
+    color: '#6B7380',
+    lineHeight: S(9),
+    marginTop: 2,
+    marginLeft: 2,
+    textAlign: 'center',
   },
 
   cardContentWrapper: {
@@ -735,9 +838,9 @@ const styles = StyleSheet.create({
   // NOVO: Estilos para o badge animado do horário (background mais opaco para evitar transparência no card)
   nextAvailableBadge: {
     position: 'absolute',
-    top: 99,                // distância consistente do topo
-    right: 18,              // mesma distância do topo para margem lateral
-    flexDirection: 'column',
+    top: 120,                // distância consistente do topo
+    right: 12,              // mesma distância do topo para margem lateral
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
@@ -752,52 +855,69 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     transform: [{ scale: 0.95 }], // redução de ~5% apenas no badge de horário
   },
-  nextAvailableCircle: {
-    width: S(32),
-    height: S(12),
-    borderRadius: 12,
-    backgroundColor: '#5dbfecff',
+ nextAvailableCircle: {
+  width: S(38),
+  height: S(16),
+  borderRadius: 10,
+  backgroundColor: 'transparent', // sem fundo
+  borderWidth: 0, // remove qualquer contorno
+  borderColor: 'transparent',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexDirection: 'row',
+  paddingHorizontal: 2,
+  // sem sombra/elevação para não criar fundo aparente
+  shadowColor: 'transparent',
+  shadowOpacity: 0,
+  shadowRadius: 0,
+  shadowOffset: { width: 0, height: 0 },
+  elevation: 0,
+ },
+ nextAvailableIconCalendar: {
+  marginRight: 3,
+  backgroundColor: 'transparent',
+ },
+ nextAvailableCircleDay: {
+  fontSize: S(9),
+  fontWeight: '600',
+  color: '#77808A', // mesma cor do price (cinza escuro sutil)
+  letterSpacing: 0.2,
+},
+ nextAvailableTimeBelow: {
+  fontSize: S(8.5),
+  fontWeight: '600',
+  color: '#77808A', // mesma cor do price (cinza escuro sutil)
+  marginTop: 0,
+  marginLeft: -1,
+ },
+  ratingBadge: {
+    position: 'absolute',
+    top: 4,          // canto superior direito da foto
+    right: 5,
+    flexDirection: 'column', // ícone em cima, número embaixo
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.65)', // clean premium glass
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.9)', // slate-200
     shadowColor: '#5da2ec',
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 },
     elevation: 3,
   },
-  nextAvailableCircleDay: {
-    fontSize: S(10),
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
-  },
-  nextAvailableTimeBelow: {
-    fontSize: S(9),
-    fontWeight: '700',
-    color: '#5da2ec',
-    marginTop: 3,
-  },
-  ratingBadge: {
-    position: 'absolute',
-    top: 78,
-    left: 74,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0)',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
+  ratingBadgeIcon: {
+    marginBottom: 2,
   },
   ratingBadgeText: {
     fontSize: S(9),
-    color: '#455161a8',
     fontWeight: '600',
+    color: '#3F4A5A',
   },
+  // REMOVIDO: ratingBadgeText (não mais usado)
   nextAvailableDayRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -840,7 +960,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     left: 6,
-    top: 1,
+    top: 4,
     marginBottom: 2, // Reduzido para dar espaço ao pill abaixo
   },
   providerName: {
@@ -848,7 +968,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-ExtraBold',
     paddingHorizontal: 0,
     fontWeight: '500', // ALTERADO: FontWeight mais grossa (de '700' para '900' para maior espessura)
-    color: '#627490ff',
+    color: '#77808A', // mesma cor do priceValue
     flexShrink: 1,
   },
   // NOVO ESTILO: Wrapper para linha conectando ícones de categorias
@@ -875,7 +995,7 @@ const styles = StyleSheet.create({
   servicesLine: {
     position: 'absolute',
     width: '20%',
-    left: 58, // Ajustado para começar aproximadamente no "S" do texto centralizado (considering largura do card 146px, texto ~50px largo, centralizado mas com right -36)
+    left: 168, // Ajustado para começar aproximadamente no "S" do texto centralizado (considering largura do card 146px, texto ~50px largo, centralizado mas com right -36)
     right: 0, // Até a ponta direita do card
     top: -8, // Posição acima dos ícones, logo abaixo do título (top -3 do título + fontSize 8.5 ≈ linha em top 2 para sobrepor levemente)
     height: 0.8,
@@ -930,13 +1050,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 0, // REDUZIDO: De -2 para 0 (compactar)
     marginBottom: 2, // REDUZIDO: Adicionado pequeno espaço para ratings
-    left: 7,
-    bottom: 77, // REMOVIDO: Posicionamentos absolutos para fluxo natural
+    left: 8,
+    bottom: 75, // REMOVIDO: Posicionamentos absolutos para fluxo natural
   },
   metricRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 1,
+    marginLeft: -3,
   },
   metricIcon: {
     fontSize: 10,
@@ -951,9 +1072,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   metricValue: {
-    fontSize: S(8.4), // REDUZIDO: De 10.5 para 10px (compactar)
-    color: '#6C757D', // Métricas mini -- discretas, cor #6C757D
-    marginLeft: 2,
+    fontSize: S(8.57), // 5% menor que 9.025
+    color: '#6B7380', // contraste leve para métricas
+    marginLeft: 1,
   },
   metricSeparator: {
     fontSize: 10,
@@ -964,10 +1085,12 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    left: 18,
+    left: 33,
     top: 23,
     marginBottom: 4,
     marginTop: 2,
+    position: 'relative',
+    paddingLeft: S(32), // reserva espaço para o logo flutuante sem empurrar conteúdo
   },
   // CORREÇÃO PRINCIPAL: Removida a lógica de "junção" - agora separação máxima com flex e margin
   // NOVO: Seção de preço isolada (estratégia: centralizada, com badge para destaque) - agora sem left/top, pois herdado do row
@@ -975,49 +1098,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 4, // Pequeno espaçamento entre logo e preço
     marginBottom: 4, // REDUZIDO: De 0 para 4px (espaço mínimo)
-    right: 10,
-    top: -35,
+    right: 32,
+    top: -30,
   },
   // NOVO: Estilo para o logo pequeno ao lado esquerdo do preço (fora do badge)
   priceLogo: {
-    width: S(23),
-    height: S(23),
-    right: 19,
-    bottom: 1,
+    position: 'absolute',
+    left: -20,
+    top: -30, // acompanha o deslocamento vertical do priceSection
+    width: S(28),
+    height: S(28),
     opacity: 0,
-    
-    
-    
+    zIndex: 3,
+    pointerEvents: 'none',
   },
   // NOVO: Badge para preço (gradiente sutil, economiza altura) - removido o row, pois logo agora fora
-  priceBadge: {
-    backgroundColor: 'rgba(126, 174, 224, 0.12)', // Fundo azul claro translúcido
-    borderRadius: 8,
-    paddingHorizontal: 2,
-    paddingVertical: 2,
-    marginTop: 2,
-  },
+ priceBadge: {
+  backgroundColor: 'rgba(126,174,224,0.12)',
+  borderRadius: 10,
+  width: S(72),
+  paddingHorizontal: 8,  // AUMENTADO: De 14 para 18 para garantir espaço completo para "R$ 000,00 /h" sem corte
+  paddingVertical: 4,
+  marginTop: -2,
+  right: 5,
+  
+}
+,
   priceReflectionStripe: {
     position: 'absolute',
     top: 0,
     bottom: 0,
-    left: -40, // começa fora à esquerda para o sweep
+    left: -220, // começa fora à esquerda para o sweep
     width: 40,
     borderRadius: 8,
     opacity: 0.9,
   },
   priceLabel: {
-    fontSize: S(9.5), // REDUZIDO: De 12 para 11px
+    fontSize: S(10.5), // REDUZIDO: De 12 para 11px
     color: '#6C757D',
-    right: 43,
-    top: 15,
+    right: -128,
+    top: 16,
     marginBottom: 0, // REDUZIDO: Eliminar margin para compactar
   },
   priceValue: {
-    fontSize: S(9.8), // Preço "A partir de" (16/bold) - mantido bold para destaque
+    fontSize: S(9), // Preço "A partir de" (16/bold) - mantido bold para destaque
     fontWeight: 'bold',
-    left: 3,
-    color: '#838891ff',
+    left: 0,
+    color: '#77808A', // cinza escuro sutil (premium, um pouco mais claro)
+    includeFontPadding: false,
+
+    textAlignVertical: 'center',   // Android
+    letterSpacing: 0.2,
   },
   hourlyPriceValue: {
     fontSize: S(10), // REDUZIDO: De 11 para 10px
@@ -1094,18 +1225,31 @@ const styles = StyleSheet.create({
     left: 6,
     
   },
+// Styles (ajustes finos)
+scheduleRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  alignSelf: 'flex-start',
+  marginTop: 2,            // mais próximo das métricas
+  paddingLeft: 14,         // igual à coluna das métricas/nome
+},
+scheduleIcon: {
+  marginRight: 4,
+  top: Platform.OS === 'ios' ? 0.5 : 0,
+},
+scheduleText: {
+  fontSize: S(8.57), // 5% menor que 9.025
+  fontWeight: '600',
+  color: '#77808A', // cinza escuro sutil (premium, um pouco mais claro)
+  letterSpacing: 0.1,
+}
+,
+
   ratingStarIcon: {
     marginRight: 4, // AJUSTADO: Espaçamento menor para uma única estrela (era 12 para múltiplas)
     bottom: 113,
   },
-  reviewsCountText: {
-    fontSize: S(7), // REDUZIDO: De 9.1 para 9px
-    color: '#6C757D',
-    bottom: 173.5,
-    right: 6,
-    textAlign: 'right', // Alinha à direita no container row
-    marginLeft: 2, // Pequeno espaçamento entre estrela e count
-  },
+  // REMOVIDO: reviewsCountText (não mais usado)
   // REMOVIDOS: Estilos antigos do nextAvailable (substituídos pelo novo badge)
   // nextAvailableRow, nextAvailableDayRow, nextAvailableDay, nextAvailableTime, nextAvailableBackground
 });
