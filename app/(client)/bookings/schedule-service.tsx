@@ -1587,7 +1587,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FAFAFA',
     },
     scrollContentContainer: {
-        paddingBottom: 120,
+        paddingBottom: 30,
         paddingTop: 10,
     },
     stepsPill: {
