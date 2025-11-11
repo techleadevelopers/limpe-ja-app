@@ -1,10 +1,27 @@
 // src/config/config.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
+import * as fs from 'fs';
 import configuration from './configuration';
 import { validationSchema } from './validation-schema';
 
 const isProd = process.env.NODE_ENV === 'production';
+
+// Preferir .env também em produção quando o arquivo existir dentro do container
+// (ex.: para facilitar deploys simples ou ambientes de staging)
+const candidateEnvFiles = [
+  '.env.local',
+  `.env.${process.env.NODE_ENV || 'development'}`,
+  '.env',
+];
+const existingEnvFiles = candidateEnvFiles.filter((p) => {
+  try {
+    return fs.existsSync(p);
+  } catch {
+    return false;
+  }
+});
+const shouldLoadEnvFileInProd = existingEnvFiles.length > 0;
 
 /**
  * Carrega variáveis de ambiente:
@@ -22,14 +39,13 @@ const isProd = process.env.NODE_ENV === 'production';
       isGlobal: true,
       load: [configuration],
 
-      ignoreEnvFile: isProd,
+      // Em produção, ainda carregamos .env se o arquivo existir (útil dentro do container)
+      ignoreEnvFile: isProd ? !shouldLoadEnvFileInProd : false,
       envFilePath: isProd
-        ? undefined
-        : [
-            '.env.local',
-            `.env.${process.env.NODE_ENV || 'development'}`,
-            '.env',
-          ],
+        ? shouldLoadEnvFileInProd
+          ? existingEnvFiles
+          : undefined
+        : candidateEnvFiles,
 
       cache: isProd,
       expandVariables: true,
