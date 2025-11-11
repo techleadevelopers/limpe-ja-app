@@ -50,7 +50,7 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
 
   return (
     <LinearGradient
-      colors={['#4d8ce415', '#4d8ce415']}
+      colors={['transparent', 'transparent']}
       style={styles.container}
     >
       {/* Efeito BubbleRN removido â€“ restante mantido */}
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: Constants.statusBarHeight - 40,
     left: 0,
-    top: 2,
+    top: 3,
     marginHorizontal: 11,
     paddingHorizontal: 15,
     borderBottomEndRadius: 40,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     }),
   },
   userNameText: {
-    fontSize: 20,
+    fontSize: 18.5,
     fontFamily: Platform.select({
       ios: 'Roboto',
       android: 'Montserrat-Thin'
