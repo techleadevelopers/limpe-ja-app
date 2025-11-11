@@ -34,6 +34,7 @@ import { PayoutsModule } from './payouts/payouts.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { SettingsModule } from './settings/settings.module';
+import { UploadModule } from './upload/upload.module';
 
 // NOVO: Import do ConfigModule customizado (centraliza configuration e validationSchema)
 import { ConfigModule as CustomConfigModule } from './config/config.module';
@@ -126,6 +127,7 @@ import { QueuesModule } from './queues/queues.module';
     SupportModule,
     AnalyticsModule,
     SettingsModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
