@@ -97,17 +97,53 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
 
   const getIconSource = (iconFileName?: string) => {
     if (!iconFileName) return require('../../../../assets/images/icons/residencial.png');
-    const baseFileName = iconFileName.toLowerCase().replace(/\.png$/, '');
+    const baseFileName = iconFileName
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .replace(/\.png$/, '');
     try {
       switch (baseFileName) {
-        case 'residencial': return require('../../../../assets/images/icons/residencial.png');
-        case 'comercial': return require('../../../../assets/images/icons/comercial.png');
-        case 'obra': return require('../../../../assets/images/icons/obra.png');
-        case 'vidro': return require('../../../../assets/images/icons/vidro.png');
-        case 'escritorio': return require('../../../../assets/images/icons/escritorio.png');
-        case 'estofados': return require('../../../../assets/images/icons/estofados.png');
-        case 'passadoria': return require('../../../../assets/images/icons/passadoria.png');
-        default: return require('../../../../assets/images/icons/residencial.png');
+        // Residencial / Casa
+        case 'residencial':
+        case 'casa':
+          return require('../../../../assets/images/icons/residencial.png');
+        // Comercial / Empresa
+        case 'comercial':
+        case 'empresa':
+          return require('../../../../assets/images/icons/comercial.png');
+        // Pós-obra / Obra (variações)
+        case 'posobra':
+        case 'pos-obra':
+        case 'pos_obra':
+        case 'pos obra':
+        case 'pos':
+        case 'posobras':
+        case 'pos-obras':
+        case 'pos_obras':
+        case 'pos obras':
+        case 'pósobra':
+        case 'pós-obra':
+        case 'pós_obra':
+        case 'pós obra':
+        case 'obras':
+        case 'obra':
+          return require('../../../../assets/images/icons/obra.png');
+        // Vidro(s)
+        case 'vidro':
+        case 'vidros':
+          return require('../../../../assets/images/icons/vidro.png');
+        // Escritório
+        case 'escritorio':
+        case 'escritório':
+          return require('../../../../assets/images/icons/escritorio.png');
+        // Demais
+        case 'estofados':
+          return require('../../../../assets/images/icons/estofados.png');
+        case 'passadoria':
+          return require('../../../../assets/images/icons/passadoria.png');
+        default:
+          return require('../../../../assets/images/icons/residencial.png');
       }
     } catch {
       return require('../../../../assets/images/icons/residencial.png');
@@ -115,6 +151,25 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
   };
 
   const imageSource = getIconSource(item.icon);
+
+  // Mapeia título exibido sem alterar layout
+  const normalize = (s: string) =>
+    s
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .trim();
+
+  const mapCategoryTitle = (name: string): string => {
+    const n = normalize(name);
+    if (n.includes('residencial')) return 'Casa';
+    if (n.includes('comercial')) return 'Empresa';
+    if (n.includes('vidro')) return 'Vidros';
+    if (n.includes('obra')) return 'Obras'; // cobre "Pós Obra", "Obra"
+    return name; // mantém original para outros
+  };
+
+  const displayTitle = mapCategoryTitle(item.name);
 
   return (
     <Animated.View
@@ -182,7 +237,7 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
         </LinearGradient>
       </TouchableOpacity>
 
-      <Text style={styles.categoriaTexto}>{item.name}</Text>
+      <Text style={styles.categoriaTexto}>{displayTitle}</Text>
     </Animated.View>
   );
 };
@@ -235,9 +290,9 @@ const styles = StyleSheet.create({
     marginBottom: -2,
   },
   categoriaTexto: {
-    fontSize: 8,
-    color: TEXT_COLOR,
-    fontWeight: '600',
+    fontSize: 10,
+    color: '#788fa7ff',
+    fontWeight: '500',
     textAlign: 'center',
     marginTop: 7,
   },
