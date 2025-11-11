@@ -11,7 +11,7 @@ import {
 import { api } from './api';
 import { createLocalConsole } from './logging';
 const console = createLocalConsole();
-import UploadService from './UploadService';
+import UploadService from './uploadService';
 import { UploadResponseDto } from '../types/backend/upload';
 import * as FileSystem from 'expo-file-system';
 
