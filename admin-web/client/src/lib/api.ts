@@ -30,8 +30,13 @@ interface AdminAxiosRequestConfig extends AxiosRequestConfig {
 }
 
 const resolveBaseUrl = (): string => {
-    const envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_ADMIN_API_BASE_URL;
-    return (envUrl?.trim()?.replace(/\/$/, "")) || "https://limpeja-backend-production.up.railway.app";
+    const maybeWindow = (globalThis as any)?.window as any;
+    const injectedUrl = maybeWindow?.__APP_CONFIG__?.backendApiUrl
+        || maybeWindow?.__CONFIG__?.backendApiUrl
+        || maybeWindow?.__RUNTIME_CONFIG__?.backendApiUrl;
+
+    const envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_ADMIN_API_BASE_URL || injectedUrl;
+    return (envUrl?.trim()?.replace(/\/$/, "")) || "https://limpeja-backend-production-edfa.up.railway.app";
 };
 
 const API_BASE_URL = resolveBaseUrl();
