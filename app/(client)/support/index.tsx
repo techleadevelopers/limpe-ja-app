@@ -284,9 +284,13 @@ export default function SupportIndex() {
   const ListHeader = () => (
     <View style={{ padding: 16 }}>
       <View style={styles.formCard}>
-        <Text style={styles.formTitle}>Abrir novo ticket</Text>
+        {/* Atualização: Título com ícone azul sutil */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <Ionicons name="add-circle" size={20} color="#3A6FD8" />
+          <Text style={[styles.formTitle, { marginLeft: 6 }]}>Abrir novo ticket</Text>
+        </View>
         <View style={styles.rowField}>
-          <Ionicons name="pricetag-outline" size={18} color="#4A90E2" />
+          <Ionicons name="pricetag-outline" size={18} color="#3A6FD8" />
           <ScrollPills
             items={meta.categories.length ? meta.categories : (['PAGAMENTOS','AGENDAMENTOS','CONTA','TÉCNICO','SEGURANÇA','OUTRO'] as TicketCategory[])}
             value={category}
@@ -294,7 +298,7 @@ export default function SupportIndex() {
           />
         </View>
         <View style={styles.rowField}>
-          <Ionicons name="warning-outline" size={18} color="#4A90E2" />
+          <Ionicons name="warning-outline" size={18} color="#3A6FD8" />
           <ScrollPills
             items={meta.severities.length ? meta.severities : (['BAIXA','MÉDIA','ALTA'] as TicketSeverity[])}
             value={severity}
@@ -349,7 +353,7 @@ export default function SupportIndex() {
           )}
         </TouchableOpacity>
         <View style={styles.inlineHelp}>
-          <Ionicons name="shield-checkmark" size={16} color="#4A90E2" />
+          <Ionicons name="shield-checkmark" size={16} color="#3A6FD8" />
           <Text style={styles.inlineHelpTxt}>Emergência ou incidente? </Text>
           <TouchableOpacity
             onPress={() => {
@@ -418,7 +422,7 @@ export default function SupportIndex() {
       </View>
       {loading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color="#4A90E2" />
+          <ActivityIndicator size="large" color="#3A6FD8" />
           <Text style={styles.loadingTxt}>Carregando suporte...</Text>
         </View>
       ) : (
@@ -490,12 +494,12 @@ function ScrollPills<T extends string>({ items, value, onChange }: { items: T[];
 
 function statusColor(st: TicketStatus) {
   switch (st) {
-    case 'OPEN': return '#4A90E2'; // Azul premium
+    case 'OPEN': return '#3A6FD8'; // Azul premium atualizado
     case 'IN_PROGRESS': return '#F59E0B'; // Amarelo suave
     case 'RESOLVED': return '#10B981'; // Verde premium
     case 'CLOSED': return '#6B7280'; // Cinza médio
     case 'CANCELLED': return '#EF4444'; // Vermelho suave
-    default: return '#93C5FD';
+    default: return '#BBD1F9';
   }
 }
 
@@ -513,36 +517,47 @@ function formatDate(iso: string) {
 }
 
 // =============================================================
-// STYLES (Premium: Branco clean, sombras suaves, conforto iOS/Android)
+// STYLES (Aplicando princípios de refino: Minimalismo premium, glass subtle, tipografia clara, espaço iOS, hierarquia visual)
 // =============================================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6F8FB', // Fundo suave premium
+    backgroundColor: '#F6F8FB', // Fundo suave premium (mantido para consistência)
   },
-  headerSimple: { paddingTop: 70, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerSimpleTitle: { fontSize: 17, fontWeight: '800', color: '#1A2538' },
+  headerSimple: { 
+    paddingTop: 70, 
+    paddingHorizontal: 16, 
+    paddingBottom: 12, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between' 
+  },
+  headerSimpleTitle: { 
+    fontSize: 17, 
+    fontWeight: '800', 
+    color: '#1A2538' 
+  },
   scrollContent: {
     padding: 16,
     paddingBottom: 38,
   },
   header: {
-    backgroundColor: '#FFFFFF', // Branco premium
+    backgroundColor: 'rgba(255,255,255,0.95)', // Glass subtle no header
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: '#EAF1FF',
     paddingBottom: 14,
     paddingHorizontal: 16,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
+        shadowColor: '#3A6FD8',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
       },
       android: {
-        elevation: 4,
+        elevation: 3,
       },
     }),
   },
@@ -559,32 +574,32 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    color: '#4A5568', // Cinza escuro premium
-    fontSize: 18, // Legível e premium
+    color: '#1A2538', // Tons mais frios e elegantes
+    fontSize: 18,
     fontWeight: '700',
-    letterSpacing: 0.8, // Espaçamento refinado
+    letterSpacing: 0.8,
     fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }) as any,
   },
   iconRightWrap: { width: 40, height: 36, justifyContent: 'center', alignItems: 'center' },
   icon3d: { width: 28, height: 28, resizeMode: 'contain' },
 
-  // Backdrop (tonificado para sutileza premium)
+  // Backdrop (ajustado para azul premium #3A6FD8)
   blob: {
     position: 'absolute',
     width: 220,
     height: 220,
     borderRadius: 200,
-    backgroundColor: 'rgba(74, 144, 226, 0.08)', // Azul sutil
+    backgroundColor: 'rgba(58, 111, 216, 0.08)', // Azul sutil atualizado
   },
   blob2: {
     position: 'absolute',
     width: 260,
     height: 260,
     borderRadius: 260,
-    backgroundColor: 'rgba(74, 144, 226, 0.06)', // Mais sutil
+    backgroundColor: 'rgba(58, 111, 216, 0.06)', // Mais sutil
   },
 
-  // Loading
+  // Loading (ajustado para cor premium)
   loadingWrap: { 
     flex: 1, 
     alignItems: 'center', 
@@ -594,97 +609,121 @@ const styles = StyleSheet.create({
   },
   loadingTxt: { 
     marginTop: 10, 
-    color: '#4A90E2', 
+    color: '#3A6FD8', 
     fontWeight: '600',
     fontSize: 16,
   },
 
-  // Form
+  // Cards principais (glass subtle)
+  ticketCard: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#EAF1FF',
+    shadowColor: '#3A6FD8',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
   formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16, // Espaçamento confortável
-    ...Platform.select({
-      ios: { 
-        shadowColor: '#000', 
-        shadowOpacity: 0.06, 
-        shadowRadius: 10, 
-        shadowOffset: { width: 0, height: 4 } // Sutil para iOS
-      },
-      android: { elevation: 3 },
-    }),
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#EAF1FF',
+    shadowColor: '#3A6FD8',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
-  formTitle: { 
-    fontSize: 18, // Premium legível
-    fontWeight: '700', 
-    color: '#4A5568', 
-    marginBottom: 16, // Espaçamento generoso
+
+  // Tipografia premium
+  formTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#1A2538',
+    marginBottom: 16,
   },
+  sectionTitle: {
+    marginTop: 8,
+    marginBottom: 12,
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1A2538',
+  },
+  ticketSubject: {
+    flex: 1,
+    fontWeight: '700',
+    color: '#1A2538',
+    fontSize: 16,
+    letterSpacing: 0.3,
+  },
+  ticketMsg: {
+    marginTop: 8,
+    color: '#475569',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+
   rowField: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    gap: 12, // Gap confortável
+    gap: 12, 
     marginBottom: 12,
   },
+
+  // Input fields (frosted white)
   input: {
-    marginTop: 8,
-    backgroundColor: '#F8F9FA', // Fundo claro premium
+    marginTop: 10,
+    backgroundColor: '#F9FAFB',
     borderRadius: 12,
-    paddingHorizontal: 16, // Padding espaçoso
+    paddingHorizontal: 16,
     paddingVertical: 14,
-    color: '#4A5568',
+    color: '#1E293B',
+    fontSize: 15,
     borderWidth: 1,
-    borderColor: '#E9ECEF', // Borda sutil
-    fontSize: 16, // Legível
-  },
-  primaryBtn: {
-    marginTop: 16,
-    backgroundColor: '#4A90E2', // Azul premium
-    borderRadius: 14,
-    minHeight: 48, // Altura confortável para toque
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  primaryBtnTxt: { 
-    color: '#FFFFFF', 
-    fontWeight: '700',
-    fontSize: 16,
+    borderColor: '#E2E8F0',
   },
 
-  // Botão WhatsApp - Moderno e robusto
-  whatsappBtn: {
+  // Botão primary (micro gradiente via sombra, azul LimpeJá)
+  primaryBtn: {
     marginTop: 16,
-    backgroundColor: '#25D366', // Verde oficial do WhatsApp
     borderRadius: 14,
-    minHeight: 48,
+    minHeight: 50,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
     gap: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    backgroundColor: '#3A6FD8',
+    shadowColor: '#3A6FD8',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  primaryBtnTxt: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
+    letterSpacing: 0.4,
+  },
+
+  // Botão WhatsApp (flutuante)
+  whatsappBtn: {
+    marginTop: 16,
+    borderRadius: 14,
+    backgroundColor: '#25D366',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    gap: 8,
+    shadowColor: '#25D366',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
   },
   whatsappIconWrap: {
     width: 24,
@@ -703,27 +742,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // Botão de chat interno (suporte no app)
+  // Botão de chat interno (mantido similar, ajustado para consistência)
   chatBtn: {
     marginTop: 10,
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#3A6FD8',
     borderRadius: 14,
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    shadowColor: '#3A6FD8',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   chatBtnTxt: {
     color: '#FFFFFF',
@@ -737,108 +769,80 @@ const styles = StyleSheet.create({
     gap: 8, 
     marginTop: 16,
     padding: 12,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
   },
   inlineHelpTxt: { 
-    color: '#4A90E2',
+    color: '#3A6FD8',
     fontSize: 14,
   },
 
-  pill: { 
-    borderRadius: 20, // Pill arredondado confortável
-    paddingVertical: 8, 
+  // Pills (iOS-like micro botões)
+  pill: {
+    borderRadius: 22,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     borderWidth: 1,
-    minWidth: 80, // Largura mínima maior para nomes em Português
+    minWidth: 90,
   },
-  pillActive: { 
-    backgroundColor: '#FFFFFF', 
-    borderColor: '#4A90E2' 
+  pillActive: {
+    backgroundColor: '#EAF1FF',
+    borderColor: '#3A6FD8',
   },
-  pillGhost: { 
-    backgroundColor: '#F8F9FA', 
-    borderColor: '#E9ECEF' 
+  pillGhost: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
   },
-  pillTxt: { 
-    fontSize: 13, // Legível
-    fontWeight: '600',
+  pillTxt: {
+    fontSize: 13,
     textAlign: 'center',
   },
-  pillTxtActive: { 
-    color: '#4A90E2' 
+  pillTxtActive: {
+    color: '#3A6FD8',
+    fontWeight: '600',
   },
-  pillTxtGhost: { 
-    color: '#6B7280' 
-  },
-
-  sectionTitle: { 
-    marginTop: 8, 
-    marginBottom: 12, 
-    fontSize: 18, // Premium
-    fontWeight: '700', 
-    color: '#4A5568' 
+  pillTxtGhost: {
+    color: '#64748B',
+    fontWeight: '500',
   },
 
+  // Empty state refinado
   emptyBox: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 24, // Espaçamento generoso
+    padding: 24,
     alignItems: 'center',
-    ...Platform.select({ 
-      ios: { 
-        shadowColor: '#000', 
-        shadowOpacity: 0.06, 
-        shadowRadius: 10, 
-        shadowOffset: { width: 0, height: 4 } 
-      }, 
-      android: { elevation: 2 } 
-    }),
+    borderWidth: 1,
+    borderColor: '#EAF1FF',
+    shadowColor: '#3A6FD8',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
-  emptyTitle: { 
-    marginTop: 12, 
-    fontWeight: '700', 
-    color: '#4A5568',
+  emptyTitle: {
+    fontWeight: '700',
+    color: '#1A2538',
     fontSize: 18,
+    marginTop: 10,
   },
-  emptySubtitle: { 
-    marginTop: 6, 
-    textAlign: 'center', 
-    color: '#6B7280',
+  emptySubtitle: {
+    marginTop: 6,
+    textAlign: 'center',
+    color: '#475569',
     fontSize: 14,
-    lineHeight: 20, // Leitura confortável
+    lineHeight: 20,
   },
 
-  // Tickets
-  ticketCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16, // Espaçamento confortável
-    ...Platform.select({ 
-      ios: { 
-        shadowColor: '#000', 
-        shadowOpacity: 0.06, 
-        shadowRadius: 10, 
-        shadowOffset: { width: 0, height: 4 } 
-      }, 
-      android: { elevation: 2 } 
-    }),
-  },
+  // Tickets (ajustados para hierarquia visual)
   ticketRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    gap: 10, // Gap sutil
+    gap: 10, 
   },
   statusDot: { 
     width: 10, 
     height: 10, 
-    borderRadius: 5, // Mais arredondado
-  },
-  ticketSubject: { 
-    flex: 1, 
-    fontWeight: '700', 
-    color: '#4A5568',
-    fontSize: 16,
+    borderRadius: 5, 
   },
   ticketMetaRow: { 
     flexDirection: 'row', 
@@ -846,27 +850,24 @@ const styles = StyleSheet.create({
     gap: 8, 
     marginTop: 8,
   },
-  badge: { 
-    backgroundColor: '#F8F9FA', 
-    borderRadius: 12, // Pill pequeno
-    paddingVertical: 4, 
-    paddingHorizontal: 8,
-  },
-  badgeTxt: { 
-    color: '#4A90E2', 
-    fontWeight: '600', 
-    fontSize: 12,
-  },
   ticketDate: { 
     marginLeft: 'auto', 
-    color: '#9CA3AF', 
+    color: '#64748B', 
     fontSize: 12,
   },
-  ticketMsg: { 
-    marginTop: 8, 
-    color: '#6B7280',
-    fontSize: 14,
-    lineHeight: 20, // Confortável para leitura
+
+  // Badge refinado
+  badge: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EAF1FF',
+    backgroundColor: '#F9FAFB',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+  },
+  badgeTxt: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#3A6FD8',
   },
 });
-
