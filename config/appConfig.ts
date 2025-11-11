@@ -4,7 +4,8 @@ export const appConfig = {
   // A URL base da sua API é agora configurada através de variáveis de ambiente.
   // Certifique-se de que `EXPO_PUBLIC_API_BASE_URL` está definido no seu arquivo .env
   // (e.g., .env, .env.development, .env.production).
-  apiUrl: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000/api', //
+  // Base HTTP URL da API (sem sufixo /api) para permitir derivar o WS via replace('http','ws')
+  apiUrl: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000',
   // Você pode adicionar um fallback para 'http://localhost:3000/api' em desenvolvimento
   // ou uma mensagem de erro se a variável não estiver definida.
 
