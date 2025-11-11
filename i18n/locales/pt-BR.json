@@ -20,7 +20,7 @@
       "network_error": "Erro de rede ou servidor",
       "unauthorized_error": "Não autorizado. Por favor, faça login novamente.",
       "generic_error": "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.",
-      "per_hour_short": "/h",
+      "per_hour_short": "A partir",
       "per_sqm_short": "/m²",
       "per_room_short": "/quarto",
       "at": "às",
@@ -49,7 +49,7 @@
       "distance": "A {{distance}} km",
       "no_results": "Nenhum resultado encontrado.",
       "search_placeholder": "Buscar por serviço ou profissional...",
-      "nearby_providers": "Profissionais por Perto",
+      "nearby_providers": "Profissionais por perto",
       "recommended_providers": "Para você",
       "all_categories": "Acesso rapido",
       "all_providers": "Prestadores",
@@ -326,7 +326,7 @@
         "hour": "Por hora",
         "sqm": "Por m²"
       },
-      "from": "Por /h"
+      "from": "A partir"
     },
     "filters": {
       "fastResponse": "Resposta \u003c 15 min",
