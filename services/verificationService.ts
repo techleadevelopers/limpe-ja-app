@@ -11,7 +11,7 @@ import {
 import { api } from './api';
 import { createLocalConsole } from './logging';
 const console = createLocalConsole();
-import uploadService from './uploadService';
+import UploadService from './UploadService';
 import { UploadResponseDto } from '../types/backend/upload';
 import * as FileSystem from 'expo-file-system';
 
@@ -34,7 +34,7 @@ class VerificationService {
 
     async uploadDocumentPhoto(imageUri: string, type: DocumentPhotoType): Promise<VerificationResponse> {
         try {
-            const response = await uploadService.uploadImageToCloud(imageUri, type === 'FRONT' ? 'documentFront' : 'documentBack');
+            const response = await UploadService.uploadDocument(imageUri, type);
             
             return { message: "Documento enviado com sucesso.", url: response.url } as VerificationResponse;
         } catch (error: any) {
@@ -45,7 +45,7 @@ class VerificationService {
 
     async uploadAvatar(imageUri: string): Promise<UploadResponseDto> {
         try {
-            const uploadResponse = await uploadService.uploadImageToCloud(imageUri, 'avatar');
+            const uploadResponse = await UploadService.uploadAvatar(imageUri);
             return uploadResponse;
         } catch (error: any) {
             console.error('Erro ao fazer upload da foto de perfil:', error.message);
@@ -55,7 +55,7 @@ class VerificationService {
 
     async uploadSelfieWithDocument(imageUri: string): Promise<UploadResponseDto> {
         try {
-            const uploadResponse = await uploadService.uploadImageToCloud(imageUri, 'selfieWithDocument');
+            const uploadResponse = await UploadService.uploadSelfie(imageUri);
             return uploadResponse;
         } catch (error: any) {
             console.error('Erro ao fazer upload da selfie para verificação:', error.message);
