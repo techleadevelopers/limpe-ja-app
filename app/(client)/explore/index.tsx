@@ -131,7 +131,7 @@ const bannerData: BannerDataItem[] = [
   {
     id: '1',
     title: 'Obtenha Oferta Especial',
-    discount: 'Até 40%',
+    discount: 'AtÃ© 40%',
     description: '',
     buttonText: 'Resgatar',
     badgeText: 'Tempo limitado!',
@@ -181,8 +181,8 @@ export default function ExploreClientScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Novo estado para o raio de busca
-  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // Padrão 50 km (como no código original)
-  // Novo estado para o filtro de preço
+  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // PadrÃ£o 50 km (como no cÃ³digo original)
+  // Novo estado para o filtro de preÃ§o
   const [priceFilter, setPriceFilter] = useState<PricingType | null>(null);
 
   const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
@@ -198,17 +198,17 @@ export default function ExploreClientScreen() {
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const categoriesAnim = useRef(new Animated.Value(0)).current;
-  // Banner deve aparecer junto ao conteúdo; inicia visível
+  // Banner deve aparecer junto ao conteÃºdo; inicia visÃ­vel
   const bannerAnim = useRef(new Animated.Value(1)).current;
   const recommendationsAnim = useRef(new Animated.Value(0)).current;
   const providersAnim = useRef(new Animated.Value(0)).current;
   const navBarAnim = useRef(new Animated.Value(0)).current;
   const [reducedMotion, setReducedMotion] = useState(false);
 
-  // Adicionado ref para verificar se o componente está montado
+  // Adicionado ref para verificar se o componente estÃ¡ montado
   const isMounted = useRef(true);
 
-  // INTEGRAÇÃO DA LÓGICA DO NEWHEADER: Lógica completa para exibir o nome do usuário (priorizando user do auth e fallback para userProfile)
+  // INTEGRAÃ‡ÃƒO DA LÃ“GICA DO NEWHEADER: LÃ³gica completa para exibir o nome do usuÃ¡rio (priorizando user do auth e fallback para userProfile)
   const userNameDisplay = (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ?? 
                           (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ?? 
                           t('common.user');
@@ -265,7 +265,7 @@ export default function ExploreClientScreen() {
       'recommended providers',
       () => getRecommendedProviders(),
       data => setRecommendations(data),
-      'Erro ao carregar recomendações'
+      'Erro ao carregar recomendaÃ§Ãµes'
     );
 
     let locationCoords: Location.LocationObjectCoords | null = null;
@@ -294,11 +294,11 @@ export default function ExploreClientScreen() {
             radius: searchRadiusKm, // em km para o backend
           }),
         data => setNearbyProviders(data),
-        'Erro ao carregar provedores próximos'
+        'Erro ao carregar provedores prÃ³ximos'
       );
     }
 
-    if (isMounted.current) {      // Precarregar imagens do banner e do DEFENSE_SOS para evitar atraso de decodifica��o
+    if (isMounted.current) {      // Precarregar imagens do banner e do DEFENSE_SOS para evitar atraso de decodificaï¿½ï¿½o
       try {
         await Asset.loadAsync([
           require('../../../assets/images/banner6.png'),
@@ -307,7 +307,7 @@ export default function ExploreClientScreen() {
           Icons3D.support,
         ] as any);
       } catch {}
-      const D = 240; // duração padrão
+      const D = 240; // duraÃ§Ã£o padrÃ£o
       const S = 60;  // passo de atraso
       if (reducedMotion) {
         headerAnim.setValue(1);
@@ -366,6 +366,22 @@ export default function ExploreClientScreen() {
       isMounted.current = false; // Componente desmontado
     };
   }, [fetchData]);
+  // Refetch quando raio foi salvo no painel do provedor
+  useFocusEffect(
+    React.useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const flag = await AsyncStorage.getItem('@settings:radius:changed');
+          if (!cancelled && flag === '1') {
+            await AsyncStorage.removeItem('@settings:radius:changed');
+            fetchData();
+          }
+        } catch {}
+      })();
+      return () => { cancelled = true; };
+    }, [fetchData])
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -478,13 +494,13 @@ export default function ExploreClientScreen() {
   const filteredNearbyProviders = Array.isArray(nearbyProviders)
     ? nearbyProviders.filter((item) => {
         if (!item || !item.fullName) return false;
-        if (!priceFilter) return true; // Sem filtro de preço, mostra todos
+        if (!priceFilter) return true; // Sem filtro de preÃ§o, mostra todos
 
-        // Verifica se o provedor tem algum serviço que corresponda ao tipo de preço
+        // Verifica se o provedor tem algum serviÃ§o que corresponda ao tipo de preÃ§o
         return item.providerServices?.some((service) => {
           if (service.pricingType === priceFilter) {
             const price = getNumericPriceValue(service);
-            return price > 0; // Apenas serviços com preço vlido
+            return price > 0; // Apenas serviÃ§os com preÃ§o vlido
           }
           return false;
         });
@@ -554,9 +570,9 @@ export default function ExploreClientScreen() {
   const handleShareReferral = useCallback(async () => {
     try {
       const result = await Share.share({
-        message: `Use meu código de indicação ${referralCode} no LimpeJá e ganhe um desconto na sua primeira reserva!`,
+        message: `Use meu cÃ³digo de indicaÃ§Ã£o ${referralCode} no LimpeJÃ¡ e ganhe um desconto na sua primeira reserva!`,
         url: 'https://limpeja.com/referral',
-        title: 'Indique um amigo e ganhe no LimpeJá!',
+        title: 'Indique um amigo e ganhe no LimpeJÃ¡!',
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
@@ -597,8 +613,8 @@ export default function ExploreClientScreen() {
     );
   }
 
-  // Em caso de erro na primeira carga, não bloquear a home;
-  // o usuário pode usar pull-to-refresh para tentar de novo.
+  // Em caso de erro na primeira carga, nÃ£o bloquear a home;
+  // o usuÃ¡rio pode usar pull-to-refresh para tentar de novo.
 
   const rawAddress =
     userProfile?.clientDetails?.address ||
@@ -620,7 +636,7 @@ export default function ExploreClientScreen() {
           }}
         />
 
-        {/* FlatList UNICO com TODO o conteúdo no ListHeaderComponent */}
+        {/* FlatList UNICO com TODO o conteÃºdo no ListHeaderComponent */}
         <FlatList
           data={[]} // Header-only: data vazia, mas header rola tudo
           renderItem={() => null} // ? FIX: Adicionado renderItem dummy para FlatList header-only (evita erro TS)
@@ -633,9 +649,9 @@ export default function ExploreClientScreen() {
                 userAddress={addressToDisplay}
               />
 
-              {/* ContentWrapper UNICO - TODO o conteúdo aqui */}
+              {/* ContentWrapper UNICO - TODO o conteÃºdo aqui */}
               <View style={styles.contentWrapper}>
-                {/* Seção de Categorias */}
+                {/* SeÃ§Ã£o de Categorias */}
                 <Animated.View
                   style={[
                     styles.categoriesSection,
@@ -670,7 +686,7 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* Recomendações UNICAS */}
+                {/* RecomendaÃ§Ãµes UNICAS */}
                 <Animated.View
                   style={{
                     opacity: recommendationsAnim,
@@ -682,7 +698,7 @@ export default function ExploreClientScreen() {
                     data={safeRecommendations}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de recomendação inválido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de recomendaÃ§Ã£o invÃ¡lido filtrado:', item);
                         return null;
                       }
                       return <RecomendacaoCard key={item.id} item={item} />;
@@ -704,7 +720,7 @@ export default function ExploreClientScreen() {
                     data={filteredNearbyProviders}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de prestador inválido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de prestador invÃ¡lido filtrado:', item);
                         return null;
                       }
                       return (
@@ -717,7 +733,7 @@ export default function ExploreClientScreen() {
                   
                 </Animated.View>
 
-                {/* Carrossel de Banners UNICO - Movido para abaixo da seção Profissionais por Perto */}
+                {/* Carrossel de Banners UNICO - Movido para abaixo da seÃ§Ã£o Profissionais por Perto */}
                 <Animated.View
                   style={[
                     styles.carouselContainer,
@@ -780,10 +796,10 @@ export default function ExploreClientScreen() {
             />
           }
           nestedScrollEnabled={true} // Para Android
-          removeClippedSubviews={false} // Evita corte de animações
+          removeClippedSubviews={false} // Evita corte de animaÃ§Ãµes
         />
 
-        {/* NavBar ÚNICA */}
+        {/* NavBar ÃšNICA */}
         <Animated.View
           style={[
             styles.navBarContainer,
@@ -792,7 +808,7 @@ export default function ExploreClientScreen() {
               transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] 
             },
           ]}
-          pointerEvents="box-none"> {/* Não bloqueia scroll */}
+          pointerEvents="box-none"> {/* NÃ£o bloqueia scroll */}
           <NavBar
             welcomeCouponOffer={welcomeCouponOffer}
             activeBottomPromotion={activeBottomPromotion}
@@ -813,7 +829,7 @@ export default function ExploreClientScreen() {
             throttleHours={24}
             showOnRoutes={['/(client)/explore']}
             onApply={handleUseWelcomeCoupon}
-            pointerEvents="box-none" // Não bloqueia scroll
+            pointerEvents="box-none" // NÃ£o bloqueia scroll
           />
         )}
 
@@ -866,7 +882,7 @@ export default function ExploreClientScreen() {
           delayMs={3500}
           throttleHours={24}
           showOnRoutes={['/(client)/explore']}
-          bottomOffset={120} // Offset para não sobrepor NavBar
+          bottomOffset={120} // Offset para nÃ£o sobrepor NavBar
           pointerEvents="box-none"
         />
 
@@ -1052,7 +1068,7 @@ const styles = StyleSheet.create({
     fontSize: 16.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '600',
-    // PREMIUM: Estilo de t�tulo alinhado
+    // PREMIUM: Estilo de tï¿½tulo alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
   },
@@ -1074,7 +1090,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COR_CINZA_FUNDO,
   },
-  // REMOVIDO: Estilos de pagina��o (n�o mais necess�rios)
+  // REMOVIDO: Estilos de paginaï¿½ï¿½o (nï¿½o mais necessï¿½rios)
   // pagination: {
   //   flexDirection: 'row',
   //   height: 20,
@@ -1105,7 +1121,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 21,
     marginTop: 2,
   },
-  // Espaçamento adicional para manter a seção "Explore mais serviços" um pouco abaixo do carrossel
+  // EspaÃ§amento adicional para manter a seÃ§Ã£o "Explore mais serviÃ§os" um pouco abaixo do carrossel
   exploreMoreSpacing: {
     marginTop: 16,
   },
@@ -1113,7 +1129,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
-    // PREMIUM: Estilo de t�tulo alinhado
+    // PREMIUM: Estilo de tï¿½tulo alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
   },
@@ -1171,7 +1187,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
   },
-  // Desloca levemente o ícone "+" para baixo (~3px)
+  // Desloca levemente o Ã­cone "+" para baixo (~3px)
   viewAllIcon: {
     transform: [{ translateY: 3 }],
   },
