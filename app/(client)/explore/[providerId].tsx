@@ -815,6 +815,12 @@ if (isAuthenticated && user?.id) {
               />
               <Text style={styles.locationTextWhiteCard}>
                 {provider.address?.city || t('common.not_available')}
+                <Text style={styles.locationDistanceText}>
+                  {' · '}
+                  {provider.distance != null && !isNaN(provider.distance)
+                    ? `${provider.distance.toFixed(1)} km`
+                    : '0 km'}
+                </Text>
               </Text>
             </View>
 
@@ -822,7 +828,16 @@ if (isAuthenticated && user?.id) {
               {provider.bio || t('provider_details.no_description')}
             </Text>
 
-            <Text style={styles.priceTextWhiteCard}>{firstServicePrice}</Text>
+            <View style={styles.priceBackgroundWrapper}>
+              <LinearGradient
+                colors={['#E8F4FF', '#D9EDFF']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.priceBackground}
+              >
+                <Text style={styles.priceTextWhiteCard}>{firstServicePrice}</Text>
+              </LinearGradient>
+            </View>
           </View>
 
           <View style={styles.tabContentContainer}>
@@ -855,20 +870,6 @@ if (isAuthenticated && user?.id) {
               )}
               {/* Garantia LimpeJá */}
               <InfoChip iconName="shield-checkmark" text={t('guarantee.badge', 'Garantia LimpeJá')} />
-              {providerMetrics?.acceptanceRate !== undefined && (
-                <InfoChip
-                  iconName="checkmark-done-circle-outline"
-                  text={`${t('metrics.acceptance_rate')}: ${providerMetrics.acceptanceRate}%`}
-                />
-              )}
-              {providerMetrics?.averageResponseTime !== undefined && (
-                <InfoChip
-                  iconName="time-outline"
-                  text={`${
-                    t('metrics.avg_response_time')
-                  }: ${providerMetrics.averageResponseTime} ${t('common.minutes_short')}`}
-                />
-              )}
             </Animated.View>
 
             <SecurityBanner
