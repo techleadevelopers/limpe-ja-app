@@ -38,11 +38,11 @@ const NavBar: React.FC<NavBarProps> = ({ welcomeCouponOffer, setActiveBottomProm
   };
 
   const navItems = [
-    { name: 'Home', icon: 'home', route: '/(client)/explore' },
+    { name: 'Inicío', icon: 'home', route: '/(client)/explore' },
     { name: 'Cupons', icon: 'pricetag', route: '/(client)/coupons' },
-    { name: 'Booking', icon: 'calendar', route: '/(client)/bookings' },
+    { name: 'Reservas', icon: 'calendar', route: '/(client)/bookings' },
     { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/(client)/support' },
-    { name: 'Profile', icon: 'person', route: '/(client)/profile' },
+    { name: 'Perfil', icon: 'person', route: '/(client)/profile' },
   ];
 
   // Animação de pressão
