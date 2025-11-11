@@ -143,7 +143,14 @@ export default function SuccessPixInfo({ bookingId, fallback, onRegenerate, rege
       <View style={styles.qrCodeContainer}>
         {qrCodeImage ? (
           <Image
-            source={{ uri: qrCodeImage.startsWith('data:') ? qrCodeImage : `data:image/png;base64,${qrCodeImage}` }}
+            source={{
+              uri: (() => {
+                const raw = qrCodeImage;
+                const isData = raw.startsWith('data:');
+                const isHttp = /^https?:\/\//i.test(raw);
+                return isData || isHttp ? raw : `data:image/png;base64,${raw}`;
+              })(),
+            }}
             style={styles.qrCodeImage}
           />
         ) : (
