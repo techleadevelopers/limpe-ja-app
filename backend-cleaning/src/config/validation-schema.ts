@@ -31,10 +31,7 @@ export const validationSchema = Joi.object({
   // Sentry (opcional)
   SENTRY_DSN: Joi.string().allow('', null).optional().description('DSN do Sentry'),
 
-  // Google Cloud Storage
-  GCS_PROJECT_ID: Joi.string().required().description('Google Cloud Project ID'),
-  GCS_KEY: Joi.string().required().description('Conteúdo base64 da Service Account'),
-  GCS_BUCKET_NAME: Joi.string().required().description('Nome do bucket do GCS'),
+  // Upload storage is handled by UploadThing (no GCS vars required)
 
   // Cellereit Facematch
   THIRD_PARTY_FACEMATCH_API_URL: Joi.string().uri().required()
