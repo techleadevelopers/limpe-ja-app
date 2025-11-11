@@ -16,6 +16,7 @@ import {
   AccessibilityInfo,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import * as Haptics from 'expo-haptics';
@@ -71,6 +72,7 @@ import { getBookingsForUser } from '../../../services/bookingService';
 import { ProviderAvailability, GetProviderAvailabilityResponse, UpdateAvailabilityData } from '../../../types/backend/providers';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 
+import { saveProviderSettings, getProviderSettings } from '../../../services/providerSettingsService';
 // Design tokens
 const Colors = {
   primary: '#4A90E2',
@@ -102,7 +104,6 @@ const Spacing = {
   md: 18,
   lg: 24,
 };
-
 const easeOut = Easing.out(Easing.ease);
 
 // Locale PT-BR (Calendário)
@@ -534,6 +535,46 @@ export default function ManageAvailabilityScreen() {
   const [smartCustomSlots, setSmartCustomSlots] = useState<string[]>([]);
   const [smartDate, setSmartDate] = useState<string | null>(null);
   const [smartOverrideType, setSmartOverrideType] = useState<'blocked' | 'custom'>('blocked');
+
+  // Coverage radius state (moved inside component)
+  const [radiusKm, setRadiusKm] = useState<number>(15);
+  const [isSavingRadius, setIsSavingRadius] = useState<boolean>(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const s = await getProviderSettings();
+        if (mounted && typeof s?.serviceRadiusKm === 'number') {
+          setRadiusKm(s.serviceRadiusKm);
+        }
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const onMinusKm = useCallback(() => {
+    setRadiusKm(v => Math.max(1, v - (v >= 20 ? 5 : 1)));
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+  }, []);
+
+  const onPlusKm  = useCallback(() => {
+    setRadiusKm(v => Math.min(60, v + (v >= 20 ? 5 : 1)));
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+  }, []);
+
+  const saveRadius = useCallback(async () => {
+    try {
+      setIsSavingRadius(true);
+      await saveProviderSettings({ serviceRadiusKm: radiusKm });
+      // sinaliza para a tela Explore recarregar recomendações
+      await AsyncStorage.setItem('@settings:radius:changed', '1');
+    } catch (e) {
+      console.warn('[ManageAvailability] Falha ao salvar raio de atendimento:', (e as any)?.message || e);
+    } finally {
+      setIsSavingRadius(false);
+    }
+  }, [radiusKm]);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const contentAnim = useRef(new Animated.Value(0)).current;
@@ -1132,7 +1173,22 @@ export default function ManageAvailabilityScreen() {
         <View style={styles.headerPlaceholder} />
       </Animated.View>
 
-      <View style={styles.segmentedControl}>
+            {/* Cobertura: raio de atendimento (km) */}
+      <View style={{ backgroundColor: Colors.surface, borderRadius: Radii.sm, padding: Spacing.md, marginHorizontal: Spacing.sm, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.border }}>
+        <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 8 }}>Raio de atendimento (km)</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+          <TouchableOpacity onPress={onMinusKm} accessibilityRole="button" style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.fieldBg, borderWidth: 1, borderColor: Colors.border, marginHorizontal: 12 }}>
+            <Text style={{ color: Colors.primary, fontSize: 18, fontWeight: '800' }}>-</Text>
+          </TouchableOpacity>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.text }}>{radiusKm} km</Text>
+          <TouchableOpacity onPress={onPlusKm} accessibilityRole="button" style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.fieldBg, borderWidth: 1, borderColor: Colors.border, marginHorizontal: 12 }}>
+            <Text style={{ color: Colors.primary, fontSize: 18, fontWeight: '800' }}>+</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity onPress={saveRadius} disabled={isSavingRadius} style={{ marginTop: 10, backgroundColor: Colors.primary, borderRadius: 8, paddingVertical: 10, alignItems: 'center', opacity: isSavingRadius ? 0.7 : 1 }}>
+          <Text style={{ color: '#fff', fontWeight: '800' }}>{isSavingRadius ? 'Salvando...' : 'Salvar raio'}</Text>
+        </TouchableOpacity>
+      </View><View style={styles.segmentedControl}>
         <TouchableOpacity
           style={[styles.segment, activeTab === 'weekly' && styles.segmentActive]}
           onPress={() => setActiveTab('weekly')}
@@ -2220,3 +2276,6 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
 });
+
+
+
