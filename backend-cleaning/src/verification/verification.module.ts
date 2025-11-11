@@ -1,5 +1,6 @@
 // src/verification/verification.module.ts
 import { Module, forwardRef } from '@nestjs/common';
+import { UploadModule } from '../upload/upload.module';
 import { DocumentProcessingService } from '../document-processing/document-processing.service';
 import { VerificationController } from './verification.controller';
 import { VerificationService } from './verification.service';
@@ -15,6 +16,7 @@ import { NotificationsModule } from '../notifications/notifications.module'; // 
     forwardRef(() => ProvidersModule),
     forwardRef(() => QueuesModule),
     NotificationsModule, // Adicionar NotificationsModule aqui
+    UploadModule,
   ],
   controllers: [VerificationController],
   providers: [
