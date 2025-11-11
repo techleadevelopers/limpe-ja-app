@@ -1,5 +1,5 @@
 // src/availability/my-availability.controller.ts
-import { Controller, Get, Patch, Body, Param, UseGuards, Req, Query, Post, Delete, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Param, UseGuards, Req, Query, Post, Delete, NotFoundException, ConflictException } from '@nestjs/common';
 import { AvailabilityService } from './availability.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { GetAvailabilityDto } from './dto/get-availability.dto';
@@ -10,6 +10,7 @@ import { UserRole } from '@prisma/client';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { ProvidersService } from '../providers/providers.service'; // Para obter o ID do provedor logado
+import { BulkAvailabilityDto } from './dto/bulk-availability.dto';
 
 @ApiTags('my-availability') // Tag para o Swagger
 @Controller('providers/me/availability') // Rota específica para o provedor autenticado
@@ -65,6 +66,47 @@ export class MyAvailabilityController {
   ) {
     const providerId = await this.getProviderIdFromUser(req);
     return this.availabilityService.createAvailability(providerId, createAvailabilityDto);
+  }
+
+  @Post('bulk')
+  @ApiOperation({ summary: 'Definir disponibilidade em massa a partir de datas e faixas de horário' })
+  @ApiResponse({ status: 200, description: 'Disponibilidades criadas/atualizadas.' })
+  async createBulkAvailability(
+    @Req() req: Request,
+    @Body() body: BulkAvailabilityDto,
+  ) {
+    const providerId = await this.getProviderIdFromUser(req);
+
+    const updates: UpdateAvailabilityDto[] = [];
+    for (const entry of body.dates) {
+      const [y, m, d] = entry.date.split('-').map(Number);
+      if (!y || !m || !d) continue;
+      const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+      for (const r of entry.ranges) {
+        if (!r.start || !r.end) continue;
+        updates.push({ dayOfWeek: dow, startTime: r.start, endTime: r.end, isAvailable: true });
+      }
+    }
+
+    const seen = new Set<string>();
+    const dedup = updates.filter(u => {
+      const k = `${u.dayOfWeek}|${u.startTime}|${u.endTime}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    const created: any[] = [];
+    for (const u of dedup) {
+      try {
+        const res = await this.availabilityService.createAvailability(providerId, u);
+        created.push(res);
+      } catch (err) {
+        // Ignorar conflitos de duplicidade
+        continue;
+      }
+    }
+    return created;
   }
 
   @Delete(':availabilityId')
