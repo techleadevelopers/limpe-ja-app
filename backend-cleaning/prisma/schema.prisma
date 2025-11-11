@@ -328,44 +328,7 @@ model Client {
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 }
-
-model Provider {
-  id                         String             @id @default(uuid())
-  userId                     String             @unique
-  user                       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName                   String
-  cpf                        String?            @unique
-  dateOfBirth                DateTime
-  phone                      String?
-  address                    Address?           @relation("ProviderAddress")
-  yearsOfExperience          Int?
-  avatarUrl                  String?
-  bio                        String?
-  providerServices           ProviderService[]
-  fiveStarReviewCount        Int                @default(0)
-  monthlyBookingsCount       Int                @default(0)
-  availability               Availability[]
-  bookings                   Booking[]
-  reviewsReceived            Review[]           @relation("ProviderReviews")
-  earnings                   Transaction[]
-  verificationStatus         VerificationStatus @default(PENDING_INITIAL_REVIEW)
-  documentPhotoFrontUrl      String?
-  documentPhotoBackUrl       String?
-  selfieWithDocumentUrl      String?
-  backgroundCheckResult      Json?
-  ocrResult                  Json?
-  livenessResult             Json?
-  rejectionReason            String?
-  pixKey                     String?  // Chave PIX em texto puro (sensível); aplicar mascaramento/hash na aplicação e limpar este campo após migração (considerar virtual)
-  pixKeyMasked               String?  // ADICIONADO: Versão mascarada/hash para armazenamento seguro (ex: últimos dígitos ou hash); sempre popular na aplicação
-  badges                     String[]           @default([])
-  subscriptions              Subscription[]
-  guaranteeClaims            GuaranteeClaim[]
-  createdAt                  DateTime           @default(now())
-  updatedAt                  DateTime           @updatedAt
-  acceptanceRate             Float              @default(94)
-  averageResponseTime        Int                @default(25) // minutos
-}
+  
 
 model Address {
   id           String    @id @default(uuid())
@@ -1005,3 +968,4 @@ model WebhookReplay {
   eventId String   @unique
   seenAt  DateTime @default(now())
 }
+
