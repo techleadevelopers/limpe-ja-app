@@ -52,9 +52,9 @@ export function usePaymentIntent(bookingId?: string) {
         if (!alive) return;
         const status = (err as any)?.status ?? (err as any)?.response?.status;
         if (status === 404) {
-          setIntent(null);
+          // Preserve last known intent while backend is not ready yet.
+          // Do NOT clear existing intent or cache to avoid QR disappearing.
           setError(null);
-          await AsyncStorage.setItem(cacheKey, JSON.stringify(null));
           setTimeout(() => {
             if (alive) {
               setRefreshToken(token => token + 1);
