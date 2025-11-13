@@ -15,6 +15,7 @@ import {
   Logger,
   UseInterceptors,
   UploadedFile,
+  Put,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ProvidersService } from './providers.service';
@@ -75,11 +76,24 @@ export class ProvidersController {
     @Query('longitude') longitude?: number,
   ): Promise<ProviderDetailsDto[]> {
     this.logger.log('[ProvidersController] findRecommendedProviders: Chamando serviço.');
-    // CORREÇÃO: Passe lat/lng pro service pra cálculo de distance (se fornecidos)
-    const providers = await this.providersService.findTopRatedOrExperiencedProviders(latitude, longitude);
-    this.logger.log(`[ProvidersController] findRecommendedProviders: Retornando ${providers.length} provedores.`);
-    // NOVO: Mapeamento inclui novos campos opcionais para sinais premium
-    return providers.map(provider => new ProviderDetailsDto(provider));
+    // CORREÇÃO: Coerção explícita de query params para números
+    const lat = latitude !== undefined && latitude !== null ? Number(latitude) : undefined;
+    const lon = longitude !== undefined && longitude !== null ? Number(longitude) : undefined;
+
+    const safeLat = typeof lat === 'number' && !Number.isNaN(lat) ? lat : undefined;
+    const safeLon = typeof lon === 'number' && !Number.isNaN(lon) ? lon : undefined;
+
+    try {
+      // CORREÇÃO: Passe lat/lng numéricos pro service pra cálculo de distance (se fornecidos)
+      const providers = await this.providersService.findTopRatedOrExperiencedProviders(safeLat, safeLon);
+      this.logger.log(`[ProvidersController] findRecommendedProviders: Retornando ${providers.length} provedores.`);
+      return providers.map(provider => new ProviderDetailsDto(provider));
+    } catch (err: any) {
+      // Fallback hardening: nunca retornar 500 para recomendações
+      this.logger.error(`[ProvidersController] findRecommendedProviders: erro interno, retornando fallback simples. Erro: ${err?.message || err}`);
+      const fallback = await this.providersService.findAllProviders({ limit: 5 });
+      return fallback.map(p => new ProviderDetailsDto(p));
+    }
   }
 
   @Get('nearby')
@@ -97,11 +111,19 @@ export class ProvidersController {
   ): Promise<ProviderDetailsDto[]> {
     this.logger.log('[ProvidersController] findNearbyProviders: Chamando serviço.');
 
+    // Coerção de tipos de query
+    const lat = latitude !== undefined && latitude !== null ? Number(latitude) : undefined;
+    const lon = longitude !== undefined && longitude !== null ? Number(longitude) : undefined;
+    const rad = radius !== undefined && radius !== null ? Number(radius) : undefined;
+    const safeLat = typeof lat === 'number' && !Number.isNaN(lat) ? lat : undefined;
+    const safeLon = typeof lon === 'number' && !Number.isNaN(lon) ? lon : undefined;
+    const safeRadius = typeof rad === 'number' && !Number.isNaN(rad) ? rad : undefined;
+
     const findAllParams: { limit?: number; latitude?: number; longitude?: number; radius?: number; sortBy?: SortByOption } = {
       limit: 10,
-      latitude: latitude,
-      longitude: longitude,
-      radius: radius,
+      latitude: safeLat,
+      longitude: safeLon,
+      radius: safeRadius,
       sortBy: sortBy
     };
 
