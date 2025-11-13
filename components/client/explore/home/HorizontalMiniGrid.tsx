@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   Animated,
   FlatList,
@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
-// Ícones 3D da versão antiga
+// Ãcones 3D da versÃ£o antiga
 const Icons3D = {
   ticket: require("../../../../assets/images/3d/ticket.png"),
   cashback: require("../../../../assets/images/3d/cashback.png"),
@@ -35,18 +35,17 @@ interface GridItem {
   route: string;
 }
 
-// Itens da grade da versão antiga
+// Itens da grade da versÃ£o antiga
 const gridItems: GridItem[] = [
   { key: "coupons", title: "Cupons", icon: Icons3D.ticket, route: "/(client)/coupons" },
   { key: "cashback", title: "Cashback", icon: Icons3D.cashback, route: "/(client)/wallet/cashback" },
   { key: "missions", title: "Missões", icon: Icons3D.missions, route: "/(client)/missions" },
   { key: "referrals", title: "Ganhe", icon: Icons3D.referral, route: "/(client)/referrals" },
-  { key: "champions2", title: "Pontos", icon: Icons3D.champions2, route: "/(client)/champions2" },
-  { key: "metrics", title: "Métricas", icon: Icons3D.metrics, route: "/(client)/metrics" },
-  { key: "bookService", title: "Agendar", icon: Icons3D.bookService, route: "/(client)/booking" },
+  { key: "ranking", title: "Pontos", icon: Icons3D.champions2, route: "/(client)/explore/ranking" },
+  { key: "metrics", title: "Metricas", icon: Icons3D.metrics, route: "/(client)/metrics" },
   { key: "support", title: "Suporte", icon: Icons3D.support, route: "/(common)/support" },
-  { key: "safety", title: "Segurança", icon: Icons3D.safety, route: "/(common)/safety" },
-  { key: "settings", title: "Ajustes", icon: Icons3D.privacy, route: "/(client)/settings" },
+  { key: "safety", title: "Segurança", icon: Icons3D.safety, route: "/(client)/explore/security" },
+  { key: "settings", title: "Ajustes", icon: Icons3D.privacy, route: "/(client)/profile" },
 ];
 
 export default function HorizontalMiniGrid() {
@@ -61,7 +60,7 @@ export default function HorizontalMiniGrid() {
         useNativeDriver: true,
         speed: 40,
         friction: 3, // Ajuste para mais "mola"
-        tension: 80, // Ajuste para um retorno mais rápido
+        tension: 80, // Ajuste para um retorno mais rÃ¡pido
       }).start();
     };
 
@@ -69,13 +68,13 @@ export default function HorizontalMiniGrid() {
       Animated.spring(scale, {
         toValue: 1,
         friction: 3,
-        tension: 80, // Mantém a tensão para consistência
+        tension: 80, // MantÃ©m a tensÃ£o para consistÃªncia
         useNativeDriver: true,
       }).start();
     };
 
     const handlePress = () => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // Feedback tátil
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // Feedback tÃ¡til
       router.push(item.route as any);
     };
 
@@ -84,7 +83,7 @@ export default function HorizontalMiniGrid() {
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handlePress}
-        style={styles.cardContainer} // Usa o estilo do container da segunda versão
+        style={styles.cardContainer} // Usa o estilo do container da segunda versÃ£o
       >
         <Animated.View style={[styles.cardInner, { transform: [{ scale }] }]}>
           <LinearGradient
@@ -123,16 +122,16 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     alignItems: "center",
-    marginRight: 20, // Espaçamento entre os cards
+    marginRight: 20, // EspaÃ§amento entre os cards
     marginTop: -4,
   },
   cardInner: {
     width: 58, // Tamanho do fundo circular
     height: 48,
-    borderRadius: 30, // Corrigido para círculo perfeito (metade de 60)
+    borderRadius: 30, // Corrigido para cÃ­rculo perfeito (metade de 60)
     justifyContent: "center",
     alignItems: "center",
-    overflow: 'hidden', // Garante que o gradiente não vaze
+    overflow: 'hidden', // Garante que o gradiente nÃ£o vaze
     // Sombras premium: sutis e consistentes para iOS e Android (alinhado com Apple Store / Play Store)
     ...Platform.select({
       ios: {
@@ -142,7 +141,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4, // Raio ligeiramente maior para suavidade
       },
       android: {
-        elevation: 4, // Elevação moderada para profundidade sem exageros
+        elevation: 4, // ElevaÃ§Ã£o moderada para profundidade sem exageros
       },
     }),
   },
@@ -155,7 +154,7 @@ const styles = StyleSheet.create({
     borderRadius: 30, // Herda o borderRadius para o gradiente
   },
   icon: {
-    width: 35, // Tamanho do ícone
+    width: 35, // Tamanho do Ã­cone
     height: 35,
     resizeMode: 'contain',
   },
