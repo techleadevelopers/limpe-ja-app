@@ -136,9 +136,13 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
   const router = useRouter();
   const { isLargePhone } = useDevice();
 
-  const rCard = React.useMemo(() => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined), [
-    isLargePhone,
-  ]);
+  const rCard: StyleProp<ViewStyle> = React.useMemo<StyleProp<ViewStyle>>(
+    () =>
+      isLargePhone
+        ? ({ alignSelf: 'center', width: '100%', maxWidth: 820 } as ViewStyle)
+        : undefined,
+    [isLargePhone]
+  );
 
   useEffect(() => {
     Animated.parallel([
@@ -222,6 +226,11 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
       {item.id ? (
         <Link href={`/(client)/bookings/${item.id}`} asChild>
           <TouchableOpacity style={styles.itemCardContent} onPressIn={onPressInHandler} onPressOut={onPressOutHandler} activeOpacity={0.95}>
+            {/* Botão + adicionado DENTRO do card, no topo direito, ANTES do badge CONFIRMADO */}
+            <TouchableOpacity onPress={() => console.log('add action')} style={styles.addButton}>
+              <Ionicons name="add" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+
             <View style={styles.avatarContainer}>{renderProviderAvatar(item.providerAvatarUrl)}</View>
 
             <View style={styles.itemDetails}>
@@ -261,7 +270,6 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
               </Text>
             </LinearGradient>
 
-            <Ionicons name="chevron-forward-outline" size={22} color={AppColors.mediumGray} style={styles.itemChevron} />
           </TouchableOpacity>
         </Link>
       ) : (
@@ -275,7 +283,6 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
               Toque para atualizar
             </Text>
           </View>
-          <Ionicons name="refresh-outline" size={22} color={AppColors.mediumGray} style={styles.itemChevron} />
         </TouchableOpacity>
       )}
     </Animated.View>
@@ -439,7 +446,7 @@ export default function MyBookingsScreen() {
     loadBookings(activeFilter);
   }, [activeFilter, loadBookings]);
 
-  // Se a tela foi aberta com highlightNew (ex.: ps pagamento), garanta que o filtro mostre solicitades
+  // Se a tela foi aberta com highlightNew (ex.: pós pagamento), garanta que o filtro mostre solicitações
   useEffect(() => {
     if (highlightNew === 'true') {
       setActiveFilter('requests');
@@ -491,7 +498,7 @@ export default function MyBookingsScreen() {
       );
     } else if (activeFilter === 'upcoming') {
       title = 'Você não possui serviços futuros agendados.';
-      subText = 'Explore e agende novos serviços para vê‑los aqui.';
+      subText = 'Explore e agende novos serviços para vê-los aqui.';
       iconName = 'calendar-outline';
       ctaButton = (
         <Animated.View style={{ opacity: buttonAnim, transform: [{ scale: buttonAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }] }}>
@@ -502,7 +509,7 @@ export default function MyBookingsScreen() {
       );
     } else if (activeFilter === 'completed') {
       title = 'Seu histórico está vazio.';
-      subText = 'Conclua serviços para vê‑los aqui.';
+      subText = 'Conclua serviços para vê-los aqui.';
       iconName = 'archive-outline';
     } else if (activeFilter === 'cancelled') {
       title = 'Nenhum serviço cancelado.';
@@ -624,7 +631,7 @@ export default function MyBookingsScreen() {
         <BlurView intensity={Platform.OS === 'ios' ? 10 : 20} tint="light" style={StyleSheet.absoluteFillObject} />
         <LinearGradient colors={['rgba(255,255,255,0.96)', 'rgba(255,255,255,0.86)']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFillObject} />
         <Animated.View style={[StyleSheet.absoluteFillObject, { shadowColor: AppColors.primaryInteractive + '30', shadowOffset: { width: 0, height: 0 }, shadowOpacity: navbarGlowAnim, shadowRadius: 18, elevation: navbarGlowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 8] }) }]} />
-        <Navbar title={headerTitle} onBackPress={() => router.back()} showSearch={false} showNotifications={true} animated currentRoute="bookings" />
+        <Navbar />
       </Animated.View>
     </ScreenContainer>
   );
@@ -742,11 +749,34 @@ const styles = StyleSheet.create({
   itemPriceText: { fontSize: 16, fontWeight: '700', color: UI.accent, marginLeft: 6, fontFamily: 'Montserrat-SemiBold' },
 
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 16, alignSelf: 'flex-start' },
-  statusBadgeAbsolute: { position: 'absolute', top: 12, right: 12 },
+  statusBadgeAbsolute: { 
+    position: 'absolute',
+    top: 16,     // Desce mais para alinhamento visual correto
+    right: 16,   // Ajustado para right: 16 (melhor espaçamento)
+    zIndex: 20,
+  },
   statusBadgeIcon: { marginRight: 6 },
   statusText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, fontFamily: 'Montserrat-SemiBold' },
 
-  itemChevron: { marginLeft: 8, alignSelf: 'flex-start' },
+  // Estilo ajustado para o botão + (fundo azul premium, ícone branco, alinhado com o preço no canto inferior direito)
+  addButton: {
+    position: 'absolute',
+    bottom: 16,          // Posicionado na linha do preço (parte inferior do card)
+    right: 16,           // No canto direito (evita colisão com preço à esquerda)
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2563EB',   // Fundo azul forte (premium, igual à imagem)
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#2563EB',       // Sombra azul sutil
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    zIndex: 30,                   // Maior zIndex para ficar na frente
+  },
+
+  // REMOVIDO: itemChevron (seta bugada sumiu completamente)
 
   centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, backgroundColor: UI.bg },
   loadingText: { fontSize: 15, color: AppColors.textAuxiliary, fontFamily: 'Montserrat-Regular', marginTop: 12 },
