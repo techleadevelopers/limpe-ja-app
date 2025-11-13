@@ -20,6 +20,7 @@ import * as Haptics from 'expo-haptics'; // Adicionado para iOS premium
 import NotificationUIService from '../../services/notificationUIService'; // Added
 
 import { getMyProviderEarnings } from '../../services/earningService';
+import { PROVIDER_ROUTES } from '../../constants/routes';
 import { requestWithdrawal } from '../../services/paymentService'; // Esta função ainda é usada se o saque for confirmado
 import { getMyProviderDashboard } from '../../services/providerService';
 
@@ -301,7 +302,7 @@ export default function ProviderEarningsScreen() {
 
         <TouchableOpacity
           style={styles.quickLinkCard}
-          onPress={() => router.push('/(provider)/services' as any)}
+          onPress={() => router.push(PROVIDER_ROUTES.SERVICES_LIST as any)}
           activeOpacity={0.92}
         >
           <Ionicons name="briefcase-outline" size={24} color={ICON_PRIMARY} />
@@ -311,7 +312,7 @@ export default function ProviderEarningsScreen() {
 
         <TouchableOpacity
           style={styles.quickLinkCard}
-          onPress={() => router.push('/(provider)/reviews' as any)}
+          onPress={() => router.push(PROVIDER_ROUTES.REVIEWS as any)}
           activeOpacity={0.92}
         >
           <Ionicons name="star-outline" size={24} color={WARNING_YELLOW} />
