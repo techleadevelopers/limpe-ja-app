@@ -22,6 +22,8 @@ import ServiceItemSkeleton from '../../../components/ServiceItemSkeleton';
 import ToastMessage from '../../../components/ui/ToastMessage';
 import { formatDate } from '../../../utils/helpers';
 import Colors from '../../../constants/Colors';
+import { PROVIDER_ROUTES } from '../../../constants/routes';
+import NotificationUIService from '../../../services/notificationUIService';
 
 // --- Importações de SERVIÇOS e TIPAGENS REAIS do BACKEND ---
 import { getBookingsForUser, updateBookingStatus } from '../../../services/bookingService';
@@ -101,7 +103,7 @@ const BookingCardWithActions: React.FC<{
       await updateBookingStatus(item.id, { status } as any);
       onUpdate?.();
     } catch (err) {
-      Alert.alert('Erro', 'Falha ao atualizar o serviço.');
+      NotificationUIService.showError('Falha ao atualizar o serviço.', 'Erro');
     } finally {
       setIsUpdating(false);
     }
@@ -295,7 +297,7 @@ export default function ProviderServicesScreen() {
         if (refreshing) setToastMessage({ message: "Serviços atualizados!", type: "success" });
       } catch (err: any) {
         console.error("[ProviderServicesScreen] Erro ao buscar serviços:", err.response?.data || err.message);
-        Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar seus serviços.");
+        NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar seus serviços.", "Erro");
         setToastMessage({ message: "Erro ao carregar serviços.", type: "error" });
       } finally {
         setIsLoading(false);
@@ -339,12 +341,12 @@ export default function ProviderServicesScreen() {
   };
 
   const handleServicePress = (item: BookingDetails) => {
-    router.push(`/(provider)/services/${item.id}` as any);
+    router.push(PROVIDER_ROUTES.SERVICE_DETAILS(item.id) as any);
   };
 
   const handleAddPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/(provider)/profile/edit-services' as any);
+    router.push(PROVIDER_ROUTES.EDIT_SERVICES as any);
   };
 
   const getHeaderTitle = () => {
@@ -365,7 +367,7 @@ export default function ProviderServicesScreen() {
       title = "Nenhuma solicitação pendente.";
       subText = "Configure seus serviços para receber mais pedidos ou verifique seus agendamentos confirmados.";
       ctaButton = (
-        <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push('/(provider)/profile/edit-services' as any)}>
+        <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push(PROVIDER_ROUTES.EDIT_SERVICES as any)}>
           <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
           <Text style={styles.emptyStateButtonText}>Configurar Meus Serviços</Text>
         </TouchableOpacity>
@@ -374,7 +376,7 @@ export default function ProviderServicesScreen() {
       title = "Nenhum agendamento futuro.";
       subText = "Que tal verificar novas solicitações ou gerenciar sua disponibilidade?";
       ctaButton = (
-        <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push('/(provider)/availability' as any)}>
+        <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push(PROVIDER_ROUTES.MANAGE_AVAILABILITY as any)}>
           <Ionicons name="time-outline" size={20} color="#FFFFFF" />
           <Text style={styles.emptyStateButtonText}>Gerenciar Disponibilidade</Text>
         </TouchableOpacity>
@@ -723,3 +725,4 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
+
