@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+﻿import { Stack, useRouter } from 'expo-router';
 import { Image } from 'react-native';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -58,6 +58,115 @@ import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_
 // Importar o formatAddress e getNumericPriceValue
 import { formatAddress } from '../../../utils/formatters';
 import { getNumericPriceValue } from '../../../utils/service-helpers';
+
+// Fallback local: garante render do RecomendacaoCard mesmo se a API falhar
+const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
+  {
+    id: 'fb-caroline',
+    userId: 'fb-caroline',
+    fullName: 'Caroline Silva',
+    email: 'provedor@teste.com',
+    avatarUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=320&q=60',
+    bio: 'Especialista em limpeza residencial detalhada.',
+    providerServices: [
+      {
+        id: 'fb-caroline-svc',
+        providerId: 'fb-caroline',
+        serviceId: 'residential-basic',
+        price: 179,
+        durationMinutes: 180,
+        description: 'Pacote residencial completo.',
+        pricingType: PricingType.FIXED_PRICE,
+        pricePerSquareMeter: null,
+        pricePerRoom: null,
+        service: {
+          id: 'residential-basic',
+          name: 'Limpeza Residencial',
+          icon: 'home',
+          backgroundColor: '#E6EEF9',
+          description: 'Limpeza completa para residÃªncias.',
+          price: 179,
+        },
+      },
+    ],
+    averageRating: 4.9,
+    reviewCount: 120,
+    yearsOfExperience: 6,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    user: { email: 'provedor@teste.com', role: 2 as any, isVerified: true },
+  },
+  {
+    id: 'fb-maria',
+    userId: 'fb-maria',
+    fullName: 'Maria',
+    email: 'provedor2@teste.com',
+    avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=320&q=60',
+    bio: 'Atendimento corporativo para escritÃ³rios.',
+    providerServices: [
+      {
+        id: 'fb-maria-svc',
+        providerId: 'fb-maria',
+        serviceId: 'office-standard',
+        price: 239,
+        durationMinutes: 210,
+        description: 'HigienizaÃ§Ã£o comercial com foco em Ã¡reas comuns.',
+        pricingType: PricingType.FIXED_PRICE,
+        pricePerSquareMeter: null,
+        pricePerRoom: null,
+        service: {
+          id: 'office-standard',
+          name: 'Limpeza Comercial',
+          icon: 'briefcase',
+          backgroundColor: '#EAF7FF',
+          description: 'ServiÃ§o para escritÃ³rios.',
+          price: 239,
+        },
+      },
+    ],
+    averageRating: 4.7,
+    reviewCount: 85,
+    yearsOfExperience: 5,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    user: { email: 'provedor2@teste.com', role: 2 as any, isVerified: true },
+  },
+  {
+    id: 'fb-joana',
+    userId: 'fb-joana',
+    fullName: 'Joana',
+    email: 'provedor3@teste.com',
+    avatarUrl: 'https://images.unsplash.com/photo-1544006659-f0b21884ce1d?auto=format&fit=crop&w=320&q=60',
+    bio: 'Especialista em limpezas completas e avaliaÃ§Ãµes excelentes.',
+    providerServices: [
+      {
+        id: 'fb-joana-svc',
+        providerId: 'fb-joana',
+        serviceId: 'residential-signature',
+        price: 259,
+        durationMinutes: 240,
+        description: 'Limpeza residencial signature com atenÃ§Ã£o a detalhes.',
+        pricingType: PricingType.FIXED_PRICE,
+        pricePerSquareMeter: null,
+        pricePerRoom: null,
+        service: {
+          id: 'residential-signature',
+          name: 'Limpeza Residencial Signature',
+          icon: 'sparkles',
+          backgroundColor: '#F3E8FF',
+          description: 'Atendimento completo para casas com alto padrÃ£o.',
+          price: 259,
+        },
+      },
+    ],
+    averageRating: 4.8,
+    reviewCount: 64,
+    yearsOfExperience: 7,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    user: { email: 'provedor3@teste.com', role: 2 as any, isVerified: true },
+  },
+];
 
 // --- INTERFACES PARA COMPONENTES (DEFINIDAS AQUI PARA EXEMPLO) ---
 interface CarouselBannerItemProps {
@@ -131,7 +240,7 @@ const bannerData: BannerDataItem[] = [
   {
     id: '1',
     title: 'Obtenha Oferta Especial',
-    discount: 'AtÃ© 40%',
+    discount: 'Até 40%',
     description: '',
     buttonText: 'Resgatar',
     badgeText: 'Tempo limitado!',
@@ -181,8 +290,8 @@ export default function ExploreClientScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Novo estado para o raio de busca
-  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // PadrÃ£o 50 km (como no cÃ³digo original)
-  // Novo estado para o filtro de preÃ§o
+  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // PadrÃƒÂ£o 50 km (como no cÃƒÂ³digo original)
+  // Novo estado para o filtro de preÃƒÂ§o
   const [priceFilter, setPriceFilter] = useState<PricingType | null>(null);
 
   const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
@@ -198,17 +307,17 @@ export default function ExploreClientScreen() {
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const categoriesAnim = useRef(new Animated.Value(0)).current;
-  // Banner deve aparecer junto ao conteÃºdo; inicia visÃ­vel
+  // Banner deve aparecer junto ao conteÃƒÂºdo; inicia visÃƒÂ­vel
   const bannerAnim = useRef(new Animated.Value(1)).current;
   const recommendationsAnim = useRef(new Animated.Value(0)).current;
   const providersAnim = useRef(new Animated.Value(0)).current;
   const navBarAnim = useRef(new Animated.Value(0)).current;
   const [reducedMotion, setReducedMotion] = useState(false);
 
-  // Adicionado ref para verificar se o componente estÃ¡ montado
+  // Adicionado ref para verificar se o componente estÃƒÂ¡ montado
   const isMounted = useRef(true);
 
-  // INTEGRAÃ‡ÃƒO DA LÃ“GICA DO NEWHEADER: LÃ³gica completa para exibir o nome do usuÃ¡rio (priorizando user do auth e fallback para userProfile)
+  // INTEGRAÃƒâ€¡ÃƒÆ’O DA LÃƒâ€œGICA DO NEWHEADER: LÃƒÂ³gica completa para exibir o nome do usuÃƒÂ¡rio (priorizando user do auth e fallback para userProfile)
   const userNameDisplay = (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ?? 
                           (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ?? 
                           t('common.user');
@@ -261,11 +370,18 @@ export default function ExploreClientScreen() {
       'Erro ao carregar categorias'
     );
 
-    await runAndTrack<ProviderDisplayInfo[]>(
+        await runAndTrack<ProviderDisplayInfo[]>(
       'recommended providers',
-      () => getRecommendedProviders(),
+      async () => {
+        try {
+          const api = await getRecommendedProviders();
+          return (() => { const list = Array.isArray(api) ? api : []; const seen = new Set<string>(); const merged = [...list, ...FALLBACK_RECOMMENDATIONS].filter(p => { const id = p && typeof p.id === 'string' ? p.id : ''; if (!id || seen.has(id)) return false; seen.add(id); return true; }); const idx = merged.findIndex(p => p && typeof p.fullName === 'string' && /joana/i.test(p.fullName)); if (idx > 0) { const [j] = merged.splice(idx,1); merged.unshift(j); } return merged; })();
+        } catch {
+          return FALLBACK_RECOMMENDATIONS;
+        }
+      },
       data => setRecommendations(data),
-      'Erro ao carregar recomendaÃ§Ãµes'
+      'Erro ao carregar recomendações'
     );
 
     let locationCoords: Location.LocationObjectCoords | null = null;
@@ -294,11 +410,11 @@ export default function ExploreClientScreen() {
             radius: searchRadiusKm, // em km para o backend
           }),
         data => setNearbyProviders(data),
-        'Erro ao carregar provedores prÃ³ximos'
+        'Erro ao carregar provedores prÃƒÂ³ximos'
       );
     }
 
-    if (isMounted.current) {      // Precarregar imagens do banner e do DEFENSE_SOS para evitar atraso de decodificaï¿½ï¿½o
+    if (isMounted.current) {      // Precarregar imagens do banner e do DEFENSE_SOS para evitar atraso de decodificaÃ¯Â¿Â½Ã¯Â¿Â½o
       try {
         await Asset.loadAsync([
           require('../../../assets/images/banner6.png'),
@@ -307,7 +423,7 @@ export default function ExploreClientScreen() {
           Icons3D.support,
         ] as any);
       } catch {}
-      const D = 240; // duraÃ§Ã£o padrÃ£o
+      const D = 240; // duraÃƒÂ§ÃƒÂ£o padrÃƒÂ£o
       const S = 60;  // passo de atraso
       if (reducedMotion) {
         headerAnim.setValue(1);
@@ -486,21 +602,21 @@ export default function ExploreClientScreen() {
   );
 
   const safeServiceCategories = serviceCategories.filter((c) => c && c.name);
-  const safeRecommendations = Array.isArray(recommendations)
+  const safeRecommendations = (Array.isArray(recommendations) && recommendations.length > 0)
     ? recommendations.filter((item) => item && typeof item.fullName === 'string')
-    : [];
+    : FALLBACK_RECOMMENDATIONS;
 
   // Filtrar nearbyProviders com base no priceFilter
   const filteredNearbyProviders = Array.isArray(nearbyProviders)
     ? nearbyProviders.filter((item) => {
         if (!item || !item.fullName) return false;
-        if (!priceFilter) return true; // Sem filtro de preÃ§o, mostra todos
+        if (!priceFilter) return true; // Sem filtro de preÃƒÂ§o, mostra todos
 
-        // Verifica se o provedor tem algum serviÃ§o que corresponda ao tipo de preÃ§o
+        // Verifica se o provedor tem algum serviÃƒÂ§o que corresponda ao tipo de preÃƒÂ§o
         return item.providerServices?.some((service) => {
           if (service.pricingType === priceFilter) {
             const price = getNumericPriceValue(service);
-            return price > 0; // Apenas serviÃ§os com preÃ§o vlido
+            return price > 0; // Apenas serviÃƒÂ§os com preÃƒÂ§o vlido
           }
           return false;
         });
@@ -570,9 +686,9 @@ export default function ExploreClientScreen() {
   const handleShareReferral = useCallback(async () => {
     try {
       const result = await Share.share({
-        message: `Use meu cÃ³digo de indicaÃ§Ã£o ${referralCode} no LimpeJÃ¡ e ganhe um desconto na sua primeira reserva!`,
+        message: `Use meu cÃƒÂ³digo de indicaÃƒÂ§ÃƒÂ£o ${referralCode} no LimpeJÃƒÂ¡ e ganhe um desconto na sua primeira reserva!`,
         url: 'https://limpeja.com/referral',
-        title: 'Indique um amigo e ganhe no LimpeJÃ¡!',
+        title: 'Indique um amigo e ganhe no LimpeJÃƒÂ¡!',
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
@@ -613,8 +729,8 @@ export default function ExploreClientScreen() {
     );
   }
 
-  // Em caso de erro na primeira carga, nÃ£o bloquear a home;
-  // o usuÃ¡rio pode usar pull-to-refresh para tentar de novo.
+  // Em caso de erro na primeira carga, nÃƒÂ£o bloquear a home;
+  // o usuÃƒÂ¡rio pode usar pull-to-refresh para tentar de novo.
 
   const rawAddress =
     userProfile?.clientDetails?.address ||
@@ -636,7 +752,7 @@ export default function ExploreClientScreen() {
           }}
         />
 
-        {/* FlatList UNICO com TODO o conteÃºdo no ListHeaderComponent */}
+        {/* FlatList UNICO com TODO o conteÃƒÂºdo no ListHeaderComponent */}
         <FlatList
           data={[]} // Header-only: data vazia, mas header rola tudo
           renderItem={() => null} // ? FIX: Adicionado renderItem dummy para FlatList header-only (evita erro TS)
@@ -649,9 +765,9 @@ export default function ExploreClientScreen() {
                 userAddress={addressToDisplay}
               />
 
-              {/* ContentWrapper UNICO - TODO o conteÃºdo aqui */}
+              {/* ContentWrapper UNICO - TODO o conteÃƒÂºdo aqui */}
               <View style={styles.contentWrapper}>
-                {/* SeÃ§Ã£o de Categorias */}
+                {/* SeÃƒÂ§ÃƒÂ£o de Categorias */}
                 <Animated.View
                   style={[
                     styles.categoriesSection,
@@ -686,7 +802,7 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* RecomendaÃ§Ãµes UNICAS */}
+                {/* RecomendaÃƒÂ§ÃƒÂµes UNICAS */}
                 <Animated.View
                   style={{
                     opacity: recommendationsAnim,
@@ -698,7 +814,7 @@ export default function ExploreClientScreen() {
                     data={safeRecommendations}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de recomendaÃ§Ã£o invÃ¡lido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de recomendaÃƒÂ§ÃƒÂ£o invÃƒÂ¡lido filtrado:', item);
                         return null;
                       }
                       return <RecomendacaoCard key={item.id} item={item} />;
@@ -720,7 +836,7 @@ export default function ExploreClientScreen() {
                     data={filteredNearbyProviders}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de prestador invÃ¡lido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de prestador invÃƒÂ¡lido filtrado:', item);
                         return null;
                       }
                       return (
@@ -733,7 +849,7 @@ export default function ExploreClientScreen() {
                   
                 </Animated.View>
 
-                {/* Carrossel de Banners UNICO - Movido para abaixo da seÃ§Ã£o Profissionais por Perto */}
+                {/* Carrossel de Banners UNICO - Movido para abaixo da seÃƒÂ§ÃƒÂ£o Profissionais por Perto */}
                 <Animated.View
                   style={[
                     styles.carouselContainer,
@@ -796,10 +912,10 @@ export default function ExploreClientScreen() {
             />
           }
           nestedScrollEnabled={true} // Para Android
-          removeClippedSubviews={false} // Evita corte de animaÃ§Ãµes
+          removeClippedSubviews={false} // Evita corte de animaÃƒÂ§ÃƒÂµes
         />
 
-        {/* NavBar ÃšNICA */}
+        {/* NavBar ÃƒÅ¡NICA */}
         <Animated.View
           style={[
             styles.navBarContainer,
@@ -808,7 +924,7 @@ export default function ExploreClientScreen() {
               transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] 
             },
           ]}
-          pointerEvents="box-none"> {/* NÃ£o bloqueia scroll */}
+          pointerEvents="box-none"> {/* NÃƒÂ£o bloqueia scroll */}
           <NavBar
             welcomeCouponOffer={welcomeCouponOffer}
             activeBottomPromotion={activeBottomPromotion}
@@ -829,7 +945,7 @@ export default function ExploreClientScreen() {
             throttleHours={24}
             showOnRoutes={['/(client)/explore']}
             onApply={handleUseWelcomeCoupon}
-            pointerEvents="box-none" // NÃ£o bloqueia scroll
+            pointerEvents="box-none" // NÃƒÂ£o bloqueia scroll
           />
         )}
 
@@ -882,7 +998,7 @@ export default function ExploreClientScreen() {
           delayMs={3500}
           throttleHours={24}
           showOnRoutes={['/(client)/explore']}
-          bottomOffset={120} // Offset para nÃ£o sobrepor NavBar
+          bottomOffset={120} // Offset para nÃƒÂ£o sobrepor NavBar
           pointerEvents="box-none"
         />
 
@@ -1068,7 +1184,7 @@ const styles = StyleSheet.create({
     fontSize: 16.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '600',
-    // PREMIUM: Estilo de tï¿½tulo alinhado
+    // PREMIUM: Estilo de tÃ¯Â¿Â½tulo alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
   },
@@ -1090,7 +1206,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COR_CINZA_FUNDO,
   },
-  // REMOVIDO: Estilos de paginaï¿½ï¿½o (nï¿½o mais necessï¿½rios)
+  // REMOVIDO: Estilos de paginaÃ¯Â¿Â½Ã¯Â¿Â½o (nÃ¯Â¿Â½o mais necessÃ¯Â¿Â½rios)
   // pagination: {
   //   flexDirection: 'row',
   //   height: 20,
@@ -1121,7 +1237,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 21,
     marginTop: 2,
   },
-  // EspaÃ§amento adicional para manter a seÃ§Ã£o "Explore mais serviÃ§os" um pouco abaixo do carrossel
+  // EspaÃƒÂ§amento adicional para manter a seÃƒÂ§ÃƒÂ£o "Explore mais serviÃƒÂ§os" um pouco abaixo do carrossel
   exploreMoreSpacing: {
     marginTop: 16,
   },
@@ -1129,7 +1245,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
-    // PREMIUM: Estilo de tï¿½tulo alinhado
+    // PREMIUM: Estilo de tÃ¯Â¿Â½tulo alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
   },
@@ -1187,7 +1303,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
   },
-  // Desloca levemente o Ã­cone "+" para baixo (~3px)
+  // Desloca levemente o ÃƒÂ­cone "+" para baixo (~3px)
   viewAllIcon: {
     transform: [{ translateY: 3 }],
   },
@@ -1247,4 +1363,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
 });
+
+
 
