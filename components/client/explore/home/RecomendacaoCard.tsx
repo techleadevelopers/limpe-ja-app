@@ -38,7 +38,7 @@ interface RecomendacaoCardProps {
 // Escala "crisp" de 7% + ajuste fino de 2% (sem usar transform para evitar blur)
 const UI_SCALE = 1.07;
 const UI_FINE_TUNE = 0.98; // redução solicitada de 2%
-const S = (n: number) => parseFloat((n * UI_SCALE * UI_FINE_TUNE).toFixed(2));
+const S = (n: number) => parseFloat((n * UI_SCALE * UI_FINE_TUNE * 0.95).toFixed(2));
 
 const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   const router = useRouter();
@@ -735,9 +735,9 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardWrapperWithDistance: { // NOVO ESTILO: Container pai para posicionamento absoluto
-    width: S(113),
-    height: S(160), // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
-    marginRight: S(10),
+    width: S(110),
+    height: S(158), // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
+    marginRight: S(13),
     marginBottom: 6,
     marginTop: 8,
     left: 3,
@@ -838,7 +838,7 @@ const styles = StyleSheet.create({
   // NOVO: Estilos para o badge animado do horário (background mais opaco para evitar transparência no card)
   nextAvailableBadge: {
     position: 'absolute',
-    top: 120,                // distância consistente do topo
+    top: 115,                // distância consistente do topo
     right: 12,              // mesma distância do topo para margem lateral
     flexDirection: 'row',
     alignItems: 'center',
@@ -1085,8 +1085,8 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    left: 33,
-    top: 23,
+    left: 30,
+    top: 21,
     marginBottom: 4,
     marginTop: 2,
     position: 'relative',
