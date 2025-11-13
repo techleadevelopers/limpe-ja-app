@@ -1119,29 +1119,35 @@ export default function ManageAvailabilityScreen() {
   }, [specificDateOverrides, selectedDateForOverride]);
 
   // Apply preset actions when navigated with preset query param
-  useEffect(() => {
-    if (!preset) return;
-    const d = new Date();
-    const dow = d.getDay();
-    switch (preset) {
-      case 'today-morning':
-        handleApplyPreset(dow, 'morning');
-        break;
-      case 'tomorrow-afternoon':
-        handleApplyPreset((dow + 1) % 7, 'afternoon');
-        break;
-      case 'block-today':
-        handleClearSlots(dow);
-        handleToggleDay(dow, false);
-        break;
-      case 'repeat-week':
-        openCopyModal(dow);
-        setCopyTargets([1, 2, 3, 4, 5]);
-        break;
-    }
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
-    AccessibilityInfo.announceForAccessibility('Disponibilidade atualizada');
-  }, [preset, handleApplyPreset, handleClearSlots, handleToggleDay, openCopyModal]);
+const didRunPresetRef = useRef(false);
+useEffect(() => {
+  if (didRunPresetRef.current) return; // guard against StrictMode double-invoke and rerenders
+  didRunPresetRef.current = true;
+
+  if (!preset) return;
+
+  const d = new Date();
+  const dow = d.getDay();
+
+  switch (preset) {
+    case 'today-morning':
+      handleApplyPreset(dow, 'morning');
+      break;
+    case 'tomorrow-afternoon':
+      handleApplyPreset((dow + 1) % 7, 'afternoon');
+      break;
+    case 'block-today':
+      handleClearSlots(dow);
+      handleToggleDay(dow, false);
+      break;
+    case 'repeat-week':
+      openCopyModal(dow);
+      setCopyTargets([1, 2, 3, 4, 5]);
+      break;
+  }
+
+  if (Platform.OS === 'ios') Haptics.selectionAsync();
+}, []);
 
   useEffect(() => {
     loadData();
