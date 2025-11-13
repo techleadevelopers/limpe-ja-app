@@ -364,6 +364,60 @@ model Service {
   updatedAt           DateTime          @updatedAt
 }
 
+// MODELO AUSENTE: Provider
+// Adicionado para resolver erros de validação (P1012) nas relações que referenciam Provider
+model Provider {
+  id                      String              @id @default(uuid())
+  userId                  String              @unique
+  user                    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Dados públicos do provedor
+  fullName                String
+  phone                   String?
+  bio                     String?
+  yearsOfExperience       Int?
+  avatarUrl               String?
+  verificationStatus      VerificationStatus  @default(PENDING_INITIAL_REVIEW)
+
+  // Documentos e verificação
+  cpf                     String?             @unique
+  dateOfBirth             DateTime?
+  documentPhotoFrontUrl   String?
+  documentPhotoBackUrl    String?
+  selfieWithDocumentUrl   String?
+  backgroundCheckResult   Json?
+  rejectionReason         String?
+  ocrResult               Json?
+  livenessResult          Json?
+
+  // Métricas/opcionais usados nos cards
+  acceptanceRate          Int?
+  averageResponseTime     Int?
+  fiveStarReviewCount     Int                @default(0)
+  monthlyBookingsCount    Int                @default(0)
+  badges                  String[]
+
+  // Pagamentos (PIX)
+  pixKey                  String?
+  pixKeyMasked            String?
+
+  // Relacionamentos
+  address                 Address?           @relation("ProviderAddress")
+  providerServices        ProviderService[]
+  bookings                Booking[]
+  reviewsReceived         Review[]           @relation("ProviderReviews")
+  availability            Availability[]
+  transactions            Transaction[]
+  // Back-relations requeridos
+  subscriptions           Subscription[]
+  guaranteeClaims         GuaranteeClaim[]
+
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  @@index([verificationStatus, yearsOfExperience])
+}
+
 model ProviderService {
   id                    String         @id @default(uuid())
   providerId            String
