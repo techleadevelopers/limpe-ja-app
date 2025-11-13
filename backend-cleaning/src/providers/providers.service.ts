@@ -234,7 +234,7 @@ export class ProvidersService {
         id: ps.id,
         providerId: ps.providerId,
         serviceId: ps.serviceId,
-        price: ps.price.toNumber(),
+        price: ps.price ? ps.price.toNumber() : 0,
         durationMinutes: ps.durationMinutes,
         description: ps.description,
         service: {
@@ -689,13 +689,19 @@ export class ProvidersService {
               a."providerId",
               COALESCE(ST_X(a.location), a.longitude::double precision) AS longitude_val,
               COALESCE(ST_Y(a.location), a.latitude::double precision) AS latitude_val,
-              ST_DistanceSphere(
-                  COALESCE(
-                    a.location,
-                    ST_SetSRID(ST_MakePoint(a.longitude::double precision, a.latitude::double precision), 4326)
-                  ),
-                  ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
-              ) AS distance_m,  -- CORREÇÃO: Em metros (não km), pra consistência
+              CASE
+                WHEN a.location IS NOT NULL THEN
+                  ST_Distance(
+                    a.location::geography,
+                    ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
+                  )
+                WHEN a.longitude IS NOT NULL AND a.latitude IS NOT NULL THEN
+                  ST_Distance(
+                    ST_SetSRID(ST_MakePoint(a.longitude::double precision, a.latitude::double precision), 4326)::geography,
+                    ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
+                  )
+                ELSE NULL
+              END AS distance_m,  -- Em metros (seguro para NULL)
               COALESCE(AVG(r.rating), 0)::numeric AS "averageRating",
               COUNT(r.id)::int AS "reviewCount",
               p."fiveStarReviewCount",
@@ -739,14 +745,21 @@ export class ProvidersService {
                 "Review" r ON p.id = r."providerId"
             WHERE
                 p."verificationStatus" = ${Prisma.raw(`'${VerificationStatus.APPROVED}'`)} AND
-                ST_DWithin(
-                  COALESCE(
-                    a.location,
-                    ST_SetSRID(ST_MakePoint(a.longitude::double precision, a.latitude::double precision), 4326)
-                  ),
-                  ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326),
-                  ${radius * 1000}
-                )
+                CASE
+                  WHEN a.location IS NOT NULL THEN
+                    ST_DWithin(
+                      a.location::geography,
+                      ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography,
+                      ${radius * 1000}
+                    )
+                  WHEN a.longitude IS NOT NULL AND a.latitude IS NOT NULL THEN
+                    ST_DWithin(
+                      ST_SetSRID(ST_MakePoint(a.longitude::double precision, a.latitude::double precision), 4326)::geography,
+                      ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography,
+                      ${radius * 1000}
+                    )
+                  ELSE FALSE
+                END
                 ${searchTerm ? Prisma.sql`AND (p."fullName" ILIKE ${'%' + searchTerm + '%'} OR u.email ILIKE ${'%' + searchTerm + '%'} OR p.bio ILIKE ${'%' + searchTerm + '%'} OR s.name ILIKE ${'%' + searchTerm + '%'})` : Prisma.empty}
                 ${serviceId ? Prisma.sql`AND ps."serviceId" = ${serviceId}` : Prisma.empty}
                 ${location ? Prisma.sql`AND (a.city ILIKE ${'%' + location + '%'} OR a.state ILIKE ${'%' + location + '%'} OR a.street ILIKE ${'%' + location + '%'} OR a.neighborhood ILIKE ${'%' + location + '%'})` : Prisma.empty}
@@ -816,7 +829,7 @@ export class ProvidersService {
               id: ps.id,
               providerId: ps.providerId,
               serviceId: ps.serviceId,
-              price: new Decimal(ps.price),
+              price: ps.price != null ? new Decimal(ps.price) : new Decimal(0),
               durationMinutes: ps.durationMinutes,
               description: ps.description,
               createdAt: ps.createdAt,
@@ -829,7 +842,7 @@ export class ProvidersService {
                 name: ps.service.name,
                 description: ps.service.description,
                 icon: ps.service.icon,
-                price: new Decimal(ps.service.price),
+                price: ps.service.price != null ? new Decimal(ps.service.price) : new Decimal(0),
                 createdAt: ps.service.createdAt,
                 updatedAt: ps.service.updatedAt,
               }
@@ -955,7 +968,8 @@ export class ProvidersService {
     if (latitude && longitude) {
       // CORREÇÃO: Se lat/lng fornecidos, usa raw query com PostGIS pra calcular distance_m (em metros)
       this.logger.log(`[ProvidersService] findTopRatedOrExperiencedProviders: Calculando distance com lat=${latitude}, lon=${longitude}.`);
-      providers = await this.prisma.$queryRaw(Prisma.sql`
+      try {
+        providers = await this.prisma.$queryRaw(Prisma.sql`
         SELECT
           p.id,
           p."userId",
@@ -995,13 +1009,19 @@ export class ProvidersService {
           a."providerId",
           COALESCE(ST_X(a.location), a.longitude::double precision) AS longitude_val,
           COALESCE(ST_Y(a.location), a.latitude::double precision) AS latitude_val,
-          ST_DistanceSphere(
-              COALESCE(
-                a.location,
-                ST_SetSRID(ST_MakePoint(a.longitude::double precision, a.latitude::double precision), 4326)
-              ),
-              ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
-          ) AS distance_m,  -- Em metros
+          CASE
+            WHEN a.location IS NOT NULL THEN
+              ST_Distance(
+                a.location::geography,
+                ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
+              )
+            WHEN a.longitude IS NOT NULL AND a.latitude IS NOT NULL THEN
+              ST_Distance(
+                ST_SetSRID(ST_MakePoint(a.longitude::double precision, a.latitude::double precision), 4326)::geography,
+                ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
+              )
+            ELSE NULL
+          END AS distance_m,  -- Em metros (seguro para NULL)
           COALESCE(AVG(r.rating), 0)::numeric AS "averageRating",
           COUNT(r.id)::int AS "reviewCount",
           p."fiveStarReviewCount",
@@ -1052,6 +1072,33 @@ export class ProvidersService {
             distance_m ASC  -- Secundário por distância se lat/lng fornecidos
         LIMIT 5;  -- Top 5, como original
       `);
+      } catch (err: any) {
+        // Fallback seguro quando PostGIS/funcões geoespaciais não estão disponíveis
+        this.logger.error(`[ProvidersService] findTopRatedOrExperiencedProviders: Falha no cálculo de distância (PostGIS indisponível?). Caindo para consulta padrão. Erro: ${err?.message || err}`);
+        providers = await this.prisma.provider.findMany({
+          where: { verificationStatus: VerificationStatus.APPROVED },
+          include: {
+            user: { select: { email: true, role: true, isVerified: true, fullName: true } },
+            address: true,
+            providerServices: { include: { service: true } },
+            reviewsReceived: {
+              include: {
+                client: {
+                  include: { user: { select: { id: true, avatarUrl: true } } }
+                }
+              }
+            },
+            bookings: {
+              where: { status: 'COMPLETED' },
+              orderBy: { createdAt: 'desc' },
+              take: 100,
+            },
+            availability: true,
+          },
+          orderBy: { yearsOfExperience: 'desc' },
+          take: 5,
+        });
+      }
     } else {
       // Fallback: Sem lat/lng, busca normal sem distance
       this.logger.log('[ProvidersService] findTopRatedOrExperiencedProviders: Sem lat/lng, busca sem cálculo de distância.');
