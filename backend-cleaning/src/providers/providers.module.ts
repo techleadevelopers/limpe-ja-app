@@ -7,6 +7,7 @@ import { ProvidersController } from './providers.controller';
 import { VerificationModule } from '../verification/verification.module';
 import { CacheModule } from '../cache/cache.module';
 import { DocumentProcessingModule } from '../document-processing/document-processing.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { DocumentProcessingModule } from '../document-processing/document-proces
     forwardRef(() => VerificationModule),
     CacheModule,
     DocumentProcessingModule,
+    SettingsModule,
   ],
   controllers: [ProvidersController],
   providers: [ProvidersService],
