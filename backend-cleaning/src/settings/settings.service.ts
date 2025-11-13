@@ -61,6 +61,7 @@ export class SettingsService {
   private readonly generalKey = 'settings:general';
   private readonly generalHistoryKey = 'settings:general:history';
   private readonly pricingHistoryKey = 'settings:pricing:history';
+  private readonly providerRadiusKeyPrefix = 'settings:provider:radius_km';
 
   constructor(
     private readonly cache: CacheService,
@@ -188,6 +189,24 @@ export class SettingsService {
 
     this.logger.log(`[SettingsService] SLA settings updated by ${actorUserId || 'unknown'}`);
     return next;
+  }
+
+  // ================= Provider radius (km) =================
+  async setProviderRadiusKm(providerId: string, km: number): Promise<void> {
+    const key = `${this.providerRadiusKeyPrefix}:${providerId}`;
+    const clamped = Math.max(1, Math.min(200, Math.floor(Number(km))));
+    if (!Number.isFinite(clamped)) {
+      throw new BadRequestException('serviceRadiusKm inválido');
+    }
+    await this.setNumber(key, clamped);
+    this.logger.log(`[SettingsService] setProviderRadiusKm: provider=${providerId} radiusKm=${clamped}`);
+  }
+
+  async getProviderRadiusKm(providerId: string, fallback: number = 15): Promise<number> {
+    const key = `${this.providerRadiusKeyPrefix}:${providerId}`;
+    const value = await this.getNumber(key, fallback);
+    this.logger.debug(`[SettingsService] getProviderRadiusKm: provider=${providerId} -> ${value}`);
+    return value;
   }
 
   async getSlaHistory(limit = 50, cursor = 0): Promise<{ items: SlaAuditEvent[]; nextCursor: number | null }> {
