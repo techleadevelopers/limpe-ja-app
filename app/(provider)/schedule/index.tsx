@@ -16,6 +16,7 @@ import {
   AccessibilityInfo, // Importar AccessibilityInfo
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { PROVIDER_ROUTES } from '../../constants/routes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -443,7 +444,7 @@ export default function MyScheduleScreen() {
     if (presetParam) {
       showOverlay({ title: 'Aplicando disponibilidade', variant: 'info' });
       if (Platform.OS === 'ios') Haptics.selectionAsync();
-      router.push(`/(provider)/schedule/manage-availability?preset=${presetParam}` as any);
+      router.push(`${PROVIDER_ROUTES.MANAGE_AVAILABILITY}?preset=${presetParam}` as any);
     }
   };
 
@@ -459,7 +460,7 @@ export default function MyScheduleScreen() {
       >
         <Text style={styles.headerTitle}>Minha Agenda</Text>
         <TouchableOpacity
-          onPress={() => router.push('/(provider)/schedule/manage-availability' as any)}
+          onPress={() => router.push(PROVIDER_ROUTES.MANAGE_AVAILABILITY as any)}
           style={styles.headerActionIcon}
           accessibilityRole="button"
           accessibilityLabel="Gerenciar disponibilidade"
@@ -549,7 +550,7 @@ export default function MyScheduleScreen() {
           </Text>
           <TouchableOpacity
             style={styles.manageAvailabilityButton}
-            onPress={() => router.push('/(provider)/schedule/manage-availability' as any)}
+            onPress={() => router.push(PROVIDER_ROUTES.MANAGE_AVAILABILITY as any)}
             accessibilityRole="button"
             accessibilityLabel="Ir para Gerenciar Disponibilidade"
             accessibilityHint="Navegar para tela de gerenciamento de horários disponíveis"
@@ -657,7 +658,7 @@ export default function MyScheduleScreen() {
                 onPress={() => {
                   setRrVisible(false);
                   // Sugerir: abrir disponibilidade com sugestão padrão
-                  router.push('/(provider)/schedule/manage-availability?preset=tomorrow-afternoon' as any);
+                  router.push(`${PROVIDER_ROUTES.MANAGE_AVAILABILITY}?preset=tomorrow-afternoon` as any);
                   showOverlay({ title: 'Sugira um novo horário', variant: 'info' });
                   if (Platform.OS==='ios') Haptics.selectionAsync();
                 }}
