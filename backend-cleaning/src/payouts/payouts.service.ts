@@ -7,6 +7,9 @@ import { RedisLockService } from '../common/locks/redis-lock.service';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import axios from 'axios';
+import { ConnectService } from '../connect/connect.service';
+import * as fs from 'fs';
+import * as https from 'https';
 
 interface GatewayUpdateInput {
   payoutId: string;
@@ -27,12 +30,14 @@ export class PayoutsService {
   private readonly withdrawalPercentFee: number;
   private readonly pspBaseUrl: string;
   private readonly pspToken?: string;
+  private pspHttpsAgent?: https.Agent;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly queues: QueuesService,
     private readonly redisLock: RedisLockService,
     private readonly configService: ConfigService,
+    private readonly connectService: ConnectService,
   ) {
     const min = this.configService.get<string>('MIN_WITHDRAWAL_AMOUNT', '10');
     this.minWithdrawal = new Prisma.Decimal(min);
@@ -48,11 +53,159 @@ export class PayoutsService {
     this.withdrawalPercentFee = parseFloat(this.configService.get<string>('WITHDRAWAL_PERCENT_FEE', '0')) || 0;
     this.pspBaseUrl = this.configService.get<string>('PAGSEGURO_API_BASE_URL', 'https://sandbox.api.pagseguro.com');
     this.pspToken = this.configService.get<string>('PAGSEGURO_API_TOKEN') || undefined;
+
+    // Optional mTLS for production transfers
+    try {
+      const certPath = this.configService.get<string>('PAGSEGURO_MTLS_CERT_PATH');
+      const keyPath = this.configService.get<string>('PAGSEGURO_MTLS_KEY_PATH');
+      const caPath = this.configService.get<string>('PAGSEGURO_MTLS_CA_PATH');
+      if (certPath && keyPath && fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+        const cert = fs.readFileSync(certPath);
+        const key = fs.readFileSync(keyPath);
+        const ca = caPath && fs.existsSync(caPath) ? fs.readFileSync(caPath) : undefined;
+        this.pspHttpsAgent = new https.Agent({ cert, key, ca, rejectUnauthorized: true });
+        this.logger.log('PayoutsService: mTLS habilitado para cliente HTTP do PSP.');
+      }
+    } catch (err) {
+      this.logger.warn(`PayoutsService: falha ao iniciar mTLS agent: ${(err as any)?.message}`);
+    }
   }
 
   async getBalance(userId: string): Promise<{ available: number }> {
     const available = await this.computeAvailableBalance(userId);
     return { available: Number(available.toFixed(2)) };
+  }
+
+  // Lista saques para admin com filtros (status/email/userId/from/to) e ordenação
+  async listAdminWithdrawals(
+    status?: string,
+    email?: string,
+    userId?: string,
+    from?: string,
+    to?: string,
+    sortBy?: string,
+    sortDir?: 'asc' | 'desc',
+  ) {
+    const where: Prisma.PayoutWhereInput = {};
+    if (status) (where as any).status = status as any; else (where as any).status = PayoutStatus.PENDING;
+    if (userId) (where as any).userId = userId;
+    if (email && email.trim()) (where as any).user = { email: { contains: email.trim(), mode: 'insensitive' } } as any;
+
+    // Filtro por intervalo de datas em requestedAt
+    const dateFilter: any = {};
+    if (from) {
+      const d = new Date(from);
+      if (!isNaN(d.getTime())) dateFilter.gte = d;
+    }
+    if (to) {
+      const d = new Date(to);
+      if (!isNaN(d.getTime())) dateFilter.lte = d;
+    }
+    if (Object.keys(dateFilter).length > 0) (where as any).requestedAt = dateFilter as Prisma.DateTimeFilter;
+
+    // Ordenação segura
+    const allowedSorts = new Set(['requestedAt', 'amount', 'status']);
+    const field = allowedSorts.has(String(sortBy || '')) ? (sortBy as 'requestedAt' | 'amount' | 'status') : 'requestedAt';
+    const dir: 'asc' | 'desc' = sortDir === 'asc' ? 'asc' : 'desc';
+
+    const items = await this.prisma.payout.findMany({
+      where,
+      orderBy: { [field]: dir } as any,
+      include: { user: true },
+    });
+    return items.map((p) => ({
+      id: p.id,
+      userId: p.userId,
+      userEmail: (p as any).user?.email ?? undefined,
+      amount: Number(p.amount),
+      status: p.status,
+      requestedAt: (p.requestedAt as any as Date).toISOString(),
+      processedAt: p.processedAt ? (p.processedAt as any as Date).toISOString() : null,
+      gatewayTxnId: p.gatewayTxnId ?? null,
+    }));
+  }
+
+  // Confirma manualmente um saque (admin)
+  async adminConfirmWithdrawal(
+    payoutId: string,
+    input?: { gatewayTxnId?: string; note?: string; confirmedByUserId?: string },
+  ): Promise<{ ok: true; payoutId: string }> {
+    const payout = await this.prisma.payout.findUnique({ where: { id: payoutId } });
+    if (!payout) throw new NotFoundException(`Payout ${payoutId} not found.`);
+    if (payout.status === PayoutStatus.PAID) return { ok: true, payoutId };
+    const gwId = input?.gatewayTxnId || payout.gatewayTxnId || `manual_${Date.now()}_${payout.id}`;
+    await this.applyGatewayUpdate({ payoutId, status: PayoutStatus.PAID, gatewayTxnId: gwId });
+    if (input?.note || input?.confirmedByUserId) {
+      // Persistir observação como notification simples (não há campo específico no schema)
+      try {
+        await this.prisma.notification.create({
+          data: {
+            userId: payout.userId,
+            type: 'WITHDRAWAL_PAID',
+            title: 'Saque confirmado',
+            message: input?.note
+              ? `Saque confirmado manualmente. Nota: ${input.note}`
+              : 'Saque confirmado manualmente.',
+            targetUrl: '/app/(provider)/earnings',
+          },
+        });
+      } catch {}
+    }
+    return { ok: true, payoutId };
+  }
+
+  async adminFailWithdrawal(
+    payoutId: string,
+    input?: { gatewayTxnId?: string; note?: string; confirmedByUserId?: string },
+  ): Promise<{ ok: true; payoutId: string }> {
+    const payout = await this.prisma.payout.findUnique({ where: { id: payoutId } });
+    if (!payout) throw new NotFoundException(`Payout ${payoutId} not found.`);
+    if (payout.status === PayoutStatus.PAID) {
+      throw new BadRequestException('Cannot mark a PAID payout as FAILED.');
+    }
+    const gwId = input?.gatewayTxnId || payout.gatewayTxnId || `manual_${Date.now()}_${payout.id}`;
+    await this.applyGatewayUpdate({ payoutId, status: PayoutStatus.FAILED, gatewayTxnId: gwId });
+    if (input?.note) {
+      try {
+        await this.prisma.notification.create({
+          data: {
+            userId: payout.userId,
+            type: 'WITHDRAWAL_FAILED',
+            title: 'Saque falhou',
+            message: `Saque marcado como FAILED. Nota: ${input.note}`,
+            targetUrl: '/app/(provider)/earnings',
+          },
+        });
+      } catch {}
+    }
+    return { ok: true, payoutId };
+  }
+
+  async adminCancelWithdrawal(
+    payoutId: string,
+    input?: { gatewayTxnId?: string; note?: string; confirmedByUserId?: string },
+  ): Promise<{ ok: true; payoutId: string }> {
+    const payout = await this.prisma.payout.findUnique({ where: { id: payoutId } });
+    if (!payout) throw new NotFoundException(`Payout ${payoutId} not found.`);
+    if (payout.status === PayoutStatus.PAID) {
+      throw new BadRequestException('Cannot cancel a PAID payout.');
+    }
+    const gwId = input?.gatewayTxnId || payout.gatewayTxnId || `manual_${Date.now()}_${payout.id}`;
+    await this.applyGatewayUpdate({ payoutId, status: PayoutStatus.CANCELED, gatewayTxnId: gwId });
+    if (input?.note) {
+      try {
+        await this.prisma.notification.create({
+          data: {
+            userId: payout.userId,
+            type: 'WITHDRAWAL_FAILED',
+            title: 'Saque cancelado',
+            message: `Saque marcado como CANCELADO. Nota: ${input.note}`,
+            targetUrl: '/app/(provider)/earnings',
+          },
+        });
+      } catch {}
+    }
+    return { ok: true, payoutId };
   }
 
   async requestWithdrawal(userId: string, dto: RequestWithdrawalDto, idempotencyKey?: string) {
@@ -437,14 +590,14 @@ export class PayoutsService {
       callback_url: `${this.configService.get<string>('API_BASE_URL') || ''}/payouts/webhook/gateway`,
     };
     const headers: any = {
-      Authorization: `Bearer ${this.pspToken}`,
+      Authorization: `Bearer ${this.pspToken || await this.connectService.getAccessToken()}`,
       'Content-Type': 'application/json',
     };
     if (idempotencyKey) headers['X-Idempotency-Key'] = idempotencyKey;
 
     const url = `${this.pspBaseUrl.replace(/\/$/, '')}/payouts`;
     try {
-      const res = await axios.post(url, payload, { headers, timeout: 10000 });
+      const res = await axios.post(url, payload, { headers, timeout: 10000, httpsAgent: this.pspHttpsAgent });
       const txnId = res.data?.id || res.data?.transaction_id || `gw_${payoutId}`;
       return String(txnId);
     } catch (e: any) {
