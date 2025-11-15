@@ -20,14 +20,14 @@ number: string;
 neighborhood: string;
 city: string;
 state: string;
-latitude?: Prisma.Decimal | number;
-longitude?: Prisma.Decimal | number;
+latitude?: number;
+longitude?: number;
 complement?: string; // Adicionado para ser consistente com o modelo
 }) {
 const dataToCreate = {
 ...addressData,
-latitude: addressData.latitude ? new Prisma.Decimal(addressData.latitude) : undefined,
-longitude: addressData.longitude ? new Prisma.Decimal(addressData.longitude) : undefined,
+latitude: addressData.latitude,
+longitude: addressData.longitude,
 };
 const existingAddress = await prisma.address.findFirst({
 where: {
