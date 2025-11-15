@@ -58,7 +58,6 @@ export default function HorizontalMiniGrid() {
       Animated.spring(scale, {
         toValue: 0.92,
         useNativeDriver: true,
-        speed: 40,
         friction: 3, // Ajuste para mais "mola"
         tension: 80, // Ajuste para um retorno mais rÃ¡pido
       }).start();
@@ -116,14 +115,14 @@ export default function HorizontalMiniGrid() {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 10,
+    marginTop: 7,
     marginBottom: 2,
     paddingHorizontal: 5,
   },
   cardContainer: {
     alignItems: "center",
     marginRight: 20, // EspaÃ§amento entre os cards
-    marginTop: -4,
+    marginTop: 0,
   },
   cardInner: {
     width: 58, // Tamanho do fundo circular
