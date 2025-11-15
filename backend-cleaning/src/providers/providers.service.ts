@@ -91,7 +91,7 @@ export type ProviderWithCalculatedRating = {
   phone: string | null;
   bio: string | null;
   verificationStatus?: VerificationStatus; // NOVO: Opcional para selo
-  address: (Address & { latitude?: Decimal; longitude?: Decimal; }) | null;
+  address: Address | null;
   providerServices: ProviderServiceForFrontend[];
   averageRating: number;
   reviewCount: number;
@@ -225,11 +225,7 @@ export class ProvidersService {
       phone: provider.phone || null,
       bio: provider.bio || null,
       verificationStatus: provider.verificationStatus, // NOVO: Incluído para selo
-      address: provider.address ? {
-        ...provider.address,
-        latitude: provider.address.latitude || null,
-        longitude: provider.address.longitude || null,
-      } : null,
+        address: provider.address ?? null,
       providerServices: provider.providerServices.map(ps => ({
         id: ps.id,
         providerId: ps.providerId,
@@ -821,8 +817,8 @@ export class ProvidersService {
               state: rp.state,
               clientId: null,
               providerId: rp.providerId,
-              latitude: new Decimal(rp.latitude_val || 0),
-              longitude: new Decimal(rp.longitude_val || 0),
+              latitude: rp.latitude_val || null,
+              longitude: rp.longitude_val || null,
               location: null, // Não incluído na query raw
             } as Address) : null,
             providerServices: rp.providerServicesAgg ? rp.providerServicesAgg.map((ps: any) => ({
