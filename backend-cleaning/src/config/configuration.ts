@@ -105,4 +105,13 @@ export default () => ({
     apiToken: process.env.PAGSEGURO_API_TOKEN,
     apiBaseUrl: stripTrailingSlash(process.env.PAGSEGURO_API_BASE_URL),
   },
+
+  // 🔥 ADIÇÃO NECESSÁRIA PARA O WEBHOOK FUNCIONAR
+  pix: {
+    webhookSecret: process.env.PIX_WEBHOOK_SECRET,
+  },
+
+  psp: {
+    webhookSecret: process.env.PSP_WEBHOOK_SECRET,
+  },
 });
