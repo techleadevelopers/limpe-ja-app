@@ -201,8 +201,8 @@ function DetailsCard({ booking, detailsCardAnim, detailsFloatAnim, rCard, rDetai
         <View style={{ flex: 1 }}>
           <Text style={[styles.detailValueAddress, rDetails]}>
             {sanitizeText(`${booking.address.street}, ${booking.address.number}${booking.address.complement ? `, ${booking.address.complement}` : ''}`)}
-            {sanitizeText(`\n${booking.address.neighborhood}, ${booking.address.city} - ${booking.address.state}`)}
-            {sanitizeText(`\nCEP: ${booking.address.cep}`)}
+            {sanitizeText(`${booking.address.neighborhood}, ${booking.address.city} - ${booking.address.state}`)}
+            {sanitizeText(`CEP: ${booking.address.cep}`)}
           </Text>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
             <TouchableOpacity onPress={handleCopyAddress} style={styles.copyBtn}>
