@@ -1,4 +1,4 @@
-// src/payments/payments.controller.ts
+﻿// src/payments/payments.controller.ts
 import { Controller, Get, Post, Body, UseGuards, Req, Param, HttpCode, HttpStatus, Logger, InternalServerErrorException, Headers } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
@@ -10,7 +10,7 @@ import { Request } from 'express';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { UserRole } from '@prisma/client';
 
-// Interface para o payload do usuário injetado no req.user pelo JwtStrategy
+// Interface para o payload do usuÃ¡rio injetado no req.user pelo JwtStrategy
 interface RequestUserPayload {
   userId: string;
   email: string;
@@ -27,47 +27,46 @@ export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   /**
-   * Endpoint para criar uma nova cobrança PIX.
-   * Requer autenticação de cliente.
+   * Endpoint para criar uma nova cobranÃ§a PIX.
+   * Requer autenticaÃ§Ã£o de cliente.
    */
   @Post('pix-charge')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Cria uma nova cobrança PIX para um serviço ou provedor.',
-    description: 'Este endpoint permite que um cliente gere uma cobrança PIX para efetuar o pagamento.',
+    summary: 'Cria uma nova cobranÃ§a PIX para um serviÃ§o ou provedor.',
+    description: 'Este endpoint permite que um cliente gere uma cobranÃ§a PIX para efetuar o pagamento.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Cobrança PIX criada com sucesso.',
+    description: 'CobranÃ§a PIX criada com sucesso.',
     type: PixChargeResponseDto,
   })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados inválidos ou provedor não especificado.' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Não autorizado.' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Provedor ou agendamento não encontrado.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados invÃ¡lidos ou provedor nÃ£o especificado.' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'NÃ£o autorizado.' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Provedor ou agendamento nÃ£o encontrado.' })
   @ApiResponse({ status: HttpStatus.INTERNAL_SERVER_ERROR, description: 'Erro interno do servidor.' })
-  async createPixCharge(
-    @Req() req: Request,
+  async createPixCharge(, @Headers('idempotency-key') idempotencyKey?: string) req: Request,
     @Body() createPixChargeDto: CreatePixChargeDto,
   ): Promise<PixChargeResponseDto> {
     const requestUser = req.user as RequestUserPayload;
     const clientUserId = requestUser.userId;
 
-    this.logger.log(`[PaymentsController] createPixCharge: Recebida solicitação de cobrança PIX. User ID: ${clientUserId}, DTO: ${JSON.stringify(createPixChargeDto)}`);
+    this.logger.log(`[PaymentsController] createPixCharge: Recebida solicitaÃ§Ã£o de cobranÃ§a PIX. User ID: ${clientUserId}, DTO: ${JSON.stringify(createPixChargeDto)}`);
     this.logger.debug(`[PaymentsController] createPixCharge: req.user payload: ${JSON.stringify(requestUser)}`);
 
     if (!clientUserId) {
-      this.logger.error('[PaymentsController] createPixCharge: userId não encontrado no token do usuário.');
-      throw new InternalServerErrorException('ID do usuário não disponível no token de autenticação.');
+      this.logger.error('[PaymentsController] createPixCharge: userId nÃ£o encontrado no token do usuÃ¡rio.');
+      throw new InternalServerErrorException('ID do usuÃ¡rio nÃ£o disponÃ­vel no token de autenticaÃ§Ã£o.');
     }
 
-    return this.paymentsService.createPixCharge(clientUserId, createPixChargeDto);
+    return this.paymentsService.createPixCharge(clientUserId, createPixChargeDto, idempotencyKey);
   }
 
   /**
    * Endpoint para um provedor solicitar um saque via PIX.
-   * Requer autenticação de provedor.
+   * Requer autenticaÃ§Ã£o de provedor.
    */
         @Get('intent/:bookingId')
 
@@ -79,11 +78,11 @@ export class PaymentsController {
 
   @ApiResponse({ status: HttpStatus.OK, description: 'PaymentIntent encontrado com sucesso.', type: PaymentIntentResponseDto })
 
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Booking ID inválido.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Booking ID invÃ¡lido.' })
 
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Usuário não autorizado a visualizar o PaymentIntent.' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'UsuÃ¡rio nÃ£o autorizado a visualizar o PaymentIntent.' })
 
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'PaymentIntent não encontrado.' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'PaymentIntent nÃ£o encontrado.' })
 
   async getPaymentIntent(
 
@@ -95,7 +94,7 @@ export class PaymentsController {
 
     const requestUser = req.user as RequestUserPayload;
 
-    this.logger.log(`[PaymentsController] getPaymentIntent: Usuário ${requestUser.userId} consultando PaymentIntent para booking ${bookingId}.`);
+    this.logger.log(`[PaymentsController] getPaymentIntent: UsuÃ¡rio ${requestUser.userId} consultando PaymentIntent para booking ${bookingId}.`);
 
     return this.paymentsService.getPaymentIntentForBooking(bookingId, requestUser.userId);
 
@@ -108,17 +107,17 @@ export class PaymentsController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Solicita um saque de valores disponíveis para um provedor via chave PIX.',
+    summary: 'Solicita um saque de valores disponÃ­veis para um provedor via chave PIX.',
     description: 'Este endpoint permite que um provedor solicite o saque de seus ganhos para uma chave PIX.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Solicitação de saque recebida com sucesso.',
+    description: 'SolicitaÃ§Ã£o de saque recebida com sucesso.',
     type: MessageResponseDto,
   })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados inválidos (valor, chave PIX).' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Não autorizado.' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Provedor não encontrado.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados invÃ¡lidos (valor, chave PIX).' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'NÃ£o autorizado.' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Provedor nÃ£o encontrado.' })
   @ApiResponse({ status: HttpStatus.INTERNAL_SERVER_ERROR, description: 'Erro interno do servidor.' })
   async requestWithdrawal(
     @Req() req: Request,
@@ -128,33 +127,33 @@ export class PaymentsController {
     const requestUser = req.user as RequestUserPayload;
     const providerId = requestUser.providerId;
 
-    this.logger.log([PaymentsController] requestWithdrawal: Recebida solicita��o de saque. Provedor ID: );
-    this.logger.debug([PaymentsController] requestWithdrawal: req.user payload: );
+    this.logger.log(\[PaymentsController\] requestWithdrawal: Recebida solicitação de saque. Provedor ID: .);
+    this.logger.debug(\[PaymentsController\] requestWithdrawal: req.user payload: );
 
     if (!providerId) {
-      this.logger.error('[PaymentsController] requestWithdrawal: providerId nao encontrado no token do usu�rio. Payload:', requestUser);
-      throw new InternalServerErrorException('ID do provedor nao dispon�vel no token de autentica��o.');
+      this.logger.error('[PaymentsController] requestWithdrawal: providerId nao encontrado no token do usuário. Payload:', requestUser);
+      throw new InternalServerErrorException('ID do provedor nao disponível no token de autenticação.');
     }
 
     return this.paymentsService.requestWithdrawal(providerId, requestWithdrawalDto, idempotencyKey);
   }
 
   /**
-   * NOVO ENDPOINT: Endpoint para receber notificações de webhook de pagamento PIX.
+   * NOVO ENDPOINT: Endpoint para receber notificaÃ§Ãµes de webhook de pagamento PIX.
    */
   @Post('webhook/pix')
   @HttpCode(HttpStatus.OK) // Sempre retorna 200 OK para o PagSeguro
   @ApiOperation({
-    summary: 'Recebe notificações de webhook de pagamento PIX.',
-    description: 'Este endpoint é chamado pelo gateway de pagamento para notificar sobre o status de uma transação PIX.',
+    summary: 'Recebe notificaÃ§Ãµes de webhook de pagamento PIX.',
+    description: 'Este endpoint Ã© chamado pelo gateway de pagamento para notificar sobre o status de uma transaÃ§Ã£o PIX.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: 'Webhook recebido e processado com sucesso (ou erro logado internamente).' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados do webhook inválidos (se a validação básica falhar antes do service).' })
-  async handlePixWebhook(@Body() webhookData: any): Promise<MessageResponseDto> {
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados do webhook invÃ¡lidos (se a validaÃ§Ã£o bÃ¡sica falhar antes do service).' })
+  async handlePixWebhook(@Headers('x-signature') signature: string, @Headers('x-event-id') eventId: string, @Body() webhookData: any): Promise<MessageResponseDto> {
     this.logger.log('Recebendo webhook PIX...');
     this.logger.debug(`[PaymentsController] handlePixWebhook: Dados do webhook: ${JSON.stringify(webhookData)}`);
     try {
-      const result = await this.paymentsService.handlePixWebhook(webhookData);
+      const result = await this.paymentsService.handlePixWebhook(signature, eventId, webhookData);
       this.logger.log('[PaymentsController] handlePixWebhook: Webhook processado com sucesso.');
       return result;
     } catch (error) {
@@ -164,18 +163,18 @@ export class PaymentsController {
   }
 
   /**
-   * NOVO ENDPOINT: Endpoint para receber notificações de webhook de saque.
-   * Este endpoint simula o recebimento de notificações de um gateway de pagamento
-   * sobre o status de uma transferência de saque.
+   * NOVO ENDPOINT: Endpoint para receber notificaÃ§Ãµes de webhook de saque.
+   * Este endpoint simula o recebimento de notificaÃ§Ãµes de um gateway de pagamento
+   * sobre o status de uma transferÃªncia de saque.
    */
   @Post('webhook/withdrawal')
   @HttpCode(HttpStatus.OK) // Retornar 200 OK para o gateway, mesmo em caso de erro interno
   @ApiOperation({
-    summary: 'Recebe notificações de webhook de saque.',
-    description: 'Este endpoint é chamado pelo gateway de pagamento para notificar sobre o status de uma transação de saque.',
+    summary: 'Recebe notificaÃ§Ãµes de webhook de saque.',
+    description: 'Este endpoint Ã© chamado pelo gateway de pagamento para notificar sobre o status de uma transaÃ§Ã£o de saque.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: 'Webhook de saque recebido e processado com sucesso (ou erro logado internamente).' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados do webhook inválidos.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados do webhook invÃ¡lidos.' })
   async handleWithdrawalWebhook(
     @Headers('x-signature') signature: string,
     @Headers('x-event-id') eventId: string,
@@ -185,4 +184,7 @@ export class PaymentsController {
     return this.paymentsService.handleWithdrawalWebhook(signature, eventId, payload);
   }
 }
+
+
+
 
