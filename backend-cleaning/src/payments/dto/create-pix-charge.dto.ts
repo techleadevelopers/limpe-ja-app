@@ -22,7 +22,7 @@ export class CreatePixChargeDto {
     description: 'ID do agendamento relacionado a esta cobrança',
     example: 'uuid-do-agendamento',
   })
-  @IsUUID()
+  @IsString()
   @IsNotEmpty() // Tornando bookingId obrigatório, pois o serviço o usa para consulta e atualização.
   bookingId: string; // Removido '?' para indicar que é obrigatório
 
