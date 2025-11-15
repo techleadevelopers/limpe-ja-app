@@ -134,7 +134,7 @@ export default function FeedbackScreen() {
 
   if (type === 'service') {
     screenTitle = `Avaliar Serviço`;
-    contextInfo = `Serviço: ${serviceName || 'Não especificado'}${providerName ? `\nPrestado por: ${providerName}` : ''}`;
+    contextInfo = `Serviço: ${serviceName || 'Não especificado'}${providerName ? `Prestado por: ${providerName}` : ''}`;
     commentPlaceholder = "Como foi sua experiência com este serviço?";
   } else if (type === 'provider_profile') {
     screenTitle = `Avaliar Profissional`;
