@@ -10,6 +10,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailModule } from '../email/email.module';
 import { QueuesModule } from '../queues/queues.module';
 import { PayoutsModule } from '../payouts/payouts.module';
+import { ConnectModule } from '../connect/connect.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PayoutsModule } from '../payouts/payouts.module';
     EmailModule,
     forwardRef(() => QueuesModule),
     forwardRef(() => PayoutsModule),
+    ConnectModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],
