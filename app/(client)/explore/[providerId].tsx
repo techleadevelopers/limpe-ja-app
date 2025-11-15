@@ -555,11 +555,12 @@ if (isAuthenticated && user?.id) {
       ? rawPrice
       : (rawPrice as any)?.toNumber?.() ?? 0;
 
-    switch (service.pricingType) {
-      case PricingType.HOURLY:
-        priceValue = price;
-        priceUnit = t('common.per_hour_short');
-        break;
+      switch (service.pricingType) {
+        case PricingType.HOURLY:
+          priceValue = price;
+          // Exibir explicitamente "/h" ao lado do preço para serviços por hora
+          priceUnit = '/h';
+          break;
       case PricingType.BY_SIZE:
         const sqmPrice = service.pricePerSquareMeter ?? 0;
         priceValue = (typeof sqmPrice === 'number')
@@ -575,10 +576,20 @@ if (isAuthenticated && user?.id) {
         break;
     }
 
-    return typeof priceValue === 'number' && priceValue > 0 && Number.isFinite(priceValue)
-      ? `R$ ${priceValue.toFixed(2).replace('.', ',')}${priceUnit}`
-      : t('provider_details.price_not_available');
-  };
+      if (typeof priceValue !== 'number' || !Number.isFinite(priceValue) || priceValue <= 0) {
+        return t('provider_details.price_not_available');
+      }
+
+      const base = `R$ ${priceValue.toFixed(2).replace('.', ',')}`;
+
+      // Garantir que serviços por hora exibam sempre "/h" ao lado do preço,
+      // mesmo que por algum motivo o i18n não esteja sendo aplicado.
+      if (service.pricingType === PricingType.HOURLY) {
+        return `${base}/h`;
+      }
+
+      return `${base}${priceUnit}`;
+    };
 
   // CORREÇÃO: handleCopyCouponCode TOTALMENTE SILENCIOSO - SEM ALERT OU TOAST EM ERRO
   const handleCopyCouponCode = async (code: string) => {
@@ -682,11 +693,14 @@ if (isAuthenticated && user?.id) {
 
   const firstProviderService =
     provider.providerServices && provider.providerServices.length > 0
-      ? provider.providerServices[0]
+      ? (
+          provider.providerServices.find(ps => ps.pricingType === PricingType.HOURLY)
+          ?? provider.providerServices[0]
+        )
       : undefined;
 
   const firstServicePrice = firstProviderService
-    ? formatPriceDisplay(firstProviderService)
+    ? formatPriceDisplay(firstProviderService).replace('/h', '').trim()
     : t('provider_details.price_not_available');
 
   const firstProviderServiceOfferingId = firstProviderService ? firstProviderService.id : undefined;
@@ -829,15 +843,23 @@ if (isAuthenticated && user?.id) {
             </Text>
 
             <View style={styles.priceBackgroundWrapper}>
-              <LinearGradient
-                colors={['#E8F4FF', '#D9EDFF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.priceBackground}
-              >
-                <Text style={styles.priceTextWhiteCard}>{firstServicePrice}</Text>
-              </LinearGradient>
-            </View>
+                <LinearGradient
+                  colors={['#E8F4FF', '#D9EDFF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.priceBackground}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={styles.priceTextWhiteCard}>{firstServicePrice}</Text>
+                    <Ionicons
+                      name="time-outline"
+                      size={19}
+                      color={AppColors.primaryInteractive}
+                      style={{ marginLeft: 10 }}
+                    />
+                  </View>
+                </LinearGradient>
+              </View>
           </View>
 
           <View style={styles.tabContentContainer}>
