@@ -11,7 +11,7 @@ export default {
     tint: tintColorLight, // Usado como ICON_PRIMARY
     tabIconDefault: '#7A8599', // Mapeado para TEXT_MUTED
     tabIconSelected: tintColorLight,
-    primary: '#007AFF', // Mapeado para ICON_PRIMARY
+    primary: '#59a2f0ff', // Mapeado para ICON_PRIMARY
     secondary: '#28a745',   // Mapeado para SUCCESS_GREEN
     accent: '#FFC107',      // Mapeado para WARNING_YELLOW
     error: '#dc3545',       // Mapeado para DANGER_RED
