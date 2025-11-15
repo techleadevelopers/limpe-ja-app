@@ -255,3 +255,85 @@ Interação: O provedor pode adicionar novos tipos de serviço, editar detalhes 
  ├── index.tsx
  ├── layout.tsx
  └── README.md
+
+## Saque (Wallet) – Produção
+
+Esta seção documenta o fluxo de saque de valores para provedores (wallet interna), os endpoints usados pelo app e os pré‑requisitos para produção com PagBank.
+
+### Pré‑requisitos (produção)
+- PagBank Connect (OAuth) habilitado e tokens válidos por ambiente.
+- Desafio do Connect (challenge) aprovado e certificado mTLS emitido.
+- Variáveis no backend (`backend-cleaning/.env`):
+  - `PAGSEGURO_API_BASE_URL=https://api.pagseguro.com` (prod) ou sandbox
+  - `PAGSEGURO_CONNECT_CLIENT_ID`, `PAGSEGURO_CONNECT_CLIENT_SECRET`, `PAGSEGURO_CONNECT_REDIRECT_URI`
+  - `PAGSEGURO_PUBLIC_KEY_PATH` (para o challenge)
+  - `PAGSEGURO_MTLS_CERT_PATH`, `PAGSEGURO_MTLS_KEY_PATH`, `PAGSEGURO_MTLS_CA_PATH`
+  - `PSP_WEBHOOK_SECRET` (assinatura HMAC dos webhooks de payout)
+  - `PIX_WEBHOOK_SECRET` (assinatura HMAC dos webhooks de PIX)
+
+### Endpoints usados pelo app (provider)
+- Saldo disponível (wallet)
+  - GET `/payouts/balance`
+  - Resposta: `{ available: number }`
+
+- Solicitar saque
+  - POST `/payouts/withdrawals`
+  - Headers: `idempotency-key: <string único por ação>` (obrigatório)
+  - Body (JSON):
+    - `amount: number` (mín. 0.01)
+    - `pixKeyType: 'CPF' | 'CNPJ' | 'EMAIL' | 'PHONE' | 'RANDOM'`
+    - `pixKey: string`
+    - `notes?: string`
+  - Resposta: `{ message: string, payoutId: string, status: 'PENDING' | 'PROCESSING' | ... }`
+
+### Estados do saque
+- `PENDING`: solicitado; débito lançado em ledger (WITHDRAWAL/FEE).
+- `PROCESSING`: enviado ao PSP ou em fila de processamento.
+- `PAID`: liquidado; sem alteração adicional no ledger (débito já lançado na solicitação).
+- `FAILED`/`CANCELED`: rollback automático via ledger (cria RELEASE para devolver o valor ao saldo).
+
+### Painel/Admin (backoffice)
+- Listar saques
+  - GET `/admin/withdrawals?status=PENDING&email=<parte>&userId=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD&sortBy=requestedAt|amount|status&sortDir=asc|desc`
+- Confirmar como pago
+  - PATCH `/admin/withdrawals/:id/confirm`
+  - Body opcional: `{ "gatewayTxnId": "psp-123", "note": "Liquidado manualmente" }`
+- Marcar como falho / cancelar (com rollback)
+  - PATCH `/admin/withdrawals/:id/fail`  (FAILED)
+  - PATCH `/admin/withdrawals/:id/cancel` (CANCELED)
+
+### Webhooks (produção)
+- Payouts webhook (PSP → backend)
+  - POST `/payouts/webhook/gateway`
+  - Headers: `x-signature: sha256=<hmac-hex>`, `x-event-id: <id>`
+  - Assinatura: HMAC‑SHA256 do corpo JSON stringificado com `PSP_WEBHOOK_SECRET`.
+  - Efeito: atualiza `Payout.status` e cria RELEASE no ledger quando FAILED/CANCELED.
+
+### Comandos de teste (PowerShell)
+- Saldo
+```
+curl -H "Authorization: Bearer <PROVIDER_JWT>" http://localhost:3000/payouts/balance
+```
+
+- Solicitar saque (idempotência obrigatória)
+```
+$idem = "wd-$(Get-Random)";
+curl -X POST http://localhost:3000/payouts/withdrawals \
+ -H "Authorization: Bearer <PROVIDER_JWT>" \
+ -H "Content-Type: application/json" \
+ -H "idempotency-key: $idem" \
+ -d '{"amount":50.0,"pixKeyType":"CPF","pixKey":"12345678901","notes":"Saque teste"}'
+```
+
+- Admin – listar e confirmar
+```
+curl -H "Authorization: Bearer <ADMIN_JWT>" "http://localhost:3000/admin/withdrawals?status=PENDING"
+curl -X PATCH -H "Authorization: Bearer <ADMIN_JWT>" -H "Content-Type: application/json" \
+ http://localhost:3000/admin/withdrawals/<PAYOUT_ID>/confirm \
+ -d '{"gatewayTxnId":"psp-123","note":"Liquidado manualmente"}'
+```
+
+### Alinhamento do app (RN)
+- A tela de saque em `app/(provider)/withdraw/index.tsx` consome os endpoints acima e envia `idempotency-key` por requisição.
+- O serviço `services/paymentService.ts` usa `POST /payouts/withdrawals` (padronizado).
+- Em produção, saques reais exigem Connect + mTLS. Em dev, sem PSP/token, o backend pode simular PAID (somente fora de produção).
