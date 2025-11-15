@@ -269,6 +269,7 @@ const bannerData: BannerDataItem[] = [
 const WELCOME_COUPON_DISMISSED_KEY = '@LimpeJa:WelcomeCouponDismissed';
 const WELCOME_COUPON_REDEEMED_KEY = '@LimpeJa:WelcomeCouponRedeemed';
 const REFERRAL_BANNER_DISMISSED_KEY = '@LimpeJa:ReferralBannerDismissed';
+const PROTOCOL_PREMIUM_SEEN_KEY = '@LimpeJa:ProtocolPremiumSeen_v1';
 
 export default function ExploreClientScreen() {
   const router = useRouter();
@@ -321,6 +322,45 @@ export default function ExploreClientScreen() {
   const userNameDisplay = (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ?? 
                           (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ?? 
                           t('common.user');
+
+  // Exibir alerta de protocolo premium apenas na primeira vez, com delay de 3s
+  useEffect(() => {
+    let timeout: NodeJS.Timeout | null = null;
+
+    (async () => {
+      try {
+        const seen = await AsyncStorage.getItem(PROTOCOL_PREMIUM_SEEN_KEY);
+        // Sempre exibir o alerta ao abrir a home
+        if (true) {
+          timeout = setTimeout(() => {
+            Alert.alert(
+              'Produtos de limpeza disponíveis?',
+              'Os produtos de limpeza que a diarista vai usar já estão separados e acessíveis no local?',
+              [
+                {
+                  text: t('common.cancel', { defaultValue: 'Cancelar' }),
+                  style: 'cancel',
+                },
+                {
+                  text: 'Aceitar',
+                  style: 'default',
+                },
+              ],
+            );
+          }, 3000);
+          await AsyncStorage.setItem(PROTOCOL_PREMIUM_SEEN_KEY, 'true');
+        }
+      } catch {
+        // silencioso se falhar
+      }
+    })();
+
+    return () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
+  }, []);
 
       const fetchData = useCallback(async () => {
     if (!isMounted.current) {
@@ -375,7 +415,45 @@ export default function ExploreClientScreen() {
       async () => {
         try {
           const api = await getRecommendedProviders();
-          return (() => { const list = Array.isArray(api) ? api : []; const seen = new Set<string>(); const merged = [...list, ...FALLBACK_RECOMMENDATIONS].filter(p => { const id = p && typeof p.id === 'string' ? p.id : ''; if (!id || seen.has(id)) return false; seen.add(id); return true; }); const idx = merged.findIndex(p => p && typeof p.fullName === 'string' && /joana/i.test(p.fullName)); if (idx > 0) { const [j] = merged.splice(idx,1); merged.unshift(j); } return merged; })();
+          return (() => {
+            const list = Array.isArray(api) ? api : [];
+            const seen = new Set<string>();
+
+            // Merge API + fallback, removendo duplicados por id
+            const merged = [...list, ...FALLBACK_RECOMMENDATIONS].filter(p => {
+              const id = p && typeof p.id === 'string' ? p.id : '';
+              if (!id || seen.has(id)) return false;
+              seen.add(id);
+              return true;
+            });
+
+            // 1º critério: se o usuário logado for provider, colocar seu próprio card em primeiro
+            const currentProviderId =
+              (user as any)?.providerDetails?.id || (user as any)?.providerDetails?.providerId;
+            const currentProviderEmail = user?.email;
+
+            let idx = -1;
+            if (currentProviderId || currentProviderEmail) {
+              idx = merged.findIndex(p => {
+                if (!p) return false;
+                if (currentProviderId && p.id === currentProviderId) return true;
+                if (currentProviderEmail && p.email === currentProviderEmail) return true;
+                return false;
+              });
+            } else {
+              // 2º critério (fallback antigo): destacar Joana para usuários genéricos
+              idx = merged.findIndex(
+                p => p && typeof p.fullName === 'string' && /joana/i.test(p.fullName)
+              );
+            }
+
+            if (idx > 0) {
+              const [first] = merged.splice(idx, 1);
+              merged.unshift(first);
+            }
+
+            return merged;
+          })();
         } catch {
           return FALLBACK_RECOMMENDATIONS;
         }
@@ -1177,7 +1255,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 10,
-    marginTop: 1,
+    marginTop: 3,
     marginBottom: 2,
   },
   categorySectionTitle: {
@@ -1190,7 +1268,7 @@ const styles = StyleSheet.create({
   },
   carouselContainer: {
     marginTop: 10,
-    marginBottom: 10,
+    marginBottom: 20,
     alignItems: 'center',
   },
   navBarContainer: {
