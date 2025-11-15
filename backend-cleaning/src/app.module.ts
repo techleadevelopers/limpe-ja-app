@@ -1,10 +1,9 @@
-// src/app.module.ts
 import { Module, forwardRef } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { ConfigModule, ConfigService } from '@nestjs/config'; // Mantenha para injeção em forRootAsync
+import { ConfigModule, ConfigService } from '@nestjs/config'; // mantém
 import { UsersModule } from './users/users.module';
 import { ProvidersModule } from './providers/providers.module';
 import { ClientsModule } from './clients/clients.module';
@@ -35,8 +34,9 @@ import { GeocodingModule } from './geocoding/geocoding.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { SettingsModule } from './settings/settings.module';
 import { UploadModule } from './upload/upload.module';
+import { ConnectModule } from './connect/connect.module';
 
-// NOVO: Import do ConfigModule customizado (centraliza configuration e validationSchema)
+// ConfigModule customizado
 import { ConfigModule as CustomConfigModule } from './config/config.module';
 
 // Sentry
@@ -46,51 +46,49 @@ import { SentryModule } from '@sentry/nestjs/setup';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { RankingModule } from './ranking/ranking.module';
 
-// 🔹 MISSIONS
+// MISSIONS
 import { MissionsModule } from './missions/missions.module';
-// 🔹 DISPUTES
+// DISPUTES
 import { DisputeModule } from './disputes/dispute.module';
 
-// NOVO: Módulos para os novos recursos
-import { LocksModule } from './common/locks/locks.module'; // NOVO: Módulo de Lock Distribuído
-import { MetricsModule } from './metrics/metrics.module'; // NOVO: Módulo de Métricas
-import { SupportModule } from './support/support.module'; // NOVO: Módulo de Suporte
+// NOVOS recursos
+import { LocksModule } from './common/locks/locks.module';
+import { MetricsModule } from './metrics/metrics.module';
+import { SupportModule } from './support/support.module';
 
-// NOVO: Import do AdminModule (ajuste o path se necessário)
+// Admin
 import { AdminModule } from './admin/admin.module';
 
-// Import do QueuesModule SEM forwardRef no import (forwardRef é de common)
+// Queues
 import { QueuesModule } from './queues/queues.module';
 
 @Module({
   imports: [
-    // NOVO: Use o ConfigModule customizado (substitui o forRoot direto)
+    // 🔥 CORREÇÃO DEFINITIVA: carrega o .env aqui
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+
+    // mantém o módulo customizado
     CustomConfigModule,
 
-    // ThrottlerModule ajustado para usar as configs de configuration.ts
     ThrottlerModule.forRootAsync({
       imports: [CustomConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         throttlers: [{
-          ttl: config.get<number>('throttle.ttl', 60) * 1000, // Ajustado: throttle.ttl (de configuration.ts)
-          limit: config.get<number>('throttle.limit', 10),     // Ajustado: throttle.limit (de configuration.ts)
+          ttl: config.get<number>('throttle.ttl', 60) * 1000,
+          limit: config.get<number>('throttle.limit', 10),
         }],
       }),
     }),
 
-    // FIX DEFINITIVO Sentry: Use forRoot() SEM ARGUMENTOS (resolve "propriedade não existe" e "0 args esperados")
-    // Sentry auto-detecta DSN de SENTRY_DSN no .env (validado pelo CustomConfigModule)
-    // Se precisar de configs extras, adicione manualmente no main.ts ou atualize pacote
     SentryModule.forRoot(),
 
-    // REMOVIDO: BullModule duplicado – QueuesModule já configura forRootAsync com redis.url de config
-
-    // Todos os outros módulos permanecem iguais (com forwardRef onde necessário para circular deps)
     PrismaModule,
     AuthModule,
     UsersModule,
-    forwardRef(() => ProvidersModule), // ForwardRef para Providers se houver circular com Queues/Verification
+    forwardRef(() => ProvidersModule),
     ClientsModule,
     ServicesModule,
     ProviderServicesModule,
@@ -106,7 +104,7 @@ import { QueuesModule } from './queues/queues.module';
     DashboardModule,
     EarningsModule,
     FaqsModule,
-    forwardRef(() => QueuesModule), // forwardRef direto de common
+    forwardRef(() => QueuesModule),
     CacheModule,
     ReferralsModule,
     SubscriptionsModule,
@@ -119,15 +117,14 @@ import { QueuesModule } from './queues/queues.module';
     RankingModule,
     MissionsModule,
     DisputeModule,
-    // NOVO: Inclusão do AdminModule
     AdminModule,
-    // NOVO: Inclusão dos novos módulos
     LocksModule,
     MetricsModule,
     SupportModule,
     AnalyticsModule,
     SettingsModule,
     UploadModule,
+    ConnectModule,
   ],
   controllers: [AppController],
   providers: [AppService],
