@@ -66,13 +66,13 @@ const SecaoContainer = <T extends { id: string | number }>({
 const styles = StyleSheet.create({
   container: {
     marginTop: 0,
-    marginBottom: 10,
+    marginBottom: 18,
     backgroundColor: 'transparent',
   },
   cardsScrollContainer: {
     paddingHorizontal: 15,
     paddingBottom: 10,
-    marginTop: -3,
+    marginTop: -1,
     paddingRight: 30, // dá espaço para o último card não encostar no fade
     paddingLeft: 30,  // dá espaço para o primeiro card não encostar no fade
   },
