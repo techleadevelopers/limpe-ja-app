@@ -537,7 +537,7 @@ export default function MyBookingsScreen() {
   };
 
   return (
-    <ScreenContainer style={[styles.container, { backgroundColor: theme.background, paddingTop: Platform.OS === 'ios' ? insets.top : 0, paddingBottom: insets.bottom + 92 }]}>
+    <ScreenContainer style={[styles.container, { backgroundColor: theme.background, paddingTop: 0, paddingBottom: 92 }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header temático (alinha com ScheduleHeader: vidro leve + cantos arredondados) */}
