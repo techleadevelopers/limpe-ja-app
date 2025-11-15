@@ -158,10 +158,31 @@ export class BookingsService {
           calculatedTotalPrice = providerService.price;
           break;
         case 'HOURLY':
+          // Fallback robusto: se o app não enviar requestedDurationMinutes,
+          // usar a durationMinutes configurada no ProviderService quando positiva.
+          if (!createBookingDto.requestedDurationMinutes || createBookingDto.requestedDurationMinutes <= 0) {
+            const serviceDefaultDuration = (providerService as any).durationMinutes as number | null | undefined;
+            if (serviceDefaultDuration && serviceDefaultDuration > 0) {
+              this.logger.log(
+                `[BookingsService] create - Aplicando fallback de durationMinutes do serviço HOURLY: ${serviceDefaultDuration} minutos.`,
+              );
+              createBookingDto.requestedDurationMinutes = serviceDefaultDuration;
+            }
+          }
+
           if (!createBookingDto.requestedDurationMinutes) {
             throw new BadRequestException(await this.i18n.translate('booking.badRequest.durationRequired', locale));
           }
-          calculatedTotalPrice = providerService.price.mul(new Prisma.Decimal(createBookingDto.requestedDurationMinutes).div(new Prisma.Decimal(60)));
+
+          // Para HOURLY, usar pricePerHour se configurado; caso contrário, cair para price
+          const hourlyBase = providerService.pricePerHour ?? providerService.price;
+          if (!hourlyBase) {
+            throw new BadRequestException('Preço por hora não configurado para este serviço.');
+          }
+
+          calculatedTotalPrice = hourlyBase.mul(
+            new Prisma.Decimal(createBookingDto.requestedDurationMinutes).div(new Prisma.Decimal(60)),
+          );
           break;
         case 'BY_SIZE':
           if (createBookingDto.requestedSquareMeters && providerService.pricePerSquareMeter) {
@@ -227,8 +248,8 @@ export class BookingsService {
             neighborhood: createBookingDto.address.neighborhood,
             city: createBookingDto.address.city,
             state: createBookingDto.address.state,
-            latitude: new Prisma.Decimal(createBookingDto.address.latitude),
-            longitude: new Prisma.Decimal(createBookingDto.address.longitude),
+            latitude: Number(createBookingDto.address.latitude),
+            longitude: Number(createBookingDto.address.longitude),
           },
         });
         this.logger.log(`[BookingsService] create - Novo endereço criado com ID: ${newAddress.id}`);
@@ -881,7 +902,7 @@ export class BookingsService {
         paymentIntent: true,
       },
     });
-    this.logger.log(`[BookingsService] findUpcomingBookings: Primas encontradas ${upcomingPrismaBookings.length} agendamentos futuros antes da filtragem de hora.`);
+    this.logger.log(`[BookingsService] findUpcomingBookings: Bookings encontradas via Prisma ${upcomingPrismaBookings.length} agendamentos futuros antes da filtragem de hora.`);
 
     const filteredBookings = upcomingPrismaBookings.filter(booking => {
       const bookingDateTime = new Date(booking.scheduledDate);
@@ -1121,6 +1142,3 @@ export class BookingsService {
     return updatedBooking;
   }
 }
-
-
-
