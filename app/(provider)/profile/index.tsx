@@ -10,7 +10,8 @@ import {
   Platform,
   useColorScheme,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';\nimport { PROVIDER_ROUTES } from '../../../constants/routes';
+import { Stack, useRouter } from 'expo-router';
+import { PROVIDER_ROUTES } from '../../../constants/routes';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -122,7 +123,7 @@ export default function ProviderProfileScreen() {
       await logout();
       router.replace('/welcome' as any);
     } catch (error) {
-      Alert.alert('Erro ao Sair', 'NÃ£o foi possÃ­vel sair da conta. Tente novamente.');
+      Alert.alert('Erro ao Sair', 'Não foi possível sair da conta. Tente novamente.');
     }
   };
 
@@ -158,23 +159,23 @@ export default function ProviderProfileScreen() {
 
         <View style={styles.section}>
           <ListRow label="Editar Perfil" ionIcon="person-outline" onPress={() => router.push(PROVIDER_ROUTES.PROFILE as any)} />
-          <ListRow label="VerificaÃ§Ã£o de Conta" ionIcon="id-card-outline" onPress={() => router.push(PROVIDER_ROUTES.VERIFICATION as any)} />
-          <ListRow label="Editar/Adicionar ServiÃ§os" ionIcon="briefcase-outline" onPress={() => router.push(PROVIDER_ROUTES.EDIT_SERVICES as any)} />
+          <ListRow label="Verificação de Conta" ionIcon="id-card-outline" onPress={() => router.push(PROVIDER_ROUTES.VERIFICATION as any)} />
+          <ListRow label="Editar/Adicionar Serviços" ionIcon="briefcase-outline" onPress={() => router.push(PROVIDER_ROUTES.EDIT_SERVICES as any)} />
           <ListRow label="Gerenciar Disponibilidade" ionIcon="time-outline" onPress={() => router.push(PROVIDER_ROUTES.MANAGE_AVAILABILITY as any)} />
         </View>
 
         <View style={styles.section}>
-          <ListRow label="Minhas AvaliaÃ§Ãµes" ionIcon="star-outline" onPress={() => router.push(PROVIDER_ROUTES.REVIEWS as any)} />
+          <ListRow label="Minhas Avaliações" ionIcon="star-outline" onPress={() => router.push(PROVIDER_ROUTES.REVIEWS as any)} />
           <ListRow label="Meus Ganhos" ionIcon="wallet-outline" onPress={() => router.push(PROVIDER_ROUTES.EARNINGS as any)} />
-          <ListRow label="RelatÃ³rios e MÃ©tricas" ionIcon="trending-up-outline" onPress={() => router.push('/(provider)/profile/metrics' as any)} />
+          <ListRow label="Relatórios e Métricas" ionIcon="trending-up-outline" onPress={() => router.push('/(provider)/profile/metrics' as any)} />
         </View>
 
         <View style={styles.section}>
-          <ListRow label="NotificaÃ§Ãµes" ionIcon="notifications-outline" onPress={() => router.push('/(common)/settings/notifications' as any)} />
-          <ListRow label="Dados BancÃ¡rios" ionIcon="card-outline" onPress={() => router.push('/(provider)/profile/bank-details' as any)} />
+          <ListRow label="Notificações" ionIcon="notifications-outline" onPress={() => router.push('/(common)/settings/notifications' as any)} />
+          <ListRow label="Dados Bancários" ionIcon="card-outline" onPress={() => router.push('/(provider)/profile/bank-details' as any)} />
           <ListRow label="Ajuda e Suporte" ionIcon="help-circle-outline" onPress={() => router.push('/(common)/help' as any)} />
-          <ListRow label="Termos de ServiÃ§o" ionIcon="document-text-outline" onPress={() => router.push('/(common)/termos' as any)} />
-          <ListRow label="PolÃ­tica de Privacidade" ionIcon="shield-checkmark-outline" onPress={() => router.push('/(common)/privacidade' as any)} />
+          <ListRow label="Termos de Serviço" ionIcon="document-text-outline" onPress={() => router.push('/(common)/termos' as any)} />
+          <ListRow label="Política de Privacidade" ionIcon="shield-checkmark-outline" onPress={() => router.push('/(common)/privacidade' as any)} />
           <ListRow label="Sair" ionIcon="log-out-outline" destructive onPress={handleLogout} />
         </View>
       </ScrollView>
@@ -244,5 +245,3 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: '#FF2D55', paddingHorizontal: 8, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   badgeText: { color: '#fff', fontWeight: '700', fontSize: 12 },
 });
-
-
