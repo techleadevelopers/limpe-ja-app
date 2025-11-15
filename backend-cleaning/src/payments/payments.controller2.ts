@@ -123,11 +123,13 @@ export class PaymentsController {
     @Headers('x-signature') signature: string,
     @Headers('x-event-id') eventId: string,
     @Body() webhookData: any,
+    @Req() req: Request,
   ): Promise<MessageResponseDto> {
     this.logger.log('[PaymentsController] handlePixWebhook: recebido.');
     this.logger.debug(`[PaymentsController] handlePixWebhook: payload=${JSON.stringify(webhookData)}`);
     try {
-      return await this.paymentsService.handlePixWebhook(signature, eventId, webhookData);
+      const rawBody: Buffer | undefined = (req as any)?.rawBody;
+      return await this.paymentsService.handlePixWebhook(signature, eventId, webhookData, rawBody);
     } catch (error: any) {
       this.logger.error('Erro ao processar webhook PIX no controller:', error?.message, error?.stack);
       return { message: 'Erro interno ao processar webhook PIX, mas o erro foi logado.' };
@@ -182,6 +184,17 @@ export class PaymentsController {
     if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
     const status = req.query?.status as string | undefined;
     return this.paymentsService.listWithdrawals(status);
+  }
+
+  // ADMIN: Registrar webhooks (PIX e Payouts)
+  @Post('webhooks/register')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Registra webhooks de PIX e Payouts no PagBank (admin)' })
+  async registerWebhooks(@Req() req: any, @Body() body: { pixUrl?: string; payoutsUrl?: string }) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
+    return this.paymentsService.registerAllWebhooks(body?.pixUrl, body?.payoutsUrl);
   }
 
   // ADMIN: Aprovar saque
