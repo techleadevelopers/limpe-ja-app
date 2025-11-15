@@ -26,7 +26,7 @@
       "distribution": "internal",
       "android": { "image": "latest", "buildType": "apk" },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://limpeja-backend-production.up.railway.app",
+        "EXPO_PUBLIC_API_BASE_URL": "https://limpeja-backend-production-edfa.up.railway.app",
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBt5-IB2CI9fKOeWcGFEM4ZJ57ix-cUHpg",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "semiotic-anvil-461613-c0.firebaseapp.com",
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "semiotic-anvil-461613-c0",
