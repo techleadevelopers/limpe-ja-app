@@ -245,12 +245,13 @@ priceDropText: {
     
   },
   sectionTitle: {
-    fontSize: 20,
-    left: 4,
-    paddingHorizontal: 6,
-    fontWeight: '700',
-    color: AppColors.textBody, // Usando AppColors
-    marginBottom: 10,
+      fontSize: 20,
+      left: 4,
+      paddingHorizontal: 6,
+      fontWeight: '700',
+      color: AppColors.textBody, // Usando AppColors
+      marginTop: 20,
+      marginBottom: 10,
     marginTop: 25,
   },
   descriptionText: {
