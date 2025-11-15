@@ -36,7 +36,8 @@ export const requestWithdrawal = async (data: RequestWithdrawalDto): Promise<Mes
   // Gera uma chave idempotente leve e única por dispositivo/ação
   const idemKey = `wd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   try {
-    const response = await api.post<MessageResponseDto>('/payments/withdrawal', data, {
+    // Padroniza no serviço de payouts (o backend também mantém compatibilidade em /payments/withdrawal)
+    const response = await api.post<MessageResponseDto>('/payouts/withdrawals', data, {
       headers: { 'idempotency-key': idemKey },
     });
     return response.data;
