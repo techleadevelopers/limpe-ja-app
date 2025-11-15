@@ -5,6 +5,19 @@ import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { GetAvailabilityDto } from './dto/get-availability.dto';
 import { Availability, BookingStatus } from '@prisma/client';
 
+// Garante que os horários configurados sejam sempre "cheios" (ex.: 09:00, 10:00)
+const assertFullHour = (label: string, time: string) => {
+  const [hStr, mStr] = time.split(':');
+  const h = Number(hStr);
+  const m = Number(mStr);
+
+  if (!Number.isInteger(h) || !Number.isInteger(m) || m !== 0) {
+    throw new BadRequestException(
+      `${label} deve ser um horário redondo (ex: 09:00, 10:00, 14:00).`,
+    );
+  }
+};
+
 @Injectable()
 export class AvailabilityService {
   constructor(private prisma: PrismaService) {}
@@ -88,6 +101,13 @@ export class AvailabilityService {
     for (const dto of updateAvailabilityDtos) {
       const { id, dayOfWeek, startTime, endTime, isAvailable } = dto;
 
+      if (startTime) {
+        assertFullHour('startTime', startTime);
+      }
+      if (endTime) {
+        assertFullHour('endTime', endTime);
+      }
+
       if (id) {
         if (isAvailable === false) {
           try {
@@ -137,6 +157,9 @@ export class AvailabilityService {
     }
 
     const { dayOfWeek, startTime, endTime } = createDto;
+
+    assertFullHour('startTime', startTime);
+    assertFullHour('endTime', endTime);
 
     const existingSlot = await this.prisma.availability.findFirst({
       where: { providerId, dayOfWeek, startTime, endTime },
