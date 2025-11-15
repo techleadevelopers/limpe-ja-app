@@ -237,19 +237,19 @@ export class ComplianceService {
           cpf: null,
           dateOfBirth: null,
           // Anonimizar endereço ou remover
-          address: {
-            update: {
-              street: 'Anonimizado',
-              number: '0',
-              complement: null,
-              neighborhood: 'Anonimizado',
-              city: 'Anonimizado',
-              state: 'AN',
-              cep: '00000-000',
-              latitude: new Prisma.Decimal(0),
-              longitude: new Prisma.Decimal(0),
-            }
-          }
+              address: {
+             update: {
+               street: 'Anonimizado',
+               number: '0',
+               complement: null,
+               neighborhood: 'Anonimizado',
+               city: 'Anonimizado',
+               state: 'AN',
+               cep: '00000-000',
+               latitude: 0,
+               longitude: 0,
+             }
+           }
         }
       });
     } else if (user.role === 'PROVIDER' && user.provider) { // Verificando se user.provider existe
@@ -269,19 +269,19 @@ export class ComplianceService {
           ocrResult: Prisma.JsonNull,
           livenessResult: Prisma.JsonNull,
           rejectionReason: null,
-          address: {
-            update: {
-              street: 'Anonimizado',
-              number: '0',
-              complement: null,
-              neighborhood: 'Anonimizado',
-              city: 'Anonimizado',
-              state: 'AN',
-              cep: '00000-000',
-              latitude: new Prisma.Decimal(0),
-              longitude: new Prisma.Decimal(0),
-            }
-          }
+           address: {
+             update: {
+               street: 'Anonimizado',
+               number: '0',
+               complement: null,
+               neighborhood: 'Anonimizado',
+               city: 'Anonimizado',
+               state: 'AN',
+               cep: '00000-000',
+               latitude: 0,
+               longitude: 0,
+             }
+           }
         }
       });
     }
