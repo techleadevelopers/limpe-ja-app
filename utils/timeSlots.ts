@@ -66,8 +66,10 @@ export const generateDailySlots = (
     }
   }
 
-  // Remove duplicates and sort
-  const uniqueCandidates = Array.from(new Set(startCandidates)).sort();
+  // Remove duplicates, keep only full-hour slots (:00) and sort
+  const uniqueCandidates = Array.from(new Set(startCandidates))
+    .filter((time) => time.endsWith(':00'))
+    .sort();
 
   const now = new Date();
 
