@@ -26,8 +26,8 @@ async function upsertAddress(addressData: {
 }) {
   const dataToCreate = {
     ...addressData,
-    latitude: addressData.latitude ? new Prisma.Decimal(addressData.latitude) : undefined,
-    longitude: addressData.longitude ? new Prisma.Decimal(addressData.longitude) : undefined,
+    latitude: addressData.latitude ? Number(addressData.latitude) : undefined,
+    longitude: addressData.longitude ? Number(addressData.longitude) : undefined,
   };
   const existingAddress = await prisma.address.findFirst({
     where: {
@@ -2743,16 +2743,16 @@ export async function main() {
     where: { id: 'PANIC-001' },
     update: {
       userId: referrerUser.id,
-      latitude: new Prisma.Decimal(-23.59),
-      longitude: new Prisma.Decimal(-46.67),
+      latitude: -23.59,
+      longitude: -46.67,
       message: 'Preciso de ajuda urgente!',
       status: 'ACTIVE',
     },
     create: {
       id: 'PANIC-001',
       userId: referrerUser.id,
-      latitude: new Prisma.Decimal(-23.59),
-      longitude: new Prisma.Decimal(-46.67),
+      latitude: -23.59,
+      longitude: -46.67,
       message: 'Preciso de ajuda urgente!',
       status: 'ACTIVE',
     },
