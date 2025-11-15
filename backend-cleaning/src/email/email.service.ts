@@ -112,7 +112,7 @@ export class EmailService {
     transactionId: string,
   ): Promise<void> {
     const subject = `LimpeJá: Sua solicitação de saque de R$ ${amount} foi recebida!`;
-    const text = `Olá ${recipientName},Sua solicitação de saque de R$ ${amount} para a chave PIX ${pixKeyType}: ${pixKey} foi recebida com sucesso (ID da Transação: ${transactionId}).O valor estará disponível em breve. Você pode acompanhar o status na seção "Ganhos" do aplicativo.Atenciosamente,\nEquipe LimpeJá`;
+    const text = `Olá ${recipientName},Sua solicitação de saque de R$ ${amount} para a chave PIX ${pixKeyType}: ${pixKey} foi recebida com sucesso (ID da Transação: ${transactionId}).O valor estará disponível em breve. Você pode acompanhar o status na seção "Ganhos" do aplicativo.Atenciosamente,Equipe LimpeJá`;
     const html = `<p>Olá <strong>${recipientName}</strong>,</p>
                   <p>Sua solicitação de saque de <strong>R$ ${amount}</strong> para a chave PIX <strong>${pixKeyType}</strong>: <strong>${pixKey}</strong> foi recebida com sucesso (ID da Transação: ${transactionId}).</p>
                   <p>O valor estará disponível em breve. Você pode acompanhar o status na seção "Ganhos" do aplicativo.</p>
@@ -165,7 +165,7 @@ export class EmailService {
     reason: string,
   ): Promise<void> {
     const subject = `LimpeJá: Seu saque de R$ ${amount} falhou!`;
-    const text = `Olá ${recipientName},Lamentamos informar que seu saque de R$ ${amount} (ID da Transação: ${transactionId}) para a chave PIX ${pixKeyType}: ${pixKey} falhou.Motivo da falha: ${reason}Por favor, verifique os dados da sua chave PIX e tente novamente, ou entre em contato com nosso suporte para mais informações.Atenciosamente,\nEquipe LimpeJá`;
+    const text = `Olá ${recipientName},Lamentamos informar que seu saque de R$ ${amount} (ID da Transação: ${transactionId}) para a chave PIX ${pixKeyType}: ${pixKey} falhou.Motivo da falha: ${reason}Por favor, verifique os dados da sua chave PIX e tente novamente, ou entre em contato com nosso suporte para mais informações.Atenciosamente,Equipe LimpeJá`;
     const html = `<p>Olá <strong>${recipientName}</strong>,</p>
                   <p>Lamentamos informar que seu saque de <strong>R$ ${amount}</strong> (ID da Transação: ${transactionId}) para a chave PIX <strong>${pixKeyType}</strong>: <strong>${pixKey}</strong> falhou.</p>
                   <p><strong>Motivo da falha:</strong> ${reason}</p>
