@@ -1,6 +1,72 @@
 Documentação do Frontend LimpeJáApp
 O LimpeJáApp é uma aplicação mobile construída com React Native e Expo, projetada para conectar clientes a profissionais de limpeza e organização. Este frontend robusto e interativo gerencia todo o ciclo de vida do usuário, desde o registro e autenticação até o agendamento de serviços, comunicação e gestão de perfis.
 
+## Fluxo de Agendamento (Sequência)
+
+Aqui está um fluxograma simples do fluxo validado (login → explorar → detalhe do provedor → agendar → sucesso com PIX), refletindo a lógica atual testada.
+
+Mermaid (visual)
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as App (Cliente)
+    participant AUTH as Backend /auth
+    participant BK as Backend /bookings
+    participant PAY as Backend /payments
+    participant PSP as PSP (PagBank)
+
+    Note over C: Login
+    C->>AUTH: POST /auth/login (email, senha)
+    AUTH-->>C: 200 { accessToken, user }
+    Note over C: Navega para /(client)/explore
+
+    Note over C: Explorar / Provedor
+    C->>BK: GET /services (categorias)
+    C->>BK: GET /providers?… (busca/geolocalização)
+    C->>BK: GET /providers/:providerId (detalhes)
+
+    Note over C: Agendar Serviço
+    C->>BK: POST /bookings { providerId, providerServiceId, scheduledDate, scheduledTime, address, totalPrice, … }
+    BK-->>C: 201 { booking }
+    Note over C: Vai para /(client)/bookings/success?bookingId=…&paymentMethod=PIX
+
+    Note over C: Pagamento PIX (tela de sucesso)
+    C->>PAY: GET /payments/intent/:bookingId
+    alt Sem PaymentIntent ou expirado
+      C->>PAY: POST /payments/pix-charge { amount, description, bookingId, providerId }
+      PAY-->>C: 200 { brCode, qrCodeImage, expiresAt, … }
+    else PaymentIntent válido
+      PAY-->>C: 200 { status, qrCodeText/url, expiresAt, … }
+    end
+    Note over C: Exibe QR/BR Code e inicia polling do intent
+
+    Note over PSP: Pagamento confirmado
+    PSP->>PAY: POST /payments/webhook/pix (HMAC rawBody)
+    PAY->>BK: update booking → CONFIRMED; update intent → PAID; log transaction; notificação
+    PAY-->>PSP: 200 ok
+
+    Note over C: Poll detecta PAID
+    C->>PAY: GET /payments/intent/:bookingId
+    PAY-->>C: 200 { status: PAID }
+    Note over C: UI finalizada (ações: ver agendamentos, rebook com cupom, contato)
+```
+
+ASCII (fallback)
+- Login: App → POST /auth/login → token → navega para /(client)/explore
+- Explorar: GET /services, GET /providers, GET /providers/:id → botão Agendar
+- Agendar: POST /bookings → 201 booking → navega para success
+- Sucesso PIX:
+  - GET /payments/intent/:bookingId
+  - [se precisar] POST /payments/pix-charge (gera BR Code/QR)
+  - Usuário paga → PSP chama POST /payments/webhook/pix (HMAC raw)
+  - Backend marca Transaction=COMPLETED, PaymentIntent=PAID, Booking=CONFIRMED
+  - App (polling) vê status=PAID e conclui
+
+Notas práticas
+- Idempotência: usar header `idempotency-key` no POST /payments/pix-charge; backend também usa Redis‑lock na criação de booking para evitar duplicidade.
+- Alternativa: `POST /bookings/schedule-and-pay` (cria booking e gera PIX em uma chamada) — disponível, mas o fluxo validado usa booking → success → charge.
+- Webhook PIX: assinatura HMAC-SHA256 do corpo bruto (`PIX_WEBHOOK_SECRET`), com proteção de replay.
+
 1. Visão Geral da Arquitetura
 O frontend do LimpeJáApp segue uma arquitetura modular e baseada em componentes, utilizando as seguintes tecnologias e padrões:
 
