@@ -346,8 +346,8 @@ model Address {
   booking      Booking?  @relation("BookingAddress")
   // Geo: Mantidos ambos para compatibilidade; normalizar na aplicação para evitar divergência (ex: derivar lat/lon de location ou vice-versa)
   location     Unsupported("geometry(Point, 4326)")?
-  latitude     Decimal?  @db.Decimal(10, 8)
-  longitude    Decimal?  @db.Decimal(11, 8)
+  latitude     Float?
+  longitude    Float?
 }
 
 model Service {
