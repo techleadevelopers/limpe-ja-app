@@ -87,15 +87,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 5,
   },
   sectionTitle: {
     fontSize: 15.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
     marginTop: 20,
-    marginBottom: -6,
-
+    marginBottom: 0,
   },
   viewAllButton: {
     flexDirection: 'row',
