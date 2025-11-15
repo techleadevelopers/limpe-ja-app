@@ -16,7 +16,7 @@ import {
   AccessibilityInfo, // Importar AccessibilityInfo
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { PROVIDER_ROUTES } from '../../constants/routes';
+import { PROVIDER_ROUTES } from '../../../constants/routes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
