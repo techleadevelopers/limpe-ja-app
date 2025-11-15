@@ -1,10 +1,12 @@
-// src/payments/payments.service.ts
+﻿// src/payments/payments.service.ts
 import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException, Inject, forwardRef, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BookingStatus, Prisma, PaymentIntentStatus, TransactionType, UserRole } from '@prisma/client';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { createHmac, timingSafeEqual } from 'crypto';
 import axios from 'axios';
+import * as fs from 'fs';
+import * as https from 'https';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { QueuesService } from '../queues/queues.service';
@@ -14,12 +16,15 @@ import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 import { CouponsService } from '../coupons/coupons.service';
 import { PayoutsService } from '../payouts/payouts.service';
 
+import { ConnectService } from '../connect/connect.service';
+
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
   private pagseguroApiToken: string | undefined;
   private pagseguroApiBaseUrl: string;
   private appBaseUrl: string | undefined;
+  private pagseguroHttpsAgent?: https.Agent;
 
   // property-injection para resolver o ciclo com BookingsService
   @Inject(forwardRef(() => BookingsService))
@@ -31,20 +36,35 @@ export class PaymentsService {
     private readonly couponsService: CouponsService,
     private readonly payoutsService: PayoutsService,
     private readonly queues: QueuesService,
+    private readonly connectService: ConnectService,
   ) {
     this.pagseguroApiToken = this.configService.get<string>('PAGSEGURO_API_TOKEN') || undefined;
     this.pagseguroApiBaseUrl = this.configService.get<string>('PAGSEGURO_API_BASE_URL', 'https://sandbox.api.pagseguro.com');
-    this.appBaseUrl = this.configService.get<string>('API_BASE_URL') || undefined;
+    this.appBaseUrl = this.configService.get<string>('API_BASE_URL') || undefined;    // mTLS (opcional, exigido para PIX/Transfer em produção)
+    try {
+      const certPath = this.configService.get<string>('PAGSEGURO_MTLS_CERT_PATH');
+      const keyPath = this.configService.get<string>('PAGSEGURO_MTLS_KEY_PATH');
+      const caPath = this.configService.get<string>('PAGSEGURO_MTLS_CA_PATH');
+      if (certPath && keyPath && fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+        const cert = fs.readFileSync(certPath);
+        const key = fs.readFileSync(keyPath);
+        const ca = caPath && fs.existsSync(caPath) ? fs.readFileSync(caPath) : undefined;
+        this.pagseguroHttpsAgent = new https.Agent({ cert, key, ca, rejectUnauthorized: true });
+        this.logger.log('PaymentsService: mTLS habilitado para cliente HTTP do PagSeguro.');
+      }
+    } catch (err) {
+      this.logger.warn(`PaymentsService: falha ao iniciar mTLS agent: ${(err as any)?.message}`);
+    }
 
     if (!this.pagseguroApiToken) {
-      this.logger.warn('PAGSEGURO_API_TOKEN ausente. Integração real com PSP desativada (modo placeholder).');
+      this.logger.warn('PAGSEGURO_API_TOKEN ausente. IntegraÃ§Ã£o real com PSP desativada (modo placeholder).');
     }
     if (!this.appBaseUrl) {
-      this.logger.warn('API_BASE_URL ausente. Webhooks de PSP podem não funcionar externamente.');
+      this.logger.warn('API_BASE_URL ausente. Webhooks de PSP podem nÃ£o funcionar externamente.');
     }
   }
 
-  // Admin: listar transações com filtros básicos
+  // Admin: listar transaÃ§Ãµes com filtros bÃ¡sicos
   async listTransactions(type?: string, status?: string) {
     const where: Prisma.TransactionWhereInput = {};
     if (type) where.type = type as any;
@@ -81,6 +101,49 @@ export class PaymentsService {
     }));
   }
 
+  /**
+   * Registra webhook de PIX no PagBank (produção requer access_token + mTLS).
+   */
+  async registerPixWebhook(targetUrl?: string) {
+    const accessToken = await this.connectService.getAccessToken();
+    const url = `${this.pagseguroApiBaseUrl.replace(/\/$/, '')}/pix/v1/webhooks`;
+    const body = { url: targetUrl || `${this.configService.get<string>('API_BASE_URL') || ''}/payments/webhook/pix` };
+    const headers: any = { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` };
+    try {
+      const res = await axios.post(url, body, { headers, httpsAgent: this.pagseguroHttpsAgent, timeout: 15000 });
+      return res.data;
+    } catch (e: any) {
+      this.logger.error(`[PaymentsService] registerPixWebhook error: ${e?.response?.status} ${JSON.stringify(e?.response?.data || e.message)}`);
+      throw new InternalServerErrorException(e?.response?.data?.message || 'Falha ao registrar webhook de PIX.');
+    }
+  }
+
+  /**
+   * Registra webhook de Payouts/Transferências.
+   */
+  async registerPayoutsWebhook(targetUrl?: string) {
+    const accessToken = await this.connectService.getAccessToken();
+    const url = `${this.pagseguroApiBaseUrl.replace(/\/$/, '')}/payouts/v1/webhooks`;
+    const body = { url: targetUrl || `${this.configService.get<string>('API_BASE_URL') || ''}/payouts/webhook/gateway` };
+    const headers: any = { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` };
+    try {
+      const res = await axios.post(url, body, { headers, httpsAgent: this.pagseguroHttpsAgent, timeout: 15000 });
+      return res.data;
+    } catch (e: any) {
+      this.logger.error(`[PaymentsService] registerPayoutsWebhook error: ${e?.response?.status} ${JSON.stringify(e?.response?.data || e.message)}`);
+      throw new InternalServerErrorException(e?.response?.data?.message || 'Falha ao registrar webhook de Payouts.');
+    }
+  }
+
+  /**
+   * Registra ambos os webhooks (PIX e Payouts). Retorna payloads de criação.
+   */
+  async registerAllWebhooks(pixUrl?: string, payoutsUrl?: string) {
+    const pix = await this.registerPixWebhook(pixUrl);
+    const payouts = await this.registerPayoutsWebhook(payoutsUrl);
+    return { pix, payouts };
+  }
+
   // Admin: aprovar saque (marca como PAID)
   async approveWithdrawal(id: string) {
     const payout = await this.prisma.payout.update({ where: { id }, data: { status: 'PAID', processedAt: new Date() } });
@@ -107,12 +170,12 @@ export class PaymentsService {
     };
   }
 
-  // Admin: iniciar reembolso de uma transação (simplificado)
+  // Admin: iniciar reembolso de uma transaÃ§Ã£o (simplificado)
   async initiateRefund(transactionId: string, amount?: number) {
     const tx = await this.prisma.transaction.findUnique({ where: { id: transactionId } });
     if (!tx) throw new NotFoundException('Transaction not found');
     const refundAmount = amount != null ? new Prisma.Decimal(amount) : tx.amount;
-    // Criar transação de REFUND e marcar original como REFUNDED
+    // Criar transaÃ§Ã£o de REFUND e marcar original como REFUNDED
     await this.prisma.transaction.update({ where: { id: tx.id }, data: { status: 'REFUNDED' } });
     const refund = await this.prisma.transaction.create({
       data: {
@@ -141,15 +204,15 @@ export class PaymentsService {
     };
   }
 
-  // Cria cobrança PIX e PaymentIntent associado (placeholder caso PSP não esteja configurado)
-  async createPixCharge(clientUserId: string, dto: CreatePixChargeDto): Promise<PixChargeResponseDto> {
+  // Cria cobranÃ§a PIX e PaymentIntent associado (placeholder caso PSP nÃ£o esteja configurado)
+  async createPixCharge(clientUserId: string, dto: CreatePixChargeDto, idempotencyKey?: string): Promise<PixChargeResponseDto> {
     const { amount, description, bookingId, providerId } = dto;
 
     if (!providerId) {
-      throw new BadRequestException('providerId é obrigatório.');
+      throw new BadRequestException('providerId Ã© obrigatÃ³rio.');
     }
     if (!bookingId) {
-      throw new BadRequestException('bookingId é obrigatório.');
+      throw new BadRequestException('bookingId Ã© obrigatÃ³rio.');
     }
 
     const provider = await this.prisma.provider.findUnique({ where: { id: providerId } });
@@ -159,7 +222,7 @@ export class PaymentsService {
 
     const clientUser = await this.prisma.user.findUnique({ where: { id: clientUserId } });
     if (!clientUser?.email) {
-      throw new NotFoundException('Cliente não encontrado ou sem e-mail.');
+      throw new NotFoundException('Cliente nÃ£o encontrado ou sem e-mail.');
     }
 
     const booking = await this.prisma.booking.findUnique({ where: { id: bookingId } });
@@ -167,7 +230,7 @@ export class PaymentsService {
       throw new NotFoundException('Booking not found.');
     }
 
-    // 1) Cria transação local
+    // 1) Cria transaÃ§Ã£o local
     const transaction = await this.prisma.transaction.create({
       data: {
         provider: { connect: { id: providerId } },
@@ -179,18 +242,19 @@ export class PaymentsService {
       },
     });
 
-    // 2) Simula externalRef/gateway id (ou usa PSP real se disponível)
+    // 2) Simula externalRef/gateway id (ou usa PSP real se disponÃ­vel)
     let externalRef = `local_pix_${transaction.id}`;
     let qrCodeText = `BR_CODE_${transaction.id}`;
     let qrCodeUrl = `${this.appBaseUrl || 'https://example.com'}/qrcode/${transaction.id}.png`;
     const expiresAt = new Date(Date.now() + 24 * 3600 * 1000);
-
-    // Integração PagSeguro (se token presente)
-    if (this.pagseguroApiToken) {
-      try {
+    // Integração PagSeguro (env token em sandbox; Connect token em produção)
+    try {
+      const accessToken = this.pagseguroApiToken || (await this.connectService.getAccessToken());
+      if (accessToken) {
         const headers: any = {
-          Authorization: `Bearer ${this.pagseguroApiToken}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
+          'X-Idempotency-Key': (idempotencyKey || transaction.id),
         };
         const url = `${this.pagseguroApiBaseUrl.replace(/\/$/, '')}/pix/charges`;
         const payload: any = {
@@ -198,13 +262,13 @@ export class PaymentsService {
           description: description || `Booking ${bookingId}`,
           reference_id: transaction.id,
         };
-        const res = await axios.post(url, payload, { headers, timeout: 10000 });
+        const res = await axios.post(url, payload, { headers, timeout: 10000, httpsAgent: this.pagseguroHttpsAgent });
         externalRef = res.data?.id || res.data?.charge_id || res.data?.transaction_id || externalRef;
         qrCodeText = res.data?.brcode || res.data?.qr_code_text || qrCodeText;
         qrCodeUrl = res.data?.qr_code || res.data?.qr_code_url || qrCodeUrl;
-      } catch (e: any) {
-        this.logger.error(`PagSeguro charge error: ${e?.response?.status} ${JSON.stringify(e?.response?.data || e.message)}`);
       }
+    } catch (e: any) {
+      this.logger.error(`PagSeguro charge error: ${e?.response?.status} ${JSON.stringify(e?.response?.data || e.message)}`);
     }
 
     await this.prisma.transaction.update({
@@ -271,8 +335,24 @@ export class PaymentsService {
     return this.mapPaymentIntent(intent);
   }
 
-  async handlePixWebhook(signature: string, eventId: string, webhookData: any): Promise<MessageResponseDto> {
+  async handlePixWebhook(
+    signature: string,
+    eventId: string,
+    webhookData: any,
+    rawBody?: Buffer,
+  ): Promise<MessageResponseDto> {
     this.logger.log(`[PaymentsService] handlePixWebhook - payload: ${JSON.stringify(webhookData)}`);
+    try {
+      if (rawBody && Buffer.isBuffer(rawBody)) {
+        // Log temporário para depuração de assinatura
+        // Atenção: não deixe isso habilitado em produção
+        // eslint-disable-next-line no-console
+        console.log('RAW BODY RECEBIDO:', rawBody.toString('hex'));
+      } else {
+        // eslint-disable-next-line no-console
+        console.log('RAW BODY RECEBIDO: (indisponível)');
+      }
+    } catch {}
 
     if (!signature || !eventId) {
       throw new BadRequestException('Missing webhook headers.');
@@ -282,13 +362,39 @@ export class PaymentsService {
     if (!secret) {
       this.logger.warn('PIX_WEBHOOK_SECRET not configured. Skipping signature validation.');
     } else {
-      const bodyStr = JSON.stringify(webhookData ?? {});
-      const computed = createHmac('sha256', secret).update(bodyStr).digest('hex');
-      const incoming = signature.startsWith('sha256=') ? signature.slice(7) : signature;
-      try {
-        const ok = timingSafeEqual(Buffer.from(incoming, 'hex'), Buffer.from(computed, 'hex'));
-        if (!ok) throw new ForbiddenException('Invalid webhook signature.');
-      } catch {
+      const incoming = signature?.startsWith('sha256=') ? signature.slice(7) : signature;
+      let valid = false;
+
+      // 1) Tenta validar com o rawBody exato recebido
+      if (rawBody && Buffer.isBuffer(rawBody)) {
+        try {
+          const h1 = createHmac('sha256', secret).update(rawBody).digest('hex');
+          // eslint-disable-next-line no-console
+          console.log('HMAC RAW HEX:', h1);
+          valid = timingSafeEqual(Buffer.from(incoming, 'hex'), Buffer.from(h1, 'hex'));
+        } catch {
+          valid = false;
+        }
+      }
+
+      // 2) Se falhar, tenta com JSON.stringify (corpos reconstruídos pelo body-parser)
+      if (!valid) {
+        const bodyStr = JSON.stringify(webhookData ?? {});
+        try {
+          // eslint-disable-next-line no-console
+          console.log('BODY JSON STRINGIFIED HEX:', Buffer.from(bodyStr, 'utf8').toString('hex'));
+        } catch {}
+        try {
+          const h2 = createHmac('sha256', secret).update(bodyStr).digest('hex');
+          // eslint-disable-next-line no-console
+          console.log('HMAC JSON HEX:', h2);
+          valid = timingSafeEqual(Buffer.from(incoming, 'hex'), Buffer.from(h2, 'hex'));
+        } catch {
+          valid = false;
+        }
+      }
+
+      if (!valid) {
         throw new ForbiddenException('Invalid webhook signature.');
       }
     }
@@ -302,14 +408,22 @@ export class PaymentsService {
       return { message: 'ok' };
     }
 
-    const transactionId = webhookData.transactionId;
+    const transactionId = webhookData.transactionId as string;
     const status = webhookData.status?.toString() || '';
     if (!transactionId || !status) {
       throw new BadRequestException('Dados essenciais (transactionId, status) ausentes no webhook.');
     }
 
     try {
-      const transaction = await this.prisma.transaction.findFirst({ where: { gatewayTransactionId: transactionId } });
+      // Permitir tanto o gatewayTransactionId (externo) quanto o id interno da transação
+      const transaction = await this.prisma.transaction.findFirst({
+        where: {
+          OR: [
+            { gatewayTransactionId: transactionId },
+            { id: transactionId },
+          ],
+        },
+      });
       if (!transaction) {
         this.logger.warn(`Transaction with gatewayTransactionId ${transactionId} not found.`);
         return { message: 'Transaction not found for webhook' };
@@ -344,7 +458,13 @@ export class PaymentsService {
       await this.prisma.transaction.update({ where: { id: transaction.id }, data: { status: newTransactionStatus } });
 
       // Atualizar PaymentIntent pelo externalRef
-      const intent = await this.prisma.paymentIntent.findFirst({ where: { externalRef: transactionId } });
+      // Procura o PaymentIntent usando o externalRef preferencialmente do transaction.gatewayTransactionId
+      const refForIntent = transaction.gatewayTransactionId || transactionId;
+      let intent = await this.prisma.paymentIntent.findFirst({ where: { externalRef: refForIntent } });
+      if (!intent && transaction.bookingId) {
+        // Fallback: procura pelo bookingId (caso seeds usem refs diferentes entre Transaction e PaymentIntent)
+        intent = await this.prisma.paymentIntent.findFirst({ where: { bookingId: transaction.bookingId } });
+      }
       if (intent && intentNewStatus) {
         await this.prisma.paymentIntent.update({ where: { id: intent.id }, data: { status: intentNewStatus } });
         await this.prisma.paymentEvent.create({
@@ -353,10 +473,10 @@ export class PaymentsService {
       }
 
       if (transaction.bookingId && bookingNewStatus) {
-        // Use BookingsService para garantir side‑effects (notificações/agenda de lembretes)
+        // Use BookingsService para garantir sideâ€‘effects (notificaÃ§Ãµes/agenda de lembretes)
         await this.bookingsService.updateStatus(transaction.bookingId, bookingNewStatus, UserRole.ADMIN);
 
-        // Notificação imediata ao PROVEDOR (pagamento confirmado)
+        // NotificaÃ§Ã£o imediata ao PROVEDOR (pagamento confirmado)
         if (newTransactionStatus === 'COMPLETED') {
           try {
             const b = await this.prisma.booking.findUnique({
@@ -368,15 +488,15 @@ export class PaymentsService {
               await this.queues.addNotificationJob('send-notification', {
                 userId: b.provider.userId,
                 kind: 'booking_confirmed',
-                title: 'Serviço confirmado',
-                body: `Limpeza com ${b.client?.user?.fullName || 'cliente'}, hoje às ${hora}.`,
+                title: 'ServiÃ§o confirmado',
+                body: `Limpeza com ${b.client?.user?.fullName || 'cliente'}, hoje Ã s ${hora}.`,
                 deeplink: `/(provider)/active-booking/${b.id}`,
                 priority: 1,
                 idempotencyKey: `evt:booking_confirmed:${b.id}:provider`,
               });
             }
           } catch (e) {
-            this.logger.warn(`[PaymentsService] Falha ao enfileirar notificação de confirmação para booking ${transaction.bookingId}: ${e?.message || e}`);
+            this.logger.warn(`[PaymentsService] Falha ao enfileirar notificaÃ§Ã£o de confirmaÃ§Ã£o para booking ${transaction.bookingId}: ${e?.message || e}`);
           }
         }
       }
@@ -405,7 +525,7 @@ export class PaymentsService {
   }
 
   private mapPaymentIntent(pi: Prisma.PaymentIntentUncheckedCreateInput & { id: string; createdAt?: any; updatedAt?: any }): PaymentIntentResponseDto {
-    // Método auxiliar para mapear para DTO
+    // MÃ©todo auxiliar para mapear para DTO
     const anyPi: any = pi;
     return {
       id: anyPi.id,
@@ -445,3 +565,9 @@ export class PaymentsService {
     });
   }
 }
+
+
+
+
+
+
