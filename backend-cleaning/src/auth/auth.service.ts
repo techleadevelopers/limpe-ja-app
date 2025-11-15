@@ -231,8 +231,9 @@ export class AuthService {
                   city: address.city,
                   state: address.state,
                   complement: address.complement ?? null,
-                  latitude: geoCoordinates?.latitude,
-                  longitude: geoCoordinates?.longitude,
+                  // PROVISÓRIO: evitar 22P03 no cadastro de provedor (lat/lng nulos aqui, tratar depois no perfil)
+                  latitude: null,
+                  longitude: null,
                 },
               },
             },
@@ -322,6 +323,7 @@ export class AuthService {
   }
 
   async registerProvider(registerProviderDto: RegisterProviderDto): Promise<AuthResponseDto> {
+    this.logger.log('[AuthService] registerProvider VERSION=v5-minimal');
     const {
       email,
       password,
@@ -353,7 +355,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
-      // NOVO: Validação robusta de dateOfBirth
+      // Validação robusta de dateOfBirth
       let parsedDateOfBirth: Date | undefined;
       if (dateOfBirth) {
         parsedDateOfBirth = new Date(dateOfBirth);
@@ -364,34 +366,50 @@ export class AuthService {
         throw new BadRequestException('Data de nascimento é obrigatória para provedores.');
       }
 
-      const geoCoordinates = await this.geocodingService.geocodeAddress(
-        `${address.street}, ${address.number}, ${address.neighborhood}, ${address.city}, ${address.state}, ${address.cep}`
-      );
-
-      const newUserProvider: NewUserProviderPayload = await this.prisma.user.create({
+      // Etapa 1: cria apenas o User (sem nested provider)
+      const createdUser = await this.prisma.user.create({
         data: {
           email,
           phone: phone || null,
           passwordHash: hashedPassword,
           role: UserRole.PROVIDER,
           isPhoneVerified: !!phone,
-          fullName: fullName, // Adicionado fullName ao User
-          provider: {
-            create: {
-              fullName,
-              cpf,
-              dateOfBirth: parsedDateOfBirth, // CORREÇÃO: Usa data validada
-              phone: phone ?? null,
-              yearsOfExperience: yearsOfExperience ?? 0,
-              avatarUrl: avatarUrl ?? null,
-              verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
-              bio: null,
-              badges: [],
-              // Defaults iniciais de métricas (exibição): 94% e 25 min
-              acceptanceRate: 94,
-              averageResponseTime: 25,
-              address: {
-                create: {
+          fullName: fullName,
+        },
+      });
+
+      // Normaliza latitude/longitude para garantir apenas number ou null (evitar 22P03)
+      let normalizedLatitude: number | null = null;
+      let normalizedLongitude: number | null = null;
+      if (address) {
+        const latRaw: any = (address as any).latitude;
+        const lonRaw: any = (address as any).longitude;
+
+        const latNum = typeof latRaw === 'number' ? latRaw : (latRaw !== undefined && latRaw !== null ? Number(latRaw) : null);
+        const lonNum = typeof lonRaw === 'number' ? lonRaw : (lonRaw !== undefined && lonRaw !== null ? Number(lonRaw) : null);
+
+        normalizedLatitude = latNum !== null && Number.isFinite(latNum) ? latNum : null;
+        normalizedLongitude = lonNum !== null && Number.isFinite(lonNum) ? lonNum : null;
+
+        this.logger.log(`[AuthService] registerProvider address lat/lng normalizados: lat=${normalizedLatitude}, lng=${normalizedLongitude}`);
+      }
+
+      // Etapa 2: cria o Provider com endereço nested (incluindo latitude/longitude)
+      await this.prisma.provider.create({
+        data: {
+          userId: createdUser.id,
+          fullName,
+          cpf,
+          dateOfBirth: parsedDateOfBirth,
+          phone: phone ?? null,
+          yearsOfExperience: yearsOfExperience ?? 0,
+          avatarUrl: avatarUrl ?? null,
+          verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
+          bio: null,
+          badges: [],
+          address: {
+            create: address
+              ? {
                   cep: address.cep,
                   street: address.street,
                   number: address.number,
@@ -399,68 +417,41 @@ export class AuthService {
                   city: address.city,
                   state: address.state,
                   complement: address.complement ?? null,
-                  latitude: geoCoordinates?.latitude,
-                  longitude: geoCoordinates?.longitude,
-                },
-              },
-            },
+                  latitude: normalizedLatitude,
+                  longitude: normalizedLongitude,
+                }
+              : undefined,
           },
         },
-        include: {
-          provider: {
-            include: loginProviderInclude
-          },
-          loyalty: true, // Incluído
-          referredBy: true, // Incluído
-          referralsMade: true, // Incluído
-        }
       });
 
-      // NOVO: Try-catch isolado para o SQL raw de localização (isola falhas de PostGIS sem quebrar o registro)
-      if (geoCoordinates && newUserProvider.provider?.address?.id) {
-        try {
-          const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`;
-
-          await this.prisma.$executeRaw(Prisma.sql`
-              UPDATE "Address"
-              SET location = ST_GeomFromText(${wktPoint}, 4326)
-              WHERE id = ${newUserProvider.provider.address.id}
-          `);
-          this.logger.log(`[AuthService] Endereço do provedor ID: ${newUserProvider.provider.address.id} atualizado com localização geoespacial.`);
-        } catch (geoError: any) {
-          this.logger.warn(`[AuthService] Falha ao atualizar localização geoespacial para provedor ${newUserProvider.provider.address.id}: ${geoError.message}. Continuando sem localização espacial.`);
-          // Não interrompe o registro; lat/lng já estão setados se geocoding succeeded
-        }
-      }
-
-      // --- NOVO: Lógica de Indicação no Registro (para provedor) ---
+      // Indicação (se existir referralCode)
       if (referralCode) {
         try {
-          // ASSUNÇÃO: O referralCode fornecido no DTO é o ID do usuário indicador.
           const referrerUser = await this.prisma.user.findUnique({
-            where: { id: referralCode }, // Tenta encontrar o usuário pelo ID fornecido como referralCode
+            where: { id: referralCode },
           });
 
           if (referrerUser) {
             await this.referralsService.createReferral({
-              referredUserId: newUserProvider.id,
+              referredUserId: createdUser.id,
               referrerUserId: referrerUser.id,
-              referralCode: referralCode, // Passa o código original para o registro da indicação
+              referralCode,
             });
-            this.logger.log(`[AuthService] Provedor ${newUserProvider.id} registrado com código de indicação ${referralCode} do indicador ${referrerUser.id}.`);
+            this.logger.log(`[AuthService] Provedor ${createdUser.id} registrado com código de indicação ${referralCode} do indicador ${referrerUser.id}.`);
           } else {
             this.logger.warn(`[AuthService] Código de indicação ${referralCode} não corresponde a nenhum usuário indicador. Registro sem vínculo de indicação.`);
           }
         } catch (e) {
-          this.logger.error(`[AuthService] Falha ao processar indicação para provedor ${newUserProvider.id} com código ${referralCode}: ${e?.message || e}`);
+          this.logger.error(`[AuthService] Falha ao processar indicação para provedor ${createdUser.id} com código ${referralCode}: ${e?.message || e}`);
         }
       }
-      // --- Fim da Lógica de Indicação ---
 
       // Telemetria: provider_registered
-      this.logger.log(`[TELEMETRY] provider_registered: { userId: ${newUserProvider.id}, email: ${newUserProvider.email} }`);
+      this.logger.log(`[TELEMETRY] provider_registered: { userId: ${createdUser.id}, email: ${createdUser.email} }`);
 
-      return this.login(newUserProvider);
+      // Reusa lógica do login para montar o payload completo
+      return this.login(createdUser);
     } catch (error) {
       // MELHORIA: Logging mais detalhado no catch para debug
       this.logger.error('Erro ao registrar provedor:', {
