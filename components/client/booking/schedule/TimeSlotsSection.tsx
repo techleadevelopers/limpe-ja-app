@@ -1,9 +1,18 @@
-// TimeSlotsSection.tsx (ajustado para espaçamento lateral uniforme entre slots, sem alterar UI)
+// TimeSlotsSection.tsx - seção de horários, agora suportando seleção múltipla (contígua) sem alterar o layout base
 import React from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, Dimensions, TouchableOpacity, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  ActivityIndicator,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import TimeSlotButton from './TimeSlotButton';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import { AppColors } from '../../../../constants/appStyles';
 
 interface SlotItem {
   time: string;
@@ -18,22 +27,29 @@ interface TimeSlotsSectionProps {
 
   displaySlotsInfo: Array<{ time: string; isAvailable: boolean }>;
   isLoading: boolean;
+
+  // Seleção "clássica" (um único horário) – mantida para compatibilidade
   selectedTime: string | null;
   onTimeSelect: (time: string) => void;
+
   isPreference?: boolean;
+
+  // NOVO: suporte a seleção múltipla (contígua)
+  selectedSlots?: string[];
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const numColumns = 3;
 
-const CARD_MARGIN_TOTAL = 25 * 2; // Alinhado ao calendar: marginHorizontal=25 do card
-const CARD_PADDING_TOTAL = 24 * 2; // Ajustado: paddingHorizontal=24 do card
+const CARD_MARGIN_TOTAL = 25 * 2;
+const CARD_PADDING_TOTAL = 24 * 2;
 const HORIZONTAL_GUTTER = CARD_MARGIN_TOTAL + CARD_PADDING_TOTAL;
 
 const toMinutes = (t: string) => {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 };
+
 const getPeriod = (time: string) => {
   const mins = toMinutes(time);
   if (mins < 12 * 60) return 'morning';
@@ -50,14 +66,13 @@ export default function TimeSlotsSection({
   selectedTime,
   onTimeSelect,
   isPreference = false,
+  selectedSlots,
 }: TimeSlotsSectionProps) {
   const { t, i18n } = useTranslation();
   const [showUnavailable, setShowUnavailable] = React.useState(false);
 
-  const dense = showUnavailable; // ao "ver todos", ativa layout compacto
-  // ✅ AJUSTE: Gap reduzido para 8px no modo normal (uniforme como na imagem); 0 no dense com margem no item
+  const dense = showUnavailable;
   const currentGap = dense ? 0 : 8;
-  // ✅ AJUSTE: Largura otimizada para ~80px por slot (como na imagem), considerando gutter e gaps
   const itemWidth = (SCREEN_WIDTH - HORIZONTAL_GUTTER - currentGap * (numColumns - 1)) / numColumns;
 
   const headerText = React.useMemo(() => {
@@ -76,10 +91,11 @@ export default function TimeSlotsSection({
     const filtered = showUnavailable ? displaySlotsInfo : displaySlotsInfo.filter(s => s.isAvailable);
     const sorted = [...filtered].sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
 
-    // recomendados: próximos 3 horários (se a data for hoje)
     const isToday = date ? new Date(date).toDateString() === new Date().toDateString() : false;
     const now = new Date();
-    const nowMins = toMinutes(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+    const nowMins = toMinutes(
+      `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+    );
     const nextIdx = new Set<number>();
     if (isToday) {
       let c = 0;
@@ -116,11 +132,13 @@ export default function TimeSlotsSection({
 
   return (
     <View style={[styles.card, isPreference && { marginTop: 12 }]}>
-      <Text style={styles.title} maxFontSizeMultiplier={1.2}>{headerText}</Text>
+      <Text style={styles.title} maxFontSizeMultiplier={1.2}>
+        {headerText}
+      </Text>
 
       {isLoading ? (
         <ActivityIndicator size="large" color={AppColors.primaryDark} style={{ marginVertical: 22 }} />
-      ) : (displaySlotsInfo && displaySlotsInfo.length > 0) ? (
+      ) : displaySlotsInfo && displaySlotsInfo.length > 0 ? (
         <>
           {sections.map(section => (
             <View key={section.key} style={{ marginBottom: 6 }}>
@@ -130,55 +148,59 @@ export default function TimeSlotsSection({
                 data={section.data}
                 keyExtractor={(item: SlotItem) => item.time}
                 numColumns={numColumns}
-                renderItem={({ item }: { item: SlotItem }) => (
-                  <TimeSlotButton
-                    time={item.time}
-                    isSelected={selectedTime === item.time}
-                    onPress={onTimeSelect}
-                    isAvailable={item.isAvailable}
-                    itemWidth={itemWidth}
-                    isRecommended={item.isRecommended && dense}
-                    dense={dense}
-                    // ✅ AJUSTE: Margem lateral só no dense (gap=0); no normal, gap=8 cuida do espaçamento uniforme
-                    noHorizontalMargin={!dense}
-                  />
-                )}
-                // ✅ NOVO: getItemLayout para altura fixa (melhora performance em VirtualizedList)
+                renderItem={({ item }: { item: SlotItem }) => {
+                  const isInMultiSelection =
+                    selectedSlots && selectedSlots.length > 0
+                      ? selectedSlots.includes(item.time)
+                      : false;
+                  const isSlotSelected = isInMultiSelection || selectedTime === item.time;
+
+                  return (
+                    <TimeSlotButton
+                      time={item.time}
+                      isSelected={isSlotSelected}
+                      onPress={onTimeSelect}
+                      isAvailable={item.isAvailable}
+                      itemWidth={itemWidth}
+                      isRecommended={item.isRecommended && dense}
+                      dense={dense}
+                      noHorizontalMargin={!dense}
+                    />
+                  );
+                }}
                 getItemLayout={(data, index) => ({
-                  length: dense ? 40 : 44, // Altura aproximada do item (ajuste se necessário)
+                  length: dense ? 40 : 44,
                   offset: (dense ? 40 : 44) * index,
                   index,
                 })}
-                // ✅ CORREÇÃO: Desabilita scroll interno para evitar conflitos com ScrollView pai
                 scrollEnabled={false}
                 columnWrapperStyle={{
                   justifyContent: 'flex-start',
                   alignItems: 'center',
-                  gap: currentGap, // Gap uniforme entre slots (8px no normal, 0 no dense)
+                  gap: currentGap,
                 }}
                 contentContainerStyle={{
                   paddingVertical: dense ? 3 : 6,
                   paddingBottom: dense ? 8 : 12,
-                  // ✅ AJUSTE: Padding lateral zero para alinhar slots à esquerda com espaçamento uniforme (como na imagem)
                   paddingLeft: 0,
                   paddingRight: 0,
                 }}
-                // ✅ NOVO: Componente para lista vazia (evita warnings)
                 ListEmptyComponent={() => (
                   <Text style={styles.emptySlotText}>Nenhum horário disponível</Text>
                 )}
-                // ✅ CORREÇÃO: Adicionado para listas curtas (evita warnings de virtualização)
                 ListFooterComponent={null}
-                // ✅ OTIMIZAÇÃO: Ajustes para performance sem warnings em aninhamento
                 initialNumToRender={12}
                 maxToRenderPerBatch={12}
-                windowSize={21} // Padrão RN para listas pequenas, evita buffer baixo
-                removeClippedSubviews={false} // ✅ CORREÇÃO: Desabilitado para evitar clipping e warnings em FlatList aninhado
+                windowSize={21}
+                removeClippedSubviews={false}
               />
             </View>
           ))}
 
-          <TouchableOpacity onPress={() => setShowUnavailable(v => !v)} style={[styles.toggleBtn, dense && { marginTop: 8 }]}>
+          <TouchableOpacity
+            onPress={() => setShowUnavailable(v => !v)}
+            style={[styles.toggleBtn, dense && { marginTop: 8 }]}
+          >
             <Text style={styles.toggleText}>
               {showUnavailable
                 ? t('schedule_service.hide_unavailable', { defaultValue: 'ocultar indisponíveis' })
@@ -198,15 +220,15 @@ export default function TimeSlotsSection({
 const styles = StyleSheet.create({
   card: {
     marginTop: 12,
-    marginHorizontal: 25, // mesmo padrão do calendar
+    marginHorizontal: 25,
     backgroundColor: AppColors.white,
-    borderRadius: 16, // igual ao Radii.md usado no calendar
+    borderRadius: 16,
     overflow: 'hidden',
     paddingHorizontal: 24,
     paddingVertical: 18,
     paddingBottom: 20,
     borderWidth: 0.9,
-    borderColor: 'rgba(24, 79, 230, 0.09)', // mesma borda sutil do calendar
+    borderColor: 'rgba(24, 79, 230, 0.09)',
     ...Platform.select({
       ios: {
         shadowColor: '#45484b56',
@@ -255,7 +277,6 @@ const styles = StyleSheet.create({
     marginVertical: 16,
     fontWeight: '700',
   },
-  // ✅ NOVO: Estilo para texto de lista vazia no FlatList
   emptySlotText: {
     textAlign: 'center',
     color: AppColors.textAuxiliary,
@@ -263,3 +284,4 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
 });
+
