@@ -38,7 +38,7 @@ const NavBar: React.FC<NavBarProps> = ({ welcomeCouponOffer, setActiveBottomProm
   const navItemAnims = useRef(navItems.map(() => new Animated.Value(1))).current;
   const [navBarWidth, setNavBarWidth] = useState(0);
 
-  const CURRENT_COLOR = theme.text || '#1A1A1A';
+  const CURRENT_COLOR = theme.text || '#5b84dbff';
   const LI_COLOR = theme.textSecondary || '#8A8A8E';
   const BACKGROUND_COLOR = 'rgba(255,255,255,0.7)';
 
@@ -95,7 +95,7 @@ const NavBar: React.FC<NavBarProps> = ({ welcomeCouponOffer, setActiveBottomProm
                   {
                     backgroundColor: theme.primary
                       ? `${theme.primary}20`
-                      : 'rgba(77,140,228,0.12)',
+                      : 'rgba(86, 139, 212, 0.12)',
                   },
                 ]}
               />
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   },
   navText: {
     fontSize: 11.5,
-    marginTop: 3,
+    marginTop: 8,
     letterSpacing: 0.2,
   },
   activePill: {
