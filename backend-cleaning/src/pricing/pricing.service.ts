@@ -60,7 +60,17 @@ export class PricingService {
       throw new NotFoundException(`Service ${dto.serviceId} not found.`);
     }
 
-    const basePriceDecimal: Decimal | null = providerService?.price ?? service.price ?? null;
+    // Para serviços HOURLY, usar pricePerHour se configurado; caso contrário, cair para price
+    let basePriceDecimal: Decimal | null;
+    if (providerService) {
+      if (providerService.pricingType === 'HOURLY') {
+        basePriceDecimal = (providerService.pricePerHour as Decimal | null) ?? providerService.price ?? service.price ?? null;
+      } else {
+        basePriceDecimal = providerService.price ?? service.price ?? null;
+      }
+    } else {
+      basePriceDecimal = service.price ?? null;
+    }
     if (!basePriceDecimal) {
       throw new BadRequestException('Base price not configured for this service/provider.');
     }
