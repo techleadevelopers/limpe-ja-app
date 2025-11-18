@@ -16,6 +16,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Colors from '../../../constants/Colors';
+import userService from '../../../services/userService';
 
 const AppLogo = require('../../../assets/images/logo2.png');
 
@@ -94,7 +95,9 @@ const ListRow: React.FC<{
       </View>
       <View style={styles.rowRight}>
         {typeof badge === 'number' && badge > 0 && (
-          <View style={styles.badge}><Text style={styles.badgeText}>{badge}</Text></View>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
         )}
         {!destructive && <Ionicons name="chevron-forward-outline" size={16} color="#C7C7CC" />}
       </View>
@@ -125,12 +128,42 @@ export default function ClientProfileScreen() {
       await logout();
       router.replace('/(auth)/login' as any);
     } catch (error) {
-      Alert.alert('Erro ao Sair', 'Não foi possível sair da conta. Por favor, tente novamente.');
+      Alert.alert('Erro ao sair', 'Não foi possível sair da conta. Por favor, tente novamente.');
     }
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Excluir conta',
+      'Tem certeza? Essa ação é irreversível. Sua conta e dados serão removidos.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: () => {
+            (async () => {
+              try {
+                await userService.deleteMe();
+                await logout();
+                Alert.alert('Conta excluída', 'Conta excluída com sucesso.', [
+                  {
+                    text: 'OK',
+                    onPress: () => router.replace('/(auth)/login' as any),
+                  },
+                ]);
+              } catch (error) {
+                Alert.alert('Erro', 'Não foi possível excluir sua conta. Tente novamente.');
+              }
+            })();
+          },
+        },
+      ],
+    );
+  };
+
   const handleWIP = (featureName: string) => {
-    Alert.alert('Em Desenvolvimento', `A funcionalidade "${featureName}" será implementada em breve!`);
+    Alert.alert('Em desenvolvimento', `A funcionalidade "${featureName}" será implementada em breve!`);
   };
 
   if (!user) {
@@ -154,7 +187,7 @@ export default function ClientProfileScreen() {
 
       <ProfileHero
         name={userName}
-        subtitle={'usar cupons de até R$21,90'}
+        subtitle="usar cupons de até R$21,90"
         avatarUrl={userAvatarUrl}
         onBack={() => router.back()}
         onSubtitlePress={() => router.push('/(client)/profile/edit' as any)}
@@ -178,6 +211,12 @@ export default function ClientProfileScreen() {
           <ListRow label="Suporte" ionIcon="help-circle-outline" onPress={() => router.push('/(common)/help' as any)} />
           <ListRow label="Termos de Serviço" ionIcon="document-text-outline" onPress={() => router.push('/(common)/termos' as any)} />
           <ListRow label="Política de Privacidade" ionIcon="shield-checkmark-outline" onPress={() => router.push('/(common)/privacidade' as any)} />
+          <ListRow
+            label="Excluir minha conta"
+            ionIcon="trash-outline"
+            destructive
+            onPress={handleDeleteAccount}
+          />
           <ListRow label="Sair" ionIcon="log-out-outline" destructive onPress={handleLogout} />
         </View>
       </ScrollView>
@@ -218,7 +257,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 6 }, android: { elevation: 3 } }),
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 6 },
+      android: { elevation: 3 },
+    }),
   },
   paymentTitle: { fontSize: 16, color: '#111', fontWeight: '600' },
   paymentSubtitle: { fontSize: 12, color: '#6C6C6C', marginTop: 2, maxWidth: 240 },
@@ -229,7 +271,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginHorizontal: 4,
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 6 }, android: { elevation: 2 } }),
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 6 },
+      android: { elevation: 2 },
+    }),
   },
   row: {
     flexDirection: 'row',
@@ -244,6 +289,15 @@ const styles = StyleSheet.create({
   rowLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   rowRight: { flexDirection: 'row', alignItems: 'center' },
   rowLabel: { fontSize: 15, color: '#1F2E35', flex: 1 },
-  badge: { backgroundColor: '#FF2D55', paddingHorizontal: 8, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  badge: {
+    backgroundColor: '#FF2D55',
+    paddingHorizontal: 8,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
   badgeText: { color: '#fff', fontWeight: '700', fontSize: 12 },
 });
+
