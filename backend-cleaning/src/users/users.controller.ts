@@ -1,15 +1,27 @@
 // src/users/users.controller.ts
 import {
-  Controller, Get, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Delete, HttpCode, HttpStatus, Logger,
-  Post, InternalServerErrorException,
+  Controller,
+  Get,
+  Body,
+  Patch,
+  Param,
+  UseGuards,
+  Req,
+  NotFoundException,
+  Delete,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Post,
+  InternalServerErrorException,
 } from '@nestjs/common';
-import { UsersService, UserWithIncludes } from './users.service'; // CORRIGIDO: Importe UserWithIncludes
+import { UsersService, UserWithIncludes } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserProfileDto } from './dto/user-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '@prisma/client'; // Removido PrismaUser desnecessário
+import { UserRole } from '@prisma/client';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express-serve-static-core';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
@@ -43,38 +55,55 @@ export class UsersController {
       const requestUserPayload = req.user as RequestUserPayload;
       const userId = requestUserPayload?.userId;
 
-      this.logger.log(`[UsersController] getMyProfile: req.user payload: ${JSON.stringify(requestUserPayload)}`);
+      this.logger.log(
+        `[UsersController] getMyProfile: req.user payload: ${JSON.stringify(requestUserPayload)}`,
+      );
       this.logger.log(`[UsersController] getMyProfile: Extrair userId: ${userId}`);
 
       if (!userId) {
-        this.logger.error('[UsersController] getMyProfile: userId undefined. Payload completo:', requestUserPayload);
-        throw new NotFoundException('ID do usuário não encontrado no token ou não logado.');
+        this.logger.error(
+          '[UsersController] getMyProfile: userId undefined. Payload completo:',
+          requestUserPayload,
+        );
+        throw new NotFoundException(
+          'ID do usuário não encontrado no token ou usuário não logado.',
+        );
       }
 
-      const user = await this.usersService.findOne(userId) as UserWithIncludes | null; // Tipado corretamente
+      const user = (await this.usersService.findOne(userId)) as UserWithIncludes | null;
       if (!user) {
-        this.logger.warn(`[UsersController] getMyProfile: Usuário ${userId} não encontrado.`);
+        this.logger.warn(
+          `[UsersController] getMyProfile: Usuário ${userId} não encontrado.`,
+        );
         throw new NotFoundException(`Usuário com ID "${userId}" não encontrado.`);
       }
 
-      // CORRIGIDO: Removida verificação problemática (DTO lida com opcionais); valide só null
       if (!user.client && user.role === UserRole.CLIENT) {
-        this.logger.warn(`[UsersController] getMyProfile: Client details ausentes para ${userId} - verifique schema.`);
+        this.logger.warn(
+          `[UsersController] getMyProfile: Client details ausentes para ${userId} - verifique schema.`,
+        );
       }
       if (!user.provider && user.role === UserRole.PROVIDER) {
-        this.logger.warn(`[UsersController] getMyProfile: Provider details ausentes para ${userId}.`);
+        this.logger.warn(
+          `[UsersController] getMyProfile: Provider details ausentes para ${userId}.`,
+        );
       }
       if (!user.loyalty) {
-        this.logger.warn(`[UsersController] getMyProfile: Loyalty ausente para ${userId}.`);
+        this.logger.warn(
+          `[UsersController] getMyProfile: Loyalty ausente para ${userId}.`,
+        );
       }
 
       this.logger.log(`[UsersController] getMyProfile: Perfil pronto para ${userId}.`);
-      return new UserProfileDto(user); // Agora tipado, sem 'as any'
-    } catch (error) {
-      this.logger.error(`[UsersController] getMyProfile: Erro geral: ${error.message}. Stack: ${error.stack}`);
+      return new UserProfileDto(user);
+    } catch (error: any) {
+      this.logger.error(
+        `[UsersController] getMyProfile: Erro geral: ${error.message}. Stack: ${error.stack}`,
+      );
       if (error instanceof NotFoundException) throw error;
-      // Não mascarar como 404: responder 500 para erros internos reais
-      throw new InternalServerErrorException('Falha ao carregar perfil do usuário. Tente novamente em instantes.');
+      throw new InternalServerErrorException(
+        'Falha ao carregar perfil do usuário. Tente novamente em instantes.',
+      );
     }
   }
 
@@ -86,29 +115,42 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   @ApiResponse({ status: 500, description: 'Erro interno.' })
-  async updateMyProfile(@Req() req: Request, @Body() updateUserDto: UpdateUserDto): Promise<UserProfileDto> {
+  async updateMyProfile(
+    @Req() req: Request,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<UserProfileDto> {
     try {
       const userId = (req.user as RequestUserPayload).userId;
-      this.logger.log(`[UsersController] updateMyProfile: Atualizando para userId: ${userId}. DTO: ${JSON.stringify(updateUserDto)}`);
+      this.logger.log(
+        `[UsersController] updateMyProfile: Atualizando para userId: ${userId}. DTO: ${JSON.stringify(
+          updateUserDto,
+        )}`,
+      );
 
-      const updatedUser = await this.usersService.update(userId, updateUserDto) as UserWithIncludes;
+      const updatedUser = (await this.usersService.update(
+        userId,
+        updateUserDto,
+      )) as UserWithIncludes;
       if (!updatedUser) {
-        this.logger.warn(`[UsersController] updateMyProfile: Usuário ${userId} não encontrado para update.`);
+        this.logger.warn(
+          `[UsersController] updateMyProfile: Usuário ${userId} não encontrado para update.`,
+        );
         throw new NotFoundException(`Usuário com ID "${userId}" não encontrado.`);
       }
 
-      this.logger.log(`[UsersController] updateMyProfile: Perfil atualizado para ${userId}.`);
-      return new UserProfileDto(updatedUser); // Tipado
-    } catch (error) {
-      this.logger.error(`[UsersController] updateMyProfile: Erro: ${error.message}`);
+      this.logger.log(
+        `[UsersController] updateMyProfile: Perfil atualizado para ${userId}.`,
+      );
+      return new UserProfileDto(updatedUser);
+    } catch (error: any) {
+      this.logger.error(
+        `[UsersController] updateMyProfile: Erro ao atualizar perfil: ${error.message}`,
+      );
       throw error;
     }
   }
 
   // ENDPOINT ADMIN: Listar todos
-  @Get()
-  @Roles(UserRole.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get()
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -120,12 +162,40 @@ export class UsersController {
   @ApiResponse({ status: 500, description: 'Erro interno.' })
   async findAll(): Promise<UserProfileDto[]> {
     try {
-      this.logger.log(`[UsersController] findAll: Listando usuários (ADMIN).`);
-      const users = await this.usersService.findAllUsers() as UserWithIncludes[];
-      this.logger.log(`[UsersController] findAll: Mapeando ${users.length} usuários para DTOs.`);
-      return users.map(user => new UserProfileDto(user)); // Tipado
-    } catch (error) {
+      this.logger.log('[UsersController] findAll: Listando usuários (ADMIN).');
+      const users = (await this.usersService.findAllUsers()) as UserWithIncludes[];
+      this.logger.log(
+        `[UsersController] findAll: Mapeando ${users.length} usuários para DTOs.`,
+      );
+      return users.map(user => new UserProfileDto(user));
+    } catch (error: any) {
       this.logger.error(`[UsersController] findAll: Erro: ${error.message}`);
+      throw error;
+    }
+  }
+
+  // DELETE /users/me – deve vir ANTES do DELETE /users/:id para evitar conflito
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Solicitar exclusão da própria conta (LGPD)' })
+  @ApiResponse({ status: 202, description: 'Solicitação recebida.', type: MessageResponseDto })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 500, description: 'Erro interno.' })
+  @HttpCode(HttpStatus.ACCEPTED)
+  async deleteMyAccount(@Req() req: Request): Promise<MessageResponseDto> {
+    try {
+      const userId = (req.user as RequestUserPayload).userId;
+      this.logger.log(`[UsersController] deleteMyAccount: Para ${userId}.`);
+      await this.usersService.requestAccountDeletion(userId);
+      return {
+        message:
+          'Solicitação de exclusão recebida. Sua conta será desativada e removida após o período de carência. Um e-mail de confirmação será enviado.',
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `[UsersController] deleteMyAccount: Erro ao solicitar exclusão: ${error.message}`,
+      );
       throw error;
     }
   }
@@ -143,14 +213,16 @@ export class UsersController {
   async findOne(@Param('id') id: string): Promise<UserProfileDto> {
     try {
       this.logger.log(`[UsersController] findOne: Obtendo perfil de ${id} (ADMIN).`);
-      const user = await this.usersService.findOne(id) as UserWithIncludes | null;
+      const user = (await this.usersService.findOne(id)) as UserWithIncludes | null;
       if (!user) {
-        this.logger.warn(`[UsersController] findOne: Usuário ${id} não encontrado.`);
+        this.logger.warn(
+          `[UsersController] findOne: Usuário ${id} não encontrado.`,
+        );
         throw new NotFoundException(`Usuário com ID "${id}" não encontrado.`);
       }
       this.logger.log(`[UsersController] findOne: Perfil pronto para ${id}.`);
-      return new UserProfileDto(user); // Tipado
-    } catch (error) {
+      return new UserProfileDto(user);
+    } catch (error: any) {
       this.logger.error(`[UsersController] findOne: Erro: ${error.message}`);
       throw error;
     }
@@ -172,7 +244,7 @@ export class UsersController {
       await this.usersService.remove(id);
       this.logger.log(`[UsersController] remove: Sucesso para ${id}.`);
       return { message: `Usuário com ID ${id} foi marcado para exclusão.` };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`[UsersController] remove: Erro: ${error.message}`);
       throw error;
     }
@@ -191,30 +263,16 @@ export class UsersController {
       const userId = (req.user as RequestUserPayload).userId;
       this.logger.log(`[UsersController] requestDataExport: Para ${userId}.`);
       await this.usersService.requestDataExport(userId);
-      return { message: 'Solicitação de exportação recebida. Link será enviado por e-mail.' };
-    } catch (error) {
-      this.logger.error(`[UsersController] requestDataExport: Erro: ${error.message}`);
-      throw error;
-    }
-  }
-
-  @Delete('delete-account')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Solicitar exclusão de conta (LGPD)' })
-  @ApiResponse({ status: 202, description: 'Solicitação recebida.', type: MessageResponseDto })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 500, description: 'Erro interno.' })
-  @HttpCode(HttpStatus.ACCEPTED)
-  async requestAccountDeletion(@Req() req: Request): Promise<MessageResponseDto> {
-    try {
-      const userId = (req.user as RequestUserPayload).userId;
-      this.logger.log(`[UsersController] requestAccountDeletion: Para ${userId}.`);
-      await this.usersService.requestAccountDeletion(userId);
-      return { message: 'Solicitação de exclusão recebida. Conta será desativada após carência. E-mail de confirmação será enviado.' };
-    } catch (error) {
-      this.logger.error(`[UsersController] requestAccountDeletion: Erro: ${error.message}`);
+      return {
+        message:
+          'Solicitação de exportação recebida. Link será enviado por e-mail quando os dados estiverem prontos.',
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `[UsersController] requestDataExport: Erro ao solicitar exportação: ${error.message}`,
+      );
       throw error;
     }
   }
 }
+
