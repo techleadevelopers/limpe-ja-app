@@ -121,8 +121,13 @@ const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
 
 const s = StyleSheet.create({
   wrap: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 40, paddingTop: 18, paddingBottom: Platform.OS === 'ios' ? 24 : 24,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 40,
+    paddingTop: 18,
+    paddingBottom: Platform.OS === 'ios' ? 55 : 39,
     backgroundColor: AppColors.white,
     ...AppShadows.medium,
   },
