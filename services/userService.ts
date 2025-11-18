@@ -23,7 +23,20 @@ class UserService {
     }
   }
 
+  async deleteMe(): Promise<void> {
+    try {
+      // Alinha com o contrato DELETE /users/me
+      await api.delete(`${this.BASE_URL}/me`);
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        throw error;
+      }
+      throw new Error(error?.message || 'Erro ao excluir conta do usuário.');
+    }
+  }
+
   // Adicione outros métodos relacionados ao usuário aqui, se necessário (ex: update profile)
 }
 
 export default new UserService();
+
