@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
   // Header temático (vidro leve + bordas arredondadas) alinhado ao ScheduleHeader
   thematicHeader: {
     marginHorizontal: 12,
-    marginTop: 6,
+    marginTop: 28,
     marginBottom: 6,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }, android: { elevation: 3 } }),
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingVertical: 10 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingVertical: 10, marginTop: 28},
   headerIconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700', color: UI.textPrimary, left: 4, },
   navbarContainer: {
