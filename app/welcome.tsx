@@ -55,7 +55,6 @@ export default function WelcomeScreen() {
 
   // Definindo startLoopAnimations com useCallback para garantir estabilidade da função
   const startLoopAnimations = useCallback(() => {
-    if (__DEV__) console.log("[WelcomeScreen | startLoopAnimations] Iniciando animações de loop...");
     logoRotateY.value = withRepeat(
       withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
       -1,
@@ -84,18 +83,12 @@ export default function WelcomeScreen() {
   }, [logoRotateY, logoPulseScale, reflectionTranslateY, reflectionSkewX]);
 
   useEffect(() => {
-    if (__DEV__) console.log("[WelcomeScreen | useEffect] Componente montado ou dependências alteradas.");
-
     logoOpacity.value = withTiming(1, { duration: 80 });
     logoScale.value = withTiming(1, { duration: 80, easing: Easing.out(Easing.back(1.2)) }, (isFinished) => {
       'worklet'; // <-- IMPORTANTE: Marca este callback como um worklet
       if (isFinished) {
-        if (__DEV__) console.log("[WelcomeScreen | withTiming Callback] Callback de logoScale.value withTiming executado.");
-
         // Usar runOnJS para chamar startLoopAnimations na thread JS principal
         runOnJS(startLoopAnimations)(); // <-- CHAMADA CORRIGIDA AQUI
-
-        if (__DEV__) console.log("[WelcomeScreen | withTiming Callback] Chamada para runOnJS(startLoopAnimations) feita.");
       }
     });
 
@@ -107,12 +100,10 @@ export default function WelcomeScreen() {
     );
 
     const timer = setTimeout(async () => {
-      if (__DEV__) console.log("WelcomeScreen: Redirecionando automaticamente após 4 segundos.");
       router.replace('/(auth)/login');
     }, 4000);
 
     return () => {
-      if (__DEV__) console.log("[WelcomeScreen | useEffect] Cleanup: Limpando timer.");
       clearTimeout(timer);
     };
   }, [router, logoOpacity, logoScale, reflectionOpacityAnim, startLoopAnimations]); // Mantenha startLoopAnimations aqui
