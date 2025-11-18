@@ -124,6 +124,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 5,
+    marginTop: 10,
   },
   providerNameWhiteCard: {
     fontSize: 23,
@@ -250,9 +251,9 @@ priceDropText: {
       paddingHorizontal: 6,
       fontWeight: '700',
       color: AppColors.textBody, // Usando AppColors
-      marginTop: 20,
+      
       marginBottom: 10,
-    marginTop: 25,
+     marginTop: 25,
   },
   descriptionText: {
     fontSize: 13,
@@ -507,6 +508,24 @@ priceDropText: {
   marginBottom: 6,
 },
 
+priceWrapper: {
+  marginTop: 6,
+  marginBottom: 4,
+},
+
+priceValue: {
+  fontSize: 22,
+  fontWeight: '800',
+  color: AppColors.primaryInteractive,
+},
+
+priceUnit: {
+  marginTop: 6,
+  fontSize: 14,
+  fontWeight: '600',
+  color: AppColors.textAuxiliary,
+},
+
 locationDistanceText: {
   color: '#7C8590',
   fontSize: 14,
@@ -709,6 +728,8 @@ priceBackground: {
     fontWeight: '700',
     color: AppColors.textBody, // Usando AppColors
     marginRight: 0,
+    marginTop: -4,
+    bottom: 20,
   },
   averageRatingText: {
     fontSize: 15,
