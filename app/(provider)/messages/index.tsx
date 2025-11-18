@@ -164,7 +164,6 @@ export default function ProviderConversationsListScreen() {
   const { user, isAuthenticated } = useAuth();
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('Todas'); // Adicionado do cliente
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const feedbackAnim = useRef(new Animated.Value(0)).current;
@@ -228,7 +227,6 @@ export default function ProviderConversationsListScreen() {
     });
   };
 
-  const tabs = ['Todas', 'Grupos', 'Contatos'];
   const loggedInUserName = user?.fullName || 'Provedor'; // Usar o nome real do usuário logado
 
   const handleBackPress = () => {
@@ -260,28 +258,11 @@ export default function ProviderConversationsListScreen() {
             <Ionicons name="arrow-back" size={24} color="#4A5568" />
           </TouchableOpacity>
           <View style={styles.greetingContainer}>
-            <Text style={styles.greetingSubText}>Olá, {loggedInUserName}</Text>
             <Text style={styles.greetingText}>Mensagens</Text>
           </View>
-          <View style={styles.headerIcons}>
-            {/* Placeholder para ícones extras no futuro; vazio por enquanto para manter simples */}
-          </View>
+          <View style={styles.headerIcons} />
         </View>
 
-        {/* Tabs segmentados adaptados para estilo premium (abaixo do header, clean e cinza) */}
-        <View style={styles.segmentedControl}>
-          {tabs.map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabButtonText, activeTab === tab && styles.activeTabButtonText]}>
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
       </Animated.View>
 
        {isLoading ? (
@@ -369,22 +350,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   // Tabs segmentados adaptados para estilo premium (clean, cinza, abaixo do header)
-  segmentedControl: {
-    flexDirection: 'row',
-    backgroundColor: '#F8F9FA', // Fundo cinza claro premium
-    borderRadius: 25,
-    padding: 4,
-    width: '80%', // Ajustado para caber melhor
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
   activeTabButton: {
     backgroundColor: '#FFFFFF', // Fundo branco para tab ativo
   },
@@ -530,3 +495,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
