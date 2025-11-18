@@ -320,7 +320,6 @@ export default function ClientRegisterScreen() {
                     currentStep, subStepAddress
                 };
                 await AsyncStorage.setItem('clientRegisterFormData', JSON.stringify(formData));
-                console.log("Form data saved to AsyncStorage.");
             } catch (e) {
                 console.error("Failed to save form data to AsyncStorage", e);
             }
@@ -357,7 +356,6 @@ export default function ClientRegisterScreen() {
                     setCurrentStep(parsedFormData.currentStep || 1);
                     setSubStepAddress(parsedFormData.subStepAddress || 1);
                     setGeneralError("Dados carregados automaticamente. Continue seu cadastro.");
-                    console.log("Form data loaded from AsyncStorage.");
                 }
                 const savedReferral: string | undefined = parsedFormData?.referralCode;
                 if (savedReferral) {
