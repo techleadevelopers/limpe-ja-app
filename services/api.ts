@@ -207,9 +207,9 @@ api.interceptors.response.use(
         }
       }
 
-      await AsyncStorage.multiRemove(['auth_token', 'user_role', 'user_id', 'user_profile']);
-      // NOVO: Toast de unauthorized condicional a !isSilent (silencia na home/boot)
+      // Só limpa o token e mostra toast se NÃO for chamada silenciosa
       if (!isSilent && !isMetaSilent) {
+        await AsyncStorage.multiRemove(['auth_token', 'user_role', 'user_id', 'user_profile']);
         Toast.show({
           type: 'error',
           text1: i18n.t('common.error'),
