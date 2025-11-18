@@ -27,7 +27,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.techleadevelopers.limpeja',
-      buildNumber: '1',
+      buildNumber: '3',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription:
