@@ -58,31 +58,28 @@ import { useDevice } from '@/utils/responsive';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
-const SecurityBanner: React.FC<{ onPress: () => void }> = ({ onPress }) => (
-    <View style={styles.securityBannerContainer}>
-        <LinearGradient
-            colors={['#EAF3FF', '#DCEBFF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.securityBannerCard}
-        >
-            <View style={styles.securityBannerLeftSection}>
-                <View style={styles.securityBannerIconBadge}>
-                    <Ionicons name="shield-checkmark" size={18} color="#fff" />
-                </View>
-                <View style={styles.securityBannerTextWrap}>
-                    <Text style={styles.securityBannerTitle}>Segurança LimpeJa</Text>
-                    <Text style={styles.securityBannerSubtitle} numberOfLines={2}>
-                        Dicas e garantias para seu atendimento com tranquilidade.
-                    </Text>
-                </View>
-            </View>
+const SafetyReminderBanner = () => (
+  <View style={styles.safetyBannerContainer}>
+    <LinearGradient
+      colors={['#EAF3FF', '#DCEBFF']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.safetyBannerCard}
+    >
+      <View style={styles.safetyBannerLeft}>
+        <View style={styles.safetyBannerIconBadge}>
+          <Ionicons name="shield-checkmark" size={18} color="#fff" />
+        </View>
 
-            <TouchableOpacity onPress={onPress} style={styles.securityBannerCta}>
-                <Text style={styles.securityBannerCtaText}>Ver</Text>
-            </TouchableOpacity>
-        </LinearGradient>
-    </View>
+        <View style={{ flex: 1 }}>
+         
+          <Text style={styles.safetyBannerSubtitle} numberOfLines={3}>
+            Guarde objetos de alto valor e mantenha itens pessoais protegidos durante o serviço de limpeza.
+          </Text>
+        </View>
+      </View>
+    </LinearGradient>
+  </View>
 );
 
 interface BookingSummaryPreviewProps {
@@ -108,10 +105,10 @@ interface BookingSummaryPreviewProps {
     couponFeedbackAnim: Animated.Value;
     couponFeedbackColor: string;
     couponFeedbackIcon: string;
-    // ? NOVO: Anima��es para premium entrance no step 2
+    // ? NOVO: Animações para premium entrance no step 2
     reviewEntranceAnim?: Animated.Value;
     reviewStaggerDelay?: number;
-    // ? NOVO: Anima��es stagger para se��es internas (notes e cupom)
+    // ? NOVO: Animações stagger para seções internas (notes e cupom)
     notesAnim?: Animated.Value;
     cupomAnim?: Animated.Value;
     summaryAnim?: Animated.Value;
@@ -140,7 +137,7 @@ const BookingSummaryPreview = ({
     couponFeedbackAnim,
     couponFeedbackColor,
     couponFeedbackIcon,
-    reviewEntranceAnim, // ? PREMIUM: Anima��o de entrada suave para review
+    reviewEntranceAnim, // ? PREMIUM: Animação de entrada suave para review
     reviewStaggerDelay = 0, // Delay para stagger (sequencial)
     notesAnim, // ? NOVO: Stagger para notes
     cupomAnim, // ? NOVO: Stagger para cupom
@@ -160,7 +157,7 @@ const BookingSummaryPreview = ({
             return `${t('schedule_service.summary_hours', { defaultValue: 'Horas' })}: ${hours}h`;
         }
         if (selectedProviderService.pricingType === PricingType.BY_SIZE && squareMeters) {
-            return `${squareMeters} m�`;
+            return `${squareMeters} m²`;
         }
         return t('common.na', { defaultValue: 'N/A' });
     }, [selectedProviderService, durationInMinutes, squareMeters, t]);
@@ -187,8 +184,8 @@ const BookingSummaryPreview = ({
         Animated.sequence([
             Animated.timing(iconAnim, {
                 toValue: 1,
-                duration: AppDurations.xs, // Ainda mais r�pido para �cones
-                delay: reviewStaggerDelay + 0, // Sem delay adicional para �cones
+                duration: AppDurations.xs, // Ainda mais rápido para ícones
+                delay: reviewStaggerDelay + 0, // Sem delay adicional para ícones
                 easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
@@ -200,21 +197,21 @@ const BookingSummaryPreview = ({
         transform: [{
             translateX: iconAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: [-10, 0] // Movimento menor para mais r�pido
+                outputRange: [-10, 0] // Movimento menor para mais rápido
             })
         }]
     };
 
-    // ? PREMIUM: Anima��o de entrada suave para o card review (slide up + fade + subtle scale)
+    // ? PREMIUM: Animação de entrada suave para o card review (slide up + fade + subtle scale)
     const reviewCardAnim = reviewEntranceAnim ? {
         opacity: reviewEntranceAnim,
         transform: [
-            { translateY: reviewEntranceAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }, // Menos slide para mais r�pido
+            { translateY: reviewEntranceAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }, // Menos slide para mais rápido
             { scale: reviewEntranceAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) } // Scale menor
         ]
     } : {};
 
-    // ? NOVO: Anima��es stagger internas para se��es (notes, cupom, summary)
+    // ? NOVO: Animações stagger internas para seções (notes, cupom, summary)
     const notesSectionAnim = notesAnim ? {
         opacity: notesAnim,
         transform: [{ translateY: notesAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }]
@@ -230,7 +227,7 @@ const BookingSummaryPreview = ({
         transform: [{ translateY: summaryAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }]
     } : {};
 
-    // ? CORRE��O: Wrapper expl�cito para endere�o (evita string direta em View/Text)
+    // ? CORREÇÃO: Wrapper explícito para endereço (evita string direta em View/Text)
     const formattedAddress = useMemo(() => {
         return `${(address.street || '')}, ${(address.number || '')} - ${(address.neighborhood || '')}, ${(address.city || '')}/${(address.state || '')}`.trim();
     }, [address]);
@@ -243,7 +240,7 @@ const BookingSummaryPreview = ({
                 </Text>
             </View>
 
-            {/* ? NOVO: Se��o de Cupom integrada e compacta (diminu�da) - MANTIDA NO TOPO AP�S HEADER */}
+            {/* ? NOVO: Seção de Cupom integrada e compacta (diminuída) - MANTIDA NO TOPO APÓS HEADER */}
             {false && (
             <Animated.View style={[styles.compactSection, cupomSectionAnim]}>
                 <Text style={styles.compactSectionTitle}>{t('schedule_service.coupon_section_title', { defaultValue: 'Cupom de Desconto' })}</Text>
@@ -253,7 +250,7 @@ const BookingSummaryPreview = ({
                 }) }]}>
                     <AnimatedTextInput
                         style={styles.compactCouponInput}
-                        placeholder={t('schedule_service.coupon_input_placeholder', { defaultValue: 'Digite o c�digo do cupom' })}
+                        placeholder={t('schedule_service.coupon_input_placeholder', { defaultValue: 'Digite o código do cupom' })}
                         placeholderTextColor={couponInputAnim.interpolate({
                             inputRange: [0, 1],
                             outputRange: [AppColors.mediumGray, AppColors.primaryInteractive]
@@ -288,14 +285,14 @@ const BookingSummaryPreview = ({
             </Animated.View>
             )}
 
-            {/* ? NOVO: Se��o de Resumo (Summary) com stagger - MANTIDA NO MEIO */}
+            {/* ? NOVO: Seção de Resumo (Summary) com stagger - MANTIDA NO MEIO */}
             <Animated.View style={[styles.summarySection, summarySectionAnim]}>
                 <View style={styles.summaryItem}>
                     <Animated.View style={animatedIconStyle}>
                         <Ionicons name="briefcase-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                     </Animated.View>
                     <Text style={styles.summaryText}>
-                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_service', { defaultValue: 'Servi�o' })}</Text> <Text>{selectedProviderService.service?.name || t('common.na', { defaultValue: 'N/A' })}</Text>
+                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_service', { defaultValue: 'Serviço' })}</Text> <Text>{selectedProviderService.service?.name || t('common.na', { defaultValue: 'N/A' })}</Text>
                     </Text>
                 </View>
                 <View style={styles.summaryItem}>
@@ -311,7 +308,7 @@ const BookingSummaryPreview = ({
                         <Ionicons name="calendar-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                     </Animated.View>
                     <Text style={styles.summaryText}>
-                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_date_time', { defaultValue: 'Data e Hora' })}</Text> <Text>{formattedDate}, {t('common.at', { defaultValue: '�s' })} {selectedTime || ''}</Text>
+                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_date_time', { defaultValue: 'Data e Hora' })}</Text> <Text>{formattedDate}, {t('common.at', { defaultValue: 'às' })} {selectedTime || ''}</Text>
                     </Text>
                 </View>
                 <View style={styles.summaryItem}>
@@ -319,7 +316,7 @@ const BookingSummaryPreview = ({
                         <Ionicons name="location-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                     </Animated.View>
                     <Text style={styles.summaryText}>
-                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_address', { defaultValue: 'Endere�o' })}</Text> <Text>{formattedAddress || t('common.na', { defaultValue: 'N/A' })}</Text>
+                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_address', { defaultValue: 'Endereço' })}</Text> <Text>{formattedAddress || t('common.na', { defaultValue: 'N/A' })}</Text>
                     </Text>
                 </View>
                 {(selectedProviderService.pricingType === PricingType.HOURLY || selectedProviderService.pricingType === PricingType.BY_SIZE) && (
@@ -328,7 +325,7 @@ const BookingSummaryPreview = ({
                             <Ionicons name="timer-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                         </Animated.View>
                         <Text style={styles.summaryText}>
-                            <Text style={styles.summaryLabel}>{t('schedule_service.summary_service_details', { defaultValue: 'Detalhes do Servi�o' })}</Text> <Text>{serviceDetailsText}</Text>
+                            <Text style={styles.summaryLabel}>{t('schedule_service.summary_service_details', { defaultValue: 'Detalhes do Serviço' })}</Text> <Text>{serviceDetailsText}</Text>
                         </Text>
                     </View>
                 )}
@@ -348,26 +345,27 @@ const BookingSummaryPreview = ({
                         {formatBRL(finalPrice)}
                     </Animated.Text>
                 </View>
+                <SafetyReminderBanner />
                 <TouchableOpacity onPress={onShowCancellationPolicy} style={styles.cancellationPolicyLink}>
-                    <Text style={styles.cancellationPolicyText}>{t('schedule_service.cancellation_policy', { defaultValue: 'Pol�tica de Cancelamento' })}</Text>
+                    <Text style={styles.cancellationPolicyText}>{t('schedule_service.cancellation_policy', { defaultValue: 'Política de Cancelamento' })}</Text>
                 </TouchableOpacity>
             </Animated.View>
 
-            {/* ? MUDAN�A: Se��o de Observa��es (Notes) movida para ABAIXO da pol�tica de cancelamento */}
-            {/* ? MUDAN�A: Sem t�tulo em negrito - apenas o input com placeholder sutil */}
+            {/* ? MUDANÇA: Seção de Observações (Notes) movida para ABAIXO da política de cancelamento */}
+            {/* ? MUDANÇA: Sem título em negrito - apenas o input com placeholder sutil */}
             <Animated.View style={[styles.compactSection, styles.notesFinalSection, notesSectionAnim]}>
                 <NotesInputSection
                     notes={notes}
                     setNotes={setNotes}
                     compactMode={true} // ? NOVO: Modo compacto para reduzir tamanho
-                    showTitle={false} // ? NOVO: Esconde t�tulo interno para evitar duplica��o e negrito
+                    showTitle={false} // ? NOVO: Esconde título interno para evitar duplicação e negrito
                 />
             </Animated.View>
         </Animated.View>
     );
 };
 
-// PREMIUM: Cache com TTL (expira >1h) para dados frescos e gerenciamento de mem�ria
+// PREMIUM: Cache com TTL (expira >1h) para dados frescos e gerenciamento de memória
 const availabilityCache = new Map<string, { 
     available: ProviderAvailability[], 
     occupiedTimes: string[], 
@@ -452,7 +450,7 @@ export default function ScheduleServiceScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isBooking, setIsBooking] = useState(false);
     const [isFetchingSlots, setIsFetchingSlots] = useState(false);
-    const [isSearchingNextDate, setIsSearchingNextDate] = useState(false); // ? NOVO: Flag para prevenir buscas simult�neas
+    const [isSearchingNextDate, setIsSearchingNextDate] = useState(false); // ? NOVO: Flag para prevenir buscas simultâneas
 
     const [currentDisplayMonth, setCurrentDisplayMonth] = useState(new Date());
     const shineAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.3)).current;
@@ -476,7 +474,7 @@ export default function ScheduleServiceScreen() {
 
     const floatingSummaryAnim = useRef(new Animated.Value(0)).current;
 
-    // ? PREMIUM: Anima��es espec�ficas para step 2 (review) - entrance suave, stagger para cards
+    // ? PREMIUM: Animações específicas para step 2 (review) - entrance suave, stagger para cards
     const reviewStepAnim = useRef(new Animated.Value(0)).current; // Controla entrada do step 2 inteiro
     const serviceDetailsAnim = useRef(new Animated.Value(0)).current; // Stagger 1: ServiceDetailsInput
     const notesAnim = useRef(new Animated.Value(0)).current; // Stagger 2: Notes
@@ -507,9 +505,9 @@ export default function ScheduleServiceScreen() {
         slotCount: selectedSlots.length,
     });
 
-    // ? CORRE��O: Use t() fora do array para evitar re-run do useEffect de slots; fallback para undefined
+    // ? CORREÇÃO: Use t() fora do array para evitar re-run do useEffect de slots; fallback para undefined
     const stepDateTimeTitle = useMemo(() => t('schedule_service.progress_step_date_time', { defaultValue: 'Data e Hora' }), [t]);
-    const stepReviewTitle = useMemo(() => t('schedule_service.progress_step_complete_review', { defaultValue: 'Revis�o' }), [t]);
+    const stepReviewTitle = useMemo(() => t('schedule_service.progress_step_complete_review', { defaultValue: 'Revisão' }), [t]);
     const stepTitles = [stepDateTimeTitle, stepReviewTitle];
 
     const prefetchAvailability = useCallback(async (provId: string | undefined, baseDate: Date) => {
@@ -655,8 +653,8 @@ export default function ScheduleServiceScreen() {
         };
     }, []);
 
-    // ? PREMIUM: Anima��o de entrada para step 2 (review) - inicia baixo e sobe suavemente para conforto UX
-    // ? AJUSTE: Anima��es paralelas com delays m�nimos para entrada quase instant�nea (profissional e r�pida)
+    // ? PREMIUM: Animação de entrada para step 2 (review) - inicia baixo e sobe suavemente para conforto UX
+    // ? AJUSTE: Animações paralelas com delays mínimos para entrada quase instantânea (profissional e rápida)
     useEffect(() => {
         if (currentStep === 2) {
             // Reset todos os valores para 0
@@ -666,34 +664,34 @@ export default function ScheduleServiceScreen() {
             cupomAnim.setValue(0);
             summaryAnim.setValue(0);
 
-            // ? MUDAN�A: Usar parallel em vez de sequence para que todas entrem ao mesmo tempo, com delays m�nimos
-            // Isso faz a se��o de Detalhes do Servi�o aparecer imediatamente (delay 0)
+            // ? MUDANÇA: Usar parallel em vez de sequence para que todas entrem ao mesmo tempo, com delays mínimos
+            // Isso faz a seção de Detalhes do Serviço aparecer imediatamente (delay 0)
             Animated.parallel([
-                // Entrada geral do step 2 (r�pida)
+                // Entrada geral do step 2 (rápida)
                 Animated.timing(reviewStepAnim, {
                     toValue: 1,
-                    duration: AppDurations.xs, // Extra r�pido (ex: 100ms)
+                    duration: AppDurations.xs, // Extra rápido (ex: 100ms)
                     delay: 0, // Sem delay inicial
                     easing: Easing.out(Easing.ease), // Sem back para mais direto
                     useNativeDriver: true,
                 }),
-                // Detalhes do Servi�o: Imediato e r�pido (prioridade alta)
+                // Detalhes do Serviço: Imediato e rápido (prioridade alta)
                 Animated.timing(serviceDetailsAnim, {
                     toValue: 1,
-                    duration: AppDurations.xs, // Extra r�pido
+                    duration: AppDurations.xs, // Extra rápido
                     delay: 0, // Entra imediatamente
                     easing: Easing.out(Easing.ease),
                     useNativeDriver: true,
                 }),
-                // Notes: Delay m�nimo
+                // Notes: Delay mínimo
                 Animated.timing(notesAnim, {
                     toValue: 1,
                     duration: AppDurations.xs,
-                    delay: 50, // 50ms ap�s o primeiro
+                    delay: 50, // 50ms após o primeiro
                     easing: Easing.out(Easing.ease),
                     useNativeDriver: true,
                 }),
-                // Cupom: Delay m�nimo
+                // Cupom: Delay mínimo
                 Animated.timing(cupomAnim, {
                     toValue: 1,
                     duration: AppDurations.xs,
@@ -701,10 +699,10 @@ export default function ScheduleServiceScreen() {
                     easing: Easing.out(Easing.ease),
                     useNativeDriver: true,
                 }),
-                // Summary: �ltimo, com leve delay para destaque
+                // Summary: último, com leve delay para destaque
                 Animated.timing(summaryAnim, {
                     toValue: 1,
-                    duration: AppDurations.sm, // Um pouco mais lenta para �nfase
+                    duration: AppDurations.sm, // Um pouco mais lenta para ênfase
                     delay: 150, // 150ms total
                     easing: Easing.out(Easing.back(1.05)),
                     useNativeDriver: true,
@@ -724,7 +722,7 @@ export default function ScheduleServiceScreen() {
         if (currentStep === 2 && selectedTime && finalCalculatedPrice > 0) {
             Animated.timing(floatingSummaryAnim, {
                 toValue: 1,
-                duration: AppDurations.xs, // Extra r�pido
+                duration: AppDurations.xs, // Extra rápido
                 easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }).start();
@@ -775,8 +773,8 @@ export default function ScheduleServiceScreen() {
 
         setSelectedTime(null);
 
-        // ? CORRE��O: Aumentado para 800ms, condicionado a displaySlotsInfo.length > 0 e hasRealAvailableSlots para evitar scroll prematuro
-        // ? NOVO: S� scroll se lista tem itens dispon�veis (evita warnings em re-render vazio)
+        // ? CORREÇÃO: Aumentado para 800ms, condicionado a displaySlotsInfo.length > 0 e hasRealAvailableSlots para evitar scroll prematuro
+        // ? NOVO: Só scroll se lista tem itens disponíveis (evita warnings em re-render vazio)
         setTimeout(() => {
             const hasAvailable = displaySlotsInfo.some(slot => slot.isAvailable);
             if (timeSlotsRef.current && scrollViewRef.current && displaySlotsInfo.length > 0 && hasAvailable) {
@@ -898,17 +896,18 @@ export default function ScheduleServiceScreen() {
             setSelectedTime(time);
         }
     }, [displaySlotsInfo, selectionAnim, t, selectedProviderService]);
+
     const showCancellationPolicy = useCallback(() => {
         NotificationUIService.showInfo(
-            t('schedule_service.cancellation_policy_message', { defaultValue: 'Pol�tica de cancelamento: 24h antes sem custo.' }),
-            t('schedule_service.cancellation_policy_title', { defaultValue: 'Pol�tica de Cancelamento' })
+            t('schedule_service.cancellation_policy_message', { defaultValue: 'Política de cancelamento: 24h antes sem custo.' }),
+            t('schedule_service.cancellation_policy_title', { defaultValue: 'Política de Cancelamento' })
         );
     }, [t]);
 
     const handlePanic = useCallback(() => {
         Alert.alert(
-            t('safety.panic.button_pressed_title', { defaultValue: 'P�nico Ativado' }),
-            t('safety.panic.button_pressed_message', { defaultValue: 'Ajuda ser� enviada em breve.' }),
+            t('safety.panic.button_pressed_title', { defaultValue: 'Pânico Ativado' }),
+            t('safety.panic.button_pressed_message', { defaultValue: 'Ajuda será enviada em breve.' }),
             [
                 { text: t('common.cancel', { defaultValue: 'Cancelar' }), style: 'cancel' },
                 { text: t('common.confirm', { defaultValue: 'Confirmar' }), onPress: () => setPanicStatus('RECEIVED') }
@@ -920,22 +919,22 @@ export default function ScheduleServiceScreen() {
         if (currentStep === 1) {
             if (selectedSlots.length === 0 || !address.street || !address.number || !address.neighborhood || !address.city || !address.state) {
                 NotificationUIService.showError(
-                    t('schedule_service.step1_validation_error', { defaultValue: 'Selecione data, hora e endere�o.' }),
+                    t('schedule_service.step1_validation_error', { defaultValue: 'Selecione data, hora e endereço.' }),
                     t('common.error', { defaultValue: 'Erro' })
                 );
                 return;
             }
         }
-        // ? PREMIUM: Anima��o suave na transi��o para step 2 (fade out step 1 + prepare review entrance)
-        // ? AJUSTE: Transi��o ultra-r�pida e scroll para topo ao entrar no step 2
+        // ? PREMIUM: Animação suave na transição para step 2 (fade out step 1 + prepare review entrance)
+        // ? AJUSTE: Transição ultra-rápida e scroll para topo ao entrar no step 2
         Animated.sequence([
-            // Fade e scale r�pido para transi��o
+            // Fade e scale rápido para transição
             Animated.parallel([
-                Animated.timing(fadeAnim, { toValue: 0, duration: AppDurations.xs, useNativeDriver: true }), // Fade out completo e r�pido
+                Animated.timing(fadeAnim, { toValue: 0, duration: AppDurations.xs, useNativeDriver: true }), // Fade out completo e rápido
                 Animated.timing(scaleAnim, { toValue: 0.95, duration: AppDurations.xs, useNativeDriver: true }),
             ]),
         ]).start(() => {
-            // Ap�s fade out, muda o step e reseta anima��es
+            // Após fade out, muda o step e reseta animações
             setCurrentStep(prev => prev + 1);
             reviewStepAnim.setValue(0);
             serviceDetailsAnim.setValue(0);
@@ -943,13 +942,13 @@ export default function ScheduleServiceScreen() {
             cupomAnim.setValue(0);
             summaryAnim.setValue(0);
             
-            // ? FIX: Scroll para o TOPO imediatamente ao entrar no step 2 (profissional, sem come�ar embaixo)
-            // Usar animated: false para instant�neo, ou true para suave
+            // ? FIX: Scroll para o TOPO imediatamente ao entrar no step 2 (profissional, sem começar embaixo)
+            // Usar animated: false para instantâneo, ou true para suave
             setTimeout(() => {
-                scrollViewRef.current?.scrollTo({ y: 0, animated: false }); // Instant�neo para evitar "salto"
-            }, 50); // Pequeno delay para garantir que o conte�do novo seja renderizado
+                scrollViewRef.current?.scrollTo({ y: 0, animated: false }); // Instantâneo para evitar "salto"
+            }, 50); // Pequeno delay para garantir que o conteúdo novo seja renderizado
 
-            // Fade in suave ap�s scroll
+            // Fade in suave após scroll
             setTimeout(() => {
                 fadeAnim.setValue(1); // Restaura opacidade
                 scaleAnim.setValue(1);
@@ -959,8 +958,8 @@ export default function ScheduleServiceScreen() {
 
     const handlePreviousStep = useCallback(() => {
         if (currentStep > 1) {
-            // ? PREMIUM: Suave sa�da do step 2 (fade in step 1)
-            // ? AJUSTE: Sa�da r�pida e scroll para topo se necess�rio
+            // ? PREMIUM: Suave saída do step 2 (fade in step 1)
+            // ? AJUSTE: Saída rápida e scroll para topo se necessário
             Animated.sequence([
                 Animated.timing(reviewStepAnim, { toValue: 0, duration: AppDurations.xs, useNativeDriver: true }),
                 Animated.parallel([
@@ -969,7 +968,7 @@ export default function ScheduleServiceScreen() {
                 ]),
             ]).start(() => {
                 setCurrentStep(prev => prev - 1);
-                // Scroll para topo ao voltar para step 1 tamb�m (boa UX)
+                // Scroll para topo ao voltar para step 1 também (boa UX)
                 scrollViewRef.current?.scrollTo({ y: 0, animated: false });
             });
         } else {
@@ -989,14 +988,14 @@ export default function ScheduleServiceScreen() {
 
         if (selectedProviderService?.pricingType === PricingType.HOURLY && (effectiveDurationInMinutes == null || effectiveDurationInMinutes <= 0)) {
             NotificationUIService.showError(
-                t('schedule_service.booking_error_duration_size', { field: t('common.duration', { defaultValue: 'dura��o' }) }),
+                t('schedule_service.booking_error_duration_size', { field: t('common.duration', { defaultValue: 'duração' }) }),
                 t('schedule_service.booking_error_title', { defaultValue: 'Erro no Agendamento' })
             );
             return;
         }
         if (selectedProviderService?.pricingType === PricingType.BY_SIZE && (squareMeters == null || squareMeters <= 0)) {
             NotificationUIService.showError(
-                t('schedule_service.booking_error_duration_size', { field: t('common.area', { defaultValue: '�rea' }) }),
+                t('schedule_service.booking_error_duration_size', { field: t('common.area', { defaultValue: 'área' }) }),
                 t('schedule_service.booking_error_title', { defaultValue: 'Erro no Agendamento' })
             );
             return;
@@ -1122,7 +1121,7 @@ export default function ScheduleServiceScreen() {
                 if (!foundService) {
                     if (isMounted.current) {
                         NotificationUIService.showError(
-                            t('schedule_service.service_not_available', { defaultValue: 'Servi�o n�o dispon�vel.' }),
+                            t('schedule_service.service_not_available', { defaultValue: 'Serviço não disponível.' }),
                             t('common.error', { defaultValue: 'Erro' })
                         );
                         router.replace('/explore');
@@ -1133,7 +1132,7 @@ export default function ScheduleServiceScreen() {
                 if (isMounted.current) {
                     setSelectedProviderService(foundService);
                 }
-                // Removido: console.log de servi�o carregado para evitar LogBox.
+                // Removido: console.log de serviço carregado para evitar LogBox.
 
                 if (foundService.pricingType === PricingType.HOURLY) {
                     const defaultDuration =
@@ -1164,8 +1163,8 @@ export default function ScheduleServiceScreen() {
                     }
                 } else {
                     NotificationUIService.showInfo(
-                        t('schedule_service.address_needed_message', { defaultValue: 'Informe o endere�o para continuar.' }),
-                        t('schedule_service.address_needed_title', { defaultValue: 'Endere�o Necess�rio' })
+                        t('schedule_service.address_needed_message', { defaultValue: 'Informe o endereço para continuar.' }),
+                        t('schedule_service.address_needed_title', { defaultValue: 'Endereço Necessário' })
                     );
                 }
 
@@ -1223,7 +1222,7 @@ export default function ScheduleServiceScreen() {
         return () => shineAnimation.stop();
     }, [animateShine]);
 
-    // ? CORRE��O: UseEffect para slots otimizado - Flag para loop, deps limpas, fallback para slots false
+    // ? CORREÇÃO: UseEffect para slots otimizado - Flag para loop, deps limpas, fallback para slots false
     useEffect(() => {
         let isCancelled = false; // Para cleanup async
 
@@ -1240,7 +1239,7 @@ export default function ScheduleServiceScreen() {
                 setIsFetchingSlots(true);
             }
 
-            await new Promise(resolve => setTimeout(resolve, 200)); // Delay para anima��o
+            await new Promise(resolve => setTimeout(resolve, 200)); // Delay para animação
 
             // ? PATCH 2.1: Blindagem para selectedDate undefined no useEffect de slots
             const safeSelectedDate = selectedDate ?? new Date();
@@ -1275,7 +1274,7 @@ export default function ScheduleServiceScreen() {
                         // Removido: console.error de erro final para evitar LogBox.
                         if (isMounted.current && !isCancelled) {
                             NotificationUIService.showError(
-                                t('schedule_service.error_fetching_slots_day', { date: dateString, defaultValue: 'Erro ao carregar hor�rios para este dia. Tente novamente.' }),
+                                t('schedule_service.error_fetching_slots_day', { date: dateString, defaultValue: 'Erro ao carregar horários para este dia. Tente novamente.' }),
                                 t('common.error', { defaultValue: 'Erro' })
                             );
                             setDisplaySlotsInfo([]);
@@ -1289,21 +1288,21 @@ export default function ScheduleServiceScreen() {
 
             if (!backendResponse || isCancelled) return;
 
-            // ? CORRE��O: Filtra entradas inv�lidas (sem .startTime string) e normaliza shape do backend
-            // Usa startTime como time principal (compat�vel com ProviderAvailability: startTime/endTime)
+            // ? CORREÇÃO: Filtra entradas inválidas (sem .startTime string) e normaliza shape do backend
+            // Usa startTime como time principal (compatível com ProviderAvailability: startTime/endTime)
             const providerConfiguredSlots: ProviderAvailability[] =
               (backendResponse.available || [])
                 .map(s => {
-                  if (s && typeof s.startTime === 'string' && s.startTime.length > 0) return s; // ? CORRE��O: Verifica startTime diretamente (sem 'as any')
+                  if (s && typeof s.startTime === 'string' && s.startTime.length > 0) return s; // ? CORREÇÃO: Verifica startTime diretamente (sem 'as any')
                   if (s && typeof (s as any).time === 'string' && (s as any).time.length > 0) {
                     // Fallback para time se backend variar (raro, mas blindagem)
                     return { ...s, startTime: (s as any).time };
                   }
                   if (s && typeof s.startTime !== 'string') {
-                    // Ignora entradas inv�lidas sem startTime
+                    // Ignora entradas inválidas sem startTime
                     return null;
                   }
-                  return s; // ? CORRE��O: Mant�m se v�lido, sem for�ar time
+                  return s; // ? CORREÇÃO: Mantém se válido, sem forçar time
                 })
                 .filter(Boolean) as ProviderAvailability[];
 
@@ -1332,15 +1331,15 @@ export default function ScheduleServiceScreen() {
             if (isMounted.current && !isCancelled) {
                 setDisplaySlotsInfo(finalDisplaySlots);
 
-                // NOVO: Se ao entrar j� houver slots dispon�veis para o dia atual/selecionado,
-                // mostramos "Sucesso � Hor�rios encontrados!" apenas uma vez.
+                // NOVO: Se ao entrar já houver slots disponíveis para o dia atual/selecionado,
+                // mostramos "Sucesso é Horários encontrados!" apenas uma vez.
                 if (!hasShownTodayAvailableToastRef.current) {
                     try {
                         const anyAvailable = finalDisplaySlots.some((s) => s?.isAvailable);
                         if (anyAvailable) {
                             hasShownTodayAvailableToastRef.current = true;
                             NotificationUIService.showSuccess(
-                                t('schedule_service.found_available_date', { defaultValue: 'Hor�rios encontrados!' }),
+                                t('schedule_service.found_available_date', { defaultValue: 'Horários encontrados!' }),
                                 t('common.success', { defaultValue: 'Sucesso' })
                             );
                         }
@@ -1348,27 +1347,22 @@ export default function ScheduleServiceScreen() {
                 }
 
                 Animated.parallel([
-                    Animated.timing(fadeAnim, { toValue: 1, duration: AppDurations.xs, useNativeDriver: true }), // Mais r�pido
+                    Animated.timing(fadeAnim, { toValue: 1, duration: AppDurations.xs, useNativeDriver: true }), // Mais rápido
                     Animated.spring(scaleAnim, { toValue: 1, friction: 5, useNativeDriver: true }),
                 ]).start();
 
-                // ? CORRE��O: Usar requestAnimationFrame + delay maior para scroll ap�s render (evita VirtualizedList durante scroll)
+                // ? CORREÇÃO: Usar requestAnimationFrame + delay maior para scroll após render (evita VirtualizedList durante scroll)
                 if (hasRealAvailableSlots && timeSlotsRef.current && scrollViewRef.current) {
                     requestAnimationFrame(() => {
                         setTimeout(() => {
                             scrollViewRef.current?.scrollTo({ y: 400, animated: true });
-                        }, 200); // Delay aumentado p�s-render
+                        }, 200); // Delay aumentado pós-render
                     });
                 }
 
-                // LOOP INTELIGENTE: S� se zero slots e n�o buscando j�
+                // LOOP INTELIGENTE: Só se zero slots e não buscando já
                 if (!hasRealAvailableSlots && !isSearchingNextDate) {
-                    setIsSearchingNextDate(true); // ? Flag para bloquear m�ltiplas buscas
-
-                    NotificationUIService.showInfo(
-                        t('schedule_service.searching_next_available', { defaultValue: 'Procurando pr�ximo dia dispon�vel...' }),
-                        t('schedule_service.no_slots_title', { defaultValue: 'Buscando Hor�rios' })
-                    );
+                    setIsSearchingNextDate(true); // ? Flag para bloquear múltiplas buscas
 
                     let foundAvailableDate = false;
                     const searchPromises = [];
@@ -1430,7 +1424,7 @@ export default function ScheduleServiceScreen() {
                                 NotificationUIService.showSuccess(
                                     t('schedule_service.found_available_date', { 
                                         date: date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }),
-                                        defaultValue: 'Hor�rios encontrados!' 
+                                        defaultValue: 'Horários encontrados!' 
                                     }),
                                     t('common.success', { defaultValue: 'Sucesso' })
                                 );
@@ -1457,7 +1451,7 @@ export default function ScheduleServiceScreen() {
                         if (!foundAvailableDate) {
                             NotificationUIService.showError(
                                 t('schedule_service.no_available_nearby', { 
-                                    defaultValue: 'Nenhum hor�rio nos pr�ximos 7 dias. Selecione outra data no calend�rio.' 
+                                    defaultValue: 'Nenhum horário nos próximos 7 dias. Selecione outra data no calendário.' 
                                 }),
                                 t('common.error', { defaultValue: 'Erro' })
                             );
@@ -1528,7 +1522,7 @@ export default function ScheduleServiceScreen() {
         if (finalCalculatedPrice > 0) {
             return formatBRL(finalCalculatedPrice);
         } else {
-            return t('schedule_service.select_date_time_address', { defaultValue: 'Selecione Data, Hora e Endere�o' });
+            return t('schedule_service.select_date_time_address', { defaultValue: 'Selecione Data, Hora e Endereço' });
         }
     }, [finalCalculatedPrice, t]);
 
@@ -1549,7 +1543,7 @@ export default function ScheduleServiceScreen() {
 
                 <ScheduleHeader
                     onBackPress={handlePreviousStep}
-                    headerTitle={t('schedule_service.header_title', { defaultValue: 'Agendar Servi�o' })}
+                    headerTitle={t('schedule_service.header_title', { defaultValue: 'Agendar Serviço' })}
                     fadeAnim={fadeAnim}
                     slideUpAnim={slideUpAnim}
                 />
@@ -1585,14 +1579,16 @@ export default function ScheduleServiceScreen() {
 
                 <Animated.ScrollView
                     ref={scrollViewRef}
-                    contentContainerStyle={styles.scrollContentContainer}
+                    contentContainerStyle={[styles.scrollContentContainer, { paddingBottom: 90 }]} // Padding extra para n�o esconder o card atr�s do bot�o fixo
                     style={{
                         opacity: fadeAnim,
                         transform: [{ translateY: slideUpAnim }]
                     }}
                     showsVerticalScrollIndicator={false}
-                    nestedScrollEnabled={true} // ? FIX: Permite FlatList aninhada sem quebrar virtualiza��o
-                    removeClippedSubviews={false} // ? CORRE��O: Desabilitado para evitar clipping do FlatList filho (causa VirtualizedList warnings)
+                    nestedScrollEnabled={true} // ? FIX: Permite FlatList aninhada sem quebrar virtualização
+                    removeClippedSubviews={false} // ? CORREÇÃO: Desabilitado para evitar clipping do FlatList filho (causa VirtualizedList warnings)
+                    bounces={currentStep !== 2}
+                    alwaysBounceVertical={currentStep !== 2}
                     // ? FIX: Scroll inicial sempre no topo ao montar (evita problemas iniciais)
                     onContentSizeChange={() => {
                         if (currentStep === 1) {
@@ -1652,29 +1648,17 @@ export default function ScheduleServiceScreen() {
                                     selectedSlots={selectedSlots}
                                 />
                             </Animated.View>
-
-                            <TouchableOpacity
-                                style={[styles.nextStepButton, isNextButtonDisabled && styles.nextStepButtonDisabled]}
-                                onPress={handleNextStep}
-                                disabled={isNextButtonDisabled}
-                            >
-                                <Text style={styles.nextStepButtonText}>
-                                    {finalCalculatedPrice > 0
-                                        ? `Continuar (${formatBRL(finalCalculatedPrice)})`
-                                        : 'Continuar'}
-                                </Text>
-                            </TouchableOpacity>
                         </>
                     )}
 
-                    {/* ? PREMIUM: Wrapper para step 2 com anima��o global de entrada (inicia baixo, sobe suave) */}
-                    {/* ? MUDAN�A: Agora um �nico card unificado para notes + cupom + summary */}
+                    {/* ? PREMIUM: Wrapper para step 2 com animação global de entrada (inicia baixo, sobe suave) */}
+                    {/* ? MUDANÇA: Agora um único card unificado para notes + cupom + summary */}
                     {currentStep === 2 && (
                         <Animated.View style={{
                             opacity: reviewStepAnim,
                             transform: [
-                                { translateY: reviewStepAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }, // Menos slide para r�pido
-                                { scale: reviewStepAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) } // Scale m�nimo
+                                { translateY: reviewStepAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }, // Menos slide para rápido
+                                { scale: reviewStepAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) } // Scale mínimo
                             ]
                         }}>
                             {selectedProviderService && (
@@ -1687,16 +1671,18 @@ export default function ScheduleServiceScreen() {
                                 </Animated.View>
                             )}
 
-                            {/* ? MUDAN�A: Removidas se��es separadas de Notes e Coupon - agora integradas no BookingSummaryPreview */}
-                            {/* ? NOVO: �nico card com todas as se��es (notes, cupom, summary) */}
+                            {/* ? CORREÇÃO POSIÇÃO BANNER: Movido para ANTES do card (abaixo do header, acima do "Revise seu Agendamento") */}
+                            {/* ? AJUSTE: Adicionado marginTop extra para espaçamento natural abaixo do header */}
+                            {/* ? MUDANÇA: Removidas seções separadas de Notes e Coupon - agora integradas no BookingSummaryPreview */}
+                            {/* ? NOVO: Único card com todas as seções (notes, cupom, summary) */}
                             <BookingSummaryPreview
                                 provider={provider}
                                 selectedProviderService={selectedProviderService}
-                                  selectedDate={selectedDate}
-                                  selectedTime={selectedTime}
-                                  address={address}
-                                  durationInMinutes={effectiveDurationInMinutes}
-                                  squareMeters={squareMeters}
+                                selectedDate={selectedDate}
+                                selectedTime={selectedTime}
+                                address={address}
+                                durationInMinutes={effectiveDurationInMinutes}
+                                squareMeters={squareMeters}
                                 subtotal={calculatedSubtotal}
                                 discountAmount={discountAmount}
                                 finalPrice={finalCalculatedPrice}
@@ -1712,7 +1698,7 @@ export default function ScheduleServiceScreen() {
                                 couponFeedbackAnim={couponFeedbackAnim}
                                 couponFeedbackColor={couponFeedbackColor}
                                 couponFeedbackIcon={couponFeedbackIcon}
-                                reviewEntranceAnim={reviewStepAnim} // Usa reviewStepAnim para o card �nico
+                                reviewEntranceAnim={reviewStepAnim} // Usa reviewStepAnim para o card único
                                 reviewStaggerDelay={0} // Sem delay extra para o card principal
                                 notesAnim={notesAnim} // Passa stagger para notes interna
                                 cupomAnim={cupomAnim} // Passa stagger para cupom interna
@@ -1738,7 +1724,7 @@ export default function ScheduleServiceScreen() {
                     ]}>
                         <View style={styles.floatingSummaryContent}>
                             <Text style={styles.floatingSummaryText}>
-                                <Text>{selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }) || ''} {t('common.at', { defaultValue: '�s' })} {selectedTime || ''}</Text>
+                                <Text>{selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }) || ''} {t('common.at', { defaultValue: 'às' })} {selectedTime || ''}</Text>
                             </Text>
                             <Text style={styles.floatingSummaryPrice}>
                                 <Text>{formatBRL(finalCalculatedPrice)}</Text>
@@ -1747,22 +1733,33 @@ export default function ScheduleServiceScreen() {
                     </Animated.View>
                 )}
 
+                {/* ? CORREÇÃO POSIÇÃO BANNER: Botão MANTIDO FORA do ScrollView (fixo no fundo), agora com banner acima do card */}
+                {currentStep === 1 && (
+                    <View style={styles.bottomNextStepWrap}>
+                        <TouchableOpacity
+                            style={[styles.nextStepButton, isNextButtonDisabled && styles.nextStepButtonDisabled]}
+                            onPress={handleNextStep}
+                            disabled={isNextButtonDisabled}
+                            activeOpacity={0.9}
+                        >
+                            <Text style={styles.nextStepButtonText}>
+                                {finalCalculatedPrice > 0
+                                    ? `Continuar (${formatBRL(finalCalculatedPrice)})`
+                                    : 'Continuar'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 {currentStep === 2 && (
-                    <>
-                        <SecurityBanner
-                            onPress={() =>
-                                router.push('/(client)/explore/sercurity/index' as any)
-                            }
-                        />
-                        <ConfirmBookingButton
-                            isButtonDisabled={isConfirmButtonDisabled}
-                            onConfirmBooking={handleConfirmBooking}
-                            isBooking={isBooking}
-                            confirmButtonText={confirmButtonText}
-                            selectedTime={selectedTime}
-                            hasSelectedServicePrice={!!selectedProviderService?.price}
-                        />
-                    </>
+                    <ConfirmBookingButton
+                        isButtonDisabled={isConfirmButtonDisabled}
+                        onConfirmBooking={handleConfirmBooking}
+                        isBooking={isBooking}
+                        confirmButtonText={confirmButtonText}
+                        selectedTime={selectedTime}
+                        hasSelectedServicePrice={!!selectedProviderService?.price}
+                    />
                 )}
             </View>
         </View>
@@ -1787,7 +1784,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FAFAFA',
     },
     scrollContentContainer: {
-        paddingBottom: 30,
+        paddingBottom: 40,
         paddingTop: 10,
     },
     stepsPill: {
@@ -1859,76 +1856,56 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: AppColors.primaryInteractive,
     },
-    securityBannerContainer: {
-        width: SCREEN_WIDTH - 30,
-        height: 90,
-        alignSelf: 'center',
-        marginTop: 12,
-        marginBottom: 12,
-        bottom: 80,
+    safetyBannerContainer: {
+      width: '100%',
+      alignSelf: 'center',
+      marginTop: 30, // ? CORREÇÃO POSIÇÃO BANNER: Mantido para espaçamento inicial, mas ajustado via wrapper
+      marginBottom: 4,
     },
-    securityBannerCard: {
-        flex: 1,
-        borderRadius: 18,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        ...AppShadows.medium,
+    safetyBannerCard: {
+      flex: 1,
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      ...AppShadows.medium,
     },
-    securityBannerLeftSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-        paddingRight: 10,
+    safetyBannerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
     },
-    securityBannerIconBadge: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: AppColors.primaryInteractive,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 10,
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOpacity: 0.12,
-                shadowRadius: 6,
-                shadowOffset: { width: 0, height: 3 },
-            },
-            android: {
-                elevation: 3,
-            },
-        }),
+    safetyBannerIconBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: AppColors.primaryInteractive,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 10,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOpacity: 0.12,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 3 },
+        },
+        android: {
+          elevation: 3,
+        },
+      }),
     },
-    securityBannerTextWrap: {
-        flex: 1,
+    safetyBannerTitle: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: AppColors.textBody,
+      marginBottom: 2,
     },
-    securityBannerTitle: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: AppColors.textBody,
-        marginBottom: 2,
-    },
-    securityBannerSubtitle: {
-        fontSize: 12,
-        color: AppColors.textAuxiliary,
-        lineHeight: 18,
-    },
-    securityBannerCta: {
-        backgroundColor: AppColors.primaryInteractive,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    securityBannerCtaText: {
-        color: AppColors.white,
-        fontSize: 12,
-        fontWeight: '700',
+    safetyBannerSubtitle: {
+      fontSize: 11,
+      color: AppColors.textAuxiliary,
+      lineHeight: 16,
     },
     /* HEADER LIMPO - sem fundo nem sombra (apenas texto refinado) */
     sectionHeaderRow: {
@@ -1963,7 +1940,7 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
         elevation: 3,
     },
-    /* Opcional: t�tulo das se��es internas (se quiser manter o estilo anterior em outros lugares) */
+    /* Opcional: título das seções internas (se quiser manter o estilo anterior em outros lugares) */
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
@@ -1979,15 +1956,15 @@ const styles = StyleSheet.create({
         marginTop: 25,
         marginBottom: 15,
     },
-    /* ? NOVO: Estilos para se��es compactas integradas (diminu�das) */
+    /* ? NOVO: Estilos para seções compactas integradas (diminuídas) */
     compactSection: {
-        marginBottom: 12, // Menos espa�amento entre se��es
+        marginBottom: 12, // Menos espaçamento entre seções
         paddingBottom: 8,
         borderBottomWidth: 1,
         borderBottomColor: AppColors.backgroundNeutral,
     },
     compactSectionTitle: {
-        fontSize: 16, // Menor que o t�tulo principal
+        fontSize: 16, // Menor que o título principal
         fontWeight: '600',
         color: AppColors.textBody,
         marginBottom: 8,
@@ -2017,7 +1994,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderTopRightRadius: 8,
         borderBottomRightRadius: 8,
-        minWidth: 70, // Largura m�nima para bot�o compacto
+        minWidth: 70, // Largura mínima para botão compacto
     },
     compactApplyCouponButtonText: {
         color: AppColors.white,
@@ -2031,13 +2008,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 0,
     },
     compactCouponAppliedText: {
-        marginLeft: 6, // Menos espa�amento
+        marginLeft: 6, // Menos espaçamento
         fontSize: 13, // Fonte menor
         fontWeight: '500',
     },
-    /* ? NOVO: Se��o de summary interna (parte do card �nico) */
+    /* ? NOVO: Seção de summary interna (parte do card único) */
     summarySection: {
-        marginTop: 8, // Pequena margem ap�s cupom
+        marginTop: 8, // Pequena margem após cupom
     },
     summaryItem: {
         flexDirection: 'row',
@@ -2101,11 +2078,11 @@ const styles = StyleSheet.create({
         color: AppColors.primaryInteractive,
         textDecorationLine: 'underline',
     },
-    /* ? NOVO: Estilo espec�fico para se��o de notes no final (sem t�tulo, espa�amento sutil) */
+    /* ? NOVO: Estilo específico para seção de notes no final (sem título, espaçamento sutil) */
     notesFinalSection: {
-        marginTop: 15, // Espa�amento ap�s pol�tica de cancelamento
+        marginTop: 15, // Espaçamento após política de cancelamento
         paddingTop: 10,
-        borderTopWidth: 1, // Linha sutil de separa��o
+        borderTopWidth: 1, // Linha sutil de separação
         borderTopColor: AppColors.backgroundNeutral,
         paddingBottom: 0, // Sem padding inferior extra
     },
@@ -2138,18 +2115,47 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14,
     },
+    bottomNextStepWrap: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingHorizontal: 24,
+        paddingTop: 12,
+        paddingBottom: Platform.OS === 'ios' ? 28 : 24,
+        backgroundColor: AppColors.white,
+        ...AppShadows.medium,
+    },
     nextStepButton: {
         backgroundColor: AppColors.primaryInteractive,
-        paddingVertical: 16,
+        paddingVertical: 14,
         paddingHorizontal: 24,
-        borderRadius: 12,
         alignItems: 'center',
-        marginHorizontal: 20,
-        marginTop: 20,
-        marginBottom: 20,
+        justifyContent: 'center',
+        marginHorizontal: 24,
+        marginTop: 6,
+        marginBottom: 2,
+        borderTopStartRadius: 44,
+        borderBottomStartRadius: 44,
+        borderTopEndRadius: 44,
+        borderBottomEndRadius: 44,
+        overflow: 'hidden',
+        ...AppShadows.medium,
+        borderRightWidth: 0,
+        borderRightColor: '#45484b56',
+        borderBottomColor: '#45484b56',
+        borderBottomWidth: 0.1,
+        borderLeftColor: '#45484b56',
+        borderLeftWidth: 1,
+        shadowColor: '#45484b56',
+        shadowOffset: { width: -1, height: 1 },
+        shadowOpacity: 3.55,
+        shadowRadius: 35,
+        elevation: 6,
     },
     nextStepButtonDisabled: {
-        backgroundColor: AppColors.backgroundNeutral,
+        backgroundColor: AppColors.primaryInteractive + '50',
+        ...AppShadows.small,
     },
     nextStepButtonText: {
         color: AppColors.white,
@@ -2157,4 +2163,3 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
 });
-
