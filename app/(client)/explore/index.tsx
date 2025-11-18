@@ -1,4 +1,4 @@
-﻿import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Image } from 'react-native';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -84,7 +84,7 @@ const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
           name: 'Limpeza Residencial',
           icon: 'home',
           backgroundColor: '#E6EEF9',
-          description: 'Limpeza completa para residÃªncias.',
+          description: 'Limpeza completa para residências.',
           price: 179,
         },
       },
@@ -102,7 +102,7 @@ const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
     fullName: 'Maria',
     email: 'provedor2@teste.com',
     avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=320&q=60',
-    bio: 'Atendimento corporativo para escritÃ³rios.',
+    bio: 'Atendimento corporativo para escritórios.',
     providerServices: [
       {
         id: 'fb-maria-svc',
@@ -110,7 +110,7 @@ const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
         serviceId: 'office-standard',
         price: 239,
         durationMinutes: 210,
-        description: 'HigienizaÃ§Ã£o comercial com foco em Ã¡reas comuns.',
+        description: 'Higienização comercial com foco em áreas comuns.',
         pricingType: PricingType.FIXED_PRICE,
         pricePerSquareMeter: null,
         pricePerRoom: null,
@@ -119,7 +119,7 @@ const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
           name: 'Limpeza Comercial',
           icon: 'briefcase',
           backgroundColor: '#EAF7FF',
-          description: 'ServiÃ§o para escritÃ³rios.',
+          description: 'Serviço para escritórios.',
           price: 239,
         },
       },
@@ -137,7 +137,7 @@ const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
     fullName: 'Joana',
     email: 'provedor3@teste.com',
     avatarUrl: 'https://images.unsplash.com/photo-1544006659-f0b21884ce1d?auto=format&fit=crop&w=320&q=60',
-    bio: 'Especialista em limpezas completas e avaliaÃ§Ãµes excelentes.',
+    bio: 'Especialista em limpezas completas e avaliações excelentes.',
     providerServices: [
       {
         id: 'fb-joana-svc',
@@ -145,7 +145,7 @@ const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
         serviceId: 'residential-signature',
         price: 259,
         durationMinutes: 240,
-        description: 'Limpeza residencial signature com atenÃ§Ã£o a detalhes.',
+        description: 'Limpeza residencial signature com atenção a detalhes.',
         pricingType: PricingType.FIXED_PRICE,
         pricePerSquareMeter: null,
         pricePerRoom: null,
@@ -154,7 +154,7 @@ const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
           name: 'Limpeza Residencial Signature',
           icon: 'sparkles',
           backgroundColor: '#F3E8FF',
-          description: 'Atendimento completo para casas com alto padrÃ£o.',
+          description: 'Atendimento completo para casas com alto padrão.',
           price: 259,
         },
       },
@@ -291,8 +291,8 @@ export default function ExploreClientScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Novo estado para o raio de busca
-  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // PadrÃƒÂ£o 50 km (como no cÃƒÂ³digo original)
-  // Novo estado para o filtro de preÃƒÂ§o
+  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // PadrÃ£o 50 km (como no cÃ³digo original)
+  // Novo estado para o filtro de preÃ§o
   const [priceFilter, setPriceFilter] = useState<PricingType | null>(null);
 
   const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
@@ -308,17 +308,17 @@ export default function ExploreClientScreen() {
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const categoriesAnim = useRef(new Animated.Value(0)).current;
-  // Banner deve aparecer junto ao conteÃƒÂºdo; inicia visÃƒÂ­vel
+  // Banner deve aparecer junto ao conteÃºdo; inicia visÃ­vel
   const bannerAnim = useRef(new Animated.Value(1)).current;
   const recommendationsAnim = useRef(new Animated.Value(0)).current;
   const providersAnim = useRef(new Animated.Value(0)).current;
   const navBarAnim = useRef(new Animated.Value(0)).current;
   const [reducedMotion, setReducedMotion] = useState(false);
 
-  // Adicionado ref para verificar se o componente estÃƒÂ¡ montado
+  // Adicionado ref para verificar se o componente estÃ¡ montado
   const isMounted = useRef(true);
 
-  // INTEGRAÃƒâ€¡ÃƒÆ’O DA LÃƒâ€œGICA DO NEWHEADER: LÃƒÂ³gica completa para exibir o nome do usuÃƒÂ¡rio (priorizando user do auth e fallback para userProfile)
+  // INTEGRAÃ‡ÃƒO DA LÃ“GICA DO NEWHEADER: LÃ³gica completa para exibir o nome do usuÃ¡rio (priorizando user do auth e fallback para userProfile)
   const userNameDisplay = (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ?? 
                           (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ?? 
                           t('common.user');
@@ -331,21 +331,21 @@ export default function ExploreClientScreen() {
       try {
         const seen = await AsyncStorage.getItem(PROTOCOL_PREMIUM_SEEN_KEY);
         // Sempre exibir o alerta ao abrir a home
-        if (true) {
+          if (true) {
           timeout = setTimeout(() => {
             Alert.alert(
               'Produtos de limpeza disponíveis?',
               'Os produtos de limpeza que a diarista vai usar já estão separados e acessíveis no local?',
               [
                 {
-                  text: t('common.cancel', { defaultValue: 'Cancelar' }),
+                  text: 'Cancelar',
                   style: 'cancel',
                 },
                 {
                   text: 'Aceitar',
                   style: 'default',
                 },
-              ],
+              ]
             );
           }, 3000);
           await AsyncStorage.setItem(PROTOCOL_PREMIUM_SEEN_KEY, 'true');
@@ -397,7 +397,6 @@ export default function ExploreClientScreen() {
       'user profile',
       () => getUserProfile(),
       profile => {
-        console.log('[ExploreClientScreen] User profile loaded:', profile);
         setUserProfile(profile);
       },
       'Erro ao carregar perfil'
@@ -427,7 +426,7 @@ export default function ExploreClientScreen() {
               return true;
             });
 
-            // 1º critério: se o usuário logado for provider, colocar seu próprio card em primeiro
+            // 1� crit�rio: se o usu�rio logado for provider, colocar seu pr�prio card em primeiro
             const currentProviderId =
               (user as any)?.providerDetails?.id || (user as any)?.providerDetails?.providerId;
             const currentProviderEmail = user?.email;
@@ -441,7 +440,7 @@ export default function ExploreClientScreen() {
                 return false;
               });
             } else {
-              // 2º critério (fallback antigo): destacar Joana para usuários genéricos
+              // 2� crit�rio (fallback antigo): destacar Joana para usu�rios gen�ricos
               idx = merged.findIndex(
                 p => p && typeof p.fullName === 'string' && /joana/i.test(p.fullName)
               );
@@ -459,7 +458,7 @@ export default function ExploreClientScreen() {
         }
       },
       data => setRecommendations(data),
-      'Erro ao carregar recomendações'
+      'Erro ao carregar recomenda��es'
     );
 
     let locationCoords: Location.LocationObjectCoords | null = null;
@@ -488,11 +487,11 @@ export default function ExploreClientScreen() {
             radius: searchRadiusKm, // em km para o backend
           }),
         data => setNearbyProviders(data),
-        'Erro ao carregar provedores prÃƒÂ³ximos'
+        'Erro ao carregar provedores prÃ³ximos'
       );
     }
 
-    if (isMounted.current) {      // Precarregar imagens do banner e do DEFENSE_SOS para evitar atraso de decodificaÃ¯Â¿Â½Ã¯Â¿Â½o
+    if (isMounted.current) {      // Precarregar imagens do banner e do DEFENSE_SOS para evitar atraso de decodificaï¿½ï¿½o
       try {
         await Asset.loadAsync([
           require('../../../assets/images/banner6.png'),
@@ -501,7 +500,7 @@ export default function ExploreClientScreen() {
           Icons3D.support,
         ] as any);
       } catch {}
-      const D = 240; // duraÃƒÂ§ÃƒÂ£o padrÃƒÂ£o
+      const D = 240; // duraÃ§Ã£o padrÃ£o
       const S = 60;  // passo de atraso
       if (reducedMotion) {
         headerAnim.setValue(1);
@@ -688,13 +687,13 @@ export default function ExploreClientScreen() {
   const filteredNearbyProviders = Array.isArray(nearbyProviders)
     ? nearbyProviders.filter((item) => {
         if (!item || !item.fullName) return false;
-        if (!priceFilter) return true; // Sem filtro de preÃƒÂ§o, mostra todos
+        if (!priceFilter) return true; // Sem filtro de preÃ§o, mostra todos
 
-        // Verifica se o provedor tem algum serviÃƒÂ§o que corresponda ao tipo de preÃƒÂ§o
+        // Verifica se o provedor tem algum serviÃ§o que corresponda ao tipo de preÃ§o
         return item.providerServices?.some((service) => {
           if (service.pricingType === priceFilter) {
             const price = getNumericPriceValue(service);
-            return price > 0; // Apenas serviÃƒÂ§os com preÃƒÂ§o vlido
+            return price > 0; // Apenas serviÃ§os com preÃ§o vlido
           }
           return false;
         });
@@ -764,9 +763,9 @@ export default function ExploreClientScreen() {
   const handleShareReferral = useCallback(async () => {
     try {
       const result = await Share.share({
-        message: `Use meu cÃƒÂ³digo de indicaÃƒÂ§ÃƒÂ£o ${referralCode} no LimpeJÃƒÂ¡ e ganhe um desconto na sua primeira reserva!`,
+        message: `Use meu cÃ³digo de indicaÃ§Ã£o ${referralCode} no LimpeJÃ¡ e ganhe um desconto na sua primeira reserva!`,
         url: 'https://limpeja.com/referral',
-        title: 'Indique um amigo e ganhe no LimpeJÃƒÂ¡!',
+        title: 'Indique um amigo e ganhe no LimpeJÃ¡!',
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
@@ -793,8 +792,6 @@ export default function ExploreClientScreen() {
     }
   }, []);
 
-  console.log('DEBUG | welcomeCouponOffer:', welcomeCouponOffer);
-
   if (loading && !isRefreshing) {
     return (
       <View style={styles.loadingContainer}>
@@ -807,8 +804,8 @@ export default function ExploreClientScreen() {
     );
   }
 
-  // Em caso de erro na primeira carga, nÃƒÂ£o bloquear a home;
-  // o usuÃƒÂ¡rio pode usar pull-to-refresh para tentar de novo.
+  // Em caso de erro na primeira carga, nÃ£o bloquear a home;
+  // o usuÃ¡rio pode usar pull-to-refresh para tentar de novo.
 
   const rawAddress =
     userProfile?.clientDetails?.address ||
@@ -830,7 +827,7 @@ export default function ExploreClientScreen() {
           }}
         />
 
-        {/* FlatList UNICO com TODO o conteÃƒÂºdo no ListHeaderComponent */}
+        {/* FlatList UNICO com TODO o conteÃºdo no ListHeaderComponent */}
         <FlatList
           data={[]} // Header-only: data vazia, mas header rola tudo
           renderItem={() => null} // ? FIX: Adicionado renderItem dummy para FlatList header-only (evita erro TS)
@@ -843,9 +840,9 @@ export default function ExploreClientScreen() {
                 userAddress={addressToDisplay}
               />
 
-              {/* ContentWrapper UNICO - TODO o conteÃƒÂºdo aqui */}
+              {/* ContentWrapper UNICO - TODO o conteÃºdo aqui */}
               <View style={styles.contentWrapper}>
-                {/* SeÃƒÂ§ÃƒÂ£o de Categorias */}
+                {/* SeÃ§Ã£o de Categorias */}
                 <Animated.View
                   style={[
                     styles.categoriesSection,
@@ -880,7 +877,7 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* RecomendaÃƒÂ§ÃƒÂµes UNICAS */}
+                {/* RecomendaÃ§Ãµes UNICAS */}
                 <Animated.View
                   style={{
                     opacity: recommendationsAnim,
@@ -892,7 +889,7 @@ export default function ExploreClientScreen() {
                     data={safeRecommendations}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de recomendaÃƒÂ§ÃƒÂ£o invÃƒÂ¡lido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de recomendaÃ§Ã£o invÃ¡lido filtrado:', item);
                         return null;
                       }
                       return <RecomendacaoCard key={item.id} item={item} />;
@@ -914,7 +911,7 @@ export default function ExploreClientScreen() {
                     data={filteredNearbyProviders}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de prestador invÃƒÂ¡lido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de prestador invÃ¡lido filtrado:', item);
                         return null;
                       }
                       return (
@@ -927,7 +924,7 @@ export default function ExploreClientScreen() {
                   
                 </Animated.View>
 
-                {/* Carrossel de Banners UNICO - Movido para abaixo da seÃƒÂ§ÃƒÂ£o Profissionais por Perto */}
+                {/* Carrossel de Banners UNICO - Movido para abaixo da seÃ§Ã£o Profissionais por Perto */}
                 <Animated.View
                   style={[
                     styles.carouselContainer,
@@ -990,10 +987,10 @@ export default function ExploreClientScreen() {
             />
           }
           nestedScrollEnabled={true} // Para Android
-          removeClippedSubviews={false} // Evita corte de animaÃƒÂ§ÃƒÂµes
+          removeClippedSubviews={false} // Evita corte de animaÃ§Ãµes
         />
 
-        {/* NavBar ÃƒÅ¡NICA */}
+        {/* NavBar ÃšNICA */}
         <Animated.View
           style={[
             styles.navBarContainer,
@@ -1002,7 +999,7 @@ export default function ExploreClientScreen() {
               transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] 
             },
           ]}
-          pointerEvents="box-none"> {/* NÃƒÂ£o bloqueia scroll */}
+          pointerEvents="box-none"> {/* NÃ£o bloqueia scroll */}
           <NavBar
             welcomeCouponOffer={welcomeCouponOffer}
             activeBottomPromotion={activeBottomPromotion}
@@ -1023,7 +1020,7 @@ export default function ExploreClientScreen() {
             throttleHours={24}
             showOnRoutes={['/(client)/explore']}
             onApply={handleUseWelcomeCoupon}
-            pointerEvents="box-none" // NÃƒÂ£o bloqueia scroll
+            pointerEvents="box-none" // NÃ£o bloqueia scroll
           />
         )}
 
@@ -1076,7 +1073,7 @@ export default function ExploreClientScreen() {
           delayMs={3500}
           throttleHours={24}
           showOnRoutes={['/(client)/explore']}
-          bottomOffset={120} // Offset para nÃƒÂ£o sobrepor NavBar
+          bottomOffset={120} // Offset para nÃ£o sobrepor NavBar
           pointerEvents="box-none"
         />
 
@@ -1262,7 +1259,7 @@ const styles = StyleSheet.create({
     fontSize: 16.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '600',
-    // PREMIUM: Estilo de tÃ¯Â¿Â½tulo alinhado
+    // PREMIUM: Estilo de tï¿½tulo alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
   },
@@ -1284,7 +1281,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COR_CINZA_FUNDO,
   },
-  // REMOVIDO: Estilos de paginaÃ¯Â¿Â½Ã¯Â¿Â½o (nÃ¯Â¿Â½o mais necessÃ¯Â¿Â½rios)
+  // REMOVIDO: Estilos de paginaï¿½ï¿½o (nï¿½o mais necessï¿½rios)
   // pagination: {
   //   flexDirection: 'row',
   //   height: 20,
@@ -1315,7 +1312,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 21,
     marginTop: 2,
   },
-  // EspaÃƒÂ§amento adicional para manter a seÃƒÂ§ÃƒÂ£o "Explore mais serviÃƒÂ§os" um pouco abaixo do carrossel
+  // EspaÃ§amento adicional para manter a seÃ§Ã£o "Explore mais serviÃ§os" um pouco abaixo do carrossel
   exploreMoreSpacing: {
     marginTop: 16,
   },
@@ -1323,7 +1320,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
-    // PREMIUM: Estilo de tÃ¯Â¿Â½tulo alinhado
+    // PREMIUM: Estilo de tï¿½tulo alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
   },
@@ -1381,7 +1378,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
   },
-  // Desloca levemente o ÃƒÂ­cone "+" para baixo (~3px)
+  // Desloca levemente o Ã­cone "+" para baixo (~3px)
   viewAllIcon: {
     transform: [{ translateY: 3 }],
   },
