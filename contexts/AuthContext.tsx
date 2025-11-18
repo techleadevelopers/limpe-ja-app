@@ -1,13 +1,10 @@
 // LimpeJaApp/contexts/AuthContext.tsx
 import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
-import { AuthResponse, RegisterClientDto, RegisterProviderDto, UserRole, VerificationStatus } from '../types/backend/auth';
+import { AuthResponse, RegisterClientDto, RegisterProviderDto, UserRole } from '../types/backend/auth';
 import authService from '../services/authService';
 import { registerDevicePushToken } from '../services/pushService';
 import { setUnauthorizedCallback } from '../services/api';
-import { ProviderDisplayInfo } from '../types/backend/providers';
 import { UserProfile } from '../types/backend/users';
-import { ClientDetails } from '../types/backend/clients';
-import { BookingAddress } from '../types/backend/bookings';
 import userService from '../services/userService';
 import axios from 'axios';
 import type { AxiosRequestConfig } from 'axios';
@@ -22,9 +19,15 @@ const safeString = (v: any) => {
   }
 };
 
-const debugLog   = (...args: unknown[]) => { if (__DEV__) console.log('[Auth]', ...args.map(safeString)); };
-const debugWarn  = (...args: unknown[]) => { if (__DEV__) console.warn('[Auth]', ...args.map(safeString)); };
-const debugError = (...args: unknown[]) => { if (__DEV__) console.error('[Auth]', ...args.map(safeString)); };
+const debugLog = (...args: unknown[]) => {
+  if (__DEV__) console.log('[Auth]', ...args.map(safeString));
+};
+const debugWarn = (...args: unknown[]) => {
+  if (__DEV__) console.warn('[Auth]', ...args.map(safeString));
+};
+const debugError = (...args: unknown[]) => {
+  if (__DEV__) console.error('[Auth]', ...args.map(safeString));
+};
 
 interface AuthDataFromStorage {
   token: string | null;
@@ -83,14 +86,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const handleUnauthorized = useCallback(async () => {
-    // Backend não expõe /auth/refresh no momento; trate 401 como sessão inválida
-    await logout();
-    throw new Error('Unauthorized');
-  }, [logout]);
+  const handleUnauthorized = useCallback(
+    async ({ originalRequest }: { originalRequest: AxiosRequestConfig }) => {
+      const headers = (originalRequest.headers ?? {}) as Record<string, unknown>;
+      const silentHeader = headers['x-silent'] ?? headers['X-Silent'];
+      const isSilent = silentHeader === '1' || silentHeader === 1 || silentHeader === true;
+      const isMetaSilent = (originalRequest as any).meta?.silent === true;
+
+      // Chamadas marcadas como silenciosas NÃO derrubam a sessão
+      if (isSilent || isMetaSilent) {
+        debugLog('[AuthContext | handleUnauthorized] 401 silencioso; mantendo sessão.');
+        return;
+      }
+
+      // Backend não expõe /auth/refresh; trate 401 não silencioso como sessão inválida
+      await logout();
+      throw new Error('Unauthorized');
+    },
+    [logout],
+  );
 
   useEffect(() => {
-    setUnauthorizedCallback(handleUnauthorized);
+    setUnauthorizedCallback(handleUnauthorized as any);
     loadStoredData();
   }, [handleUnauthorized]);
 
@@ -168,7 +185,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signUpClient = async (data: RegisterClientDto) => {
     try {
       setIsLoading(true);
-      debugLog('[AuthContext | signUpClient] Iniciando registro de cliente com dados:', { ...data, password: '***' });
+      debugLog('[AuthContext | signUpClient] Iniciando registro de cliente com dados:', {
+        ...data,
+        password: '***',
+      });
       await authService.registerClient(data);
       debugLog('[AuthContext | signUpClient] Registro de cliente bem-sucedido. Fazendo login...');
       await login({ email: data.email, password: data.password });
@@ -177,7 +197,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       debugError('[AuthContext | signUpClient] Erro no cadastro de cliente:', {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
       });
       throw new Error(`Falha no registro: ${error.message}`);
     } finally {
@@ -189,7 +209,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       setIsRegistrationInProgress(true);
-      debugLog('[AuthContext | signUpProvider] Iniciando registro de provedor com dados:', { ...data, password: '***' }); // Log sem senha
+      debugLog('[AuthContext | signUpProvider] Iniciando registro de provedor com dados:', {
+        ...data,
+        password: '***',
+      });
       await authService.registerProvider(data);
       debugLog('[AuthContext | signUpProvider] Registro de provedor bem-sucedido. Fazendo login...');
       await login({ email: data.email, password: data.password });
@@ -199,10 +222,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
-        fullError: error
+        fullError: error,
       });
       setIsRegistrationInProgress(false);
-      throw new Error(`Falha no registro: ${error.message}`); // Mensagem mais amigável para UI
+      throw new Error(`Falha no registro: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -214,7 +237,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const currentToken = user?.token || (await authService.loadAuthData()).token;
       if (!currentToken) {
-        debugWarn('[AuthContext | refreshUser] Nenhum token encontrado para refreshUser. Realizando logout.');
+        debugWarn(
+          '[AuthContext | refreshUser] Nenhum token encontrado para refreshUser. Realizando logout.',
+        );
         await logout();
         return;
       }
@@ -238,10 +263,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           debugLog('[AuthContext | refreshUser] Token inválido/expirado, realizando logout.');
           await logout();
         } else if (status === 404) {
-          debugWarn('[AuthContext | refreshUser] /users/me retornou 404. Mantendo sessão atual e seguindo.');
+          debugWarn(
+            '[AuthContext | refreshUser] /users/me retornou 404. Mantendo sessão atual e seguindo.',
+          );
           // Não lança; mantém o usuário atual e segue o fluxo
         } else {
-          debugError('[AuthContext | refreshUser] Falha ao atualizar perfil. Mantendo sessão atual.');
+          debugError(
+            '[AuthContext | refreshUser] Falha ao atualizar perfil. Mantendo sessão atual.',
+          );
         }
       } else {
         debugError('[AuthContext | refreshUser] Erro inesperado no refreshUser. Mantendo sessão.');
@@ -251,34 +280,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const updateUser = useCallback(async (updatedUserData?: Partial<UserProfile>) => {
-    if (user) {
-      if (updatedUserData) {
-        const updatedProfile: UserProfile = {
-          ...user,
-          ...updatedUserData,
-        };
-        const updatedAuthenticatedUser: AuthenticatedUserProfile = {
-          ...updatedProfile,
-          token: user.token,
-        };
-        setUser(updatedAuthenticatedUser);
-        setRole(updatedProfile.role as UserRole);
-        
-        await authService.storeAuthData({
-          token: user.token,
-          user: updatedProfile,
-          id: user.id,
-          role: user.role,
-        });
-        debugLog('[AuthContext | updateUser] Perfil do usuário atualizado no contexto e no armazenamento.');
+  const updateUser = useCallback(
+    async (updatedUserData?: Partial<UserProfile>) => {
+      if (user) {
+        if (updatedUserData) {
+          const updatedProfile: UserProfile = {
+            ...user,
+            ...updatedUserData,
+          };
+          const updatedAuthenticatedUser: AuthenticatedUserProfile = {
+            ...updatedProfile,
+            token: user.token,
+          };
+          setUser(updatedAuthenticatedUser);
+          setRole(updatedProfile.role as UserRole);
+
+          await authService.storeAuthData({
+            token: user.token,
+            user: updatedProfile,
+            id: user.id,
+            role: user.role,
+          });
+          debugLog(
+            '[AuthContext | updateUser] Perfil do usuário atualizado no contexto e no armazenamento.',
+          );
+        } else {
+          await refreshUser();
+        }
       } else {
-        await refreshUser();
+        debugWarn('[AuthContext | updateUser] Tentativa de atualizar usuário não logado.');
       }
-    } else {
-      debugWarn('[AuthContext | updateUser] Tentativa de atualizar usuário não logado.');
-    }
-  }, [user, refreshUser]);
+    },
+    [user, refreshUser],
+  );
 
   const setAuthData = async (authData: AuthResponse) => {
     try {
@@ -329,3 +363,4 @@ export const useAuth = (): AuthContextType => {
 };
 
 export { AuthContext };
+
