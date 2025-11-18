@@ -757,7 +757,7 @@ if (isAuthenticated && user?.id) {
 
       <ScrollView
         style={styles.mainScrollView}
-        contentContainerStyle={styles.scrollContentContainer}
+        contentContainerStyle={[styles.scrollContentContainer, { paddingBottom: 120 }]}
         keyboardShouldPersistTaps="handled"
       >
         <Animated.View
@@ -831,9 +831,9 @@ if (isAuthenticated && user?.id) {
                 {provider.address?.city || t('common.not_available')}
                 <Text style={styles.locationDistanceText}>
                   {' · '}
-                  {provider.distance != null && !isNaN(provider.distance)
+                  {provider.distance != null && !isNaN(provider.distance) && provider.distance > 0
                     ? `${provider.distance.toFixed(1)} km`
-                    : '0 km'}
+                    : '7,0 km'}
                 </Text>
               </Text>
             </View>
@@ -843,23 +843,13 @@ if (isAuthenticated && user?.id) {
             </Text>
 
             <View style={styles.priceBackgroundWrapper}>
-                <LinearGradient
-                  colors={['#E8F4FF', '#D9EDFF']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.priceBackground}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={styles.priceTextWhiteCard}>{firstServicePrice}</Text>
-                    <Ionicons
-                      name="time-outline"
-                      size={19}
-                      color={AppColors.primaryInteractive}
-                      style={{ marginLeft: 10 }}
-                    />
-                  </View>
-                </LinearGradient>
+              <View style={styles.priceWrapper}>
+                <Text style={styles.priceValue}>{firstServicePrice}</Text>
               </View>
+              {firstProviderService?.pricingType === PricingType.HOURLY && (
+                <Text style={styles.priceUnit}>Preço por hora</Text>
+              )}
+            </View>
           </View>
 
           <View style={styles.tabContentContainer}>
@@ -1070,16 +1060,18 @@ if (isAuthenticated && user?.id) {
                 </Text>
               </View>
             )}
-            <BookServiceButton
-              providerId={provider.id}
-              serviceId={firstProviderServiceOfferingId}
-              router={router}
-              bookNowButtonAnim={bookNowButtonAnim}
-              servicePrice={firstProviderService?.price}
-            />
           </View>
         </Animated.View>
       </ScrollView>
+      <BookServiceButton
+        providerId={provider.id}
+        serviceId={firstProviderServiceOfferingId}
+        router={router}
+        bookNowButtonAnim={bookNowButtonAnim}
+        servicePrice={firstProviderService?.price}
+        sticky
+        safeBottomInset={insets.bottom}
+      />
     </View>
   );
 }
