@@ -76,16 +76,22 @@ export default function TimeSlotsSection({
   const itemWidth = (SCREEN_WIDTH - HORIZONTAL_GUTTER - currentGap * (numColumns - 1)) / numColumns;
 
   const headerText = React.useMemo(() => {
-    const base = title ?? (titleKey ? t(titleKey as any) : '');
-    if (!date) return base;
+    return title ?? (titleKey ? t(titleKey as any) : '');
+  }, [title, titleKey, t]);
+
+  const headerDateText = React.useMemo(() => {
+    if (!date) return '';
 
     const d = new Date(date);
-    if (isNaN(d.getTime())) return base;
+    if (isNaN(d.getTime())) return '';
 
     const locale = i18n?.language || 'pt-BR';
-    const dateStr = d.toLocaleDateString(locale, { day: '2-digit', month: 'long' });
-    return `${base} - ${dateStr}`;
-  }, [title, titleKey, date, t, i18n?.language]);
+    return d.toLocaleDateString(locale, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }, [date, i18n?.language]);
 
   const sections = React.useMemo(() => {
     const filtered = showUnavailable ? displaySlotsInfo : displaySlotsInfo.filter(s => s.isAvailable);
@@ -142,7 +148,12 @@ export default function TimeSlotsSection({
         <>
           {sections.map(section => (
             <View key={section.key} style={{ marginBottom: 6 }}>
-              <Text style={styles.periodHeader}>{section.label}</Text>
+              <View style={styles.periodHeaderRow}>
+                <Text style={styles.periodHeader}>{section.label}</Text>
+                {!!headerDateText && (
+                  <Text style={styles.periodDate}>{headerDateText}</Text>
+                )}
+              </View>
 
               <FlatList
                 data={section.data}
@@ -227,6 +238,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 18,
     paddingBottom: 20,
+    marginBottom: 39,
     borderWidth: 0.9,
     borderColor: 'rgba(24, 79, 230, 0.09)',
     ...Platform.select({
@@ -240,11 +252,12 @@ const styles = StyleSheet.create({
     }),
   },
   title: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: AppColors.textBody,
-    textAlign: 'left',
-    marginBottom: 12,
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 26,
   },
   toggleBtn: {
     marginTop: 12,
@@ -261,14 +274,24 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  periodHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    marginTop: 6,
+  },
   periodHeader: {
     fontSize: 12.5,
     fontWeight: '700',
     color: AppColors.textAuxiliary,
-    marginBottom: 8,
-    marginTop: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
+  },
+  periodDate: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: AppColors.textAuxiliary,
   },
   empty: {
     textAlign: 'center',
@@ -284,4 +307,3 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
 });
-
