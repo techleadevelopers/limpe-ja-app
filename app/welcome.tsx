@@ -100,7 +100,9 @@ export default function WelcomeScreen() {
     );
 
     const timer = setTimeout(async () => {
-      router.replace('/(auth)/login');
+      // Sem login obrigatório na abertura: após a animação, ir para a HOME
+      // Removido: redirecionamento automático para explore; welcome apenas anima.
+      router.replace('/(auth)/register-options' as any);
     }, 4000);
 
     return () => {
