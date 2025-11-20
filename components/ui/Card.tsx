@@ -1,6 +1,6 @@
 // LimpeJaApp/src/components/ui/Card.tsx
 import React from 'react';
-import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
+import { View, StyleSheet, ViewStyle, Pressable, Platform } from 'react-native';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from 'react-native';
 
@@ -21,6 +21,13 @@ const Card: React.FC<CardProps> = ({ children, style, onPress }) => {
       backgroundColor: colorScheme === 'light' ? themeColors.background : themeColors.lightGrey, // Exemplo
       borderColor: colorScheme === 'light' ? themeColors.lightGrey : themeColors.darkGrey,
     },
+    Platform.select({
+      android: {
+        elevation: 3,
+        shadowColor: 'rgba(0,0,0,0.08)',
+      },
+      default: {},
+    }),
     style,
   ];
 
