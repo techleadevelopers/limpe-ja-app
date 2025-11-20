@@ -9,6 +9,7 @@ import {
     Animated,
     TouchableOpacity,
     Platform,
+    Alert,
 } from 'react-native';
 import { LogBox } from 'react-native'; // âœ… ADICIONADO: Para ignorar o warning especÃ­fico do LogBox (dev mode apenas)
 import 'react-native-reanimated';
@@ -175,7 +176,7 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
             overflow: 'hidden',
             ...Platform.select({
               ios: { shadowColor: '#000', shadowOpacity: 0.12, shadowOffset: { width: 0, height: 6 }, shadowRadius: 12 },
-              android: { elevation: 5 },
+              android: { elevation: 3, shadowColor: 'rgba(0,0,0,0.08)' },
             }),
           }}
         >
@@ -316,6 +317,33 @@ function RootLayoutContent() {
     }, [t, initializationError]);
 
     useEffect(() => {
+        if (!appReady || Platform.OS !== 'android') {
+            return;
+        }
+
+        const existingDefaultProps = (Text as any).defaultProps || {};
+        const existingStyle = existingDefaultProps.style;
+        const baseStyleArray = existingStyle
+            ? Array.isArray(existingStyle)
+                ? existingStyle
+                : [existingStyle]
+            : [];
+
+        (Text as any).defaultProps = {
+            ...existingDefaultProps,
+            allowFontScaling: false,
+            style: [
+                ...baseStyleArray,
+                {
+                    includeFontPadding: false,
+                    textAlignVertical: 'center',
+                    fontFamily: 'Montserrat-Regular',
+                },
+            ],
+        };
+    }, [appReady]);
+
+    useEffect(() => {
         // Removido: Todo o bloco de console.groupCollapsed e logs verbosos para evitar erro no LogBox.
         // Se precisar debugar, adicione de volta com if (__DEV__) para modo dev apenas.
         // Exemplo de log mÃ­nimo mantido sÃ³ para erros:
@@ -353,6 +381,60 @@ function RootLayoutContent() {
 
         const decideAndRedirect = async () => {
             const path = pathname ?? '';
+            // Permitir HOME/Explore (e filhas) para guest sem redirecionar de volta para /welcome
+            if (!isAuthenticated && (path.includes('/(client)/explore') || path.startsWith('/explore'))) {
+                return;
+            }
+            const inAuthGroup = segments[0] === '(auth)';
+            const inProviderGroup = segments[0] === '(provider)';
+            const isWelcomeRoute = pathname === '/welcome';
+
+            // Guest: regras específicas de acesso (cadastro obrigatório em rotas protegidas)
+            if (!isAuthenticated) {
+                const protectedRoutes = [
+                    '/(client)/bookings',
+                    '/(client)/messages',
+                    '/(client)/profile',
+                    '/(provider)',
+                    '/bookings',
+                    '/messages',
+                ];
+
+                const isProtected =
+                    protectedRoutes.some((r) => path.startsWith(r)) || path.includes('/agendar');
+
+                if (isProtected) {
+                    // Ação protegida em modo guest: alerta nativo e navegação para cadastro de cliente
+                    Alert.alert(
+                        'Cadastro necessário',
+                        'Crie seu cadastro para agendar serviços de limpeza',
+                        [
+                            {
+                                text: 'Continuar',
+                                onPress: () => {
+                                    try {
+                                        router.push('/(auth)/client-register' as any);
+                                    } catch {}
+                                },
+                            },
+                            {
+                                text: 'Cancelar',
+                                style: 'cancel',
+                            },
+                        ],
+                    );
+                    return;
+                }
+
+                // Visitante só pode acessar: welcome, rotas de auth e explore
+                if (!isWelcomeRoute && !inAuthGroup && !path.startsWith('/(client)/explore')) {
+                    router.replace('/welcome');
+                    return;
+                }
+
+                return;
+            }
+
             const isBookingOrChat =
                 path.startsWith('/(client)/bookings') ||
                 path.startsWith('/bookings') ||
@@ -363,10 +445,6 @@ function RootLayoutContent() {
                 // Removido: console.log de rota de booking/chat.
                 return;
             }
-
-            const inAuthGroup = segments[0] === '(auth)';
-            const inProviderGroup = segments[0] === '(provider)';
-            const isWelcomeRoute = pathname === '/welcome';
 
             if (isAuthenticated && user?.role === UserRole.PROVIDER && inProviderGroup && !isWelcomeRoute) {
                 // Removido: console.log de provedor no grupo.
