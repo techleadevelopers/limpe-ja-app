@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '../constants/appStyles';
 
@@ -13,7 +13,16 @@ export interface ServiceCardProps {
 
 const ServiceCard: React.FC<ServiceCardProps> = ({ id, name, description, price, onPress }) => {
   return (
-    <TouchableOpacity style={styles.card} onPress={() => onPress(id)}>
+    <TouchableOpacity
+      style={[
+        styles.card,
+        Platform.OS === 'android' && {
+          elevation: 3,
+          shadowColor: 'rgba(0,0,0,0.08)',
+        },
+      ]}
+      onPress={() => onPress(id)}
+    >
       <View style={styles.textContainer}>
         <Text style={styles.title}>{name}</Text>
         {description ? <Text style={styles.description}>{description}</Text> : null}
