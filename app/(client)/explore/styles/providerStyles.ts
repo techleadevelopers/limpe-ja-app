@@ -4,6 +4,12 @@ import { AppColors, AppShadows, SCREEN_WIDTH, SCREEN_HEIGHT } from '../../../../
 // Definir FONT_FAMILY aqui para que seja acessível em todo o arquivo de estilos
 const FONT_FAMILY = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
+const PROVIDER_NAME_FONT_FAMILY = Platform.select({
+  ios: 'System',
+  android: 'Montserrat-Regular',
+  default: 'System',
+});
+
 const IMAGE_HEIGHT = 380; // Altura da imagem de perfil do profissional
 
 // Exporta os estilos
@@ -131,6 +137,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: AppColors.textBody, // Usando AppColors
     flexShrink: 1,
+    fontFamily: PROVIDER_NAME_FONT_FAMILY,
     marginRight: 10,
   },
   locationContainerWhiteCard: {
