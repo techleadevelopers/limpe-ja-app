@@ -16,6 +16,7 @@ interface NewHeaderProps {
 const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddress }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets?.() || { top: 0, bottom: 0, left: 0, right: 0 } as any;
+  const displayName = userName && userName.trim().length > 0 ? userName : 'Visitante';
 
   // Press feedback
   const avatarScale = useRef(new Animated.Value(1)).current;
@@ -61,8 +62,8 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
         </TouchableOpacity>
         <View>
           <Text style={styles.greetingText}>{getGreeting()}</Text>
-          <Text style={styles.userNameText}>{userName}</Text>
-        </View>
+          <Text style={styles.userNameText}>{displayName}</Text>
+       </View>
       </View>
       <View style={styles.rightContent}>
         <TouchableOpacity onPress={handleCategoryPress} style={styles.notificationIconContainer}>
@@ -93,10 +94,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     zIndex: 0,
-    shadowColor: '#2f3344e8',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.17,
-    shadowRadius: 9,
+    
     elevation: 6,
     overflow: 'hidden', // mantÃ©m cantos arredondados
   },
@@ -120,7 +118,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   greetingText: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: Platform.select({
       ios: 'Montserrat-ExtraBold',
       android: 'Montserrat-Regular'
@@ -132,7 +130,7 @@ const styles = StyleSheet.create({
     }),
   },
   userNameText: {
-    fontSize: 18.5,
+    fontSize: 19.5,
     fontFamily: Platform.select({
       ios: 'Roboto',
       android: 'Montserrat-Thin'
