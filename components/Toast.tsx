@@ -1,6 +1,6 @@
 // LimpeJaApp/components/Toast.tsx
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, Platform } from 'react-native';
 import Toast, { BaseToast, ErrorToast, ToastConfig } from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -116,6 +116,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    ...Platform.select({
+      android: {
+        elevation: 3,
+        shadowColor: 'rgba(0,0,0,0.08)',
+      },
+      default: {},
+    }),
   },
   customToastImage: {
     width: 36,
@@ -135,4 +142,3 @@ const styles = StyleSheet.create({
 });
 
 export default Toast;
-
