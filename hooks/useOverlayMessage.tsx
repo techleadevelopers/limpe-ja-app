@@ -1,10 +1,11 @@
 // app/hooks/useOverlayMessage.tsx
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
 import i18n from '../i18n';
 import OverlayMessage from '../components/ui/OverlayMessage';
 
 type Variant = 'success' | 'info' | 'warning' | 'error';
+type OverlayPlacement = 'top' | 'center';
+type OverlayTone = 'default' | 'soft';
 
 type Item = {
   id: string;
@@ -13,6 +14,12 @@ type Item = {
   variant: Variant;
   iconName?: any;
   durationMs?: number;
+  placement?: OverlayPlacement;
+  tone?: OverlayTone;
+  imageSource?: any;
+  imageSize?: number;
+  primaryActionLabel?: string;
+  onPrimaryAction?: () => void;
 };
 
 type ShowOverlayOpts = {
@@ -23,6 +30,12 @@ type ShowOverlayOpts = {
   durationMs?: number;
   title?: string;
   subtitle?: string;
+  placement?: OverlayPlacement;
+  tone?: OverlayTone;
+  imageSource?: any;
+  imageSize?: number;
+  primaryActionLabel?: string;
+  onPrimaryAction?: () => void;
 };
 
 const listeners = new Set<(item: Item | null) => void>();
@@ -49,6 +62,12 @@ export function showOverlay(opts: ShowOverlayOpts) {
     variant: opts.variant ?? 'info',
     iconName: opts.iconName,
     durationMs: opts.durationMs ?? 2600,
+    placement: opts.placement,
+    tone: opts.tone,
+    imageSource: opts.imageSource,
+    imageSize: opts.imageSize,
+    primaryActionLabel: opts.primaryActionLabel,
+    onPrimaryAction: opts.onPrimaryAction,
   };
 
   // Dedupe simples por título em 3s (não reenvia se igual)
@@ -89,6 +108,13 @@ export const OverlayPortal: React.FC = () => {
       iconName={item?.iconName}
       onHide={onHide}
       durationMs={item?.durationMs}
+      placement={item?.placement}
+      tone={item?.tone}
+      imageSource={item?.imageSource}
+      imageSize={item?.imageSize}
+      primaryActionLabel={item?.primaryActionLabel}
+      onPrimaryAction={item?.onPrimaryAction}
     />
   );
 };
+
