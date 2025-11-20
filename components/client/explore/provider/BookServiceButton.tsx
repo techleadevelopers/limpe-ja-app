@@ -1,6 +1,6 @@
 // components/client/explore/provider/BookServiceButton.tsx
 import React from 'react';
-import { Animated, Text, TouchableOpacity, Platform, StyleSheet, View } from 'react-native';
+import { Animated, Text, TouchableOpacity, Platform, StyleSheet, View, Alert } from 'react-native';
 import { type Router } from 'expo-router';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
 
@@ -12,6 +12,7 @@ interface BookServiceButtonProps {
   servicePrice?: number;
   sticky?: boolean;
   safeBottomInset?: number;
+  isAuthenticated: boolean;
 }
 
 const BookServiceButton: React.FC<BookServiceButtonProps> = ({
@@ -22,10 +23,33 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
   servicePrice,
   sticky = false,
   safeBottomInset = 0,
+  isAuthenticated,
 }) => {
   const baseBottomPadding = Platform.OS === 'ios' ? 34 : 20;
 
   const handlePress = () => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Cadastro necessário',
+        'Crie seu cadastro para agendar serviços de limpeza',
+        [
+          {
+            text: 'Continuar',
+            onPress: () => {
+              try {
+                router.push('/(auth)/client-register' as any);
+              } catch {}
+            },
+          },
+          {
+            text: 'Cancelar',
+            style: 'cancel',
+          },
+        ],
+      );
+      return;
+    }
+
     router.push({
       pathname: '/(client)/bookings/schedule-service',
       params: {
@@ -148,4 +172,3 @@ const styles = StyleSheet.create({
 });
 
 export default BookServiceButton;
-
