@@ -133,6 +133,7 @@ const DashboardHeader: React.FC<{
   const paddingTopValue = Platform.OS === 'ios'
     ? insets.top + 20 // insets.top cobre status bar/notch; 20px é padding base confortável
     : 20; // Padding fixo para Android (ajuste se quiser mais/menos)
+  const androidPaddingTopValue = insets.top + 20;
   return (
     <Animated.View style={[
       headerStyles.headerContainer,
@@ -140,7 +141,8 @@ const DashboardHeader: React.FC<{
         opacity: headerAnim,
         transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
         paddingTop: paddingTopValue // Aplicar o valor dinâmico aqui
-      }
+      },
+      Platform.OS === 'android' && { paddingTop: androidPaddingTopValue },
     ]}>
       <View style={headerStyles.greetingContainer}>
         <Text style={headerStyles.greetingText}>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
