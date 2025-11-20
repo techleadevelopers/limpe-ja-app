@@ -102,7 +102,8 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
       },
       android: {
-        elevation: 8,
+        elevation: 3,
+        shadowColor: 'rgba(0,0,0,0.08)',
       },
     }),
     borderWidth: StyleSheet.hairlineWidth, // Borda fina para um toque mais clean
@@ -132,6 +133,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 6,
+    ...Platform.select({
+      android: {
+        elevation: 3,
+        shadowColor: 'rgba(0,0,0,0.08)',
+      },
+      default: {},
+    }),
   },
 });
 
