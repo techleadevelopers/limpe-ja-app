@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ViewProps, StyleSheet } from 'react-native';
+import { View, ViewProps, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDevice } from '@/utils/responsive';
 
@@ -11,10 +11,13 @@ export default function ScreenContainer({ style, children, ...rest }: ViewProps)
     <View
       style={[
         styles.root,
-        {
-          paddingTop: 5, // ou -12, etc.
-    paddingBottom: -12,
-        },
+	        {
+	          paddingTop:
+	            Platform.OS === 'android'
+	              ? insets.top + 5
+	              : 5,
+	          paddingBottom: -12,
+	        },
         isLargePhone && styles.maxW,
         style,
       ]}
@@ -30,4 +33,3 @@ const styles = StyleSheet.create({
   // só aplica no Pro Max; 12 Pro fica igual
   maxW: { alignSelf: 'center', width: '100%', maxWidth: 820, paddingHorizontal: 10 },
 });
-
