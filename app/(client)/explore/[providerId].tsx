@@ -757,7 +757,10 @@ if (isAuthenticated && user?.id) {
 
       <ScrollView
         style={styles.mainScrollView}
-        contentContainerStyle={[styles.scrollContentContainer, { paddingBottom: 120 }]}
+        contentContainerStyle={[
+          styles.scrollContentContainer,
+          { paddingBottom: Platform.OS === 'ios' ? 120 : 80 },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <Animated.View
@@ -1071,6 +1074,7 @@ if (isAuthenticated && user?.id) {
         servicePrice={firstProviderService?.price}
         sticky
         safeBottomInset={insets.bottom}
+        isAuthenticated={isAuthenticated}
       />
     </View>
   );
