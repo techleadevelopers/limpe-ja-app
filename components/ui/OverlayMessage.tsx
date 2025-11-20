@@ -1,9 +1,20 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Platform, StyleSheet, Text, View, TouchableWithoutFeedback } from 'react-native';
+import {
+  Animated,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+  TouchableWithoutFeedback,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '../../constants/appStyles';
 
 type Variant = 'success' | 'info' | 'warning' | 'error';
+type OverlayPlacement = 'top' | 'center';
+type OverlayTone = 'default' | 'soft';
 
 export interface OverlayMessageProps {
   visible: boolean;
@@ -13,6 +24,12 @@ export interface OverlayMessageProps {
   variant?: Variant;
   onHide?: () => void;
   durationMs?: number;
+  placement?: OverlayPlacement;
+  tone?: OverlayTone;
+  imageSource?: any;
+  imageSize?: number;
+  primaryActionLabel?: string;
+  onPrimaryAction?: () => void;
 }
 
 const VARIANT_COLORS: Record<Variant, { bg: string; fg: string; icon: keyof typeof Ionicons.glyphMap }> = {
@@ -30,64 +47,140 @@ export const OverlayMessage: React.FC<OverlayMessageProps> = ({
   variant = 'info',
   onHide,
   durationMs = 1000,
+  placement = 'top',
+  tone = 'default',
+  imageSource,
+  imageSize,
+  primaryActionLabel,
+  onPrimaryAction,
 }) => {
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
       Animated.sequence([
-        Animated.timing(anim, { toValue: 1, duration: 220, easing: undefined, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 220,
+          easing: undefined,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
         Animated.delay(durationMs),
-        Animated.timing(anim, { toValue: 0, duration: 220, easing: undefined, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(anim, {
+          toValue: 0,
+          duration: 220,
+          easing: undefined,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
       ]).start(({ finished }) => finished && onHide?.());
     }
   }, [visible, anim, durationMs, onHide]);
 
-  const t = Animated;
   const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] });
   const opacity = anim;
 
-  const palette = VARIANT_COLORS[variant];
+  const isSoft = tone === 'soft';
+  const basePalette = VARIANT_COLORS[variant];
+  const palette =
+    isSoft && variant === 'info'
+      ? { bg: '#EBF5FF', fg: '#1E3A8A', icon: basePalette.icon }
+      : basePalette;
+
   const isSuccess = variant === 'success';
+  const hasImage = !!imageSource;
   const icon = iconName || palette.icon;
 
-  const iconElement = isSuccess ? (
-    <View style={styles.successIconBadge}>
-      <Ionicons name={icon} size={20} color={AppColors.white} />
-    </View>
-  ) : (
-    <Ionicons name={icon} size={20} color={palette.fg} style={styles.icon} />
-  );
+  const iconElement = hasImage
+    ? null
+    : isSuccess
+    ? (
+      <View style={styles.successIconBadge}>
+        <Ionicons name={icon} size={20} color={AppColors.white} />
+      </View>
+    )
+    : (
+      <Ionicons name={icon} size={20} color={palette.fg} style={styles.icon} />
+    );
 
   if (!visible) return null;
 
+  const containerStyle = placement === 'center' ? styles.rootCentered : styles.root;
+
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, { opacity }] }>
-      {/* Backdrop escuro com dismiss on tap */}
-      <TouchableWithoutFeedback onPress={onHide}>
-        <View style={styles.backdrop} />
-      </TouchableWithoutFeedback>
+    <Animated.View
+      style={[StyleSheet.absoluteFill, { opacity }]}
+      pointerEvents={isSoft ? 'box-none' : 'auto'}
+    >
+      {/* Backdrop escuro com dismiss on tap (modo padrão) */}
+      {!isSoft && (
+        <TouchableWithoutFeedback onPress={onHide}>
+          <View style={styles.backdrop} />
+        </TouchableWithoutFeedback>
+      )}
+      {/* Backdrop leve não bloqueante para overlays suaves (visitante) */}
+      {isSoft && (
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, styles.softBackdrop, { opacity }]}
+        />
+      )}
       {/* Card premium */}
       <Animated.View
         accessibilityLiveRegion="polite"
         accessibilityRole="alert"
-        style={[styles.root, { transform: [{ translateY }] }]}
+        style={[containerStyle, { transform: [{ translateY }] }]}
+        pointerEvents="box-none"
       >
-        <View style={[styles.card, isSuccess && styles.successCard, { backgroundColor: palette.bg }]}>
-          {isSuccess && (
-            <>
-              <View style={styles.successSplash} />
-              <View style={styles.successBlob} />
-              <View style={styles.successDotLarge} />
-              <View style={styles.successDotSmall} />
-            </>
+        <View style={styles.cardContainer}>
+          {hasImage && (
+            <Image
+              source={imageSource}
+              style={[
+                styles.imageIconFloating,
+                { width: imageSize || 56, height: imageSize || 56 },
+              ]}
+              resizeMode="contain"
+            />
           )}
-          {iconElement}
-          <View style={styles.textContent}>
-            <Text style={[styles.title, { color: palette.fg }]} numberOfLines={2}>{title}</Text>
-            {subtitle ? (
-              <Text style={[styles.subtitle, { color: palette.fg }]} numberOfLines={3}>{subtitle}</Text>
-            ) : null}
+          <View
+            style={[
+              styles.card,
+              isSuccess && styles.successCard,
+              isSoft && variant === 'info' && styles.softInfoCard,
+              { backgroundColor: palette.bg },
+            ]}
+            pointerEvents="auto"
+          >
+            {isSuccess && (
+              <>
+                <View style={styles.successSplash} />
+                <View style={styles.successBlob} />
+                <View style={styles.successDotLarge} />
+                <View style={styles.successDotSmall} />
+              </>
+            )}
+            {!hasImage && iconElement}
+            <View style={styles.textContent}>
+              <Text style={[styles.title, { color: palette.fg }]} numberOfLines={2}>
+                {title}
+              </Text>
+              {subtitle ? (
+                <Text style={[styles.subtitle, { color: palette.fg }]} numberOfLines={3}>
+                  {subtitle}
+                </Text>
+              ) : null}
+              {primaryActionLabel ? (
+                <TouchableOpacity
+                  style={styles.primaryActionButton}
+                  onPress={() => {
+                    onPrimaryAction?.();
+                    onHide?.();
+                  }}
+                >
+                  <Text style={styles.primaryActionText}>{primaryActionLabel}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
         </View>
       </Animated.View>
@@ -97,27 +190,52 @@ export const OverlayMessage: React.FC<OverlayMessageProps> = ({
 
 const styles = StyleSheet.create({
   root: {
-  position: 'absolute',
-  left: 0,
-  right: 0,
-  top: Platform.OS === 'ios' ? 60 : 40, // margem de segurança (notch / status bar)
-  alignItems: 'center',
-  justifyContent: 'flex-start', // 👈 empurra o card pro topo
-  zIndex: 10001,
-},
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: Platform.OS === 'ios' ? 60 : 40, // margem de segurança (notch / status bar)
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    zIndex: 10001,
+  },
+  rootCentered: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10001,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.40)',
     zIndex: 10000,
   },
+  softBackdrop: {
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  cardContainer: {
+    position: 'relative',
+    alignItems: 'center',
+  },
   icon: {
     marginRight: 8,
+  },
+  imageIconFloating: {
+    position: 'absolute',
+    top: 34,
+    right: 5,
+    borderRadius: 32,
+    backgroundColor: 'transparent',
+    zIndex: 2,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderRadius: 12,
     maxWidth: '92%',
     shadowColor: 'rgba(0,0,0,0.25)',
@@ -134,6 +252,17 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: AppColors.primaryLight,
   },
+  softInfoCard: {
+    borderRadius: 26,
+    paddingHorizontal: 39,
+    paddingVertical: 18,
+    backgroundColor: AppColors.accentLight,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
   successIconBadge: {
     width: 38,
     height: 38,
@@ -146,6 +275,7 @@ const styles = StyleSheet.create({
   },
   textContent: {
     flex: 1,
+    right: 8,
     zIndex: 1,
   },
   successSplash: {
@@ -196,6 +326,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
     opacity: 0.9,
+  },
+  primaryActionButton: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: AppColors.primaryInteractive,
+  },
+  primaryActionText: {
+    color: AppColors.white,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 
