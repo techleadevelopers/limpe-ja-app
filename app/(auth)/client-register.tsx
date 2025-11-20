@@ -759,8 +759,8 @@ export default function ClientRegisterScreen() {
 
                     // Clear AsyncStorage after successful registration
                     await AsyncStorage.removeItem('clientRegisterFormData');
-                    console.log("[ClientRegister] handleNext (Step 5 - final sub-step): signUpClient do AuthContext retornou sucesso. Redirecionando.");
-                    router.replace('/(auth)/login'); // Ajuste para a tela de sucesso ou login
+                    console.log("[ClientRegister] handleNext (Step 5 - final sub-step): signUpClient do AuthContext retornou sucesso. Redirecionando para explore autenticado.");
+                    router.replace('/(client)/explore'); // Após cadastro + login automático, leva o cliente direto para a HOME autenticada
                 } catch (error: any) {
                     console.error("[ClientRegister] handleNext (Step 5 - final sub-step): Erro durante o registro inicial:", error.message, error);
                     const msg = (error?.message || '').toLowerCase();
