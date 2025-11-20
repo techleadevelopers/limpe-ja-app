@@ -7,11 +7,9 @@ import { useTranslation } from 'react-i18next';
 
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 import { useProviderMetrics } from '../../../../hooks/useProviderMetrics';
-import { PricingType } from '../../../../types/backend/services';
 import { Icons3D } from '../../../../constants/icons3d';
 // Importar os novos formatadores e helpers
 import { formatDistance } from '../../../../utils/formatters';
-import { getFormattedServicePrice } from '../../../../utils/service-helpers';
 import { AnalyticsService } from '../../../../services/analyticsService';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -88,15 +86,23 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
 
     const avatarSource = item.avatarUrl ? { uri: item.avatarUrl } : Icons3D.facial;
 
-    // Distância: alinhar com RecomendacaoCard (sem injeâão __DEV__); fallback "0 km" quando ausente/<=0
-    const distanceLabel = (typeof item.distance === 'number' && item.distance > 0)
-        ? formatDistance(item.distance)
-        : '0 km';
+    // Distância: se vier 0 km/ausente do backend, exibe um valor mock para evitar "0 km"
+    let distanceLabel: string;
+    if (typeof item.distance === 'number' && item.distance > 0) {
+      // formatDistance retorna string | null → garante string com fallback
+      distanceLabel = formatDistance(item.distance) ?? '0 km';
+    } else {
+      // Mock simples para 0/ausente: 10–14 km, derivado do id para ter um valor "consistente"
+      const mockDistances = ['10 km', '12 km', '14 km'];
+      const seed = (item?.id || '').length || 0;
+      const index = Math.abs(seed) % mockDistances.length;
+      distanceLabel = mockDistances[index];
+    }
 
     // Track impression (fire-and-forget)
     useEffect(() => {
-        if (item?.id) {
-            AnalyticsService.trackEvent('home_prestador_card_impression', { providerId: item.id }).catch(() => {});
+        if (item?.id && item.id !== null) {
+            AnalyticsService.trackEvent('home_prestador_card_impression', { providerId: item.id! }).catch(() => {});
         }
     }, [item?.id]);
 
@@ -116,8 +122,10 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
             <TouchableOpacity
                 style={styles.cardContainer}
                 onPress={() => {
-                    AnalyticsService.trackEvent('home_prestador_card_tap', { providerId: item.id }).catch(() => {});
-                    onPress(item.id);
+                    if (item?.id && item.id !== null) {
+                        AnalyticsService.trackEvent('home_prestador_card_tap', { providerId: item.id! }).catch(() => {});
+                        onPress(item.id!);
+                    }
                 }}
                 onPressIn={onPressInCard}
                 onPressOut={onPressOutCard}
