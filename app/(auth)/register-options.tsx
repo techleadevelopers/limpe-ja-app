@@ -10,7 +10,7 @@ import {
     Animated,
     StatusBar,
 } from 'react-native';
-import { Stack, useRouter, Link } from 'expo-router';
+import { Stack, useRouter, Link, useLocalSearchParams } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 // import { LinearGradient } from 'expo-linear-gradient'; // Removido, não será mais usado diretamente nos botões
 
@@ -19,6 +19,7 @@ const LOGO_IMAGE = require('../../assets/images/logo.png');
 
 export default function ChooseRegistrationTypeScreen() {
     const router = useRouter();
+    const { from } = useLocalSearchParams<{ from?: string }>();
 
     // Animações para elementos da tela
     const logoAnim = useRef(new Animated.Value(0)).current;
@@ -119,7 +120,7 @@ export default function ChooseRegistrationTypeScreen() {
                     },
                 ]}
             >
-                Como você deseja se cadastrar hoje?
+                Você é cliente ou prestador?
             </Animated.Text>
 
             {/* Container para os botões lado a lado */}
@@ -138,7 +139,7 @@ export default function ChooseRegistrationTypeScreen() {
                         style={styles.actionButton} // Usando o estilo do botão de login
                         onPress={() => {
                             clientButtonAnims.onPressOut();
-                            router.push('/(auth)/client-register' as any);
+                            router.push('/(client)/explore' as any);
                         }}
                         onPressIn={clientButtonAnims.onPressIn}
                         onPressOut={clientButtonAnims.onPressOut}
