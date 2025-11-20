@@ -5,6 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { UnifiedTheme } from "../constants/UnifiedTheme";
 import { Icons3D } from "../constants/icons3d";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface UnifiedHeaderProps {
   title: string;
@@ -16,6 +17,7 @@ interface UnifiedHeaderProps {
 export default function UnifiedHeader({ title, onBack, rightIcon, onRightPress }: UnifiedHeaderProps) {
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(20)).current;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     Animated.parallel([
@@ -28,7 +30,14 @@ export default function UnifiedHeader({ title, onBack, rightIcon, onRightPress }
     <Animated.View style={[styles.container, { opacity: fade, transform: [{ translateY: slide }] }]}>
       <LinearGradient
         colors={UnifiedTheme.gradients.header}
-        style={styles.gradient}
+        style={[
+          styles.gradient,
+          Platform.select({
+            android: {
+              paddingTop: insets.top + 32,
+            },
+          }),
+        ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
