@@ -28,11 +28,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { PermissionStatus } from 'expo-location';
 import { getCurrentPosition } from '../../../services/locationService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { Icons3D } from '../../../constants/icons3d';
 import { Asset } from 'expo-asset';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   getOffers,
@@ -41,6 +41,7 @@ import {
   searchProvidersWithLocation,
 } from '../../../services/clientService';
 import { useAuth } from '../../../hooks/useAuth';
+import { useOverlayMessage } from '../../../hooks/useOverlayMessage';
 
 import {
   getRecommendedProviders,
@@ -257,7 +258,7 @@ const bannerData: BannerDataItem[] = [
   },
   {
     id: '3',
-    title: 'Ultima Chance!',
+    title: 'Última Chance!',
     discount: '75% de Desconto',
     description: 'Para Novos Clientes',
     buttonText: 'Cadastrar',
@@ -270,13 +271,15 @@ const WELCOME_COUPON_DISMISSED_KEY = '@LimpeJa:WelcomeCouponDismissed';
 const WELCOME_COUPON_REDEEMED_KEY = '@LimpeJa:WelcomeCouponRedeemed';
 const REFERRAL_BANNER_DISMISSED_KEY = '@LimpeJa:ReferralBannerDismissed';
 const PROTOCOL_PREMIUM_SEEN_KEY = '@LimpeJa:ProtocolPremiumSeen_v1';
+const EXPLORE_VISITOR_OVERLAY_SEEN_KEY = '@LimpeJa:ExploreVisitorOverlaySeen_dev';
 
 export default function ExploreClientScreen() {
   const router = useRouter();
   const flatListRef = useRef<FlatList<BannerDataItem>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { t } = useTranslation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const { showOverlay } = useOverlayMessage();
   const { isLargePhone } = useDevice();
   const navWrap: StyleProp<ViewStyle> = React.useMemo(
     () => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined),
@@ -291,8 +294,8 @@ export default function ExploreClientScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Novo estado para o raio de busca
-  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // PadrÃ£o 50 km (como no cÃ³digo original)
-  // Novo estado para o filtro de preÃ§o
+  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // Padrão 50 km (como no código original)
+  // Novo estado para o filtro de preço
   const [priceFilter, setPriceFilter] = useState<PricingType | null>(null);
 
   const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
@@ -308,45 +311,48 @@ export default function ExploreClientScreen() {
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const categoriesAnim = useRef(new Animated.Value(0)).current;
-  // Banner deve aparecer junto ao conteÃºdo; inicia visÃ­vel
+  // Banner deve aparecer junto ao conteúdo; inicia visível
   const bannerAnim = useRef(new Animated.Value(1)).current;
   const recommendationsAnim = useRef(new Animated.Value(0)).current;
   const providersAnim = useRef(new Animated.Value(0)).current;
   const navBarAnim = useRef(new Animated.Value(0)).current;
   const [reducedMotion, setReducedMotion] = useState(false);
 
-  // Adicionado ref para verificar se o componente estÃ¡ montado
+  // Adicionado ref para verificar se o componente está montado
   const isMounted = useRef(true);
 
-  // INTEGRAÃ‡ÃƒO DA LÃ“GICA DO NEWHEADER: LÃ³gica completa para exibir o nome do usuÃ¡rio (priorizando user do auth e fallback para userProfile)
-  const userNameDisplay = (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ?? 
-                          (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ?? 
-                          t('common.user');
+  // INTEGRAÇÃO DA LÓGICA DO NEWHEADER: Lógica completa para exibir o nome do usuário (priorizando user do auth e fallback para userProfile)
+  const userNameDisplay =
+    (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ??
+    (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ??
+    '';
 
-  // Exibir alerta de protocolo premium apenas na primeira vez, com delay de 3s
+  const showProductsAlert = useCallback(() => {
+    Alert.alert(
+      'Produtos de limpeza disponíveis?',
+      'Os produtos de limpeza que a diarista vai usar já estão separados e acessíveis no local?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Aceitar',
+          style: 'default',
+        },
+      ]
+    );
+  }, []);
+
   useEffect(() => {
     let timeout: NodeJS.Timeout | null = null;
 
     (async () => {
       try {
         const seen = await AsyncStorage.getItem(PROTOCOL_PREMIUM_SEEN_KEY);
-        // Sempre exibir o alerta ao abrir a home
-          if (true) {
+        if (isAuthenticated && !seen) {
           timeout = setTimeout(() => {
-            Alert.alert(
-              'Produtos de limpeza disponíveis?',
-              'Os produtos de limpeza que a diarista vai usar já estão separados e acessíveis no local?',
-              [
-                {
-                  text: 'Cancelar',
-                  style: 'cancel',
-                },
-                {
-                  text: 'Aceitar',
-                  style: 'default',
-                },
-              ]
-            );
+            showProductsAlert();
           }, 3000);
           await AsyncStorage.setItem(PROTOCOL_PREMIUM_SEEN_KEY, 'true');
         }
@@ -360,9 +366,9 @@ export default function ExploreClientScreen() {
         clearTimeout(timeout);
       }
     };
-  }, []);
+  }, [isAuthenticated, showProductsAlert]);
 
-      const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!isMounted.current) {
       return;
     }
@@ -409,7 +415,7 @@ export default function ExploreClientScreen() {
       'Erro ao carregar categorias'
     );
 
-        await runAndTrack<ProviderDisplayInfo[]>(
+    await runAndTrack<ProviderDisplayInfo[]>(
       'recommended providers',
       async () => {
         try {
@@ -426,7 +432,7 @@ export default function ExploreClientScreen() {
               return true;
             });
 
-            // 1� crit�rio: se o usu�rio logado for provider, colocar seu pr�prio card em primeiro
+            // 1º critério: se o usuário logado for provider, colocar seu próprio card em primeiro
             const currentProviderId =
               (user as any)?.providerDetails?.id || (user as any)?.providerDetails?.providerId;
             const currentProviderEmail = user?.email;
@@ -440,7 +446,7 @@ export default function ExploreClientScreen() {
                 return false;
               });
             } else {
-              // 2� crit�rio (fallback antigo): destacar Joana para usu�rios gen�ricos
+              // 2º critério (fallback antigo): destacar Joana para usuários genéricos
               idx = merged.findIndex(
                 p => p && typeof p.fullName === 'string' && /joana/i.test(p.fullName)
               );
@@ -458,7 +464,7 @@ export default function ExploreClientScreen() {
         }
       },
       data => setRecommendations(data),
-      'Erro ao carregar recomenda��es'
+      'Erro ao carregar recomendações'
     );
 
     let locationCoords: Location.LocationObjectCoords | null = null;
@@ -487,11 +493,11 @@ export default function ExploreClientScreen() {
             radius: searchRadiusKm, // em km para o backend
           }),
         data => setNearbyProviders(data),
-        'Erro ao carregar provedores prÃ³ximos'
+        'Erro ao carregar provedores próximos'
       );
     }
 
-    if (isMounted.current) {      // Precarregar imagens do banner e do DEFENSE_SOS para evitar atraso de decodificaï¿½ï¿½o
+    if (isMounted.current) { // Precarregar imagens do banner e do DEFENSE_SOS para evitar atraso de decodificação
       try {
         await Asset.loadAsync([
           require('../../../assets/images/banner6.png'),
@@ -499,9 +505,9 @@ export default function ExploreClientScreen() {
           require('../../../assets/images/banner3.png'),
           Icons3D.support,
         ] as any);
-      } catch {}
-      const D = 240; // duraÃ§Ã£o padrÃ£o
-      const S = 60;  // passo de atraso
+      } catch { }
+      const D = 240; // duração padrão
+      const S = 60; // passo de atraso
       if (reducedMotion) {
         headerAnim.setValue(1);
         categoriesAnim.setValue(1);
@@ -513,10 +519,10 @@ export default function ExploreClientScreen() {
         Animated.parallel([
           Animated.timing(headerAnim, { toValue: 1, duration: D, delay: 0, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
           Animated.timing(categoriesAnim, { toValue: 1, duration: D, delay: S, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-          Animated.timing(bannerAnim, { toValue: 1, duration: D, delay: S*2, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-          Animated.timing(recommendationsAnim, { toValue: 1, duration: D, delay: S*3, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-          Animated.timing(providersAnim, { toValue: 1, duration: D, delay: S*4, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-          Animated.timing(navBarAnim, { toValue: 1, duration: D, delay: S*5, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(bannerAnim, { toValue: 1, duration: D, delay: S * 2, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(recommendationsAnim, { toValue: 1, duration: D, delay: S * 3, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(providersAnim, { toValue: 1, duration: D, delay: S * 4, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(navBarAnim, { toValue: 1, duration: D, delay: S * 5, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
         ]).start();
       }
 
@@ -542,13 +548,14 @@ export default function ExploreClientScreen() {
     navBarAnim,
     searchRadiusKm,
     reducedMotion,
+    user,
   ]);
   // Respeitar "reduzir movimento"
   useEffect(() => {
     let mounted = true;
     AccessibilityInfo.isReduceMotionEnabled?.().then((v: boolean) => {
       if (mounted) setReducedMotion(!!v);
-    }).catch(() => {});
+    }).catch(() => { });
     const sub = (AccessibilityInfo as any).addEventListener?.('reduceMotionChanged', (v: boolean) => setReducedMotion(!!v));
     return () => { mounted = false; (sub && sub.remove?.()); };
   }, []);
@@ -570,7 +577,7 @@ export default function ExploreClientScreen() {
             await AsyncStorage.removeItem('@settings:radius:changed');
             fetchData();
           }
-        } catch {}
+        } catch { }
       })();
       return () => { cancelled = true; };
     }, [fetchData])
@@ -661,6 +668,40 @@ export default function ExploreClientScreen() {
     }, [userProfile, isAuthenticated, t])
   );
 
+  // Overlay premium de boas-vindas para visitantes (sempre que for visitante)
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      const maybeShowVisitorOverlay = async () => {
+        if (isLoading || isAuthenticated) {
+          return;
+        }
+        if (cancelled) return;
+
+        showOverlay({
+          title: 'Explore o LimpeJá com liberdade',
+          subtitle:
+            'Você pode conhecer profissionais e serviços antes de criar sua conta. O cadastro só é necessário na hora de agendar.',
+          variant: 'info',
+          placement: 'center',
+          tone: 'soft',
+          durationMs: 600000,
+          imageSource: require('../../../assets/images/provider.png'),
+          imageSize: 106,
+          primaryActionLabel: 'OK, entendi',
+          onPrimaryAction: showProductsAlert,
+        });
+      };
+
+      maybeShowVisitorOverlay();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [isAuthenticated, isLoading, showOverlay, showProductsAlert])
+  );
+
   const handleCategoryPress = useCallback(
     (item: Service) => {
       router.push({
@@ -686,18 +727,18 @@ export default function ExploreClientScreen() {
   // Filtrar nearbyProviders com base no priceFilter
   const filteredNearbyProviders = Array.isArray(nearbyProviders)
     ? nearbyProviders.filter((item) => {
-        if (!item || !item.fullName) return false;
-        if (!priceFilter) return true; // Sem filtro de preÃ§o, mostra todos
+      if (!item || !item.fullName) return false;
+      if (!priceFilter) return true; // Sem filtro de preço, mostra todos
 
-        // Verifica se o provedor tem algum serviÃ§o que corresponda ao tipo de preÃ§o
-        return item.providerServices?.some((service) => {
-          if (service.pricingType === priceFilter) {
-            const price = getNumericPriceValue(service);
-            return price > 0; // Apenas serviÃ§os com preÃ§o vlido
-          }
-          return false;
-        });
-      })
+      // Verifica se o provedor tem algum serviço que corresponda ao tipo de preço
+      return item.providerServices?.some((service) => {
+        if (service.pricingType === priceFilter) {
+          const price = getNumericPriceValue(service);
+          return price > 0; // Apenas serviços com preço válido
+        }
+        return false;
+      });
+    })
     : [];
 
   const viewabilityConfig = useRef({
@@ -712,14 +753,7 @@ export default function ExploreClientScreen() {
 
   const renderBannerItem = useCallback(({ item }: { item: BannerDataItem }) => {
     return (
-      <CarouselBannerItem
-        title={item.title}
-        discount={item.discount}
-        description={item.description}
-        buttonText={item.buttonText}
-        badgeText={item.badgeText}
-        onPress={item.onPress}
-      />
+      <CarouselBannerItem title={item.title} discount={item.discount} description={item.description} buttonText={item.buttonText} badgeText={item.badgeText} onPress={item.onPress} />
     );
   }, []);
 
@@ -763,9 +797,9 @@ export default function ExploreClientScreen() {
   const handleShareReferral = useCallback(async () => {
     try {
       const result = await Share.share({
-        message: `Use meu cÃ³digo de indicaÃ§Ã£o ${referralCode} no LimpeJÃ¡ e ganhe um desconto na sua primeira reserva!`,
+        message: `Use meu código de indicação ${referralCode} no LimpeJá e ganhe um desconto na sua primeira reserva!`,
         url: 'https://limpeja.com/referral',
-        title: 'Indique um amigo e ganhe no LimpeJÃ¡!',
+        title: 'Indique um amigo e ganhe no LimpeJá!',
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
@@ -804,8 +838,8 @@ export default function ExploreClientScreen() {
     );
   }
 
-  // Em caso de erro na primeira carga, nÃ£o bloquear a home;
-  // o usuÃ¡rio pode usar pull-to-refresh para tentar de novo.
+  // Em caso de erro na primeira carga, não bloquear a home;
+  // o usuário pode usar pull-to-refresh para tentar de novo.
 
   const rawAddress =
     userProfile?.clientDetails?.address ||
@@ -827,28 +861,54 @@ export default function ExploreClientScreen() {
           }}
         />
 
-        {/* FlatList UNICO com TODO o conteÃºdo no ListHeaderComponent */}
+        {/* FlatList ÚNICO com TODO o conteúdo no ListHeaderComponent */}
         <FlatList
           data={[]} // Header-only: data vazia, mas header rola tudo
-          renderItem={() => null} // ? FIX: Adicionado renderItem dummy para FlatList header-only (evita erro TS)
+          renderItem={() => null} // FIX: Adicionado renderItem dummy para FlatList header-only (evita erro TS)
           keyExtractor={() => 'header-only'}
           ListHeaderComponent={(
             <>
-              {/* NewHeader UNICO */}
-              <NewHeader
-                userName={userNameDisplay}
-                userAddress={addressToDisplay}
-              />
+              {/* NewHeader ÚNICO */}
+              <NewHeader userName={userNameDisplay} userAddress={addressToDisplay} />
 
-              {/* ContentWrapper UNICO - TODO o conteÃºdo aqui */}
+              {/* Mini-tutorial para visitantes (sempre que não autenticado) */}
+              {!isAuthenticated && (
+                <View style={styles.howItWorksTutorialContainer}>
+                  <Text style={styles.howItWorksTitle} allowFontScaling={false}>
+                    Como funciona o LimpeJá
+                  </Text>
+                  <View style={styles.howItWorksSteps}>
+                    <View style={styles.howItWorksStep}>
+                      <Image source={Icons3D.provider} style={styles.howItWorksIcon} />
+                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
+                        Escolha o profissional
+                      </Text>
+                    </View>
+                    <View style={styles.howItWorksStep}>
+                      <Image source={Icons3D.calendar} style={styles.howItWorksIcon} />
+                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
+                        Agende data e hora
+                      </Text>
+                    </View>
+                    <View style={styles.howItWorksStep}>
+                      <Image source={Icons3D.payments} style={styles.howItWorksIcon} />
+                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
+                        Pague via PIX
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* ContentWrapper ÚNICO - TODO o conteúdo aqui */}
               <View style={styles.contentWrapper}>
-                {/* SeÃ§Ã£o de Categorias */}
+                {/* Seção de Categorias */}
                 <Animated.View
                   style={[
                     styles.categoriesSection,
-                    { 
-                      opacity: categoriesAnim, 
-                      transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }] 
+                    {
+                      opacity: categoriesAnim,
+                      transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }]
                     },
                   ]}>
                   <View style={styles.categoryTitleWrapper}>
@@ -877,7 +937,7 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* RecomendaÃ§Ãµes UNICAS */}
+                {/* Recomendações ÚNICAS */}
                 <Animated.View
                   style={{
                     opacity: recommendationsAnim,
@@ -889,7 +949,7 @@ export default function ExploreClientScreen() {
                     data={safeRecommendations}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de recomendaÃ§Ã£o invÃ¡lido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de recomendação inválido filtrado:', item);
                         return null;
                       }
                       return <RecomendacaoCard key={item.id} item={item} />;
@@ -899,7 +959,7 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* Profissionais por Perto UNICOS */}
+                {/* Profissionais por Perto ÚNICOS */}
                 <Animated.View
                   style={{
                     opacity: providersAnim,
@@ -911,7 +971,7 @@ export default function ExploreClientScreen() {
                     data={filteredNearbyProviders}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de prestador invÃ¡lido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de prestador inválido filtrado:', item);
                         return null;
                       }
                       return (
@@ -921,16 +981,16 @@ export default function ExploreClientScreen() {
                     horizontal={true}
                     noDataText={t('search.no_results')}
                   />
-                  
+
                 </Animated.View>
 
-                {/* Carrossel de Banners UNICO - Movido para abaixo da seÃ§Ã£o Profissionais por Perto */}
+                {/* Carrossel de Banners ÚNICO - Movido para abaixo da seção Profissionais por Perto */}
                 <Animated.View
                   style={[
                     styles.carouselContainer,
-                    { 
-                      opacity: bannerAnim, 
-                      transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }] 
+                    {
+                      opacity: bannerAnim,
+                      transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }]
                     },
                   ]}>
                   <FlatList<BannerDataItem>
@@ -950,19 +1010,19 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* HorizontalMiniGrid  */}
+                {/* HorizontalMiniGrid */}
                 <Animated.View
                   style={{
                     opacity: providersAnim,
                     transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
                   }}>
                   <View style={styles.exploreMoreSpacing}>
-                  <View style={styles.miniGridHeader}>
-                    <Text style={styles.miniGridTitle} allowFontScaling={false}>
-                      {t('explore_section.title')}
-                    </Text>
-                  </View>
-                  <HorizontalMiniGrid />
+                    <View style={styles.miniGridHeader}>
+                      <Text style={styles.miniGridTitle} allowFontScaling={false}>
+                        {t('explore_section.title')}
+                      </Text>
+                    </View>
+                    <HorizontalMiniGrid />
                   </View>
                 </Animated.View>
 
@@ -972,9 +1032,9 @@ export default function ExploreClientScreen() {
             </>
           )}
           style={styles.scrollViewArea}
-          contentContainerStyle={{ 
+          contentContainerStyle={{
             paddingBottom: 10, // Padding alto para NavBar + Nudges + FABs
-            flexGrow: 1 
+            flexGrow: 1
           }}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -987,27 +1047,23 @@ export default function ExploreClientScreen() {
             />
           }
           nestedScrollEnabled={true} // Para Android
-          removeClippedSubviews={false} // Evita corte de animaÃ§Ãµes
+          removeClippedSubviews={false} // Evita corte de animações
         />
 
-        {/* NavBar ÃšNICA */}
+        {/* NavBar ÚNICA */}
         <Animated.View
           style={[
             styles.navBarContainer,
             navWrap,
-            { 
-              transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] 
+            {
+              transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }]
             },
           ]}
-          pointerEvents="box-none"> {/* NÃ£o bloqueia scroll */}
-          <NavBar
-            welcomeCouponOffer={welcomeCouponOffer}
-            activeBottomPromotion={activeBottomPromotion}
-            setActiveBottomPromotion={setActiveBottomPromotion}
-          />
+          pointerEvents="box-none"> {/* Não bloqueia scroll */}
+          <NavBar welcomeCouponOffer={welcomeCouponOffer} activeBottomPromotion={activeBottomPromotion} setActiveBottomPromotion={setActiveBottomPromotion} />
         </Animated.View>
 
-        {/* DEFENSE_SOS UNICO */}
+        {/* DEFENSE_SOS ÚNICO */}
         <DEFENSE_SOS bottomOffset={20} />
 
         {/* SmartCouponNudge */}
@@ -1020,7 +1076,7 @@ export default function ExploreClientScreen() {
             throttleHours={24}
             showOnRoutes={['/(client)/explore']}
             onApply={handleUseWelcomeCoupon}
-            pointerEvents="box-none" // NÃ£o bloqueia scroll
+            pointerEvents="box-none" // Não bloqueia scroll
           />
         )}
 
@@ -1042,14 +1098,7 @@ export default function ExploreClientScreen() {
         {/* BottomSlideInCard para Referral */}
         {isAuthenticated && userProfile?.referralCode && (
           <BottomSlideInCard isVisible={activeBottomPromotion === 'referral'} pointerEvents="box-none">
-            <ReferralBanner
-              code={referralCode}
-              rewardReferrer={rewardReferrer}
-              rewardReferred={rewardReferred}
-              onShare={handleShareReferral}
-              onHowItWorks={handleHowItWorksReferral}
-              onDismiss={handleDismissReferralBanner}
-            />
+            <ReferralBanner code={referralCode} rewardReferrer={rewardReferrer} rewardReferred={rewardReferred} onShare={handleShareReferral} onHowItWorks={handleHowItWorksReferral} onDismiss={handleDismissReferralBanner} />
           </BottomSlideInCard>
         )}
 
@@ -1073,7 +1122,7 @@ export default function ExploreClientScreen() {
           delayMs={3500}
           throttleHours={24}
           showOnRoutes={['/(client)/explore']}
-          bottomOffset={120} // Offset para nÃ£o sobrepor NavBar
+          bottomOffset={120} // Offset para não sobrepor NavBar
           pointerEvents="box-none"
         />
 
@@ -1259,7 +1308,7 @@ const styles = StyleSheet.create({
     fontSize: 16.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '600',
-    // PREMIUM: Estilo de tï¿½tulo alinhado
+    // PREMIUM: Estilo de título alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
   },
@@ -1281,25 +1330,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COR_CINZA_FUNDO,
   },
-  // REMOVIDO: Estilos de paginaï¿½ï¿½o (nï¿½o mais necessï¿½rios)
-  // pagination: {
-  //   flexDirection: 'row',
-  //   height: 20,
-  //   alignItems: 'center',
-  //   marginTop: 10,
-  // },
-  // paginationDot: {
-  //   width: 8,
-  //   height: 8,
-  //   borderRadius: 4,
-  //   marginHorizontal: 5,
-  // },
-  // paginationDotActive: {
-  //   backgroundColor: COR_AZUL_CLARO_UNIFICADA,
-  // },
-  // paginationDotInactive: {
-  //   backgroundColor: '#ddd',
-  // },
   shieldIconContainer: {
     padding: 5,
     marginRight: Platform.OS === 'ios' ? 10 : 0,
@@ -1312,7 +1342,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 21,
     marginTop: 2,
   },
-  // EspaÃ§amento adicional para manter a seÃ§Ã£o "Explore mais serviÃ§os" um pouco abaixo do carrossel
+  // Espaçamento adicional para manter a seção "Explore mais serviços" um pouco abaixo do carrossel
   exploreMoreSpacing: {
     marginTop: 16,
   },
@@ -1320,7 +1350,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
-    // PREMIUM: Estilo de tï¿½tulo alinhado
+    // PREMIUM: Estilo de título alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
   },
@@ -1378,7 +1408,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
   },
-  // Desloca levemente o Ã­cone "+" para baixo (~3px)
+  // Desloca levemente o ícone "+" para baixo (~3px)
   viewAllIcon: {
     transform: [{ translateY: 3 }],
   },
@@ -1437,7 +1467,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
+  howItWorksTutorialContainer: {
+    marginHorizontal: 11,
+    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    backgroundColor: AppColors.white,
+    borderWidth: 1,
+    borderColor: COR_BORDA_SUAVE,
+    ...AppShadows.small,
+  },
+  howItWorksTitle: {
+    fontSize: 16,
+    fontFamily: 'Montserrat-Regular',
+    fontWeight: '700',
+    color: AppColors.textTitle,
+    marginBottom: 10,
+  },
+  howItWorksSteps: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  howItWorksStep: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  howItWorksIcon: {
+    width: 34,
+    height: 34,
+    marginBottom: 6,
+    resizeMode: 'contain',
+  },
+  howItWorksStepLabel: {
+    fontSize: 12,
+    textAlign: 'center',
+    color: AppColors.textBody,
+  },
 });
-
-
-
