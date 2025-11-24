@@ -94,7 +94,11 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 8 }).start();
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.9}>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={onPress}
+      activeOpacity={0.9}
+    >
       <View style={styles.imageWrapper}>
         {/* imagem atual */}
         <Animated.View
@@ -170,7 +174,7 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: Dimensions.get('window').width - 40,
-    height: 90,
+    height: 120,
     borderRadius: 14,
     overflow: 'hidden',
     marginHorizontal: 6,
