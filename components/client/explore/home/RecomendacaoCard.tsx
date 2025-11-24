@@ -965,7 +965,7 @@ const styles = StyleSheet.create({
   },
   providerName: {
     fontSize: S(11.5), // Nome (16/700)
-    fontFamily: 'Montserrat-ExtraBold',
+    fontFamily: Platform.OS === 'ios' ? 'Montserrat-ExtraBold' : 'Montserrat-Regular',
     paddingHorizontal: 0,
     fontWeight: '500', // ALTERADO: FontWeight mais grossa (de '700' para '900' para maior espessura)
     color: '#77808A', // mesma cor do priceValue
@@ -1016,6 +1016,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: S(8.5), // REDUZIDO: De 9 para 8.5px para caber melhor sem quebrar (mantém legibilidade)
     fontWeight: '500',
+    fontFamily: Platform.OS === 'android' ? 'Montserrat-Regular' : undefined,
     color: '#5c6367ff',
     textAlign: 'center',
     left: 16,
@@ -1042,6 +1043,7 @@ const styles = StyleSheet.create({
       ios: '300', 
       android: 'bold' 
     }),
+    fontFamily: Platform.OS === 'android' ? 'Montserrat-Regular' : undefined,
     color: '#6C757D',
     marginBottom: 12, // Ajustado: +4px para compensar remoção de chips centrais
   },
@@ -1073,6 +1075,7 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontSize: S(8.57), // 5% menor que 9.025
+    fontFamily: Platform.OS === 'android' ? 'Montserrat-Regular' : undefined,
     color: '#6B7380', // contraste leve para métricas
     marginLeft: 1,
   },
@@ -1143,6 +1146,7 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: S(9), // Preço "A partir de" (16/bold) - mantido bold para destaque
     fontWeight: 'bold',
+    fontFamily: Platform.OS === 'android' ? 'Montserrat-Regular' : undefined,
     left: 0,
     color: '#77808A', // cinza escuro sutil (premium, um pouco mais claro)
     includeFontPadding: false,
@@ -1153,6 +1157,7 @@ const styles = StyleSheet.create({
   hourlyPriceValue: {
     fontSize: S(10), // REDUZIDO: De 11 para 10px
     fontWeight: 'normal',
+    fontFamily: Platform.OS === 'android' ? 'Montserrat-Regular' : undefined,
     color: '#7d786cff',
     marginTop: 0, // REDUZIDO: Espaço mínimo
   },
@@ -1237,12 +1242,13 @@ scheduleIcon: {
   marginRight: 4,
   top: Platform.OS === 'ios' ? 0.5 : 0,
 },
-scheduleText: {
-  fontSize: S(8.57), // 5% menor que 9.025
-  fontWeight: '600',
-  color: '#77808A', // cinza escuro sutil (premium, um pouco mais claro)
-  letterSpacing: 0.1,
-}
+  scheduleText: {
+    fontSize: S(8.57), // 5% menor que 9.025
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'android' ? 'Montserrat-Regular' : undefined,
+    color: '#77808A', // cinza escuro sutil (premium, um pouco mais claro)
+    letterSpacing: 0.1,
+  }
 ,
 
   ratingStarIcon: {
