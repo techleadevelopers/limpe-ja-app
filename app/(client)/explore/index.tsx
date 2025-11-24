@@ -212,6 +212,8 @@ import BottomSlideInCard from '../../../components/common/BottomSlideInCard';
 import SmartCouponNudge from '../../../components/coupons/CouponNudge';
 import ScreenContainer from '@/components/layout/ScreenContainer';
 import { useDevice } from '@/utils/responsive';
+import TutorialOverlay from '../../../components/ui/TutorialOverlay';
+import { useTutorial } from '../../../hooks/useTutorial';
 
 // Importar os novos componentes Nudge
 import SecurityNudge from '../../../components/nudges/SecurityNudge';
@@ -285,6 +287,7 @@ export default function ExploreClientScreen() {
     () => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined),
     [isLargePhone]
   );
+  const exploreTutorial = useTutorial('explore_first_time');
 
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
@@ -367,6 +370,12 @@ export default function ExploreClientScreen() {
       }
     };
   }, [isAuthenticated, showProductsAlert]);
+
+  useEffect(() => {
+    if (!isAuthenticated && exploreTutorial.isReady && !exploreTutorial.hasSeen) {
+      exploreTutorial.show();
+    }
+  }, [isAuthenticated, exploreTutorial.isReady, exploreTutorial.hasSeen, exploreTutorial.show]);
 
   const fetchData = useCallback(async () => {
     if (!isMounted.current) {
@@ -869,73 +878,72 @@ export default function ExploreClientScreen() {
           ListHeaderComponent={(
             <>
               {/* NewHeader ÚNICO */}
-              <NewHeader userName={userNameDisplay} userAddress={addressToDisplay} />
-
-              {/* Mini-tutorial para visitantes (sempre que não autenticado) */}
-              {!isAuthenticated && (
-                <View style={styles.howItWorksTutorialContainer}>
-                  <Text style={styles.howItWorksTitle} allowFontScaling={false}>
-                    Como funciona o LimpeJá
-                  </Text>
-                  <View style={styles.howItWorksSteps}>
-                    <View style={styles.howItWorksStep}>
-                      <Image source={Icons3D.provider} style={styles.howItWorksIcon} />
-                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
-                        Escolha o profissional
-                      </Text>
-                    </View>
-                    <View style={styles.howItWorksStep}>
-                      <Image source={Icons3D.calendar} style={styles.howItWorksIcon} />
-                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
-                        Agende data e hora
-                      </Text>
-                    </View>
-                    <View style={styles.howItWorksStep}>
-                      <Image source={Icons3D.payments} style={styles.howItWorksIcon} />
-                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
-                        Pague via PIX
-                      </Text>
-                    </View>
+                <NewHeader userName={userNameDisplay} userAddress={addressToDisplay} />
+              {/* Mini-tutorial sempre vis?vel */}
+              <View style={styles.howItWorksTutorialContainer}>
+                <Text style={styles.howItWorksTitle} allowFontScaling={false}>
+                  Como funciona o LimpeJá
+                </Text>
+                <View style={styles.howItWorksSteps}>
+                  <View style={styles.howItWorksStep}>
+                    <Image source={Icons3D.provider} style={styles.howItWorksIcon} />
+                    <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
+                      Escolha o profissional
+                    </Text>
+                  </View>
+                  <View style={styles.howItWorksStep}>
+                    <Image source={Icons3D.calendar} style={styles.howItWorksIcon} />
+                    <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
+                      Agende data e hora
+                    </Text>
+                  </View>
+                  <View style={styles.howItWorksStep}>
+                    <Image source={Icons3D.payments} style={styles.howItWorksIcon} />
+                    <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
+                      Pague via PIX
+                    </Text>
                   </View>
                 </View>
-              )}
+              </View>
 
               {/* ContentWrapper ÚNICO - TODO o conteúdo aqui */}
               <View style={styles.contentWrapper}>
                 {/* Seção de Categorias */}
-                <Animated.View
-                  style={[
-                    styles.categoriesSection,
-                    {
-                      opacity: categoriesAnim,
-                      transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }]
-                    },
-                  ]}>
-                  <View style={styles.categoryTitleWrapper}>
-                    <Text style={styles.categorySectionTitle} allowFontScaling={false}>
-                      {t('search.all_categories')}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                      style={styles.viewAllButton}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />
-                    </TouchableOpacity>
-                  </View>
+                {!isAuthenticated && (
+                  <Animated.View
+                    style={[
+                      styles.categoriesSection,
+                      {
+                        opacity: categoriesAnim,
+                        transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }]
+                      },
+                    ]}>
+                    <View style={styles.categoryTitleWrapper}>
+                      <Text style={styles.categorySectionTitle} allowFontScaling={false}>
+                        {t('search.all_categories')}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                        style={styles.viewAllButton}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />
+                      </TouchableOpacity>
+                    </View>
                   <SecaoContainer<Service>
                     titulo={t('search.all_categories')}
                     onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
                     data={safeServiceCategories}
                     renderItem={({ item }) => {
                       if (!item || !item.name) return null;
-                      return (
+                        return (
                         <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
-                      );
+                        );
                     }}
                     horizontal={true}
                     noDataText={t('search.no_results')}
                   />
-                </Animated.View>
+                  </Animated.View>
+                )}
 
                 {/* Recomendações ÚNICAS */}
                 <Animated.View
@@ -984,7 +992,7 @@ export default function ExploreClientScreen() {
 
                 </Animated.View>
 
-                {/* Carrossel de Banners ÚNICO - Movido para abaixo da seção Profissionais por Perto */}
+                {/* Carrossel de Banners ÚNICO */}
                 <Animated.View
                   style={[
                     styles.carouselContainer,
@@ -1010,21 +1018,57 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* HorizontalMiniGrid */}
-                <Animated.View
-                  style={{
-                    opacity: providersAnim,
-                    transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
-                  }}>
-                  <View style={styles.exploreMoreSpacing}>
-                    <View style={styles.miniGridHeader}>
-                      <Text style={styles.miniGridTitle} allowFontScaling={false}>
-                        {t('explore_section.title')}
+                {/* HorizontalMiniGrid / Acesso Rápido */}
+                {isAuthenticated ? (
+                  <Animated.View
+                    style={[
+                      styles.categoriesSection,
+                      {
+                        opacity: categoriesAnim,
+                        transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }]
+                      },
+                    ]}>
+                    <View style={styles.categoryTitleWrapper}>
+                      <Text style={styles.categorySectionTitle} allowFontScaling={false}>
+                        {t('search.all_categories')}
                       </Text>
+                      <TouchableOpacity
+                        onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                        style={styles.viewAllButton}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />
+                      </TouchableOpacity>
                     </View>
-                    <HorizontalMiniGrid />
-                  </View>
-                </Animated.View>
+                    <SecaoContainer<Service>
+                      titulo={t('search.all_categories')}
+                      onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                      data={safeServiceCategories}
+                      renderItem={({ item }) => {
+                        if (!item || !item.name) return null;
+                          return (
+                          <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
+                          );
+                      }}
+                      horizontal={true}
+                      noDataText={t('search.no_results')}
+                    />
+                  </Animated.View>
+                ) : (
+                  <Animated.View
+                    style={{
+                      opacity: providersAnim,
+                      transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
+                    }}>
+                    <View style={styles.exploreMoreSpacing}>
+                      <View style={styles.miniGridHeader}>
+                        <Text style={styles.miniGridTitle} allowFontScaling={false}>
+                          {t('explore_section.title')}
+                        </Text>
+                      </View>
+                      <HorizontalMiniGrid />
+                    </View>
+                  </Animated.View>
+                )}
 
                 {/* Spacer para scroll extra (compensa absolutos) */}
                 <View style={{ height: 20 }} />
@@ -1133,6 +1177,14 @@ export default function ExploreClientScreen() {
           bottomOffset={180} // Offset para empilhamento
           points={100}
           pointerEvents="box-none"
+        />
+
+        <TutorialOverlay
+          visible={exploreTutorial.isVisible}
+          title="Explore à vontade"
+          subtitle="Navegue pelos profissionais disponíveis e use as categorias para filtrar sua busca."
+          iconName="compass-outline"
+          onConfirm={exploreTutorial.markSeen}
         />
       </ScreenContainer>
     </SafeAreaView>
@@ -1293,7 +1345,7 @@ const styles = StyleSheet.create({
   },
   categoriesSection: {
     marginTop: 2,
-    marginBottom: -5,
+    marginBottom: 5,
     paddingHorizontal: 6,
   },
   categoryTitleWrapper: {
@@ -1471,7 +1523,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 11,
     marginBottom: 12,
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 29,
     borderRadius: 18,
     backgroundColor: AppColors.white,
     borderWidth: 1,
