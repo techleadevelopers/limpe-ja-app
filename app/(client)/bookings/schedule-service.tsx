@@ -19,6 +19,7 @@ import {
     TextInput,
     ImageBackground,
     ScrollView,
+    ToastAndroid,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -505,10 +506,51 @@ export default function ScheduleServiceScreen() {
         slotCount: selectedSlots.length,
     });
 
+    const priceChangeAnim = useRef(new Animated.Value(0)).current;
+    const lastFinalPriceRef = useRef<number>(finalCalculatedPrice);
+
+    const confirmButtonAnimatedStyle = useMemo(
+        () => ({
+            transform: [
+                {
+                    scale: priceChangeAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.03],
+                    }),
+                },
+            ],
+            opacity: priceChangeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 0.85],
+            }),
+        }),
+        [priceChangeAnim]
+    );
+
     // ? CORREÇÃO: Use t() fora do array para evitar re-run do useEffect de slots; fallback para undefined
     const stepDateTimeTitle = useMemo(() => t('schedule_service.progress_step_date_time', { defaultValue: 'Data e Hora' }), [t]);
     const stepReviewTitle = useMemo(() => t('schedule_service.progress_step_complete_review', { defaultValue: 'Revisão' }), [t]);
     const stepTitles = [stepDateTimeTitle, stepReviewTitle];
+
+    const timeSelectionSummaryLabel = useMemo(() => {
+        if (!selectedProviderService) return null;
+
+        if (selectedProviderService.pricingType === PricingType.HOURLY && selectedSlots.length > 0) {
+            const hours = selectedSlots.length;
+            const hoursLabel = hours === 1 ? 'hora selecionada' : 'horas selecionadas';
+            return `${hours} ${hoursLabel} · Total estimado: ${formatBRL(finalCalculatedPrice)}`;
+        }
+
+        if (
+            selectedProviderService.pricingType === PricingType.BY_SIZE &&
+            squareMeters &&
+            finalCalculatedPrice > 0
+        ) {
+            return `${squareMeters} m² · Total estimado: ${formatBRL(finalCalculatedPrice)}`;
+        }
+
+        return null;
+    }, [selectedProviderService, selectedSlots.length, squareMeters, finalCalculatedPrice]);
 
     const prefetchAvailability = useCallback(async (provId: string | undefined, baseDate: Date) => {
         if (!provId) return;
@@ -541,6 +583,32 @@ export default function ScheduleServiceScreen() {
 
         // Removido: console.log de prefetch para evitar LogBox.
     }, []);
+
+    useEffect(() => {
+        if (
+            currentStep === 2 &&
+            finalCalculatedPrice > 0 &&
+            lastFinalPriceRef.current !== finalCalculatedPrice
+        ) {
+            priceChangeAnim.setValue(0);
+            Animated.sequence([
+                Animated.timing(priceChangeAnim, {
+                    toValue: 1,
+                    duration: AppDurations.xs,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(priceChangeAnim, {
+                    toValue: 0,
+                    duration: AppDurations.xs,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        }
+
+        lastFinalPriceRef.current = finalCalculatedPrice;
+    }, [currentStep, finalCalculatedPrice, priceChangeAnim]);
 
     useEffect(() => {
         isMounted.current = true;
@@ -1638,6 +1706,14 @@ export default function ScheduleServiceScreen() {
                                     opacity: fadeAnim
                                 }}
                             >
+                                <View style={styles.timeSlotsHelperContainer}>
+                                    <Text style={styles.timeSlotsHelperText}>
+                                        Selecione os horários que deseja (cada horário = 1h de serviço).
+                                    </Text>
+                                    <Text style={styles.timeSlotsHelperSubText}>
+                                        Você pode escolher mais de um horário para aumentar a duração.
+                                    </Text>
+                                </View>
                                 <TimeSlotsSection
                                     titleKey="schedule_service.available_times"
                                     date={selectedDate}
@@ -1743,23 +1819,40 @@ export default function ScheduleServiceScreen() {
                             activeOpacity={0.9}
                         >
                             <Text style={styles.nextStepButtonText}>
-                                {finalCalculatedPrice > 0
-                                    ? `Continuar (${formatBRL(finalCalculatedPrice)})`
-                                    : 'Continuar'}
+                                {(() => {
+                                    const isHourly = selectedProviderService?.pricingType === PricingType.HOURLY;
+                                    const basePrice = selectedProviderService?.price ?? (paramServicePrice ? Number(paramServicePrice) : 0);
+                                    const displayPrice = finalCalculatedPrice > 0 ? finalCalculatedPrice : basePrice;
+
+                                    if (displayPrice > 0) {
+                                        return `Agendar \u2022 ${formatBRL(displayPrice)}${isHourly ? '/h' : ''}`;
+                                    }
+                                    return 'Agendar';
+                                })()}
                             </Text>
                         </TouchableOpacity>
                     </View>
                 )}
 
+                {currentStep === 2 && selectedSlots.length > 0 && (
+                    <View style={styles.timeSummaryInline}>
+                        <Text style={styles.timeSummaryText} numberOfLines={2}>
+                            {timeSelectionSummaryLabel}
+                        </Text>
+                    </View>
+                )}
+
                 {currentStep === 2 && (
-                    <ConfirmBookingButton
-                        isButtonDisabled={isConfirmButtonDisabled}
-                        onConfirmBooking={handleConfirmBooking}
-                        isBooking={isBooking}
-                        confirmButtonText={confirmButtonText}
-                        selectedTime={selectedTime}
-                        hasSelectedServicePrice={!!selectedProviderService?.price}
-                    />
+                    <Animated.View style={confirmButtonAnimatedStyle}>
+                        <ConfirmBookingButton
+                            isButtonDisabled={isConfirmButtonDisabled}
+                            onConfirmBooking={handleConfirmBooking}
+                            isBooking={isBooking}
+                            confirmButtonText={confirmButtonText}
+                            selectedTime={selectedTime}
+                            hasSelectedServicePrice={!!selectedProviderService?.price}
+                        />
+                    </Animated.View>
                 )}
             </View>
         </View>
@@ -2038,6 +2131,32 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 4,
     },
+    timeSlotsHelperContainer: {
+        marginHorizontal: 40,
+        marginTop: 1,
+        marginBottom: 10,
+    },
+    timeSlotsHelperText: {
+        fontSize: 14,
+        lineHeight: 20,
+        color: '#6B7280',
+    },
+    timeSlotsHelperSubText: {
+        fontSize: 14,
+        lineHeight: 20,
+        color: '#6B7280',
+        marginTop: 2,
+    },
+    timeSummaryInline: {
+        paddingHorizontal: 20,
+        paddingVertical: 6,
+        backgroundColor: 'transparent',
+    },
+    timeSummaryText: {
+        fontSize: 13,
+        color: AppColors.textAuxiliary,
+        textAlign: 'center',
+    },
     priceLabel: {
         fontSize: 14,
         color: AppColors.textBody,
@@ -2163,3 +2282,6 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
 });
+
+
+
