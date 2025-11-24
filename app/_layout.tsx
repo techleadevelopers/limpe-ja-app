@@ -75,6 +75,7 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
   const router = useRouter();
   const [booking, setBooking] = React.useState<BookingDetails | null>(null);
   const [timeLabel, setTimeLabel] = React.useState<string>('');
+  const [hidden, setHidden] = React.useState<boolean>(false);
 
   const reflectionX = React.useRef(new Animated.Value(-80)).current;
   const tremble = React.useRef(new Animated.Value(0)).current;
@@ -139,7 +140,7 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
     Animated.spring(scale, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }).start();
   };
 
-  if (!enabled || !booking) return null;
+  if (!enabled || !booking || hidden) return null;
 
   const isInProgress = booking.status === BookingStatus.IN_PROGRESS;
   const cta = isInProgress ? 'Finalizar' : 'Iniciar';
@@ -197,6 +198,24 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
             }}
           />
         </LinearGradient>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => setHidden(true)}
+        accessibilityLabel="Fechar atalho de serviço ativo"
+        accessibilityRole="button"
+        style={{
+          position: 'absolute',
+          top: -6,
+          right: -6,
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          backgroundColor: 'rgba(0,0,0,0.15)',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>×</Text>
       </TouchableOpacity>
     </Animated.View>
   );
