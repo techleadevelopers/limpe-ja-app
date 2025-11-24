@@ -1,8 +1,9 @@
 // components/client/explore/provider/BookServiceButton.tsx
 import React from 'react';
-import { Animated, Text, TouchableOpacity, Platform, StyleSheet, View, Alert } from 'react-native';
+import { Animated, Text, TouchableOpacity, Platform, StyleSheet, View, Alert, ToastAndroid } from 'react-native';
 import { type Router } from 'expo-router';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import NotificationUIService from '../../../../services/notificationUIService';
 
 interface BookServiceButtonProps {
   providerId: string;
@@ -13,6 +14,7 @@ interface BookServiceButtonProps {
   sticky?: boolean;
   safeBottomInset?: number;
   isAuthenticated: boolean;
+  requireAuthOrRedirect?: (actionName?: string) => boolean;
 }
 
 const BookServiceButton: React.FC<BookServiceButtonProps> = ({
@@ -24,14 +26,30 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
   sticky = false,
   safeBottomInset = 0,
   isAuthenticated,
+  requireAuthOrRedirect,
 }) => {
   const baseBottomPadding = Platform.OS === 'ios' ? 34 : 20;
 
   const handlePress = () => {
+    if (requireAuthOrRedirect && !requireAuthOrRedirect('book_service')) {
+      return;
+    }
+
     if (!isAuthenticated) {
+      const title = 'Cadastro necessario';
+      const message = 'Crie seu cadastro para agendar servicos de limpeza';
+
+      // Android: garantir mensagem nativa visível (toast + overlay leve), mantendo Alert para iOS
+      if (Platform.OS === 'android') {
+        try {
+          ToastAndroid.showWithGravity(message, ToastAndroid.LONG, ToastAndroid.CENTER);
+        } catch {}
+        NotificationUIService.showInfo(message, title);
+      }
+
       Alert.alert(
-        'Cadastro necessário',
-        'Crie seu cadastro para agendar serviços de limpeza',
+        title,
+        message,
         [
           {
             text: 'Continuar',
@@ -59,7 +77,6 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
       },
     });
   };
-
   const label =
     servicePrice != null && typeof servicePrice === 'number' && Number.isFinite(servicePrice)
       ? `Agendar • R$ ${servicePrice.toFixed(2).replace('.', ',')}/h`
