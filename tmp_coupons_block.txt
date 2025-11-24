@@ -1,0 +1,40 @@
+            accessibilityState={{ selected: activeTab === 'USED' }}
+          >
+            <Text style={[styles.tabText, activeTab === 'USED' && { color: theme.primary }]}>Usados</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'EXPIRED' && [styles.tabPillActive, { borderColor: theme.primary }]]}
+            onPress={() => setActiveTab('EXPIRED')}
+            accessibilityRole="tab"
+            accessibilityLabel="Cupons expirados"
+            accessibilityState={{ selected: activeTab === 'EXPIRED' }}
+          >
+            <Text style={[styles.tabText, activeTab === 'EXPIRED' && { color: theme.primary }]}>Expirados</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={filteredCoupons}
+          keyExtractor={(item) => item.id}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          refreshing={isRefreshing}
+          onRefresh={onRefresh}
+          renderItem={({ item }) => (
+            <CouponCard coupon={item} onUseCoupon={handleUseCoupon} theme={theme} />
+          )}
+          ListEmptyComponent={(
+            <View style={styles.centered}>
+              <Ionicons name="sad-outline" size={48} color={theme.textMuted} />
+              <Text style={{ marginTop: 12, color: theme.textMuted }}>
+                {activeTab === 'AVAILABLE' ? 'Nenhum cupom disponível no momento.' :
+                  activeTab === 'USED' ? 'Você ainda não usou nenhum cupom.' :
+                  'Nenhum cupom expirado.'}
+              </Text>
+            </View>
+          )}
+        />
+      </View>
+    </View>
+  );
+}
+
