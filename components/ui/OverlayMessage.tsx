@@ -8,6 +8,7 @@ import {
   TouchableWithoutFeedback,
   TouchableOpacity,
   Image,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '../../constants/appStyles';
@@ -188,12 +189,14 @@ export const OverlayMessage: React.FC<OverlayMessageProps> = ({
   );
 };
 
+const ANDROID_TOP_OFFSET = (StatusBar.currentHeight ?? 0) + 24;
+
 const styles = StyleSheet.create({
   root: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: Platform.OS === 'ios' ? 60 : 40, // margem de segurança (notch / status bar)
+    top: Platform.OS === 'ios' ? 60 : ANDROID_TOP_OFFSET, // margem de segurança (notch / status bar)
     alignItems: 'center',
     justifyContent: 'flex-start',
     zIndex: 10001,
