@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import { getMyLoyaltyBalance, getMyLoyaltyHistory, getLoyaltyRewards, redeemLoya
 import NotificationUIService from '../../../services/notificationUIService';
 import { AnalyticsService } from '../../../services/analyticsService';
 import Colors from '../../../constants/Colors';
+import { fix } from '../../utils/platformFix';
 
 function useTheme() {
   const scheme = (Colors as any)?.scheme || 'light';
@@ -64,11 +65,11 @@ export default function CashbackScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: fix.padTop(80, 94) }]}>
         <TouchableOpacity onPress={() => router.back()} accessibilityLabel={t('common.back', { defaultValue: 'Voltar' }) || 'Voltar'}>
-          <Ionicons name="arrow-back" size={22} color={theme.text} />
+          <Ionicons name="arrow-back" size={22} color={theme.text} style={styles.iconAdjust} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>{t('wallet.cashback_title', { defaultValue: 'Pontos e Cashback' })}</Text>
+        <Text style={[styles.headerTitle, { color: theme.text, fontSize: fix.font(17) }]}>{t('wallet.cashback_title', { defaultValue: 'Pontos e Cashback' })}</Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -86,7 +87,7 @@ export default function CashbackScreen() {
         <View style={styles.content}>
           <View style={[styles.balanceCard, { backgroundColor: theme.cardBackground }]}> 
             <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>{t('wallet.current_points', { defaultValue: 'Seus pontos' })}</Text>
-            <Text style={[styles.balanceValue, { color: theme.text }]}>{balQuery.data?.currentPoints ?? 0}</Text>
+            <Text style={[styles.balanceValue, { color: theme.text, fontSize: fix.font(28) }]}>{balQuery.data?.currentPoints ?? 0}</Text>
           </View>
           <View style={styles.actionsRow}>
             <TouchableOpacity
@@ -94,7 +95,7 @@ export default function CashbackScreen() {
               onPress={() => { AnalyticsService.trackEvent('wallet_use_points_tap'); router.push('/(client)/coupons'); }}
               accessibilityLabel={t('wallet.use_points', { defaultValue: 'Usar pontos' }) || 'Usar pontos'}
             >
-              <Ionicons name="pricetag-outline" size={16} color="#FFF" />
+              <Ionicons name="pricetag-outline" size={16} color="#FFF" style={styles.iconAdjust} />
               <Text style={styles.primaryBtnText}>{t('wallet.use_points', { defaultValue: 'Usar pontos' })}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -102,14 +103,14 @@ export default function CashbackScreen() {
               onPress={() => { AnalyticsService.trackEvent('wallet_earn_points_tap'); router.push('/(client)/missions'); }}
               accessibilityLabel={t('wallet.earn_points', { defaultValue: 'Ganhar pontos' }) || 'Ganhar pontos'}
             >
-              <Ionicons name="trophy-outline" size={16} color={theme.primary} />
+              <Ionicons name="trophy-outline" size={16} color={theme.primary} style={styles.iconAdjust} />
               <Text style={[styles.secondaryBtnText, { color: theme.primary }]}>{t('wallet.earn_points', { defaultValue: 'Ganhar pontos' })}</Text>
             </TouchableOpacity>
           </View>
 
           { Array.isArray(rewardsQuery.data) && rewardsQuery.data.length > 0 && (
             <>
-              <Text style={[styles.listTitle, { color: theme.text }]}>{t('wallet.rewards_title', { defaultValue: 'Resgates disponíveis' })}</Text>
+              <Text style={[styles.listTitle, { color: theme.text, fontSize: fix.font(14) }]}>{t('wallet.rewards_title', { defaultValue: 'Resgates disponíveis' })}</Text>
               <FlatList
                 data={rewardsQuery.data}
                 keyExtractor={(item) => item.id}
@@ -152,7 +153,7 @@ export default function CashbackScreen() {
               />
             </>
           )}
-          <Text style={[styles.listTitle, { color: theme.text }]}>{t('wallet.recent_points', { defaultValue: 'MovimentaÃ§Ãµes recentes' })}</Text>
+          <Text style={[styles.listTitle, { color: theme.text, fontSize: fix.font(14) }]}>{t('wallet.recent_points', { defaultValue: 'MovimentaÃ§Ãµes recentes' })}</Text>
           <FlatList
             data={((histQuery.data ?? []) as LoyaltyHistoryItem[]).slice(0, 25)}
             keyExtractor={(item) => item.id}
@@ -190,21 +191,22 @@ const styles = StyleSheet.create({
   balanceLabel: { fontSize: 14, fontWeight: '600' },
   balanceValue: { fontSize: 28, fontWeight: '800', marginTop: 4 },
   actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  primaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10 },
+  primaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: Platform.OS === 'android' ? 12 : 10, paddingHorizontal: 14, borderRadius: 10 },
   primaryBtnText: { color: '#FFF', fontWeight: '800' },
-  secondaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1 },
+  secondaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: Platform.OS === 'android' ? 11 : 9, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1 },
   secondaryBtnText: { fontWeight: '800' },
-  listTitle: { fontSize: 14, fontWeight: '700', marginBottom: 10 },
+  listTitle: { fontSize: fix.font(14), fontWeight: '700', marginBottom: 10 },
   rewardCard: { borderRadius: 12, padding: 16, marginRight: 12, width: 200, minHeight: 120, justifyContent: 'space-between' },
   historyItem: { borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   historyType: { fontSize: 14, fontWeight: '700' },
   historyDate: { fontSize: 12 },
   historyPoints: { fontSize: 16, fontWeight: '800' },
-  rewardName: { fontSize: 14, fontWeight: '800' },
+  rewardName: { fontSize: fix.font(14), fontWeight: '800' },
   rewardDesc: { fontSize: 12, marginTop: 4 },
   rewardCost: { fontSize: 12, fontWeight: '700', marginTop: 8 },
-  redeemBtn: { marginTop: 8, borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
+  redeemBtn: { marginTop: 8, borderRadius: 8, paddingVertical: Platform.OS === 'android' ? 10 : 8, alignItems: 'center' },
   redeemBtnText: { color: '#FFF', fontWeight: '800' },
+  iconAdjust: { transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
 });
 
 
