@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -102,7 +102,7 @@ const recommendationStyles = StyleSheet.create({
     color: AppColors.white,
     fontSize: 13,
     fontWeight: '700',
-    fontFamily: 'RedHatMono',
+    fontFamily: Platform.OS === 'ios' ? 'RedHatMono' : 'Montserrat-Regular', // Android usa a mesma família visível no iOS
   },
 });
 
@@ -507,7 +507,46 @@ if (isAuthenticated && user?.id) {
     };
   }, [tempProviderId, isAuthenticated, user?.id, t]); // Depend on tempProviderId
 
+  const requireAuthOrRedirect = useCallback(
+    (actionName?: string) => {
+      if (isAuthenticated) {
+        return true;
+      }
+
+      const title = t('auth.registration_required_title', 'Cadastro necessário');
+      const message =
+        actionName === 'chat'
+          ? t(
+              'auth.registration_required_chat',
+              'Crie sua conta para conversar com o profissional.'
+            )
+          : t('auth.registration_required', 'Crie seu cadastro para continuar.');
+
+      NotificationUIService.showInfo(message, title);
+      router.push('/(auth)/client-register' as any);
+      return false;
+    },
+    [isAuthenticated, router, t]
+  );
+
+  const guardedRouter = useMemo(
+    () =>
+      ({
+        ...router,
+        push: (...args: any[]) => {
+          if (!requireAuthOrRedirect('book_service')) {
+            return;
+          }
+          return (router as any).push(...args);
+        },
+      } as typeof router),
+    [router, requireAuthOrRedirect]
+  );
+
   const handleChatPress = () => {
+    if (!requireAuthOrRedirect('chat')) {
+      return;
+    }
     if (provider && user && activeBookingId) {
       router.push({
         pathname: '/(client)/messages/[chatId]',
@@ -925,12 +964,13 @@ if (isAuthenticated && user?.id) {
               <Animated.View style={{ transform: [{ scale: callButtonAnim }] }}>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() =>
+                  onPress={() => {
+                    if (!requireAuthOrRedirect('call')) return;
                     NotificationUIService.showInfo(
                       t('provider_details.call_functionality'),
                       t('provider_details.call')
-                    )
-                  }
+                    );
+                  }}
                   onPressIn={() => handleActionButtonPressIn(callButtonAnim)}
                   onPressOut={() => handleActionButtonPressOut(callButtonAnim)}
                 >
@@ -975,12 +1015,13 @@ if (isAuthenticated && user?.id) {
               <Animated.View style={{ transform: [{ scale: mapButtonAnim }] }}>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() =>
+                  onPress={() => {
+                    if (!requireAuthOrRedirect('map')) return;
                     NotificationUIService.showInfo(
                       t('provider_details.map_functionality'),
                       t('provider_details.map')
-                    )
-                  }
+                    );
+                  }}
                   onPressIn={() => handleActionButtonPressIn(mapButtonAnim)}
                   onPressOut={() => handleActionButtonPressOut(mapButtonAnim)}
                 >
@@ -1069,12 +1110,13 @@ if (isAuthenticated && user?.id) {
       <BookServiceButton
         providerId={provider.id}
         serviceId={firstProviderServiceOfferingId}
-        router={router}
+        router={guardedRouter}
         bookNowButtonAnim={bookNowButtonAnim}
         servicePrice={firstProviderService?.price}
         sticky
         safeBottomInset={insets.bottom}
         isAuthenticated={isAuthenticated}
+        requireAuthOrRedirect={requireAuthOrRedirect}
       />
     </View>
   );
