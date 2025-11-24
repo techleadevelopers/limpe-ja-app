@@ -305,3 +305,4 @@ const styles = StyleSheet.create({
   couponOverlayText: { fontSize: 20, fontWeight: '700', transform: [{ rotate: '-15deg' }] },
 });
 
+
