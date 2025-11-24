@@ -38,6 +38,7 @@ import Colors from '../../../constants/Colors';
 import Navbar from '../../../components/client/explore/home/NavBar';
 import ScreenContainer from '@/components/layout/ScreenContainer';
 import { useDevice } from '@/utils/responsive';
+import { fix } from '../../utils/platformFix';
 
 // Local light theme tokens for this screen only (UI refactor only)
 const UI = {
@@ -103,7 +104,7 @@ const renderProviderAvatar = (avatarUrl?: string | null, size: number = 60) => {
   if (!avatarUrl || avatarUrl === '' || imageError) {
     return (
       <View style={[styles.avatarPlaceholder, { width: size, height: size, borderRadius: size / 2 }]}>
-        <Ionicons name="person-circle-outline" size={Math.round(size * 0.8)} color={AppColors.mediumGray} />
+        <Ionicons name="person-circle-outline" size={Math.round(size * 0.8)} color={AppColors.mediumGray} style={styles.iconAdjust} />
       </View>
     );
   }
@@ -209,6 +210,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
     <Animated.View
       style={[
         styles.itemCard,
+        fix.blurBg,
         rCard,
         {
           opacity: fadeAnim,
@@ -228,7 +230,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
           <TouchableOpacity style={styles.itemCardContent} onPressIn={onPressInHandler} onPressOut={onPressOutHandler} activeOpacity={0.95}>
             {/* Botão + adicionado DENTRO do card, no topo direito, ANTES do badge CONFIRMADO */}
             <TouchableOpacity onPress={() => console.log('add action')} style={styles.addButton}>
-              <Ionicons name="add" size={22} color="#FFFFFF" />
+              <Ionicons name="add" size={22} color="#FFFFFF" style={styles.iconAdjust} />
             </TouchableOpacity>
 
             <View style={styles.avatarContainer}>{renderProviderAvatar(item.providerAvatarUrl)}</View>
@@ -242,7 +244,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
               </Text>
 
               <View style={styles.itemMetaRow}>
-                <Ionicons name="calendar-outline" size={13} color={AppColors.textAuxiliary} style={styles.metaIcon} />
+              <Ionicons name="calendar-outline" size={13} color={AppColors.textAuxiliary} style={[styles.metaIcon, styles.iconAdjust]} />
                 <Text style={styles.itemDate} numberOfLines={1}>
                   {formatDateTime(item.scheduledDate, item.scheduledTime, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </Text>
@@ -250,7 +252,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
 
               {item.address && (
                 <View style={styles.itemAddressContainer}>
-                  <Ionicons name="location-outline" size={13} color={AppColors.textAuxiliary} style={styles.metaIcon} />
+                  <Ionicons name="location-outline" size={13} color={AppColors.textAuxiliary} style={[styles.metaIcon, styles.iconAdjust]} />
                   <Text style={styles.itemAddressText} numberOfLines={2}>
                     {(() => { const f = formatAddressCompact(item.address); return [f.line1, f.line2].filter(Boolean).join(', '); })()}
                   </Text>
@@ -258,7 +260,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
               )}
 
               <View style={styles.itemPriceContainer}>
-                <MaterialCommunityIcons name="currency-usd" size={14} color={UI.accent} />
+                <MaterialCommunityIcons name="currency-usd" size={14} color={UI.accent} style={styles.iconAdjust} />
                 <Text style={styles.itemPriceText}>{formatPriceBRL(item.totalPrice)}</Text>
               </View>
             </View>
@@ -491,7 +493,7 @@ export default function MyBookingsScreen() {
       ctaButton = (
         <Animated.View style={{ opacity: buttonAnim, transform: [{ scale: buttonAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }] }}>
           <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push('/(client)/explore/todas-categorias' as any)}>
-            <Ionicons name="search-outline" size={18} color={AppColors.white} />
+            <Ionicons name="search-outline" size={18} color={AppColors.white} style={styles.iconAdjust} />
             <Text style={styles.emptyStateButtonText}>Explorar categorias</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -542,14 +544,14 @@ export default function MyBookingsScreen() {
 
       {/* Header temático (alinha com ScheduleHeader: vidro leve + cantos arredondados) */}
       <Animated.View style={{ opacity: navbarFadeAnim, transform: [{ translateY: navbarSlideAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }] }}>
-        <View style={styles.thematicHeader}>
+        <View style={[styles.thematicHeader, fix.blurBg, { paddingTop: fix.padTop(0, 14) }]}>
           <BlurView intensity={Platform.OS === 'ios' ? 10 : 20} tint="light" style={StyleSheet.absoluteFillObject} />
           <LinearGradient colors={[ theme.cardBackground as any, theme.cardBackground as any ]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
           <View style={styles.headerRow}>
             <TouchableOpacity onPress={() => router.back()} style={styles.headerIconBtn} accessibilityRole="button" accessibilityLabel="Voltar">
-              <Ionicons name="arrow-back" size={22} color={(theme as any).text} />
+              <Ionicons name="arrow-back" size={22} color={(theme as any).text} style={styles.iconAdjust} />
             </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: (theme as any).text }]}>{headerTitle}</Text>
+            <Text style={[styles.headerTitle, { color: (theme as any).text, fontSize: fix.font(17) }]}>{headerTitle}</Text>
             <View style={styles.headerIconBtn} />
           </View>
         </View>
@@ -627,7 +629,7 @@ export default function MyBookingsScreen() {
         <EmptyListFeedback />
       )}
 
-      <Animated.View style={[styles.navbarContainer, navWrap, { opacity: navbarFadeAnim, transform: [{ translateY: navbarSlideAnim }] }]}>
+      <Animated.View style={[styles.navbarContainer, fix.blurBg, navWrap, { opacity: navbarFadeAnim, transform: [{ translateY: navbarSlideAnim }] }]}>
         <BlurView intensity={Platform.OS === 'ios' ? 10 : 20} tint="light" style={StyleSheet.absoluteFillObject} />
         <LinearGradient colors={['rgba(255,255,255,0.96)', 'rgba(255,255,255,0.86)']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFillObject} />
         <Animated.View style={[StyleSheet.absoluteFillObject, { shadowColor: AppColors.primaryInteractive + '30', shadowOffset: { width: 0, height: 0 }, shadowOpacity: navbarGlowAnim, shadowRadius: 18, elevation: navbarGlowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 8] }) }]} />
@@ -649,7 +651,10 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
     overflow: 'hidden',
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }, android: { elevation: 3 } }),
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 1.5 },
+    }),
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingVertical: 10, marginTop: 28},
   headerIconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
@@ -661,10 +666,10 @@ const styles = StyleSheet.create({
     right: 0,
     height: 94,
     zIndex: 1000,
-    elevation: 20,
+    elevation: Platform.OS === 'android' ? 1.5 : 20,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.18, shadowRadius: 12 },
-      android: { elevation: 10 },
+      android: { elevation: 1.5 },
     }),
   },
   filterHeaderRow: {
@@ -680,13 +685,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   filterHelp: { padding: 6 },
-  filterHeaderTitle: { fontSize: 18, fontWeight: '700', color: AppColors.textBody, fontFamily: 'Montserrat-SemiBold' },
+  filterHeaderTitle: { fontSize: fix.font(18), fontWeight: '700', color: AppColors.textBody, fontFamily: 'Montserrat-SemiBold' },
   filterHeaderSub: { fontSize: 15, color: AppColors.textAuxiliary, marginTop: 2, marginBottom: 10, fontFamily: 'Montserrat-Regular' },
 
   filterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: Platform.OS === 'android' ? 12 : 10,
     bottom: 10,
     paddingHorizontal: 5,
     backgroundColor: AppColors.white,
@@ -701,7 +706,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: Platform.OS === 'android' ? 12 : 10,
     paddingHorizontal: 12,
     borderRadius: 28,
     marginHorizontal: 8,
@@ -715,9 +720,12 @@ const styles = StyleSheet.create({
   filterButtonActive: {
     backgroundColor: AppColors.primaryInteractive,
     borderColor: AppColors.primaryInteractive,
-    ...Platform.select({ ios: { shadowColor: AppColors.primaryInteractive + '22', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8 }, android: { elevation: 6 } }),
+    ...Platform.select({
+      ios: { shadowColor: AppColors.primaryInteractive + '22', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8 },
+      android: { elevation: 1.5 },
+    }),
   },
-  filterIcon: { marginRight: 8 },
+  filterIcon: { marginRight: 8, transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
   filterButtonText: { fontSize: 13, fontWeight: '600', color: AppColors.textBody, fontFamily: 'Montserrat-Regular' },
   filterButtonTextActive: { color: AppColors.white, fontWeight: '700', fontFamily: 'Montserrat-SemiBold' },
 
@@ -727,7 +735,10 @@ const styles = StyleSheet.create({
       borderRadius: 18,
       marginBottom: 20,
       overflow: 'hidden',
-      ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12 }, android: { elevation: 6 } }),
+      ...Platform.select({
+        ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12 },
+        android: { elevation: 1.5 },
+      }),
     },
   itemCardContent: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, position: 'relative' },
   avatarContainer: { marginRight: 14, width: 60 },
@@ -735,7 +746,7 @@ const styles = StyleSheet.create({
   avatarPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: AppColors.backgroundLight, borderWidth: 2, borderColor: AppColors.backgroundNeutral },
 
   itemDetails: { flex: 1, justifyContent: 'space-between' },
-  itemServiceName: { fontSize: 17, fontWeight: '700', color: AppColors.textBody, marginBottom: 4, fontFamily: 'Montserrat-SemiBold' },
+  itemServiceName: { fontSize: fix.font(17), fontWeight: '700', color: AppColors.textBody, marginBottom: 4, fontFamily: 'Montserrat-SemiBold' },
   itemProviderName: { fontSize: 14, color: AppColors.textAuxiliary, marginBottom: 8, fontFamily: 'Montserrat-Regular' },
 
   itemMetaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
@@ -755,7 +766,7 @@ const styles = StyleSheet.create({
     right: 16,   // Ajustado para right: 16 (melhor espaçamento)
     zIndex: 20,
   },
-  statusBadgeIcon: { marginRight: 6 },
+  statusBadgeIcon: { marginRight: 6, transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
   statusText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, fontFamily: 'Montserrat-SemiBold' },
 
   // Estilo ajustado para o botão + (fundo azul premium, ícone branco, alinhado com o preço no canto inferior direito)
@@ -781,12 +792,13 @@ const styles = StyleSheet.create({
   centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, backgroundColor: UI.bg },
   loadingText: { fontSize: 15, color: AppColors.textAuxiliary, fontFamily: 'Montserrat-Regular', marginTop: 12 },
 
-  emptyText: { fontSize: 20, fontWeight: '700', color: AppColors.textBody, textAlign: 'center', marginBottom: 10, fontFamily: 'Montserrat-SemiBold' },
+  emptyText: { fontSize: fix.font(20), fontWeight: '700', color: AppColors.textBody, textAlign: 'center', marginBottom: 10, fontFamily: 'Montserrat-SemiBold' },
   emptySubText: { fontSize: 15, color: AppColors.textAuxiliary, textAlign: 'center', marginBottom: 24, fontFamily: 'Montserrat-Regular', lineHeight: 20 },
 
-  emptyStateButton: { backgroundColor: AppColors.primaryInteractive, paddingVertical: 14, paddingHorizontal: 26, borderRadius: 28, flexDirection: 'row', alignItems: 'center', marginTop: 8, ...AppShadows.medium },
+  emptyStateButton: { backgroundColor: AppColors.primaryInteractive, paddingVertical: Platform.OS === 'android' ? 16 : 14, paddingHorizontal: 26, borderRadius: 28, flexDirection: 'row', alignItems: 'center', marginTop: 8, ...AppShadows.medium },
   emptyStateButtonText: { color: AppColors.white, fontSize: 15, fontWeight: '600', marginLeft: 10, fontFamily: 'Montserrat-Regular' },
 
-  exploreButton: { backgroundColor: '#5196d3ff', paddingVertical: 14, paddingHorizontal: 34, borderRadius: 30, marginTop: 10, ...AppShadows.medium },
+  exploreButton: { backgroundColor: '#5196d3ff', paddingVertical: Platform.OS === 'android' ? 16 : 14, paddingHorizontal: 34, borderRadius: 30, marginTop: 10, ...AppShadows.medium },
   exploreButtonText: { color: AppColors.white, fontSize: 16, fontWeight: '700', fontFamily: 'Montserrat-SemiBold' },
+  iconAdjust: { transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
 });
