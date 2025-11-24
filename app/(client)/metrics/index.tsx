@@ -182,6 +182,7 @@ export default function ClientMetricsScreen() {
   );
 
   const spentTotal = (metrics?.bookings?.latest || []).reduce((acc: number, b: any) => acc + (b.totalPrice || 0), 0);
+  const bookingsCompleted = metrics?.bookings?.completed ?? 0;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -235,6 +236,11 @@ export default function ClientMetricsScreen() {
                   <Text style={[styles.cardTitle, { color: theme.text }]}>
                     {t('metrics.summary_title', { defaultValue: 'Resumo' })}
                   </Text>
+                  {bookingsCompleted > 0 && (
+                    <Text style={[styles.premiumHintText, { color: theme.textMuted }]}>
+                      Você já economizou R$ 0 usando o LimpeJá.
+                    </Text>
+                  )}
                   <View style={styles.summaryGrid}>
                     <TouchableOpacity
                       onPress={() => {
