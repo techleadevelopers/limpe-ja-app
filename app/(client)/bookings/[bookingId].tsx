@@ -6,17 +6,13 @@ import {
   Alert,
   Animated,
   Image,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
-  StyleProp,
-  ViewStyle,
-  TextStyle,
   Text,
   TouchableOpacity,
   View,
-  Easing,
-  Modal,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,360 +20,329 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { Linking } from 'react-native';
 
-import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../utils/formatters';
+import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
-
 import { cancelBooking, getBookingDetails } from '../../../services/bookingService';
-
+import { getProviderDetails } from '../../../services/providerService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
-import { AppColors, AppShadows } from '../../../constants/appStyles';
+
 import Colors from '../../../constants/Colors';
+import { AppColors } from '../../../constants/appStyles';
 import { useDevice } from '@/utils/responsive';
+import { fix } from '../../utils/platformFix';
 
-// Novos imports para integração
-import { useProviderServices } from '../../../hooks/useProviderServices';
 import ProviderServicesInline from '../../../components/booking/ProviderServicesInline';
+import { useProviderServices } from '../../../hooks/useProviderServices';
+import TutorialOverlay from '../../../components/ui/TutorialOverlay';
+import { useTutorial } from '../../../hooks/useTutorial';
 
-const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient as any);
+// =============================================================================
+// Helpers de status / cores
+// =============================================================================
 
-// Local light theme tokens for this screen only (UI refactor only)
 const UI = {
-  bg: '#F6F8FB',
-  card: 'rgba(255,255,255,0.9)',
-  textPrimary: '#1A1A1A',
-  textSecondary: '#475569',
-  divider: '#EAF1FF',
-  accent: '#3A6FD8',
-  success: '#10B981',
+  bg: '#F4F6FA',
+  textPrimary: '#111827',
+  textSecondary: '#6B7280',
+  accent: '#2563EB',
   danger: '#EF4444',
-  warning: '#F59E0B',
 } as const;
 
-const isCancellableStatus = (status: BookingStatus): status is BookingStatus.CONFIRMED | BookingStatus.PENDING => status === BookingStatus.CONFIRMED || status === BookingStatus.PENDING;
-const isCompletedStatus = (status: BookingStatus): status is BookingStatus.COMPLETED => status === BookingStatus.COMPLETED;
-
-// Solid backgrounds for a clean status pill (no gradient look)
-const gradients = {
-  confirmed: ['rgba(58,111,216,0.08)', 'rgba(58,111,216,0.08)'] as const,
-  pending: ['rgba(187,209,249,0.10)', 'rgba(187,209,249,0.10)'] as const,
-  inProgress: ['rgba(58,111,216,0.08)', 'rgba(58,111,216,0.08)'] as const,
-  completed: ['#F9FAFB', '#F9FAFB'] as const,
-  cancelled: ['rgba(239,68,68,0.08)', 'rgba(239,68,68,0.08)'] as const,
-  other: ['#F9FAFB', '#F9FAFB'] as const,
-  rescheduled: ['rgba(187,209,249,0.10)', 'rgba(187,209,249,0.10)'] as const,
-} as const;
-
-type GradientKey = keyof typeof gradients;
-const statusToKey = (s?: BookingStatus | null): GradientKey => {
-  switch (s) {
-    case BookingStatus.CONFIRMED:
-      return 'confirmed';
-    case BookingStatus.PENDING:
-      return 'pending';
-    case BookingStatus.IN_PROGRESS:
-      return 'inProgress';
-    case BookingStatus.COMPLETED:
-      return 'completed';
-    case BookingStatus.CANCELLED:
-      return 'cancelled';
-    default:
-      return 'other';
-  }
+type StatusVisual = {
+  label: string;
+  color: string;
+  bg: string;
+  icon: keyof typeof Ionicons.glyphMap;
 };
 
-const getStatusStyle = (status: BookingStatus) => {
+function getStatusVisual(status: BookingStatus): StatusVisual {
   switch (status) {
     case BookingStatus.CONFIRMED:
-      return { text: 'CONFIRMADO', color: UI.accent, gradient: gradients.confirmed, icon: 'checkmark-circle-outline' as const };
+      return { label: 'Confirmado', color: '#16A34A', bg: 'rgba(22,163,74,0.08)', icon: 'checkmark-circle' };
     case BookingStatus.PENDING:
-      return { text: 'PENDENTE', color: UI.accent, gradient: gradients.pending, icon: 'time-outline' as const };
     case BookingStatus.PENDING_PROVIDER_CONFIRMATION:
-      return { text: 'AGUARDANDO', color: UI.accent, gradient: gradients.pending, icon: 'hourglass-outline' as const };
+      return { label: 'Pendente', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', icon: 'time' };
     case BookingStatus.IN_PROGRESS:
-      return { text: 'EM ANDAMENTO', color: UI.accent, gradient: gradients.inProgress, icon: 'sync-circle-outline' as const };
+      return { label: 'Em andamento', color: UI.accent, bg: 'rgba(37,99,235,0.10)', icon: 'sync' };
     case BookingStatus.COMPLETED:
-      return { text: 'CONCLUÍDO', color: UI.textSecondary, gradient: gradients.completed, icon: 'flag-outline' as const };
+      return { label: 'Concluído', color: '#4B5563', bg: '#E5E7EB', icon: 'flag' };
     case BookingStatus.CANCELLED:
-      return { text: 'CANCELADO', color: UI.danger, gradient: gradients.cancelled, icon: 'close-circle-outline' as const };
-    case BookingStatus.REJECTED:
-      return { text: 'REJEITADO', color: UI.textSecondary, gradient: gradients.other, icon: 'alert-circle-outline' as const };
+      return { label: 'Cancelado', color: UI.danger, bg: 'rgba(239,68,68,0.10)', icon: 'close-circle' };
     case BookingStatus.RESCHEDULED:
-      return { text: 'REAGENDADO', color: UI.accent, gradient: gradients.rescheduled, icon: 'sync-outline' as const };
+      return { label: 'Reagendado', color: '#7C3AED', bg: 'rgba(124,58,237,0.10)', icon: 'sync' };
     case BookingStatus.NO_SHOW:
-      return { text: 'NÃO COMPARECEU', color: UI.textPrimary, gradient: gradients.other, icon: 'person-remove-outline' as const };
+      return { label: 'Não compareceu', color: '#111827', bg: '#E5E7EB', icon: 'person-remove' };
+    case BookingStatus.REJECTED:
+      return { label: 'Rejeitado', color: '#6B7280', bg: '#E5E7EB', icon: 'alert-circle' };
     default:
-      return { text: 'DESCONHECIDO', color: '#6B7280', gradient: gradients.other, icon: 'help-circle-outline' as const };
+      return { label: 'Desconhecido', color: '#6B7280', bg: '#E5E7EB', icon: 'help-circle' };
   }
-};
+}
 
-const renderProviderAvatar = (avatarUrl?: string | null, size: number = 80) => {
-  if (!avatarUrl || avatarUrl === '') {
-    return (
-      <View style={[styles.photoPlaceholder, { width: size, height: size, borderRadius: size / 2 }]}>
-        <Ionicons name="person-circle-outline" size={Math.round(size * 0.8)} color={UI.textSecondary} />
-      </View>
-    );
-  }
+const isCancellableStatus = (s: BookingStatus) =>
+  s === BookingStatus.CONFIRMED || s === BookingStatus.PENDING || s === BookingStatus.PENDING_PROVIDER_CONFIRMATION;
+const isCompletedStatus = (s: BookingStatus) => s === BookingStatus.COMPLETED;
+
+// =============================================================================
+// Header (igual Meus Agendamentos)
+// =============================================================================
+
+function HeaderBar({ router, insets }: { router: any; insets: any }) {
   return (
-    <Image
-      source={{ uri: avatarUrl }}
-      style={[styles.providerImage, { width: size, height: size, borderRadius: size / 2 }]}
-      resizeMode="cover"
-      onError={(e) => __DEV__ && console.log('Erro carregando avatar real (details):', (e as any).nativeEvent?.error || e)}
-      onLoad={() => __DEV__ && console.log('Avatar real carregado no details!')}
-    />
-  );
-};
-
-// Subcomponente: HeaderBar (voltar + título + status pill)
-function HeaderBar({ booking, router, insets, theme }: { booking: BookingDetails; router: any; insets: any; theme: any }) {
-  const statusInfo = getStatusStyle(booking.status);
-  const rCard: StyleProp<ViewStyle> = useDevice().isLargePhone
-    ? { alignSelf: 'center' as ViewStyle['alignSelf'], width: '100%', maxWidth: 820 }
-    : undefined;
-
-  return (
-    <View style={[styles.thematicHeader, rCard]}>
-      <BlurView intensity={10} tint="light" style={StyleSheet.absoluteFillObject} />
-      <View style={{ backgroundColor: 'rgba(255,255,255,0.9)', ...StyleSheet.absoluteFillObject }} />
-      <View style={styles.headerBar}>
-        <TouchableOpacity 
-          onPress={() => router.back()} 
-          style={styles.backIcon} 
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} 
-          accessibilityRole="button" 
-          accessibilityLabel="Voltar"
-        >
-          <Ionicons name="arrow-back" size={22} color={UI.textPrimary} />
+    <View style={[styles.headerContainer, fix.blurBg, { paddingTop: fix.padTop(insets.top + 4, insets.top + 18) }]}>
+      <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
+      <View style={styles.headerRow}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
+          <Ionicons name="arrow-back" size={22} color={UI.textPrimary} style={styles.iconAdjust} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detalhes do agendamento</Text>
-        <View style={{ width: 22 }} />
+        <Text style={[styles.headerTitle, { fontSize: fix.font(17) }]} numberOfLines={1}>
+          Detalhes do agendamento
+        </Text>
+        <View style={styles.headerBtn} />
       </View>
     </View>
   );
 }
 
-// Subcomponente: ProviderHeaderCard (avatar + serviço + provider + pill)
-function ProviderHeaderCard({ booking, providerSectionAnim, providerFloatAnim, rCard, rTitle, theme }: { booking: BookingDetails; providerSectionAnim: any; providerFloatAnim: any; rCard: any; rTitle: any; theme: any }) {
-  const statusInfo = getStatusStyle(booking.status);
+// =============================================================================
+// ProviderCard (compacto, igual card da listagem)
+// =============================================================================
+
+function ProviderCard({ booking, provider }: { booking: BookingDetails; provider: any }) {
+  const status = getStatusVisual(booking.status);
+  const avatarUrl = provider?.avatarUrl || booking.providerAvatarUrl;
+  const providerName = provider?.fullName || booking.providerFullName;
 
   return (
-    <Animated.View style={[styles.card, rCard, styles.providerSectionCard, { backgroundColor: UI.card, opacity: providerSectionAnim, transform: [{ translateY: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { scale: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: providerFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) }] }]}>
-      <View style={styles.providerSection}>
-        {renderProviderAvatar(booking.providerAvatarUrl, 80)}
-        <View style={styles.providerInfo}>
-          <Text style={[styles.serviceTypeText, rTitle]} numberOfLines={1}>
-            Residencial
-          </Text>
-          <Text style={styles.serviceNameText} numberOfLines={2}>
+    <View style={styles.providerCard}>
+      <View style={styles.providerLeft}>
+        {avatarUrl ? (
+          <Image
+            source={{ uri: avatarUrl }}
+            style={styles.avatar}
+            resizeMode="cover"
+          />
+        ) : (
+          <Ionicons name="person-circle-outline" size={54} color="#94A3B8" style={styles.iconAdjust} />
+        )}
+
+        <View>
+          <Text style={styles.serviceName} numberOfLines={1}>
             {sanitizeText(booking.serviceName)}
           </Text>
-          <Text style={styles.providerNameText} numberOfLines={2}>
-            {`com ${sanitizeText(booking.providerFullName)}`}
+          <Text style={styles.providerName} numberOfLines={1}>
+            Com {sanitizeText(providerName)}
           </Text>
         </View>
       </View>
-    </Animated.View>
-  );
-}
 
-// Subcomponente: DetailsCard (data/hora, endereço, valor, notas)
-function DetailsCard({ booking, detailsCardAnim, detailsFloatAnim, rCard, rDetails, handleCopyAddress, handleOpenInMaps, theme }: { booking: BookingDetails; detailsCardAnim: any; detailsFloatAnim: any; rCard: any; rDetails: any; handleCopyAddress: () => void; handleOpenInMaps: () => void; theme: any }) {
-  return (
-    <Animated.View style={[styles.card, rCard, { backgroundColor: UI.card, opacity: detailsCardAnim, transform: [{ scale: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { translateY: detailsFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }] }]}>
-      <View style={styles.sectionTitleContainer}>
-        <Text style={styles.sectionTitle}>Detalhes do agendamento</Text>
-      </View>
-      <View style={styles.detailRow}>
-        <Ionicons name="calendar-outline" size={20} color={UI.textSecondary} style={styles.icon} />
-        <Text style={styles.detailLabel}>Data e hora</Text>
-        <Text style={[styles.detailValue, rDetails]}>
-          {formatDateTime(booking.scheduledDate, booking.scheduledTime, { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(' de ', ' ')}
+      <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
+        <Ionicons name={status.icon} size={14} color={status.color} style={styles.iconAdjust} />
+        <Text style={[styles.statusText, { color: status.color }]} numberOfLines={1}>
+          {status.label}
         </Text>
       </View>
-      <View style={styles.detailRow}>
-        <Ionicons name="location-outline" size={20} color={UI.textSecondary} style={styles.icon} />
-        <Text style={styles.detailLabel}>Endereço</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.detailValueAddress, rDetails]}>
-            {sanitizeText(`${booking.address.street}, ${booking.address.number}${booking.address.complement ? `, ${booking.address.complement}` : ''}`)}
-            {sanitizeText(`${booking.address.neighborhood}, ${booking.address.city} - ${booking.address.state}`)}
-            {sanitizeText(`CEP: ${booking.address.cep}`)}
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-            <TouchableOpacity onPress={handleCopyAddress} style={styles.copyBtn}>
-              <Text style={styles.copyBtnTxt}>Copiar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleOpenInMaps} style={styles.copyBtn}>
-              <Text style={styles.copyBtnTxt}>Abrir no mapa</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-      <View style={styles.detailRow}>
-        <Ionicons name="cash-outline" size={20} color={UI.textSecondary} style={styles.icon} />
-        <Text style={styles.detailLabel}>Valor</Text>
-        <Text style={[styles.detailValue, styles.priceText, { color: UI.accent }]}>{formatPriceBRL(booking.totalPrice)}</Text>
-      </View>
-      {booking.notes && (
-        <View style={styles.detailRow}>
-          <Ionicons name="document-text-outline" size={20} color={UI.textSecondary} style={styles.icon} />
-          <Text style={styles.detailLabel}>Observações</Text>
-          <Text style={styles.detailValue}>{sanitizeText(booking.notes)}</Text>
-        </View>
-      )}
-    </Animated.View>
+    </View>
   );
 }
 
-// Subcomponente: ActionsCard (ações)
-function ActionsCard({ 
-  booking, 
-  actionsCardAnim, 
-  actionsFloatAnim, 
-  rCard, 
-  rActionBtn, 
-  isCancellableStatus, 
-  isCompletedStatus, 
-  isReviewed,
-  handleCancelBooking, 
-  handleContactProvider, 
-  handleReviewService, 
-  handleViewProviderProfile,
-  cancelButtonScaleAnim,
-  contactButtonScaleAnim,
-  reviewButtonScaleAnim,
-  profileButtonScaleAnim,
-  onPressInButton,
-  onPressOutButton,
-  theme,
-}: { 
-  booking: BookingDetails; 
-  actionsCardAnim: any; 
-  actionsFloatAnim: any; 
-  rCard: any; 
-  rActionBtn: any; 
-  isCancellableStatus: (status: BookingStatus) => boolean; 
-  isCompletedStatus: (status: BookingStatus) => boolean;
-  isReviewed: boolean;
-  handleCancelBooking: () => void; 
-  handleContactProvider: () => void; 
-  handleReviewService: () => void; 
-  handleViewProviderProfile: () => void;
-  cancelButtonScaleAnim: any;
-  contactButtonScaleAnim: any;
-  reviewButtonScaleAnim: any;
-  profileButtonScaleAnim: any;
-  onPressInButton: (anim: any) => void;
-  onPressOutButton: (anim: any) => void;
-  theme: any;
+// =============================================================================
+// DetailsCard (único card, clean)
+// =============================================================================
+
+function DetailsCard({
+  booking,
+  onCopy,
+  onOpenMap,
+}: {
+  booking: BookingDetails;
+  onCopy: () => void;
+  onOpenMap: () => void;
 }) {
-  const statusInfo = getStatusStyle(booking.status);
+  const addr = booking.address;
 
   return (
-    <Animated.View style={[styles.actionsCard, rCard, { backgroundColor: UI.card, opacity: actionsCardAnim, transform: [{ scale: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) }, { translateY: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { translateY: actionsFloatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -1] }) }] }]}>
-      <View style={styles.sectionTitleContainer}>
-        <Text style={styles.sectionTitle}>Ações</Text>
+    <View style={styles.detailsCard}>
+      {/* Data & hora */}
+      <View style={styles.detailItem}>
+        <Ionicons name="calendar-outline" size={20} color={UI.textSecondary} style={styles.iconAdjust} />
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={styles.detailLabel}>Data & hora</Text>
+          <Text style={styles.detailValue}>
+            {formatDateTime(
+              booking.scheduledDate,
+              booking.scheduledTime,
+              { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' },
+            )}
+          </Text>
+        </View>
       </View>
-      {isCancellableStatus(booking.status) && (
-        <AnimatedLinearGradient 
-          colors={['#FF6B6B', '#EE5A52']} 
-          start={{ x: 0, y: 0 }} 
-          end={{ x: 1, y: 1 }} 
-          style={[styles.actionButton, rActionBtn, styles.cancelButton, { transform: [{ scale: cancelButtonScaleAnim }] }]}
-        >
-          <TouchableOpacity 
-            style={styles.actionButtonInner} 
-            onPress={handleCancelBooking} 
-            onPressIn={() => onPressInButton(cancelButtonScaleAnim)} 
-            onPressOut={() => onPressOutButton(cancelButtonScaleAnim)} 
-            activeOpacity={1}
-          >
-            <Ionicons name="close-circle-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Cancelar agendamento</Text>
-          </TouchableOpacity>
-        </AnimatedLinearGradient>
+
+      <View style={styles.divider} />
+
+      {/* Endereço */}
+      <View style={styles.detailItem}>
+        <Ionicons name="location-outline" size={20} color={UI.textSecondary} style={styles.iconAdjust} />
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={styles.detailLabel}>Local do serviço</Text>
+          <Text style={styles.detailValue}>
+            {sanitizeText(`${addr.street}, ${addr.number}${addr.complement ? `, ${addr.complement}` : ''}`)}
+            {'\n'}
+            {sanitizeText(`${addr.neighborhood}, ${addr.city} - ${addr.state}`)}
+            {'\n'}
+            CEP: {addr.cep}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* Valor */}
+      <View style={styles.detailItem}>
+        <Ionicons name="cash-outline" size={20} color={UI.textSecondary} style={styles.iconAdjust} />
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={styles.detailLabel}>Valor</Text>
+          <Text style={styles.detailPrice}>{formatPriceBRL(booking.totalPrice)}</Text>
+        </View>
+      </View>
+
+      {/* Observações */}
+      {booking.notes && (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.detailItem}>
+            <Ionicons name="document-text-outline" size={20} color={UI.textSecondary} style={styles.iconAdjust} />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.detailLabel}>Observações</Text>
+              <Text style={styles.detailValue}>{sanitizeText(booking.notes)}</Text>
+            </View>
+          </View>
+        </>
       )}
-      <AnimatedLinearGradient 
-        colors={['#3B82F6', '#2563EB']} 
-        start={{ x: 0, y: 0 }} 
-        end={{ x: 1, y: 1 }} 
-        style={[styles.actionButton, rActionBtn, { transform: [{ scale: contactButtonScaleAnim }] }]}
-      >
-        <TouchableOpacity 
-          style={styles.actionButtonInner} 
-          onPress={handleContactProvider} 
-          onPressIn={() => onPressInButton(contactButtonScaleAnim)} 
-          onPressOut={() => onPressOutButton(contactButtonScaleAnim)} 
-          activeOpacity={1}
-        >
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>Contatar {sanitizeText(booking.providerFullName.split(' ')[0])}</Text>
-        </TouchableOpacity>
-      </AnimatedLinearGradient>
-      {isCompletedStatus(booking.status) && !isReviewed && (
-        <AnimatedLinearGradient 
-          colors={['#60A5FA', '#3B82F6']} 
-          start={{ x: 0, y: 0 }} 
-          end={{ x: 1, y: 1 }} 
-          style={[styles.actionButton, rActionBtn, styles.reviewButton, { transform: [{ scale: reviewButtonScaleAnim }] }]}
-        >
-          <TouchableOpacity 
-            style={styles.actionButtonInner} 
-            onPress={handleReviewService} 
-            onPressIn={() => onPressInButton(reviewButtonScaleAnim)} 
-            onPressOut={() => onPressOutButton(reviewButtonScaleAnim)} 
-            activeOpacity={1}
-          >
-            <Ionicons name="star-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Avaliar serviço</Text>
-          </TouchableOpacity>
-        </AnimatedLinearGradient>
-      )}
-      <AnimatedLinearGradient 
-        colors={['#667EEA', '#764BA2']} 
-        start={{ x: 0, y: 0 }} 
-        end={{ x: 1, y: 1 }} 
-        style={[styles.actionButtonOutline, rActionBtn, { borderColor: UI.accent, transform: [{ scale: profileButtonScaleAnim }] }]}
-      >
-        <TouchableOpacity 
-          style={[styles.actionButtonInner, styles.actionButtonOutlineInner]} 
-          onPress={handleViewProviderProfile} 
-          onPressIn={() => onPressInButton(profileButtonScaleAnim)} 
-          onPressOut={() => onPressOutButton(profileButtonScaleAnim)} 
-          activeOpacity={1}
-        >
-          <Ionicons name="person-circle-outline" size={20} color={UI.accent} />
-          <Text style={[styles.actionButtonText, styles.actionButtonOutlineText, { color: UI.accent }]}>Ver perfil de {sanitizeText(booking.providerFullName.split(' ')[0])}</Text>
-        </TouchableOpacity>
-      </AnimatedLinearGradient>
-    </Animated.View>
+    </View>
   );
 }
 
-// Subcomponente: ReviewSheet (modal)
-function ReviewSheet({ showReviewSheet, setShowReviewSheet, booking, router }: { showReviewSheet: boolean; setShowReviewSheet: (v: boolean) => void; booking: BookingDetails; router: any }) {
+// =============================================================================
+// ActionsCard — versão PREMIUM OFICIAL (única)
+// =============================================================================
+
+function ActionsCard({
+  booking,
+  onCancel,
+  onContact,
+  onReview,
+  onViewProfile,
+}: {
+  booking: BookingDetails;
+  onCancel: () => void;
+  onContact: () => void;
+  onReview: () => void;
+  onViewProfile: () => void;
+}) {
+  const firstName = booking.providerFullName.split(" ")[0];
+  const canCancel = isCancellableStatus(booking.status);
+  const canReview =
+    isCompletedStatus(booking.status) &&
+    !(booking.isReviewed || booking.reviewId);
+
   return (
-    <Modal visible={showReviewSheet} transparent animationType="slide" onRequestClose={() => setShowReviewSheet(false)}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: UI.textPrimary, marginBottom: 8 }}>Avaliar serviço</Text>
-          <Text style={{ fontSize: 14, color: UI.textSecondary, marginBottom: 16, lineHeight: 20 }}>Conte como foi sua experiência. Sua opinião ajuda outros clientes e os prestadores.</Text>
-          <View style={{ flexDirection: 'row' }}>
+    <View style={premium.card}>
+      <Text style={premium.title}>Ações</Text>
+
+      {/* Contatar (ação principal) */}
+      <TouchableOpacity
+        style={[premium.button, premium.primaryButton]}
+        onPress={onContact}
+        activeOpacity={0.9}
+      >
+        <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" style={styles.iconAdjust} />
+        <Text style={premium.primaryText}>Contatar {firstName}</Text>
+      </TouchableOpacity>
+
+      {/* Avaliar */}
+      {canReview && (
+        <TouchableOpacity
+          style={[premium.button, premium.lightButton]}
+          onPress={onReview}
+          activeOpacity={0.9}
+        >
+          <Ionicons name="star-outline" size={20} color={UI.accent} style={styles.iconAdjust} />
+          <Text style={premium.lightText}>Avaliar serviço</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Ver perfil */}
+      <TouchableOpacity
+        style={[premium.button, premium.lightButton]}
+        onPress={onViewProfile}
+        activeOpacity={0.9}
+      >
+        <Ionicons name="person-circle-outline" size={20} color={UI.accent} style={styles.iconAdjust} />
+        <Text style={premium.lightText}>Ver perfil de {firstName}</Text>
+      </TouchableOpacity>
+
+      {/* Cancelar (secundário, menos evidente) */}
+      {canCancel && (
+        <TouchableOpacity
+          style={[premium.button, premium.dangerButton]}
+          onPress={onCancel}
+          activeOpacity={0.9}
+        >
+          <Ionicons name="close-circle-outline" size={20} color={UI.danger} style={styles.iconAdjust} />
+          <Text style={premium.dangerText}>Cancelar agendamento</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+// =============================================================================
+// ReviewSheet (modal de avaliação)
+// =============================================================================
+
+function ReviewSheet({
+  visible,
+  onClose,
+  booking,
+  router,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  booking: BookingDetails;
+  router: any;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.reviewOverlay}>
+        <View style={styles.reviewSheet}>
+          <Text style={styles.reviewTitle}>Avaliar serviço</Text>
+          <Text style={styles.reviewSubtitle}>
+            Conte como foi sua experiência. Sua opinião ajuda outros clientes e prestadores.
+          </Text>
+
+          <View style={styles.reviewButtonsRow}>
             <TouchableOpacity
+              style={styles.reviewPrimaryBtn}
               onPress={() => {
-                setShowReviewSheet(false);
-                router.push({ pathname: '/(common)/feedback/[targetId]', params: { targetId: booking.id, type: 'service', serviceName: sanitizeText(booking.serviceName), providerName: sanitizeText(booking.providerFullName), providerId: booking.providerId } } as any);
+                onClose();
+                router.push({
+                  pathname: '/(common)/feedback/[targetId]',
+                  params: {
+                    targetId: booking.id,
+                    type: 'service',
+                    serviceName: sanitizeText(booking.serviceName),
+                    providerName: sanitizeText(booking.providerFullName),
+                    providerId: booking.providerId,
+                  },
+                } as any);
               }}
-              style={{ flex: 1, backgroundColor: UI.accent, paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginRight: 8 }}
             >
-              <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Avaliar agora</Text>
+              <Text style={styles.reviewPrimaryText}>Avaliar agora</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowReviewSheet(false)}
-              style={{ flex: 1, backgroundColor: '#F9FAFB', paddingVertical: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', marginLeft: 8 }}
-            >
-              <Text style={{ color: UI.textPrimary, fontWeight: '700' }}>Depois</Text>
+
+            <TouchableOpacity style={styles.reviewSecondaryBtn} onPress={onClose}>
+              <Text style={styles.reviewSecondaryText}>Depois</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -386,83 +351,51 @@ function ReviewSheet({ showReviewSheet, setShowReviewSheet, booking, router }: {
   );
 }
 
+// =============================================================================
+// TELA PRINCIPAL
+// =============================================================================
+
 export default function BookingDetailsScreen() {
-  // Theme aligned with Cashback/Missions
-  const scheme = (Colors as any)?.scheme || 'light';
-  const theme = (Colors as any)[scheme] || (Colors as any).light;
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isSmallPhone, isLargePhone } = useDevice();
-
-  const rCard: StyleProp<ViewStyle> = React.useMemo(
-    () => (isLargePhone ? { alignSelf: 'center' as ViewStyle['alignSelf'], width: '100%', maxWidth: 820 } : undefined),
-    [isLargePhone]
-  );
-  const rTitle: StyleProp<TextStyle> = React.useMemo(() => (isLargePhone ? { fontSize: 24 } : undefined), [isLargePhone]);
-  const rDetails: StyleProp<TextStyle> = React.useMemo(() => (isSmallPhone ? { lineHeight: 22 } : undefined), [isSmallPhone]);
-  const rActionBtn: StyleProp<ViewStyle> = React.useMemo(() => ({ minHeight: 50 }), []);
+  const { isLargePhone } = useDevice();
 
   const [booking, setBooking] = useState<BookingDetails | null>(null);
+  const [provider, setProvider] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [panicStatus, setPanicStatus] = useState<'IDLE' | 'RECEIVED' | 'ACKED' | 'DISPATCHED' | 'CLOSED'>('IDLE');
   const [showReviewSheet, setShowReviewSheet] = useState(false);
 
-  const providerSectionAnim = useRef(new Animated.Value(0)).current;
-  const detailsCardAnim = useRef(new Animated.Value(0)).current;
-  const actionsCardAnim = useRef(new Animated.Value(0)).current;
-
-  const cancelButtonScaleAnim = useRef(new Animated.Value(1)).current;
-  const contactButtonScaleAnim = useRef(new Animated.Value(1)).current;
-  const reviewButtonScaleAnim = useRef(new Animated.Value(1)).current;
-  const profileButtonScaleAnim = useRef(new Animated.Value(1)).current;
-
-  const providerFloatAnim = useRef(new Animated.Value(0)).current;
-  const detailsFloatAnim = useRef(new Animated.Value(0)).current;
-  const actionsFloatAnim = useRef(new Animated.Value(0)).current;
-
-  // Integração: Hook para serviços do prestador (após booking carregado)
   const { services: providerServices } = useProviderServices(booking?.providerId);
+  const bookingActionsTutorial = useTutorial('booking_details_actions');
 
-  const createAndStartFloatAnimation = useCallback((animValue: Animated.Value) => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(animValue, { toValue: 1, duration: 3200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(animValue, { toValue: 0, duration: 3200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
-      { iterations: -1 }
-    );
-    loop.start();
-    return loop;
-  }, []);
-
-  const fetchBooking = useCallback(async () => {
-    if (!bookingId) {
-      setError('ID do agendamento não fornecido.');
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
+  const loadBooking = useCallback(async () => {
     try {
-      const rawData = await getBookingDetails(bookingId);
-      const data = normalizeBooking(rawData);
-      setBooking(data);
-      try {
-        const completed = data.status === BookingStatus.COMPLETED;
-        const alreadyReviewed = !!(data.isReviewed || data.reviewId);
-        if (completed && !alreadyReviewed) setShowReviewSheet(true);
-      } catch {}
+      if (!bookingId) {
+        setError('ID do agendamento não fornecido.');
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      setError(null);
 
-      const D = 240; const S = 60;
-      Animated.stagger(S, [
-        Animated.timing(providerSectionAnim, { toValue: 1, duration: D, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(detailsCardAnim, { toValue: 1, duration: D, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(actionsCardAnim, { toValue: 1, duration: D, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      ]).start();
+      const raw = await getBookingDetails(bookingId);
+      const normalized = normalizeBooking(raw);
+      setBooking(normalized);
+
+      try {
+        const providerData = await getProviderDetails(normalized.providerId);
+        setProvider(providerData);
+      } catch (err) {
+        console.log('Erro fetch provider:', err);
+      }
+
+      const completed = normalized.status === BookingStatus.COMPLETED;
+      const alreadyReviewed = !!(normalized.isReviewed || normalized.reviewId);
+      if (completed && !alreadyReviewed) setShowReviewSheet(true);
     } catch (err: any) {
-      console.error('[BookingDetailsScreen] Erro ao buscar detalhes:', err);
+      console.error('Erro ao carregar agendamento:', err);
       setError(sanitizeText(err?.message || 'Não foi possível carregar os detalhes do agendamento.'));
     } finally {
       setIsLoading(false);
@@ -470,136 +403,107 @@ export default function BookingDetailsScreen() {
   }, [bookingId]);
 
   useEffect(() => {
-    fetchBooking();
+    loadBooking();
+  }, [loadBooking]);
 
-    const providerLoop = createAndStartFloatAnimation(providerFloatAnim);
-    const detailsTimeout = setTimeout(() => {
-      const detailsLoop = createAndStartFloatAnimation(detailsFloatAnim);
-      return () => detailsLoop.stop();
-    }, 80);
-    const actionsTimeout = setTimeout(() => {
-      const actionsLoop = createAndStartFloatAnimation(actionsFloatAnim);
-      return () => actionsLoop.stop();
-    }, 160);
+  // Tutorial contextual: explica rapidamente as ações da tela
+  useEffect(() => {
+    if (booking && bookingActionsTutorial.isReady && !bookingActionsTutorial.hasSeen) {
+      bookingActionsTutorial.show();
+    }
+  }, [booking, bookingActionsTutorial.isReady, bookingActionsTutorial.hasSeen, bookingActionsTutorial.show]);
 
-    return () => {
-      providerLoop.stop();
-      clearTimeout(detailsTimeout);
-      clearTimeout(actionsTimeout);
-    };
-  }, [fetchBooking]);
-
-  const onPressInButton = (animValue: Animated.Value) => {
-    Animated.spring(animValue, { toValue: 0.96, useNativeDriver: true, friction: 3, tension: 100 }).start();
-  };
-
-  const onPressOutButton = (animValue: Animated.Value) => {
-    Animated.spring(animValue, { toValue: 1, friction: 3, tension: 100, useNativeDriver: true }).start();
-  };
-
-  const handleCancelBooking = async () => {
+  // Handlers
+  const handleCancel = () => {
     if (!booking) return;
-    Alert.alert('Cancelar agendamento', 'Deseja cancelar este agendamento? Dependendo da política, taxas podem ser aplicadas.', [
-      { text: 'Não', style: 'cancel' },
-      {
-        text: 'Sim, cancelar',
-        onPress: async () => {
-          setIsLoading(true);
-          try {
-            await cancelBooking(booking.id);
-            // Removido Alert de sucesso; use Toast.show({ type: 'success', text1: 'Agendamento cancelado.' }) aqui se tiver Toast
-            setBooking((prev) => (prev ? { ...prev, status: BookingStatus.CANCELLED } : null));
-          } catch (err: any) {
-            console.error('Erro ao cancelar:', err);
-            Alert.alert('Erro', sanitizeText(err?.message || 'Não foi possível cancelar o agendamento.'));
-          } finally {
-            setIsLoading(false);
-          }
+    Alert.alert(
+      'Cancelar agendamento',
+      'Deseja cancelar este agendamento? Dependendo da política, taxas podem ser aplicadas.',
+      [
+        { text: 'Não', style: 'cancel' },
+        {
+          text: 'Sim, cancelar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              await cancelBooking(booking.id);
+              setBooking((prev) => (prev ? { ...prev, status: BookingStatus.CANCELLED } : prev));
+            } catch (err: any) {
+              Alert.alert('Erro', sanitizeText(err?.message || 'Não foi possível cancelar o agendamento.'));
+            } finally {
+              setIsLoading(false);
+            }
+          },
         },
-        style: 'destructive',
-      },
-    ]);
+      ],
+    );
   };
 
-  const handleContactProvider = () => {
+  const handleContact = () => {
     if (!booking) return;
-    router.push({ pathname: '/(client)/messages', params: { providerId: booking.providerId, bookingId: booking.id, recipientName: sanitizeText(booking.providerFullName) } });
+    router.push({
+      pathname: '/(client)/messages',
+      params: {
+        providerId: booking.providerId,
+        bookingId: booking.id,
+        recipientName: sanitizeText(booking.providerFullName),
+      },
+    } as any);
   };
 
-  const handleReviewService = () => {
+  const handleReview = () => {
     if (!booking) return;
     router.push({
       pathname: '/(common)/feedback/[targetId]',
-      params: { targetId: booking.id, type: 'service', serviceName: sanitizeText(booking.serviceName), providerName: sanitizeText(booking.providerFullName), providerId: booking.providerId },
-    });
-  };
-
-  const handleViewProviderProfile = () => {
-    if (!booking) return;
-    router.push({ pathname: '/(client)/explore/[providerId]', params: { providerId: booking.providerId } });
-  };
-
-  const handlePanic = useCallback(() => {
-    Alert.alert('Botão de Pânico', 'Deseja acionar o botão de pânico? Segurança será notificada.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Acionar',
-        onPress: () => {
-          setPanicStatus('RECEIVED');
-          setTimeout(() => setPanicStatus('ACKED'), 3000);
-          setTimeout(() => setPanicStatus('DISPATCHED'), 6000);
-          setTimeout(() => setPanicStatus('CLOSED'), 10000);
-        },
-        style: 'destructive',
+      params: {
+        targetId: booking.id,
+        type: 'service',
+        serviceName: sanitizeText(booking.serviceName),
+        providerName: sanitizeText(booking.providerFullName),
+        providerId: booking.providerId,
       },
-    ]);
-  }, []);
+    } as any);
+  };
 
-  const handleCopyAddress = useCallback(() => {
+  const handleViewProfile = () => {
     if (!booking) return;
-    try {
-      const a = booking.address;
-      const text = `${a.street}, ${a.number}${a.complement ? `, ${a.complement}` : ''} - ${a.neighborhood}, ${a.city} - ${a.state}, ${a.cep}`;
-      Clipboard.setStringAsync(text);
-      // Opcional: Toast.show({ type: 'success', text1: 'Endereço copiado' });
-    } catch {}
-  }, [booking]);
+    router.push({
+      pathname: '/(client)/explore/[providerId]',
+      params: { providerId: booking.providerId },
+    } as any);
+  };
 
-  const handleOpenInMaps = useCallback(() => {
+  const handleCopyAddress = () => {
     if (!booking) return;
     const a = booking.address;
-    const query = encodeURIComponent(`${a.street}, ${a.number} ${a.complement || ''}, ${a.neighborhood}, ${a.city} - ${a.state}, ${a.cep}`);
+    const text = `${a.street}, ${a.number}${a.complement ? `, ${a.complement}` : ''} - ${a.neighborhood}, ${a.city} - ${a.state}, ${a.cep}`;
+    Clipboard.setStringAsync(text);
+  };
+
+  const handleOpenMaps = () => {
+    if (!booking) return;
+    const a = booking.address;
+    const query = encodeURIComponent(
+      `${a.street}, ${a.number} ${a.complement || ''}, ${a.neighborhood}, ${a.city} - ${a.state}, ${a.cep}`,
+    );
     const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
     Linking.openURL(url).catch(() => Alert.alert('Não foi possível abrir o mapa'));
-  }, [booking]);
+  };
 
-  // Integração: onSelect para ProviderServicesInline
-  const handleSelectService = useCallback((serviceId: string) => {
+  const handleSelectService = (serviceId: string) => {
     if (!booking) return;
     router.push({
       pathname: '/(client)/bookings/schedule-service',
       params: { providerId: booking.providerId, serviceId },
     } as any);
-  }, [booking, router]);
+  };
 
-  if (isLoading) {
+  // STATES DE LOADING / ERRO
+  if (isLoading && !booking) {
     return (
-      <View style={[styles.centered, { paddingTop: Platform.OS === 'ios' ? insets.top + 20 : 20 }]}>
-        <Stack.Screen
-          options={{
-            title: 'Carregando...',
-            headerTitleAlign: 'center',
-            headerTitleStyle: { fontFamily: 'System', fontWeight: '700', fontSize: 18, color: UI.textPrimary },
-            headerStyle: { backgroundColor: '#FFFFFF' },
-            headerShadowVisible: false,
-            headerTintColor: UI.accent,
-            headerLeft: () => (
-              <TouchableOpacity onPress={() => router.back()} style={{ paddingVertical: 10, paddingHorizontal: 12 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityRole="button" accessibilityLabel="Voltar">
-                <Ionicons name="arrow-back" size={24} color={UI.accent} />
-              </TouchableOpacity>
-            ),
-          } as any}
-        />
+      <View style={styles.centered}>
+        <Stack.Screen options={{ headerShown: false }} />
         <ActivityIndicator size="large" color={UI.accent} />
         <Text style={styles.loadingText}>Carregando detalhes do agendamento...</Text>
       </View>
@@ -608,342 +512,379 @@ export default function BookingDetailsScreen() {
 
   if (error || !booking) {
     return (
-      <View style={[styles.centered, { paddingTop: Platform.OS === 'ios' ? insets.top + 20 : 20 }]}>
-        <Stack.Screen
-          options={{
-            title: 'Reserva não encontrada',
-            headerTitleAlign: 'center',
-            headerTitleStyle: { fontFamily: 'System', fontWeight: '700', fontSize: 18, color: UI.textPrimary },
-            headerStyle: { backgroundColor: '#FFFFFF' },
-            headerShadowVisible: false,
-            headerTintColor: UI.accent,
-            headerLeft: () => (
-              <TouchableOpacity onPress={() => router.back()} style={{ paddingVertical: 10, paddingHorizontal: 12 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityRole="button" accessibilityLabel="Voltar">
-                <Ionicons name="arrow-back" size={24} color={UI.accent} />
-              </TouchableOpacity>
-            ),
-          } as any}
-        />
+      <View style={styles.centered}>
+        <Stack.Screen options={{ headerShown: false }} />
         <Ionicons name="alert-circle-outline" size={48} color={UI.danger} />
-        <Text style={styles.errorText}>{error || `Agendamento "${bookingId}" não encontrado.`}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>Voltar</Text>
+        <Text style={styles.errorText}>{error || 'Agendamento não encontrado.'}</Text>
+        {/* Usando o estilo de botão Premium para a ação de Voltar */}
+        <TouchableOpacity style={[premium.button, premium.primaryButton]} onPress={() => router.back()}>
+          <Text style={premium.primaryText}>Voltar</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const isReviewed = !!booking.reviewId;
-
+  // TELA PRINCIPAL
   return (
     <>
-      <ScrollView style={[styles.scrollViewContainer, { backgroundColor: UI.bg, paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 20 }]}>
-        <Stack.Screen options={{ headerShown: false }} />
-        {/* Subcomponentes no ScrollView */}
-        <HeaderBar booking={booking} router={router} insets={insets} theme={theme} />
-        <ProviderHeaderCard
-          booking={booking}
-          providerSectionAnim={providerSectionAnim}
-          providerFloatAnim={providerFloatAnim}
-          rCard={rCard}
-          rTitle={rTitle}
-          theme={theme}
-        />
-        <DetailsCard
-          booking={booking}
-          detailsCardAnim={detailsCardAnim}
-          detailsFloatAnim={detailsFloatAnim}
-          rCard={rCard}
-          rDetails={rDetails}
-          handleCopyAddress={handleCopyAddress}
-          handleOpenInMaps={handleOpenInMaps}
-          theme={theme}
-        />
-        <ActionsCard
-          booking={booking}
-          actionsCardAnim={actionsCardAnim}
-          actionsFloatAnim={actionsFloatAnim}
-          rCard={rCard}
-          rActionBtn={rActionBtn}
-          isCancellableStatus={isCancellableStatus}
-          isCompletedStatus={isCompletedStatus}
-          isReviewed={isReviewed}
-          handleCancelBooking={handleCancelBooking}
-          handleContactProvider={handleContactProvider}
-          handleReviewService={handleReviewService}
-          handleViewProviderProfile={handleViewProviderProfile}
-          cancelButtonScaleAnim={cancelButtonScaleAnim}
-          contactButtonScaleAnim={contactButtonScaleAnim}
-          reviewButtonScaleAnim={reviewButtonScaleAnim}
-          profileButtonScaleAnim={profileButtonScaleAnim}
-          onPressInButton={onPressInButton}
-          onPressOutButton={onPressOutButton}
-          theme={theme}
-        />
-        {/* Novo: ProviderServicesInline para upsell */}
-        <ProviderServicesInline
-          data={providerServices}
-          onSelect={handleSelectService}
-        />
+      <Stack.Screen options={{ headerShown: false }} />
+      <ScrollView style={[styles.container]} overScrollMode="never" showsVerticalScrollIndicator={false}>
+        <HeaderBar router={router} insets={useSafeAreaInsets()} />
+
+        <View style={[styles.contentWrapper, isLargePhone && { alignSelf: 'center', width: '100%', maxWidth: 820 }]}>
+          <ProviderCard booking={booking} provider={provider} />
+          <DetailsCard booking={booking} onCopy={handleCopyAddress} onOpenMap={handleOpenMaps} />
+          <ActionsCard
+            booking={booking}
+            onCancel={handleCancel}
+            onContact={handleContact}
+            onReview={handleReview}
+            onViewProfile={handleViewProfile}
+          />
+
+          <ProviderServicesInline data={providerServices} onSelect={handleSelectService} />
+        </View>
       </ScrollView>
-      {/* Subcomponente: ReviewSheet (Modal fora do ScrollView) */}
-      <ReviewSheet showReviewSheet={showReviewSheet} setShowReviewSheet={setShowReviewSheet} booking={booking} router={router} />
+
+      <ReviewSheet
+        visible={showReviewSheet}
+        onClose={() => setShowReviewSheet(false)}
+        booking={booking}
+        router={router}
+      />
+
+      <TutorialOverlay
+        visible={bookingActionsTutorial.isVisible}
+        title="Ações do seu agendamento"
+        subtitle={
+          `Use o chat para falar com ${sanitizeText((booking?.providerFullName || '').split(' ')[0] || 'o profissional')}.\n\n` +
+          'Se precisar, você pode cancelar pelo botão "Cancelar agendamento".'
+        }
+        iconName="chatbubble-ellipses-outline"
+        onConfirm={bookingActionsTutorial.markSeen}
+      />
     </>
   );
 }
 
+// =============================================================================
+// ESTILOS
+// =============================================================================
+
 const styles = StyleSheet.create({
-  scrollViewContainer: { flex: 1 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  loadingText: { marginTop: 16, fontSize: 15, color: UI.textSecondary, fontWeight: '500', lineHeight: 22 },
-  errorText: { fontSize: 16, color: UI.danger, textAlign: 'center', marginBottom: 24, fontWeight: '500', lineHeight: 22 },
-
-  // Header fixo translúcido + blur leve
-  thematicHeader: { 
-    marginHorizontal: 12, 
-    marginBottom: 6, 
-    borderBottomLeftRadius: 24, 
-    borderBottomRightRadius: 24, 
-    borderTopLeftRadius: 8, 
-    borderTopRightRadius: 8, 
-    overflow: 'hidden', 
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    ...Platform.select({ 
-      ios: { 
-        shadowColor: '#3A6FD8', 
-        shadowOpacity: 0.08, 
-        shadowRadius: 10, 
-        shadowOffset: { width: 0, height: 3 } 
-      }, 
-      android: { elevation: 3 } 
-    }) 
+  container: {
+    flex: 1,
+    backgroundColor: UI.bg,
   },
-  headerBar: { paddingTop: 8, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  backIcon: { 
-    width: 40, 
-    height: 36, 
-    justifyContent: 'center', 
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({ 
-      ios: { 
-        shadowColor: '#3A6FD8', 
-        shadowOpacity: 0.08, 
-        shadowRadius: 4, 
-        shadowOffset: { width: 0, height: 1 } 
-      } 
-    })
+    paddingHorizontal: 32,
+    backgroundColor: UI.bg,
   },
-  headerTitle: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    color: UI.textPrimary, 
-    flex: 1, 
+  loadingText: {
+    marginTop: 12,
+    fontSize: 15,
+    color: UI.textSecondary,
     textAlign: 'center',
-    letterSpacing: 0.3
+  },
+  errorText: {
+    marginVertical: 16,
+    fontSize: 16,
+    color: UI.danger,
+    textAlign: 'center',
   },
 
-  actionButton: { 
-    borderRadius: 14, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginBottom: 14, 
-    minHeight: 50,
-    ...Platform.select({ 
-      ios: { 
-        shadowColor: '#3A6FD820', 
-        shadowOffset: { width: 0, height: 4 }, 
-        shadowOpacity: 0.20, 
-        shadowRadius: 8 
-      }, 
-      android: { elevation: 6 } 
-    }) 
+  headerContainer: {
+    marginHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    ...Platform.select({
+      ios: {
+        shadowColor: 'rgba(15,23,42,0.15)',
+        shadowRadius: 10,
+        shadowOpacity: 0.18,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: {
+        elevation: 1.5,
+      },
+    }),
   },
-  actionButtonInner: { 
-    flex: 1, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    paddingVertical: 16, 
-    paddingHorizontal: 20 
-  },
-  actionButtonText: { 
-    color: '#FFFFFF', 
-    fontSize: 16, 
-    fontWeight: '600', 
-    marginLeft: 12 
-  },
-
-  card: { 
-    borderRadius: 18, 
-    padding: 18, 
-    marginHorizontal: 16, 
-    marginTop: 16, 
-    marginBottom: 12, 
-    overflow: 'hidden', 
-    borderWidth: 1, 
-    borderColor: UI.divider,
-    ...Platform.select({ 
-      ios: { 
-        shadowColor: '#3A6FD8', 
-        shadowOpacity: 0.08, 
-        shadowRadius: 10, 
-        shadowOffset: { width: 0, height: 3 } 
-      }, 
-      android: { elevation: 3 } 
-    }) 
-  },
-  providerSectionCard: { paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', position: 'relative' },
-  providerSection: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 16 },
-
-  photoPlaceholder: { 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    backgroundColor: '#F0F9FF', 
-    borderWidth: 1, 
-    borderColor: UI.divider 
-  },
-  providerImage: { borderWidth: 1, borderColor: UI.divider },
-
-  providerInfo: { flex: 1 },
-  serviceTypeText: { 
-    fontSize: 16, 
-    fontWeight: '600', 
-    color: UI.textSecondary, 
-    marginBottom: 4 
-  },
-  serviceNameText: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    color: UI.textPrimary, 
-    marginBottom: 2,
-    lineHeight: 22
-  },
-  providerNameText: { 
-    fontSize: 15, 
-    color: UI.accent, 
-    fontWeight: '500',
-    lineHeight: 21
-  },
-
-  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, alignSelf: 'flex-start', marginLeft: 12 },
-  statusText: { fontSize: 13, fontWeight: '700', marginLeft: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: '600' },
-
-  sectionTitleContainer: { marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: UI.divider },
-  sectionTitle: { 
-    fontSize: 17, 
-    fontWeight: '700', 
-    color: UI.textPrimary, 
-    letterSpacing: 0.3 
-  },
-
-  // Bloco de detalhes redesenhado (mini-cards)
-  detailRow: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 10,
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#3A6FD8',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-    gap: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
-  icon: { width: 20, textAlign: 'center' as any, marginRight: 0 },
-  detailLabel: {
+  headerBtn: {
+    width: 40,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
     flex: 1,
+    textAlign: 'center',
+    fontSize: 17,
+    fontWeight: '700',
+    color: UI.textPrimary,
+  },
+
+  contentWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 32,
+  },
+
+  // ProviderCard
+  providerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 14,
+    ...Platform.select({
+      ios: {
+        shadowColor: 'rgba(15,23,42,0.10)',
+        shadowRadius: 10,
+        shadowOpacity: 0.18,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: {
+        elevation: 1.5,
+      },
+    }),
+  },
+  providerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 2,
+    borderColor: AppColors.backgroundNeutral,
+    marginRight: 12,
+  },
+  serviceName: {
+    fontSize: fix.font(16),
+    fontWeight: '700',
+    color: AppColors.textBody,
+  },
+  providerName: {
     fontSize: 14,
-    color: UI.textSecondary,
+    color: AppColors.textAuxiliary,
+    marginTop: 2,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  statusText: {
+    marginLeft: 6,
+    fontSize: 12,
     fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+
+  // DetailsCard
+  detailsCard: {
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: 'rgba(15,23,42,0.08)',
+        shadowRadius: 8,
+        shadowOpacity: 0.16,
+        shadowOffset: { width: 0, height: 3 },
+      },
+      android: {
+        elevation: 1.5,
+      },
+    }),
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  detailLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: UI.textSecondary,
+    marginBottom: 2,
   },
   detailValue: {
-    flex: 2,
-    fontSize: 15,
+    fontSize: 14,
     color: UI.textPrimary,
-    fontWeight: '500',
-    lineHeight: 21,
+    lineHeight: 20,
   },
-  detailValueAddress: { 
-    flex: 1, 
-    fontSize: 15, 
-    color: UI.textPrimary, 
-    lineHeight: 21, 
-    fontWeight: '500' 
-  },
-
-  priceText: {
-    color: '#3A6FD8',
-    fontWeight: '700',
+  detailPrice: {
     fontSize: 16,
-    textShadowColor: 'rgba(58,111,216,0.15)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontWeight: '700',
+    color: UI.accent,
   },
-
-  // Botões secundários (micro-pílulas translúcidas)
-  copyBtn: {
-    backgroundColor: '#EAF1FF',
-    borderColor: '#BBD1F9',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 6,
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 12,
+  },
+  detailButtonsRow: {
+    flexDirection: 'row',
+    marginTop: 8,
+    gap: 8,
+  },
+  pillBtn: {
     paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'android' ? 8 : 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#EFF6FF',
   },
-  copyBtnTxt: {
-    color: '#3A6FD8',
+  pillBtnText: {
+    fontSize: 12,
     fontWeight: '600',
-    fontSize: 13,
+    color: UI.accent,
   },
 
-  actionsCard: { 
-    borderRadius: 18, 
-    padding: 18, 
-    marginHorizontal: 16, 
-    marginTop: 16, 
-    marginBottom: 40, 
-    overflow: 'hidden', 
-    borderWidth: 1, 
-    borderColor: UI.divider,
-    ...Platform.select({ 
-      ios: { 
-        shadowColor: '#3A6FD8', 
-        shadowOpacity: 0.08, 
-        shadowRadius: 10, 
-        shadowOffset: { width: 0, height: 3 } 
-      }, 
-      android: { elevation: 3 } 
-    }) 
+  // ReviewSheet
+  reviewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.35)',
+    justifyContent: 'flex-end',
   },
-  cancelButton: {},
-  reviewButton: {},
-  actionButtonOutline: { 
-    borderRadius: 14, 
-    borderWidth: 1, 
-    marginBottom: 16, 
-    ...Platform.select({ 
-      ios: { 
-        shadowColor: '#3A6FD820', 
-        shadowOffset: { width: 0, height: 4 }, 
-        shadowOpacity: 0.20, 
-        shadowRadius: 8 
-      }, 
-      android: { elevation: 4 } 
-    }) 
+  reviewSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    padding: 16,
   },
-  actionButtonOutlineInner: { 
-    backgroundColor: 'transparent', 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    paddingVertical: 16, 
-    paddingHorizontal: 20 
+  reviewTitle: {
+    fontSize: fix.font(18),
+    fontWeight: '700',
+    color: UI.textPrimary,
+    marginBottom: 6,
   },
-  actionButtonOutlineText: { 
-    marginLeft: 12, 
-    fontSize: 16, 
-    fontWeight: '600' 
+  reviewSubtitle: {
+    fontSize: 14,
+    color: UI.textSecondary,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  reviewButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  reviewPrimaryBtn: {
+    flex: 1,
+    backgroundColor: UI.accent,
+    borderRadius: 10,
+    paddingVertical: Platform.OS === 'android' ? 14 : 12,
+    alignItems: 'center',
+  },
+  reviewPrimaryText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  reviewSecondaryBtn: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    paddingVertical: Platform.OS === 'android' ? 14 : 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  reviewSecondaryText: {
+    color: UI.textPrimary,
+    fontWeight: '700',
+  },
+  iconAdjust: { transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
+});
+
+// =============================================================================
+// ESTILOS PREMIUM PARA AÇÕES (Renomeado para 'premium' para uso exclusivo do ActionsCard)
+// =============================================================================
+
+const premium = StyleSheet.create({
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: "rgba(0,0,0,0.08)",
+        shadowOpacity: 0.12,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: { elevation: 1.5 },
+    }),
+  },
+
+  title: {
+    fontSize: fix.font(16),
+    fontWeight: "700",
+    color: UI.textPrimary,
+    marginBottom: 12,
+  },
+
+  button: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    paddingVertical: Platform.OS === 'android' ? 14 : 12,
+    marginBottom: 10,
+  },
+
+  // Danger
+  dangerButton: {
+    backgroundColor: "#FEE2E2",
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  dangerText: {
+    color: UI.danger,
+    fontSize: 15,
+    fontWeight: "600",
+    marginLeft: 10,
+  },
+
+  // Primary
+  primaryButton: {
+    backgroundColor: "#4285F4",
+  },
+  primaryText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+    marginLeft: 10,
+  },
+
+  // Light
+  lightButton: {
+    backgroundColor: "#EEF2FF",
+    borderWidth: 1,
+    borderColor: "#CBD5FF",
+  },
+  lightText: {
+    color: UI.accent,
+    fontSize: 15,
+    fontWeight: "600",
+    marginLeft: 10,
   },
 });
