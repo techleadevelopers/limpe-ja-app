@@ -4,6 +4,7 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery } from '@tanstack/react-query';
 
 import { claimMission, getMyMissions, MissionItem as MissionItemType, MissionStatus, RewardType, MissionAudience } from '../../../services/missionService';
 import Toast from '../../../components/Toast';
@@ -12,6 +13,8 @@ import { MissionReminderCard } from '../../../components/missions/MissionReminde
 import { MissionProgressSnack } from '../../../components/missions/MissionProgressSnack';
 
 import Colors from '../../../constants/Colors';
+import { metricsService } from '../../../services/metricsService';
+import { ClientMetrics } from '../../../types/backend/metrics';
 
 const Icons3D = {
   discountTicket: require('../../../assets/images/3d/ticket.png'),
@@ -146,6 +149,15 @@ export default function ClientMissionsScreen() {
     return Number.isFinite(n) && n > 0 ? n : 120;
   });
 
+  const { data: metrics } = useQuery<ClientMetrics>({
+    queryKey: ['clientMetricsForMissions'],
+    queryFn: () => metricsService.getClientMetrics(),
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  const bookingsCompleted = metrics?.bookings?.completed ?? 0;
+
   const loadMissions = useCallback(async () => {
     setIsRefreshing(true);
     try {
@@ -254,6 +266,27 @@ export default function ClientMissionsScreen() {
             </TouchableOpacity>
           </View>
 
+          {allMissions.length === 0 && (
+            <View style={styles.emptyMissionsContainer}>
+              <Text style={[styles.emptyMissionsTitle, { color: theme.text }]}>
+                Nenhuma missão disponível ainda.
+              </Text>
+              <Text style={[styles.emptyMissionsSubtitle, { color: theme.textAuxiliary }]}>
+                Complete seu primeiro agendamento para desbloquear missões com descontos.
+              </Text>
+              {bookingsCompleted === 0 && (
+                <TouchableOpacity
+                  style={[styles.emptyExploreButton, { backgroundColor: theme.primary }]}
+                  onPress={() => router.push('/(client)/explore' as any)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Explorar serviços"
+                >
+                  <Text style={styles.emptyExploreButtonText}>Explorar serviços</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           <MissionList missions={filteredMissions} onClaimMission={handleClaimMission} claimingMissionId={claimingMissionId} onRefresh={onRefresh} isRefreshing={isRefreshing} asStaticList={true} />
         </View>
       </ScrollView>
@@ -310,5 +343,30 @@ const styles = StyleSheet.create({
   tabPill: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: 'transparent' },
   tabPillActive: { backgroundColor: '#FFFFFF' },
   tabText: { fontWeight: '700' },
+  emptyMissionsContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  emptyMissionsTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 8,
+  },
+  emptyMissionsSubtitle: {
+    fontSize: 13,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  emptyExploreButton: {
+    marginTop: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  emptyExploreButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
 });
-
