@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, TextInput, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import { getLoyaltyRewards, LoyaltyRewardItem, redeemLoyaltyPoints } from '../..
 import NotificationUIService from '../../../services/notificationUIService';
 import { AnalyticsService } from '../../../services/analyticsService';
 import Colors from '../../../constants/Colors';
+import { fix } from '../../utils/platformFix';
 
 function useTheme() {
   const scheme = (Colors as any)?.scheme || 'light';
@@ -50,16 +51,16 @@ export default function RewardsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: fix.padTop(16, 30) }]}>
         <TouchableOpacity onPress={() => router.back()} accessibilityLabel={t('common.back', { defaultValue: 'Voltar' }) || 'Voltar'}>
-          <Ionicons name="arrow-back" size={22} color={theme.text} />
+          <Ionicons name="arrow-back" size={22} color={theme.text} style={styles.iconAdjust} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>{t('wallet.rewards_all_title', { defaultValue: 'Recompensas' })}</Text>
+        <Text style={[styles.headerTitle, { color: theme.text, fontSize: fix.font(16) }]}>{t('wallet.rewards_all_title', { defaultValue: 'Recompensas' })}</Text>
         <View style={{ width: 22 }} />
       </View>
 
       <View style={styles.searchRow}>
-        <Ionicons name="search" size={16} color={theme.textMuted} />
+        <Ionicons name="search" size={16} color={theme.textMuted} style={styles.iconAdjust} />
         <TextInput
           style={[styles.searchInput, { color: theme.text }]}
           value={queryText}
@@ -71,7 +72,7 @@ export default function RewardsScreen() {
         />
         {!!queryText && (
           <TouchableOpacity onPress={() => { setQueryText(''); queryClient.removeQueries({ queryKey: ['loyaltyRewards'] }); query.refetch(); }} accessibilityLabel={t('common.clear', { defaultValue: 'Limpar' }) as string}>
-            <Ionicons name="close-circle" size={16} color={theme.textMuted} />
+            <Ionicons name="close-circle" size={16} color={theme.textMuted} style={styles.iconAdjust} />
           </TouchableOpacity>
         )}
       </View>
@@ -110,17 +111,17 @@ export default function RewardsScreen() {
           renderItem={({ item }) => (
             <View style={[styles.card, { backgroundColor: theme.cardBackground }]}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.rewardName, { color: theme.text }]} numberOfLines={1}>{item.name}</Text>
-                {!!item.description && <Text style={[styles.rewardDesc, { color: theme.textMuted }]} numberOfLines={2}>{item.description}</Text>}
-                <Text style={[styles.rewardCost, { color: theme.text }]}>{item.costPoints} pts</Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.redeemBtn, { backgroundColor: theme.primary }]}
-                onPress={async () => {
-                  try {
-                    AnalyticsService.trackEvent('wallet_reward_redeem_tap', { rewardId: item.id, costPoints: item.costPoints });
-                    const res = await redeemLoyaltyPoints({ rewardId: item.id, pointsToRedeem: item.costPoints });
-                    if (res?.success) {
+              <Text style={[styles.rewardName, { color: theme.text }]} numberOfLines={1}>{item.name}</Text>
+              {!!item.description && <Text style={[styles.rewardDesc, { color: theme.textMuted }]} numberOfLines={2}>{item.description}</Text>}
+              <Text style={[styles.rewardCost, { color: theme.text }]}>{item.costPoints} pts</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.redeemBtn, { backgroundColor: theme.primary }]}
+              onPress={async () => {
+                try {
+                  AnalyticsService.trackEvent('wallet_reward_redeem_tap', { rewardId: item.id, costPoints: item.costPoints });
+                  const res = await redeemLoyaltyPoints({ rewardId: item.id, pointsToRedeem: item.costPoints });
+                  if (res?.success) {
                       NotificationUIService.showSuccess(t('wallet.redeem_success', { defaultValue: 'Resgate concluído! Cupom gerado.' }), t('common.success', { defaultValue: 'Sucesso' }));
                       AnalyticsService.trackEvent('wallet_reward_redeem_success', { rewardId: item.id });
                     } else {
@@ -151,11 +152,12 @@ const styles = StyleSheet.create({
   filterRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 10 },
   searchRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
   searchInput: { flex: 1, fontSize: 14 },
-  filterChip: { borderWidth: 1, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12 },
+  filterChip: { borderWidth: 1, borderRadius: 999, paddingVertical: Platform.OS === 'android' ? 10 : 8, paddingHorizontal: 12 },
   card: { flexDirection: 'row', gap: 12, alignItems: 'center', borderRadius: 12, padding: 14, marginHorizontal: 16, marginBottom: 12 },
-  rewardName: { fontSize: 15, fontWeight: '800' },
+  rewardName: { fontSize: fix.font(15), fontWeight: '800' },
   rewardDesc: { fontSize: 12, marginTop: 2 },
   rewardCost: { fontSize: 12, fontWeight: '700', marginTop: 6 },
-  redeemBtn: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10 },
+  redeemBtn: { paddingVertical: Platform.OS === 'android' ? 12 : 10, paddingHorizontal: 14, borderRadius: 10 },
   redeemBtnText: { color: '#FFF', fontWeight: '800' },
+  iconAdjust: { transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
 });
