@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     marginRight: 11,
     right: 8,
     borderRadius: 45,
-    marginBottom: -4,
+    marginBottom: 4,
     marginTop: 12,
     alignItems: 'center',
   },
@@ -295,6 +295,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
     marginTop: 7,
+    marginBottom: 20,
   },
 });
 
