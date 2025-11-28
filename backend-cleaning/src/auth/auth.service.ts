@@ -261,27 +261,7 @@ export class AuthService {
 
       // --- NOVO: Lógica de Indicação no Registro ---
       if (referralCode) {
-        try {
-          // ASSUNÇÃO: O referralCode fornecido no DTO é o ID do usuário indicador.
-          // Em um cenário real, você pode ter uma tabela de códigos de indicação
-          // ou um código gerado que precisa ser mapeado de volta para um userId.
-          const referrerUser = await this.prisma.user.findUnique({
-            where: { id: referralCode }, // Tenta encontrar o usuário pelo ID fornecido como referralCode
-          });
-
-          if (referrerUser) {
-            await this.referralsService.createReferral({
-              referredUserId: newUserClient.id,
-              referrerUserId: referrerUser.id,
-              referralCode: referralCode, // Passa o código original para o registro da indicação
-            });
-            this.logger.log(`[AuthService] Cliente ${newUserClient.id} registrado com código de indicação ${referralCode} do indicador ${referrerUser.id}.`);
-          } else {
-            this.logger.warn(`[AuthService] Código de indicação ${referralCode} não corresponde a nenhum usuário indicador. Registro sem vínculo de indicação.`);
-          }
-        } catch (e) {
-          this.logger.error(`[AuthService] Falha ao processar indicação para cliente ${newUserClient.id} com código ${referralCode}: ${e?.message || e}`);
-        }
+        await this.handleReferralCode(referralCode, newUserClient.id);
       }
       // --- Fim da Lógica de Indicação ---
 
@@ -394,8 +374,8 @@ export class AuthService {
         this.logger.log(`[AuthService] registerProvider address lat/lng normalizados: lat=${normalizedLatitude}, lng=${normalizedLongitude}`);
       }
 
-      // Etapa 2: cria o Provider com endereço nested (incluindo latitude/longitude)
-      await this.prisma.provider.create({
+      // Etapa 2: cria o Provider sem address nested (evita bind incorreto no campo geometry)
+      const createdProvider = await this.prisma.provider.create({
         data: {
           userId: createdUser.id,
           fullName,
@@ -407,44 +387,43 @@ export class AuthService {
           verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
           bio: null,
           badges: [],
-          address: {
-            create: address
-              ? {
-                  cep: address.cep,
-                  street: address.street,
-                  number: address.number,
-                  neighborhood: address.neighborhood,
-                  city: address.city,
-                  state: address.state,
-                  complement: address.complement ?? null,
-                  latitude: normalizedLatitude,
-                  longitude: normalizedLongitude,
-                }
-              : undefined,
-          },
         },
       });
 
+      // Cria o endereço separado e seta location via raw (geom point) apenas se houver address
+      if (address) {
+        const createdAddress = await this.prisma.address.create({
+          data: {
+            cep: address.cep,
+            street: address.street,
+            number: address.number,
+            neighborhood: address.neighborhood,
+            city: address.city,
+            state: address.state,
+            complement: address.complement ?? null,
+            latitude: normalizedLatitude,
+            longitude: normalizedLongitude,
+            providerId: createdProvider.id,
+          },
+        });
+
+        if (
+          createdAddress.id &&
+          normalizedLatitude !== null &&
+          normalizedLongitude !== null
+        ) {
+          const wktPoint = `POINT(${normalizedLongitude} ${normalizedLatitude})`;
+          await this.prisma.$executeRaw(Prisma.sql`
+            UPDATE "Address"
+            SET location = ST_GeomFromText(${wktPoint}, 4326)
+            WHERE id = ${createdAddress.id}
+          `);
+        }
+      }
+
       // Indicação (se existir referralCode)
       if (referralCode) {
-        try {
-          const referrerUser = await this.prisma.user.findUnique({
-            where: { id: referralCode },
-          });
-
-          if (referrerUser) {
-            await this.referralsService.createReferral({
-              referredUserId: createdUser.id,
-              referrerUserId: referrerUser.id,
-              referralCode,
-            });
-            this.logger.log(`[AuthService] Provedor ${createdUser.id} registrado com código de indicação ${referralCode} do indicador ${referrerUser.id}.`);
-          } else {
-            this.logger.warn(`[AuthService] Código de indicação ${referralCode} não corresponde a nenhum usuário indicador. Registro sem vínculo de indicação.`);
-          }
-        } catch (e) {
-          this.logger.error(`[AuthService] Falha ao processar indicação para provedor ${createdUser.id} com código ${referralCode}: ${e?.message || e}`);
-        }
+        await this.handleReferralCode(referralCode, createdUser.id);
       }
 
       // Telemetria: provider_registered
@@ -501,7 +480,7 @@ export class AuthService {
     }
 
     const resetToken = this.jwtService.sign({ userId: user.id }, { expiresIn: '1h' });
-    const appBaseUrl = this.configService.get<string>('jwt.appBaseUrl'); // Corrected appBaseUrl access
+    const appBaseUrl = this.configService.get<string>('appBaseUrl') || this.configService.get<string>('APP_BASE_URL');
     const resetLink = `${appBaseUrl}/reset-password?token=${resetToken}`;
 
     try {
@@ -541,5 +520,48 @@ export class AuthService {
       // Telemetria: forgot_password_email_failed
       this.logger.log(`[TELEMETRY] forgot_password_email_failed: { email: ${email}, error: ${emailError.message} }`);
     }
+  }
+
+  /**
+   * Resolve e aplica um código de indicação seguro, evitando uso direto do userId.
+   * Aceita apenas códigos registrados em myReferralCode; em desenvolvimento permite fallback para id.
+   */
+  private async handleReferralCode(referralCode: string, referredUserId: string) {
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
+    const referrerUser = await this.prisma.user.findFirst({
+      where: {
+        myReferralCode: referralCode,
+      },
+    });
+
+    if (!referrerUser && nodeEnv !== 'production') {
+      // Fallback apenas para ambientes não-prod para compatibilidade legada
+      const legacy = await this.prisma.user.findUnique({ where: { id: referralCode } });
+      if (legacy) {
+        await this.referralsService.createReferral({
+          referredUserId,
+          referrerUserId: legacy.id,
+          referralCode,
+        });
+        this.logger.warn(
+          `[AuthService] Código de indicação usando userId em ambiente não-prod: ${referralCode}. Recomende atualizar para myReferralCode.`,
+        );
+        return;
+      }
+    }
+
+    if (!referrerUser) {
+      this.logger.warn(`[AuthService] Código de indicação inválido ou expirado: ${referralCode}. Ignorando vínculo.`);
+      return;
+    }
+
+    await this.referralsService.createReferral({
+      referredUserId,
+      referrerUserId: referrerUser.id,
+      referralCode,
+    });
+    this.logger.log(
+      `[AuthService] Usuário ${referredUserId} vinculado ao indicador ${referrerUser.id} via código ${referralCode}.`,
+    );
   }
 }
