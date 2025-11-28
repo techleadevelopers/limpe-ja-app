@@ -11,7 +11,7 @@ import Toast from '../../../components/Toast';
 
 // Assets (3D icons)
 const Icons3D = {
-  discountTicket: require('../../../assets/images/3d/ticket.png'),
+  discountTicket: require('../../../assets/images/3d/masc.png'),
   check: require('../../../assets/images/3d/check.png'),
   time: require('../../../assets/images/3d/time.png'),
   button: require('../../../assets/images/3d/button.png'),
@@ -31,7 +31,7 @@ function ReferralCodeCard({ referralCode, onCopyCode, onShareLink, theme }: { re
   return (
     <View style={[styles.card, styles.shadowCard, { backgroundColor: theme.cardBackground }]}>
       <View style={styles.cardHeaderRow}>
-        <Icon3D src={Icons3D.discountTicket} size={30} style={{ marginRight: 12 }} />
+        <Icon3D src={Icons3D.discountTicket} size={80} style={{ marginRight: 12 }} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.cardTitle, { color: theme.text }]}>Seu Código de Indicação</Text>
           <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>Compartilhe com amigos</Text>
@@ -60,8 +60,8 @@ function BenefitsSection({ referrerBenefit, refereeBenefit, theme }: { referrerB
   return (
     <View style={[styles.card, styles.shadowCard, { backgroundColor: theme.cardBackground }]}>
       <Text style={[styles.sectionTitle, { color: theme.text }]}>O que vocês ganham?</Text>
-      <View style={styles.howItem}><Icon3D src={Icons3D.check} size={18} /><Text style={[styles.howText, { color: theme.text }]}>Você: {referrerBenefit}</Text></View>
-      <View style={styles.howItem}><Icon3D src={Icons3D.button} size={18} /><Text style={[styles.howText, { color: theme.text }]}>Amigo: {refereeBenefit}</Text></View>
+      <View style={styles.howItem}><Text style={[styles.howText, { color: theme.text }]}>Você: {referrerBenefit}</Text></View>
+      <View style={styles.howItem}><Text style={[styles.howText, { color: theme.text }]}>Amigo: {refereeBenefit}</Text></View>
     </View>
   );
 }
@@ -70,9 +70,9 @@ function HowItWorks({ theme }: { theme: ReturnType<typeof useTheme> }) {
   return (
     <View style={[styles.card, styles.shadowCard, { backgroundColor: theme.cardBackground }]}>
       <Text style={[styles.sectionTitle, { color: theme.text }]}>Como Funciona</Text>
-      <View style={styles.howItem}><Icon3D src={Icons3D.check} size={18} /><Text style={[styles.howText, { color: theme.text }]}>Compartilhe seu código com um amigo.</Text></View>
-      <View style={styles.howItem}><Icon3D src={Icons3D.time} size={18} /><Text style={[styles.howText, { color: theme.text }]}>Amigo usa no primeiro agendamento.</Text></View>
-      <View style={styles.howItem}><Icon3D src={Icons3D.button} size={18} /><Text style={[styles.howText, { color: theme.text }]}>Ambos recebem o desconto!</Text></View>
+      <View style={styles.howItem}><Text style={[styles.howText, { color: theme.text }]}>Compartilhe seu código com um amigo.</Text></View>
+      <View style={styles.howItem}><Text style={[styles.howText, { color: theme.text }]}>Amigo usa no primeiro agendamento.</Text></View>
+      <View style={styles.howItem}><Text style={[styles.howText, { color: theme.text }]}>Ambos recebem o desconto!</Text></View>
     </View>
   );
 }
@@ -173,11 +173,11 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingTop: 6 },
 
   // Cards
-  card: { borderRadius: 16, padding: 16, marginBottom: 14 },
+  card: { borderRadius: 16, padding: 26, alignItems: 'center', marginBottom: 14 },
   shadowCard: { ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12 }, android: { elevation: 4 } }) },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   cardTitle: { fontSize: 16, fontWeight: '700' },
-  cardSubtitle: { fontSize: 12 },
+  cardSubtitle: { fontSize: 12, alignItems: 'center' },
 
   codeBox: { alignItems: 'center', paddingVertical: 12, borderWidth: 1, borderRadius: 8, marginVertical: 12 },
   codeText: { fontSize: 24, fontWeight: '800', letterSpacing: 2 },
@@ -187,8 +187,8 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: '#FFFFFF', fontWeight: '800' },
 
   sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
-  howItem: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
-  howText: { fontSize: 14, flex: 1 },
+  howItem: { flexDirection: 'row',  gap: 12, marginBottom: 5 },
+  howText: { fontSize: 14, flex: 1, left: 20, },
 
   termsButton: { marginTop: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4 }, android: { elevation: 2 } }) },
   termsButtonText: { fontSize: 14, fontWeight: '600' },
