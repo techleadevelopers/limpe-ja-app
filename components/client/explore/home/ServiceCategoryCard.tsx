@@ -15,7 +15,6 @@ const ServiceCategoryCard: React.FC<ServiceCategoryCardProps> = ({ item }) => {
     const router = useRouter();
 
     if (!item || !item.id || !item.fullName) {
-        console.warn('[ServiceCategoryCard] Item inválido ou incompleto. Render ignorado:', item);
         return null;
     }
 
