@@ -225,12 +225,39 @@ export class PaymentsService {
       throw new NotFoundException('Cliente nÃ£o encontrado ou sem e-mail.');
     }
 
-    const booking = await this.prisma.booking.findUnique({ where: { id: bookingId } });
+    const booking = await this.prisma.booking.findUnique({ where: { id: bookingId }, include: { client: true, provider: true } });
     if (!booking) {
       throw new NotFoundException('Booking not found.');
     }
+    if (booking.client?.userId !== clientUserId) {
+      throw new ForbiddenException('Not allowed to pay for this booking.');
+    }
+    if (booking.providerId !== providerId) {
+      throw new BadRequestException('Booking does not belong to this provider.');
+    }
+    
+    // Idempot?ncia: reutiliza intent/transa??o existente para o mesmo booking
+    const existingTx = await this.prisma.transaction.findFirst({
+      where: { bookingId, type: TransactionType.PAYMENT, status: { in: ['PENDING', 'COMPLETED'] } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const existingIntent = await this.prisma.paymentIntent.findUnique({ where: { bookingId } });
+    if (existingIntent && existingTx) {
+      return {
+        transactionId: existingTx.id,
+        status: existingTx.status as 'COMPLETED' | 'PENDING' | 'CANCELED' | 'EXPIRED',
+        brCode: (existingIntent as any).qrCodeText || existingTx.qrCodeUrl || '',
+        qrCodeImage: (existingIntent as any).qrCodeUrl || existingTx.qrCodeUrl || '',
+        expiresAt: (existingIntent as any).expiresAt ? ((existingIntent as any).expiresAt as any as Date).toISOString() : undefined,
+        amount: Number((existingIntent as any).amountCents / 100),
+        description: description,
+        bookingId,
+        providerId,
+        paymentIntent: this.mapPaymentIntent(existingIntent),
+      };
+    }
 
-    // 1) Cria transaÃ§Ã£o local
+    // 1) Cria transação local
     const transaction = await this.prisma.transaction.create({
       data: {
         provider: { connect: { id: providerId } },
@@ -242,7 +269,7 @@ export class PaymentsService {
       },
     });
 
-    // 2) Simula externalRef/gateway id (ou usa PSP real se disponÃ­vel)
+    // 2) Simula externalRef/gateway id (ou usa PSP real se disponível)
     let externalRef = `local_pix_${transaction.id}`;
     let qrCodeText = `BR_CODE_${transaction.id}`;
     let qrCodeUrl = `${this.appBaseUrl || 'https://example.com'}/qrcode/${transaction.id}.png`;
@@ -254,7 +281,7 @@ export class PaymentsService {
         const headers: any = {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
-          'X-Idempotency-Key': (idempotencyKey || transaction.id),
+          'X-Idempotency-Key': (idempotencyKey || bookingId || transaction.id),
         };
         const url = `${this.pagseguroApiBaseUrl.replace(/\/$/, '')}/pix/charges`;
         const payload: any = {
@@ -341,18 +368,11 @@ export class PaymentsService {
     webhookData: any,
     rawBody?: Buffer,
   ): Promise<MessageResponseDto> {
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
     this.logger.log(`[PaymentsService] handlePixWebhook - payload: ${JSON.stringify(webhookData)}`);
-    try {
-      if (rawBody && Buffer.isBuffer(rawBody)) {
-        // Log temporário para depuração de assinatura
-        // Atenção: não deixe isso habilitado em produção
-        // eslint-disable-next-line no-console
-        console.log('RAW BODY RECEBIDO:', rawBody.toString('hex'));
-      } else {
-        // eslint-disable-next-line no-console
-        console.log('RAW BODY RECEBIDO: (indisponível)');
-      }
-    } catch {}
+    if (nodeEnv !== 'production' && rawBody && Buffer.isBuffer(rawBody)) {
+      this.logger.debug(`[PaymentsService] RAW BODY (hex, dev-only): ${rawBody.toString('hex')}`);
+    }
 
     if (!signature || !eventId) {
       throw new BadRequestException('Missing webhook headers.');
@@ -360,7 +380,10 @@ export class PaymentsService {
 
     const secret = this.configService.get<string>('PIX_WEBHOOK_SECRET');
     if (!secret) {
-      this.logger.warn('PIX_WEBHOOK_SECRET not configured. Skipping signature validation.');
+      if (nodeEnv === 'production') {
+        throw new ForbiddenException('Webhook signature secret missing.');
+      }
+      this.logger.warn('PIX_WEBHOOK_SECRET not configured. Skipping signature validation (non-production).');
     } else {
       const incoming = signature?.startsWith('sha256=') ? signature.slice(7) : signature;
       let valid = false;
@@ -369,8 +392,9 @@ export class PaymentsService {
       if (rawBody && Buffer.isBuffer(rawBody)) {
         try {
           const h1 = createHmac('sha256', secret).update(rawBody).digest('hex');
-          // eslint-disable-next-line no-console
-          console.log('HMAC RAW HEX:', h1);
+          if (nodeEnv !== 'production') {
+            this.logger.debug(`HMAC RAW HEX (dev-only): ${h1}`);
+          }
           valid = timingSafeEqual(Buffer.from(incoming, 'hex'), Buffer.from(h1, 'hex'));
         } catch {
           valid = false;
@@ -381,13 +405,10 @@ export class PaymentsService {
       if (!valid) {
         const bodyStr = JSON.stringify(webhookData ?? {});
         try {
-          // eslint-disable-next-line no-console
-          console.log('BODY JSON STRINGIFIED HEX:', Buffer.from(bodyStr, 'utf8').toString('hex'));
-        } catch {}
-        try {
           const h2 = createHmac('sha256', secret).update(bodyStr).digest('hex');
-          // eslint-disable-next-line no-console
-          console.log('HMAC JSON HEX:', h2);
+          if (nodeEnv !== 'production') {
+            this.logger.debug(`HMAC JSON HEX (dev-only): ${h2}`);
+          }
           valid = timingSafeEqual(Buffer.from(incoming, 'hex'), Buffer.from(h2, 'hex'));
         } catch {
           valid = false;
@@ -499,12 +520,6 @@ export class PaymentsService {
             this.logger.warn(`[PaymentsService] Falha ao enfileirar notificaÃ§Ã£o de confirmaÃ§Ã£o para booking ${transaction.bookingId}: ${e?.message || e}`);
           }
         }
-      }
-
-      // Cupom usado (se houver) quando pago
-      if (newTransactionStatus === 'COMPLETED' && transaction.bookingId) {
-        const b = await this.prisma.booking.findUnique({ where: { id: transaction.bookingId } });
-        if (b?.couponId) await this.couponsService.markCouponAsUsed(b.couponId);
       }
 
       return { message: `Webhook processed for transaction ${transaction.id}.` };
