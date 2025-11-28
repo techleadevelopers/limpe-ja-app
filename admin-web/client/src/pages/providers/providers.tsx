@@ -10,7 +10,7 @@ import { Search, Filter, MoreHorizontal, MapPin, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import VerificationModal from "@/components/verification/verification-modal"; // Este componente agora gerencia suas próprias chamadas de API
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchProviders, updateProviderStatus as apiUpdateProviderStatus } from "@/lib/api";
+import { fetchProviders, updateProviderStatus as apiUpdateProviderStatus, deleteProvider } from "@/lib/api";
 import { Provider, VerificationStatus } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -98,6 +98,28 @@ export default function Providers() {
   const handleProviderClick = (provider: Provider) => {
     setSelectedProvider(provider);
     setIsModalOpen(true);
+  };
+
+  const deleteProviderMutation = useMutation({
+    mutationFn: (id: string) => deleteProvider(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/providers'] });
+      toast({ title: "Conta removida", description: "Provedor excluído com sucesso.", variant: "success" });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Erro ao excluir",
+        description: err?.message || "Não foi possível excluir o provedor.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteProvider = (e: React.MouseEvent, providerId: string) => {
+    e.stopPropagation();
+    if (window.confirm('Tem certeza que deseja excluir este provedor?')) {
+      deleteProviderMutation.mutate(providerId);
+    }
   };
 
   // As funções handleApproveProvider, handleRejectProvider, handleBlockProvider
@@ -204,9 +226,20 @@ export default function Providers() {
                             <p className="text-sm text-gray-500">{provider.email}</p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
-                          <MoreHorizontal size={16} />
-                        </Button>
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={(e) => handleDeleteProvider(e, provider.id)}
+                            disabled={deleteProviderMutation.isPending}
+                          >
+                            Excluir
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
+                            <MoreHorizontal size={16} />
+                          </Button>
+                        </div>
                       </div>
 
                       <div className="mb-4">
