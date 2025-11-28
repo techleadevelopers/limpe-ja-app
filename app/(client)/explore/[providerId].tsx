@@ -2,43 +2,44 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  Easing,
   Image,
   Platform,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Easing,
-  StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
-import NotificationUIService from '../../../services/notificationUIService';
 import * as Clipboard from 'expo-clipboard';
+import NotificationUIService from '../../../services/notificationUIService';
 
 import BookServiceButton from '../../../components/client/explore/provider/BookServiceButton';
 import InfoChip from '../../../components/client/explore/provider/InfoChip';
 // ServiceCategoryBadges removido (voltando ao layout anterior)
 import ReviewCard from '../../../components/client/explore/provider/ReviewCard';
-import StarRating from '../../../components/client/explore/provider/StarRating';
 import SideIcon from '../../../components/client/explore/provider/SideIcon';
+import StarRating from '../../../components/client/explore/provider/StarRating';
 
-import { ProviderDisplayInfo, ProviderReview, ProviderMetrics, Offer } from '../../../types/backend/providers';
 import { VerificationStatus } from '../../../types/backend/auth';
-import { PricingType } from '../../../types/backend/services';
 import { ProviderServiceOffering } from '../../../types/backend/provider-service';
+import { Offer, ProviderDisplayInfo, ProviderMetrics, ProviderReview } from '../../../types/backend/providers';
+import { PricingType } from '../../../types/backend/services';
 
+import { AppColors, AppShadows } from '../../../constants/appStyles';
+import { Icons3D } from '../../../constants/icons3d';
 import { useAuth } from '../../../hooks/useAuth';
 import { checkActiveChatBooking } from '../../../services/bookingService';
 import { getProviderDetails, getProviderMetrics, getProviderOffers } from '../../../services/providerService';
-import { AppColors, AppShadows } from '../../../constants/appStyles';
-import { Icons3D } from '../../../constants/icons3d';
-import { styles } from './styles/providerStyles';
+import { styles } from '../../../styles/providerStyles';
+import { formatDistance } from '../../../utils/formatters';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -209,6 +210,10 @@ const securityBannerStyles = StyleSheet.create({
 export default function ProviderDetailsScreen() {
   const params = useLocalSearchParams();
   const providerId = params.providerId;
+  const paramDistance =
+    params?.distance && !Array.isArray(params.distance) && Number.isFinite(Number(params.distance))
+      ? Number(params.distance)
+      : undefined;
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
@@ -290,10 +295,13 @@ export default function ProviderDetailsScreen() {
 
         const [providerResult, metricsResult, offersResult] = results;
 
-        // Provider details - CORREÇÃO TS: Type guard para 'rejected'
+        // Provider details - CORRECAO TS: Type guard para 'rejected'
         let finalProviderData: ProviderDisplayInfo | null = null;
         if (providerResult.status === 'fulfilled' && providerResult.value) {
-          finalProviderData = { ...providerResult.value };
+          const distance = Number.isFinite(paramDistance)
+            ? paramDistance
+            : providerResult.value?.distance ?? null;
+          finalProviderData = { ...providerResult.value, distance };
 
           if (providerResult.value?.fullName === 'Joana') {
             const joanaReviews: ProviderReview[] = [
@@ -658,6 +666,13 @@ if (isAuthenticated && user?.id) {
     }
   };
 
+  const distanceLabel = useMemo(() => {
+    if (typeof provider?.distance === 'number' && Number.isFinite(provider.distance) && provider.distance >= 0) {
+      return formatDistance(provider.distance, null);
+    }
+    return null;
+  }, [provider?.distance]);
+
   if (isLoading) {
     return (
       <View style={[styles.centeredFeedback, { backgroundColor: AppColors.white }]}>
@@ -873,9 +888,7 @@ if (isAuthenticated && user?.id) {
                 {provider.address?.city || t('common.not_available')}
                 <Text style={styles.locationDistanceText}>
                   {' · '}
-                  {provider.distance != null && !isNaN(provider.distance) && provider.distance > 0
-                    ? `${provider.distance.toFixed(1)} km`
-                    : '7,0 km'}
+                  {distanceLabel ?? ''}
                 </Text>
               </Text>
             </View>
