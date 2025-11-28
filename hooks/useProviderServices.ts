@@ -28,7 +28,6 @@ export function useProviderServices(providerId?: string) {
         }));
         if (mounted) setServices(list);
       } catch (e) {
-        if (__DEV__) console.warn('[useProviderServices] fallback []:', e);
         if (mounted) setServices([]);
       } finally {
         if (mounted) setLoading(false);
