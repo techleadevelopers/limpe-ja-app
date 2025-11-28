@@ -19,7 +19,7 @@ export default function MessagesOrchestrator() {
         visible={showCoupon}
         couponImage="https://cdn.limpeja.com/coupons/limpeja-premium.svg"
         onClose={() => setShowCoupon(false)}
-        onUseCoupon={() => console.log('Cupom utilizado!')}
+        onUseCoupon={() => {}}
       />
     </>
   );
