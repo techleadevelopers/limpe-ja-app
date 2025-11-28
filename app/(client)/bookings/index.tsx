@@ -1,44 +1,43 @@
 // LimpeJaApp/app/(client)/bookings/index.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import axios, { AxiosError } from 'axios';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { Link, Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  FlatList,
-  Platform,
-  RefreshControl,
-  StyleSheet,
-  StyleProp,
-  ViewStyle,
-  Text,
-  TouchableOpacity,
-  View,
-  Easing,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Easing,
+    Platform,
+    RefreshControl,
+    StyleProp,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    ViewStyle
 } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import axios, { AxiosError } from 'axios';
 
-import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../utils/formatters';
 import { formatAddressCompact } from '../../../utils/address';
+import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
 
+import { AppColors, AppShadows } from '../../../constants/appStyles';
+import Colors from '../../../constants/Colors';
 import { useAuth } from '../../../hooks/useAuth';
 import { getBookingsForUser } from '../../../services/bookingService';
 import { getProviderAvatar } from '../../../services/providerService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
-import { AppColors, AppShadows } from '../../../constants/appStyles';
-import Colors from '../../../constants/Colors';
 
-import Navbar from '../../../components/client/explore/home/NavBar';
 import ScreenContainer from '@/components/layout/ScreenContainer';
 import { useDevice } from '@/utils/responsive';
-import { fix } from '../../utils/platformFix';
+import Navbar from '../../../components/client/explore/home/NavBar';
+import { fix } from '../../../utils/platformFix';
 
 // Local light theme tokens for this screen only (UI refactor only)
 const UI = {
