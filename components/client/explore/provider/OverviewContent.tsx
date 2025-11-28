@@ -1,11 +1,11 @@
 // components/OverviewContent.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { styles } from '../../../../app/(client)/explore/styles/providerStyles';
-import { ProviderDisplayInfo, ProviderReview } from '../../../../types/backend/providers';
+import { Text, TouchableOpacity, View, Image } from 'react-native';
+import { styles } from '../../../../styles/providerStyles';
 import { VerificationStatus } from '../../../../types/backend/auth';
+import { ProviderDisplayInfo, ProviderReview } from '../../../../types/backend/providers';
 
 import ActionButtons from './ActionButtons';
 import InfoChip from './InfoChip'; // Importa o InfoChip
@@ -59,14 +59,14 @@ const OverviewContent: React.FC<OverviewContentProps> = ({ provider, providerMet
         )}
         {displayAcceptance !== undefined && (
           <InfoChip
-            iconName="checkmark-done-circle-outline" // Usando ícone Ionicons
+            iconName="checkmark-done-circle-outline" // Usando ï¿½cone Ionicons
             text={`${acceptanceLabel}: ${displayAcceptance}%`}
             compact
           />
         )}
         {rawResponse !== undefined && rawResponse !== null && (
           <InfoChip
-            iconName="time-outline" // Usando ícone Ionicons
+            iconName="time-outline" // Usando ï¿½cone Ionicons
             text={`${responseLabel}: ${rawResponse} ${minutesLabel}`}
             compact
           />
@@ -111,3 +111,4 @@ const OverviewContent: React.FC<OverviewContentProps> = ({ provider, providerMet
 };
 
 export default OverviewContent;
+
