@@ -70,7 +70,7 @@ const internalStyles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
         borderRadius: 28,
-        height: 33,
+        height: 39,
         bottom: 55,
         marginBottom: 10,
         shadowColor: 'rgba(100, 100, 150, 0.15)',
@@ -83,7 +83,7 @@ const internalStyles = StyleSheet.create({
     },
     iconCircle: {
         width: 50,
-        height: 30,
+        height: 40,
         right: 2,
         borderRadius: 40,
         justifyContent: 'center',
@@ -97,11 +97,11 @@ const internalStyles = StyleSheet.create({
         color: '#2D3748',
         right: 8,
         height: '70%',
-        paddingVertical: 0,
+        paddingVertical: 12,
     },
     eyeIconTouchable: {
         paddingHorizontal: 15,
-        height: '100%',
+        height: '70%',
         justifyContent: 'center',
     },
 });
