@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ScrollView, Animated } from 'react-native';
+import { View, StyleSheet, ScrollView, Animated, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../../../hooks/useAuth';
 import SuccessHeader from '../../../components/client/booking/success/SuccessHeader';
@@ -53,6 +54,7 @@ const HEADER_SECONDARY_COLOR = AppColors.primaryDark;
 const SUCCESS_COLOR = AppColors.successStandard;
 
 export default function BookingSuccessScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<SuccessRouteParams>();
   const bookingIdParam = extractFirst(params.bookingId);
   const paymentMethodParam = extractFirst(params.paymentMethod)?.toUpperCase();
@@ -92,6 +94,7 @@ export default function BookingSuccessScreen() {
   );
 
   const providerRating = provider?.averageRating ?? undefined;
+  const styles = useMemo(() => createStyles(insets.top), [insets.top]);
 
   const triggerContentAnimation = useCallback(() => {
     Animated.parallel([
@@ -123,9 +126,7 @@ export default function BookingSuccessScreen() {
       if (!bookingDetails) {
         throw new Error('Agendamento não encontrado.');
       }
-      if (__DEV__) {
-        console.log('[BookingSuccess] booking details', bookingDetails);
-      }
+      // log removido para performance
       setBooking(bookingDetails);
 
       const normalizedPaymentMethod =
@@ -139,11 +140,7 @@ export default function BookingSuccessScreen() {
 
       getProviderDetails(bookingDetails.providerId)
         .then(setProvider)
-        .catch(err => {
-          if (__DEV__) {
-            console.warn('[BookingSuccess] Falha ao buscar provedor:', err?.message || err);
-          }
-        });
+        .catch(() => {});
 
       getMyLoyaltyBalance()
         .then(setLoyaltyBalance)
@@ -180,10 +177,7 @@ export default function BookingSuccessScreen() {
           } else {
             setShouldPollIntent(true);
           }
-        } catch (pixError: any) {
-          if (__DEV__) {
-            console.warn('[BookingSuccess] Erro ao gerar cobrança PIX:', pixError?.response?.data || pixError?.message || pixError);
-          }
+        } catch (_pixError: any) {
           setShouldPollIntent(true);
         }
       } else {
@@ -262,9 +256,7 @@ export default function BookingSuccessScreen() {
           }, 400);
           return;
         }
-        if (__DEV__) {
-          console.warn('[BookingSuccess] polling payment intent', err?.message || err);
-        }
+        // log removido para performance
       }
     };
     poll();
@@ -285,18 +277,7 @@ export default function BookingSuccessScreen() {
     };
   }, [startPolling, shouldPollIntent]);
 
-  useEffect(() => {
-    if (__DEV__) {
-      console.log('[BookingSuccess] state', {
-        bookingLoaded: !!booking,
-        paid,
-        paymentMethod,
-        isLoading,
-        error,
-        shouldPollIntent,
-      });
-    }
-  }, [booking, paid, paymentMethod, isLoading, error, shouldPollIntent]);
+  useEffect(() => {}, [booking, paid, paymentMethod, isLoading, error, shouldPollIntent]);
 
   const handleGoToBookings = useCallback(() => {
     router.replace('/(client)/bookings?highlightNew=true' as any);
@@ -460,24 +441,26 @@ export default function BookingSuccessScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f2f2f2',
-  },
-  background: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.6,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 50,
-  },
-  bottomSpacer: {
-    height: 32,
-  },
-});
+const createStyles = (insetsTop: number) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#f2f2f2',
+      paddingTop: Platform.OS === 'android' ? insetsTop + 16 : 0, // Android safe area + spacing
+    },
+    background: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 0.6,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      paddingHorizontal: 20,
+      paddingTop: Platform.OS === 'android' ? 24 : 10, // Android extra spacing
+      paddingBottom: 50,
+    },
+    bottomSpacer: {
+      height: 32,
+    },
+  });
