@@ -479,21 +479,56 @@ export class CouponsService {
    * Modificado para listar cupons emitidos especificamente para o usuário OU cupons gerais ativos.
    */
   async getMyCoupons(userId: string) {
+    await this.ensureWelcomeCoupon(userId);
     const now = new Date();
     const coupons = await this.prisma.coupon.findMany({
       where: {
-        status: CouponStatus.ACTIVE, // <<-- FIXED: Use CouponStatus enum
-        validFrom: { lte: now },
-        validUntil: { gte: now },
+        status: {
+          in: [CouponStatus.ACTIVE, CouponStatus.USED_UP, CouponStatus.EXPIRED],
+        },
         OR: [
-          { issuedToUserId: userId }, // Cupons emitidos para este usuário
-          { issuedToUserId: null, target: CouponTarget.GENERAL }, // <<-- FIXED: Use CouponTarget.GENERAL
+          { issuedToUserId: userId },
+          { issuedToUserId: null, target: CouponTarget.GENERAL },
         ],
       },
       orderBy: { validUntil: 'asc' },
     });
-
-    this.logger.log(`[CouponsService] getMyCoupons: ${coupons.length} cupons encontrados para userId ${userId}.`);
-    return coupons;
+    const enriched = coupons.map(c => {
+      const isExpired = c.validUntil < now || c.status === CouponStatus.EXPIRED;
+      const isUsed = c.status === CouponStatus.USED_UP;
+      const derivedStatus = isExpired ? CouponStatus.EXPIRED : isUsed ? CouponStatus.USED_UP : c.status;
+      return { ...c, status: derivedStatus };
+    });
+    this.logger.log(`[CouponsService] getMyCoupons: ${enriched.length} cupons encontrados para userId ${userId}.`);
+    return enriched;
   }
+
+  async ensureWelcomeCoupon(userId: string) {
+    const now = new Date();
+    const validUntil = new Date(now);
+    validUntil.setDate(validUntil.getDate() + 30);
+    const existing = await this.prisma.coupon.findFirst({
+      where: { issuedToUserId: userId, issuedBy: 'WELCOME_NEW_USER' },
+    });
+    if (existing) return existing;
+    const code = `BEMVINDO-${userId.substring(0, 6).toUpperCase()}`;
+    const created = await this.create({
+      code,
+      description: '20% de desconto no seu primeiro agendamento',
+      value: 0.20,
+      type: CouponType.PERCENT,
+      target: CouponTarget.NEW_CLIENTS,
+      maxUses: 1,
+      validFrom: now.toISOString(),
+      validUntil: validUntil.toISOString(),
+      isActive: true,
+      issuedToUserId: userId,
+      issuedBy: 'WELCOME_NEW_USER',
+      firstBookingOnly: true,
+      maxDiscount: 50,
+    });
+    this.logger.log(`[CouponsService] ensureWelcomeCoupon: Cupom ${created.code} emitido para ${userId}.`);
+    return created;
+  }
+
 }
