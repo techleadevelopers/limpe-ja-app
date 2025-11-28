@@ -205,6 +205,16 @@ export class UserProfileDto {
         email: user.email, // Email vem do User principal
         averageRating,
         reviewCount,
+        // Campos obrigatórios que podem não estar presentes no select original
+        pixKey: (user.provider as any).pixKey ?? null,
+        pixKeyMasked: (user.provider as any).pixKeyMasked ?? null,
+        documentPhotoFrontUrl: (user.provider as any).documentPhotoFrontUrl ?? null,
+        documentPhotoBackUrl: (user.provider as any).documentPhotoBackUrl ?? null,
+        selfieWithDocumentUrl: (user.provider as any).selfieWithDocumentUrl ?? null,
+        backgroundCheckResult: (user.provider as any).backgroundCheckResult ?? null,
+        rejectionReason: (user.provider as any).rejectionReason ?? null,
+        ocrResult: (user.provider as any).ocrResult ?? null,
+        livenessResult: (user.provider as any).livenessResult ?? null,
         // Outros campos calculados/ausentes (como address, city, state, etc., que vêm do spread)
         user: {
           email: user.email,
