@@ -2,7 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Alert, Linking, Platform, Text, TouchableOpacity, View } from 'react-native'; // Importado Linking e Alert
-import { styles } from '../../../../app/(client)/explore/styles/providerStyles'; // Assumindo que este caminho está correto
+import { styles } from '../../../../styles/providerStyles'; // Assumindo que este caminho está correto
 
 // Definindo a interface para as props do componente
 interface ActionButtonsProps {
