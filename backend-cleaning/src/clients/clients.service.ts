@@ -8,6 +8,7 @@ import { UsersService } from '../users/users.service';
 
 import { BookingEntity } from '../bookings/entities/booking.entity';
 import { ReviewEntity } from '../reviews/entities/review.entity';
+import { geocodeAddress } from '../utils/geocoding.service';
 
 export type ClientWithIncludes = Client & {
   user: User;
@@ -31,6 +32,38 @@ export class ClientsService {
     private prisma: PrismaService,
     private usersService: UsersService,
   ) {}
+
+  private buildAddressString(address?: Partial<Address>): string | null {
+    if (!address) return null;
+    const parts = [
+      address.street,
+      address.number,
+      address.complement,
+      address.neighborhood,
+      address.city,
+      address.state,
+      address.cep,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : null;
+  }
+
+  private applyGeocodeFallback(
+    address: Partial<Address>,
+    geocoded?: { latitude: number; longitude: number } | null,
+  ): { latitude?: number; longitude?: number } {
+    const latitude = address.latitude !== undefined ? address.latitude : geocoded?.latitude;
+    const longitude = address.longitude !== undefined ? address.longitude : geocoded?.longitude;
+    return { latitude, longitude };
+  }
+
+  private async updateAddressLocationPoint(addressId: string, latitude?: number, longitude?: number) {
+    if (!addressId || latitude === undefined || longitude === undefined) return;
+    await this.prisma.$executeRaw`
+      UPDATE "Address"
+      SET location = ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
+      WHERE id = ${addressId};
+    `;
+  }
 
   async findClientById(id: string): Promise<ClientWithIncludes | null> {
     this.logger.log(`[ClientsService] findClientById: Buscando cliente por ID: ${id}`);
@@ -72,7 +105,26 @@ export class ClientsService {
     this.logger.log(`[ClientsService] updateClient: Atualizando cliente com ID: ${clientId}`);
     const client = await this.prisma.client.findUnique({ where: { id: clientId } });
     if (!client) {
-      throw new NotFoundException(`Cliente com ID "${clientId}" não encontrado.`);
+      throw new NotFoundException(`Cliente com ID "${clientId}" nALo encontrado.`);
+    }
+
+    let finalLatitude: number | undefined;
+    let finalLongitude: number | undefined;
+    let addressUpsert: Prisma.AddressUpsertWithoutClientInput | undefined;
+
+    if (updateClientProfileDto.address) {
+      const addressString = this.buildAddressString(updateClientProfileDto.address as Partial<Address>);
+      const geo = addressString ? await geocodeAddress(addressString) : null;
+      const coords = this.applyGeocodeFallback(updateClientProfileDto.address as Partial<Address>, geo);
+      finalLatitude = coords.latitude;
+      finalLongitude = coords.longitude;
+      const addressPayload = { ...updateClientProfileDto.address } as any;
+      if (finalLatitude !== undefined) addressPayload.latitude = finalLatitude;
+      if (finalLongitude !== undefined) addressPayload.longitude = finalLongitude;
+      addressUpsert = {
+        create: addressPayload,
+        update: addressPayload,
+      };
     }
 
     try {
@@ -81,25 +133,22 @@ export class ClientsService {
         data: {
           fullName: updateClientProfileDto.fullName,
           phone: updateClientProfileDto.phone,
-          // noShowCount e cancellationCount são atualizados no BookingsService
-          // Se o DTO permitir atualização de endereço, a lógica seria aqui
-          // address: updateClientProfileDto.address ? {
-          //   upsert: {
-          //     create: updateClientProfileDto.address,
-          //     update: updateClientProfileDto.address,
-          //   }
-          // } : undefined,
+          // noShowCount e cancellationCount sALo atualizados no BookingsService
+          address: addressUpsert ? { upsert: addressUpsert } : undefined,
         },
         include: { user: true, address: true, bookings: true, reviewsMade: true },
       });
       this.logger.log(`[ClientsService] updateClient: Cliente ${clientId} atualizado com sucesso.`);
       // Telemetria: client_profile_updated
       this.logger.log(`[TELEMETRY] client_profile_updated: { clientId: ${clientId} }`);
+      if (updatedClient.address?.id && finalLatitude !== undefined && finalLongitude !== undefined) {
+        await this.updateAddressLocationPoint(updatedClient.address.id, finalLatitude, finalLongitude);
+      }
       return updatedClient as ClientWithIncludes;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
-          throw new NotFoundException(`Cliente com ID "${clientId}" não encontrado.`);
+          throw new NotFoundException(`Cliente com ID "${clientId}" nALo encontrado.`);
         }
       }
       this.logger.error(`[ClientsService] updateClient: Erro ao atualizar cliente ${clientId}: ${error.message}`);
