@@ -57,7 +57,7 @@
     "index.ts",
     "index.tsx",
     "global.d.ts"
-  ],
+, "styles/providerStyles.ts", "data/mockData.ts", "utils/platformFix.ts", "utils/paymentIntentHooks.ts"  ],
   "exclude": [
     "node_modules",
     "**/node_modules",
