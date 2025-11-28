@@ -181,7 +181,7 @@ const RankingCard: React.FC<RankingCardProps> = ({
               <Image
                 source={{ uri: selectedPlaceholder }}
                 style={[styles.avatarImage, dynamicStyles.avatarPlaceholder]}
-                onError={(e) => console.log('Erro ao carregar imagem de placeholder:', e.nativeEvent.error)}
+                onError={() => {}}
               />
             )}
           </View>
