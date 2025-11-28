@@ -1,15 +1,15 @@
-﻿import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, FlatList, TouchableOpacity, Platform } from 'react-native';
+﻿import { Ionicons } from '@expo/vector-icons';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { getMyLoyaltyBalance, getMyLoyaltyHistory, getLoyaltyRewards, redeemLoyaltyPoints, LoyaltyHistoryItem, LoyaltyRewardItem } from '../../../services/loyaltyService';
-import NotificationUIService from '../../../services/notificationUIService';
-import { AnalyticsService } from '../../../services/analyticsService';
 import Colors from '../../../constants/Colors';
-import { fix } from '../../utils/platformFix';
+import { AnalyticsService } from '../../../services/analyticsService';
+import { getLoyaltyRewards, getMyLoyaltyBalance, getMyLoyaltyHistory, LoyaltyHistoryItem, LoyaltyRewardItem, redeemLoyaltyPoints } from '../../../services/loyaltyService';
+import NotificationUIService from '../../../services/notificationUIService';
+import { fix } from '../../../utils/platformFix';
 
 function useTheme() {
   const scheme = (Colors as any)?.scheme || 'light';
