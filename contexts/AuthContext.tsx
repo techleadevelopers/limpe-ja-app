@@ -19,15 +19,13 @@ const safeString = (v: any) => {
   }
 };
 
-const debugLog = (...args: unknown[]) => {
-  if (__DEV__) console.log('[Auth]', ...args.map(safeString));
-};
-const debugWarn = (...args: unknown[]) => {
-  if (__DEV__) console.warn('[Auth]', ...args.map(safeString));
-};
-const debugError = (...args: unknown[]) => {
-  if (__DEV__) console.error('[Auth]', ...args.map(safeString));
-};
+  const debugLog = (..._args: unknown[]) => {};
+  const debugWarn = (...args: unknown[]) => {
+    if (__DEV__) console.warn('[Auth]', ...args.map(safeString));
+  };
+  const debugError = (...args: unknown[]) => {
+    if (__DEV__) console.error('[Auth]', ...args.map(safeString));
+  };
 
 interface AuthDataFromStorage {
   token: string | null;
@@ -225,7 +223,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         fullError: error,
       });
       setIsRegistrationInProgress(false);
-      throw new Error(`Falha no registro: ${error.message}`);
+      const status = error.response?.status;
+      const backendMessage: string | undefined = error.response?.data?.message || error.message;
+      const rawMessage = (backendMessage || '').toLowerCase();
+
+      if (status === 409) {
+        throw new Error('Dados já cadastrados (e-mail, CPF ou telefone). Verifique e tente novamente.');
+      }
+      if (status === 400) {
+        throw new Error('Dados inválidos. Revise CPF, data de nascimento, senha e endereço.');
+      }
+      if (rawMessage.includes('binary data format') || rawMessage.includes('geography') || rawMessage.includes('location')) {
+        throw new Error('Não foi possível salvar o endereço. Verifique CEP, número e cidade e tente novamente.');
+      }
+      if (status >= 500) {
+        throw new Error('Erro no servidor. Tente novamente em instantes.');
+      }
+      throw new Error(`Falha no registro: ${backendMessage || 'Tente novamente.'}`);
     } finally {
       setIsLoading(false);
     }
@@ -267,6 +281,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             '[AuthContext | refreshUser] /users/me retornou 404. Mantendo sessão atual e seguindo.',
           );
           // Não lança; mantém o usuário atual e segue o fluxo
+        } else if (status === 403 || status === 400 || status === 409) {
+          debugWarn(
+            `[AuthContext | refreshUser] Falha esperada (status ${status}) ao atualizar perfil. Mantendo sessão atual.`,
+          );
+          // Fluxos de aprovação/validação podem retornar 4xx; não derruba a sessão
         } else {
           debugError(
             '[AuthContext | refreshUser] Falha ao atualizar perfil. Mantendo sessão atual.',
@@ -363,4 +382,3 @@ export const useAuth = (): AuthContextType => {
 };
 
 export { AuthContext };
-
