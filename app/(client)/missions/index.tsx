@@ -271,7 +271,7 @@ export default function ClientMissionsScreen() {
               <Text style={[styles.emptyMissionsTitle, { color: theme.text }]}>
                 Nenhuma missão disponível ainda.
               </Text>
-              <Text style={[styles.emptyMissionsSubtitle, { color: theme.textAuxiliary }]}>
+              <Text style={[styles.emptyMissionsSubtitle, { color: theme.textMuted }]}>
                 Complete seu primeiro agendamento para desbloquear missões com descontos.
               </Text>
               {bookingsCompleted === 0 && (
@@ -315,6 +315,7 @@ const styles = StyleSheet.create({
   priceColRight: { flex: 1, alignItems: 'center' },
   counterRow: { flexDirection: 'row', alignItems: 'center' },
   counterBtn: { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 8 },
+  priceLabel: { fontSize: 12, color: '#6B7280', marginBottom: 6 },
   priceValue: { fontSize: 16, fontWeight: '800', color: '#111827', minWidth: 90, textAlign: 'center', marginHorizontal: 12 },
   equalsCol: { width: 34, alignItems: 'center' },
   equalsText: { fontWeight: '800', fontSize: 16, color: '#6B7280' },
