@@ -243,6 +243,13 @@ export const updateProviderProfile = async (id: string, data: Partial<Provider>)
     });
 };
 
+// Excluir provedor (conta do prestador)
+export const deleteProvider = async (id: string): Promise<void> => {
+    await fetchApi(`/providers/${id}`, {
+        method: 'DELETE',
+    });
+};
+
 // --- FunÃ§Ãµes de Fila de VerificaÃ§Ã£o ---
 export const fetchVerificationQueue = async (): Promise<Provider[]> => {
     return fetchApi('/verification/pending-queue');
