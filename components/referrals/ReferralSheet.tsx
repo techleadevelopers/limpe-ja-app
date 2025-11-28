@@ -42,7 +42,7 @@ export const ReferralSheet: React.FC<ReferralSheetProps> = ({
           rewardReferred={rewardReferred}
           onShare={onShare}
           onHowItWorks={() => {
-            console.log('Abrir como funciona');
+            // log removido para performance
           }}
         />
         <Text style={[styles.antiFraudText, { color: theme.textMuted }]}>
