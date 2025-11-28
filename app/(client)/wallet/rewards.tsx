@@ -1,15 +1,15 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, TextInput, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { Stack, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import Colors from '../../../constants/Colors';
+import { AnalyticsService } from '../../../services/analyticsService';
 import { getLoyaltyRewards, LoyaltyRewardItem, redeemLoyaltyPoints } from '../../../services/loyaltyService';
 import NotificationUIService from '../../../services/notificationUIService';
-import { AnalyticsService } from '../../../services/analyticsService';
-import Colors from '../../../constants/Colors';
-import { fix } from '../../utils/platformFix';
+import { fix } from '../../../utils/platformFix';
 
 function useTheme() {
   const scheme = (Colors as any)?.scheme || 'light';
