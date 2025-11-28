@@ -84,7 +84,7 @@ const AnimatedTransactionItem: React.FC<AnimatedTransactionItemProps> = ({ item,
             formattedDate = 'Erro de Data';
         }
     } else {
-        console.warn(`[AnimatedTransactionItem] item.createdAt é undefined/null para transação ID: ${item.id}. Valor:`, item.createdAt);
+        // log removido para performance
     }
     // --- FIM DOS LOGS DEFENSIVOS E TRATAMENTO DE VALORES ---
 
@@ -98,7 +98,7 @@ const AnimatedTransactionItem: React.FC<AnimatedTransactionItemProps> = ({ item,
                 return { icon: "percent", color: WARNING_YELLOW, label: "Comissão" };
             default:
                 // LOG DEFENSIVO: Tipo de transação desconhecido
-                console.warn(`[AnimatedTransactionItem] Tipo de transação desconhecido para ID: ${item.id}, Tipo: ${item.type}`);
+                // log removido para performance
                 return { icon: "help-circle", color: TEXT_MUTED, label: "Transação Desconhecida" };
         }
     };
