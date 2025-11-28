@@ -22,7 +22,7 @@ const API_BASE_URL =
   'http://localhost:3000';
 
 if (!API_BASE_URL) {
-  console.error('backendApiUrl não está definido. Verifique sua configuração.');
+  if (__DEV__) console.error('backendApiUrl não está definido. Verifique sua configuração.');
   Sentry.captureMessage('backendApiUrl não está definido!', 'fatal');
 }
 
@@ -39,7 +39,7 @@ try {
   // __DEV__ is defined in React Native; fallback to NODE_ENV
   const isDev = (typeof __DEV__ !== 'undefined' && __DEV__) || process.env.NODE_ENV !== 'production';
   if (API_BASE_URL.includes('localhost') && !isDev) {
-    console.error('[api] API_BASE_URL points to localhost in production:', API_BASE_URL);
+    if (__DEV__) console.error('[api] API_BASE_URL points to localhost in production:', API_BASE_URL);
     Sentry.captureMessage('API_BASE_URL is localhost in production', 'fatal');
   }
 } catch (_) {
@@ -191,9 +191,6 @@ api.interceptors.response.use(
         tags: { scope: 'network' },
         extra: unified,
       });
-    } else if (__DEV__) {
-      // Log apenas em dev para modo silencioso
-      console.warn('[api] Erro silencioso (meta.silent=true):', unified);
     }
 
     if (axiosError.response?.status === 401 && !config._isRetryRequest) {
@@ -215,8 +212,6 @@ api.interceptors.response.use(
           text1: i18n.t('common.error'),
           text2: i18n.t('common.unauthorized_error'),
         });
-      } else if (__DEV__) {
-        console.warn('[api] 401 silencioso (X-Silent ou meta.silent):', unified);
       }
     }
 
