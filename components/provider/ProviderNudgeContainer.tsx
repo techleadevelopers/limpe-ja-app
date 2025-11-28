@@ -9,7 +9,6 @@ const ProviderNudgeContainer = () => {
   // Para este caso, vamos assumir que o 'code' é o 'code' da prop do SmartNudge.
   const handleApplyMissionCoupon = (code: string) => {
     // Logic to navigate or apply mission-related coupons
-    console.log(`Provider coupon applied: ${code}`);
     // Exemplo: router.push('/(provider)/missions');
   };
 
