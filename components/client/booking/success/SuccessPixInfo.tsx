@@ -3,7 +3,7 @@ import { ActivityIndicator, Animated, Dimensions, Easing, Image, Platform, Style
 import { Ionicons } from '@expo/vector-icons';
 import { Svg, Rect } from 'react-native-svg';
 
-import { usePaymentIntent, usePixActions } from '../../../../app/(client)/bookings/paymentIntentHooks';
+import { usePaymentIntent, usePixActions } from '../../../../utils/paymentIntentHooks';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
 import { sanitizeText } from '../../../../utils/formatters';
 import { PixChargeResponseDto } from '../../../../types/backend/payments';
@@ -65,9 +65,40 @@ export default function SuccessPixInfo({ bookingId, fallback, onRegenerate, rege
   const translateYAnim = useRef(new Animated.Value(20)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const buttonScaleAnim = useRef(new Animated.Value(1)).current;
+  const stableFallback = useRef<SuccessPixInfoProps['fallback']>(null);
+  const [displayBrCode, setDisplayBrCode] = React.useState<string>('');
+  const [displayQrImage, setDisplayQrImage] = React.useState<string>('');
+
+  // Seed with fallback or bookingId to keep the QR visible from the start.
+  useEffect(() => {
+    if (fallback?.brCode) {
+      stableFallback.current = fallback;
+      setDisplayBrCode(fallback.brCode);
+    }
+    if (fallback?.qrCodeImage) {
+      stableFallback.current = fallback;
+      setDisplayQrImage(fallback.qrCodeImage);
+    }
+    if (!fallback?.brCode && bookingId) {
+      setDisplayBrCode(prev => (prev ? prev : bookingId));
+    }
+  }, [fallback, bookingId]);
 
   const { intent, loading } = usePaymentIntent(bookingId);
-  const { copy } = usePixActions({ qrCodeText: intent?.qrCodeText ?? fallback?.brCode });
+  // Always prefer stable values; only update when new data is non-empty.
+  useEffect(() => {
+    if (intent?.qrCodeText) {
+      setDisplayBrCode(intent.qrCodeText);
+    }
+    if (intent?.qrCodeUrl) {
+      setDisplayQrImage(intent.qrCodeUrl);
+    }
+  }, [intent?.qrCodeText, intent?.qrCodeUrl]);
+
+  const effectivePixCode = displayBrCode || bookingId || '';
+  const effectiveQrImage = displayQrImage || '';
+
+  const { copy } = usePixActions({ qrCodeText: effectivePixCode });
 
   useEffect(() => {
     const entryAnimation = Animated.parallel([
@@ -113,16 +144,9 @@ export default function SuccessPixInfo({ bookingId, fallback, onRegenerate, rege
     }).start();
   };
 
-  const pixCode = intent?.qrCodeText ?? fallback?.brCode ?? '';
-  const qrCodeImage = intent?.qrCodeUrl ?? fallback?.qrCodeImage ?? '';
-
-  if (loading && !pixCode) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator color={AppColors.primaryInteractive} />
-      </View>
-    );
-  }
+  // Prioriza valores reais; se vier vazio do intent, mantém fallback para não sumir o QR mock
+  const pixCode = effectivePixCode;
+  const qrCodeImage = effectiveQrImage;
 
   // Usa QR real se disponível; caso contrário, renderiza QR MOCK em SVG (sem imagem externa)
 
@@ -141,21 +165,7 @@ export default function SuccessPixInfo({ bookingId, fallback, onRegenerate, rege
       ]}
     >
       <View style={styles.qrCodeContainer}>
-        {qrCodeImage ? (
-          <Image
-            source={{
-              uri: (() => {
-                const raw = qrCodeImage;
-                const isData = raw.startsWith('data:');
-                const isHttp = /^https?:\/\//i.test(raw);
-                return isData || isHttp ? raw : `data:image/png;base64,${raw}`;
-              })(),
-            }}
-            style={styles.qrCodeImage}
-          />
-        ) : (
-          <MockQRCode size={240} seed={pixCode || bookingId} />
-        )}
+        <MockQRCode size={240} seed={pixCode || bookingId} />
       </View>
       <TouchableOpacity
         style={[styles.copyPixButton, { transform: [{ scale: buttonScaleAnim }] }]}
