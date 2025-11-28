@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: SCREEN_WIDTH - 32, // Fix: Ajuste para safe areas iOS, previne lateral scroll
     alignSelf: 'center',
-    marginTop: 16,
+    marginTop: Platform.OS === 'android' ? 28 : 16,
     marginBottom: 24,
     paddingHorizontal: 16, // Fix: Padding fixo para evitar gaps laterais no iOS
   },
