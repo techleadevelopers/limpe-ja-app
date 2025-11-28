@@ -1,7 +1,6 @@
 // app/services/providerService.ts
 import axios, { AxiosResponse } from 'axios';
 import { api } from './api';
-import { getCurrentPosition } from './locationService';
 
 // Importa o serviço de reviews do frontend
 import { ReviewService as FrontendReviewService } from './reviewService'; // Renomeado para evitar conflito
@@ -542,17 +541,7 @@ export async function deleteProviderServiceOffering(providerId: string, serviceO
  */
 export async function getRecommendedProviders(params?: { latitude?: number; longitude?: number }): Promise<ProviderDisplayInfo[]> {
   try {
-    let finalParams = params || {};
-    if (finalParams.latitude == null || finalParams.longitude == null) {
-      try {
-        const coords = await getCurrentPosition();
-        if (coords) {
-          finalParams = { latitude: coords.latitude, longitude: coords.longitude };
-        }
-      } catch {
-        // ignore location failure
-      }
-    }
+    const finalParams = params || {};
     const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/recommended', {
       params: finalParams,
       headers: { 'X-Silent': '1' },
