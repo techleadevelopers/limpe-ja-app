@@ -163,7 +163,7 @@ export default function ForgotPasswordScreen() {
                         autoComplete="email"
                     />
 
-                    <AnimatedErrorMessage message={message} isVisible={!!message} centered={true} isSuccess={isSuccess} />
+                    <AnimatedErrorMessage message={message} isVisible={!!message} centered={true} />
 
                     <Animated.View style={{ transform: [{ scale: resetButtonAnims.scaleAnim }] }}>
                         <TouchableOpacity
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     },
     contentWrapper: {
         paddingHorizontal: 49,
-        paddingTop: Platform.OS === 'ios' ? 20 : 100,
+        paddingTop: Platform.OS === 'ios' ? 180 : 180,
         bottom: 100,
     },
     headerSection: {
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     signInButton: {
         backgroundColor: 'rgba(64, 192, 240, 0.85)',
         borderRadius: 28,
-        paddingVertical: 4,
+        paddingVertical: 12,
         width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
