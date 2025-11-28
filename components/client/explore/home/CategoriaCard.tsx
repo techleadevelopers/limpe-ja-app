@@ -27,9 +27,18 @@ const PRIMARY_ELEVATION_ANDROID = 4; // mais suave (4–6)
 
 // Bordas
 const BORDER_COLOR_LIGHT = Platform.select({
-  ios: '#2dc4c475',
-  android: 'rgba(255, 255, 255, 0.9)',
+  ios: '#2dc4c475', // igual ao iOS
+  android: '#4599f2ff', // cor sólida clara evita escurecer no Android
 });
+const ANDROID_NEON_SHADOW = Platform.OS === 'android'
+  ? {
+      shadowColor: '#A7D7FF',
+      shadowOpacity: 0.9,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 0 },
+      elevation: 0, // não deixa Android criar halo preto
+    }
+  : {};
 const BORDER_WIDTH = 1.3;
 
 const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
@@ -194,11 +203,10 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
               shadowOpacity: 0.16,  // ainda mais suave (reduz “risco”)
               shadowRadius: 16,      // difusão maior
             },
-            android: {
-              elevation: PRIMARY_ELEVATION_ANDROID, // 4
-            },
+            android: {},
           }),
           { borderColor: BORDER_COLOR_LIGHT },
+          ANDROID_NEON_SHADOW, // glow correto no Android
         ]}
         onPress={handleCardPress}
         onPressIn={onPressInCard}
@@ -244,18 +252,19 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardContainerWrapper: {
-    width:  46,
-    height: 40 + 15,
+    width:  48,
+    height: 45 + 25,
     marginRight: 11,
-    right: 8,
+    right: 22,
+    marginLeft: 4,
     borderRadius: 45,
     marginBottom: 4,
-    marginTop: 12,
+    marginTop: 14,
     alignItems: 'center',
   },
   touchableSurface: {
     width: '100%',
-    height: 45,
+    height: 48,
     borderRadius: 45,
     overflow: 'hidden',
     borderWidth: BORDER_WIDTH,
@@ -285,7 +294,7 @@ const styles = StyleSheet.create({
   },
   iconImage: {
     width: 32,
-    height: 30,
+    height: 40,
     resizeMode: 'contain',
     marginBottom: -2,
   },
