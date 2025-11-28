@@ -1,4 +1,13 @@
 🚀 Backend LimpeJá: API de Serviços Domésticos
+Auditoria funcional e de risco (26/11/2025)
+- Auth: login carrega client/provider/loyalty/referrals; registro valida unicidades e geocoding. Bug: forgotPassword monta link com config incorreta (`jwt.appBaseUrl` nALo existe). Referral code aceita qualquer UUID como userId (abuso de bonus).
+- Bookings: criacao com lock Redis 5s, pricing dinamico + cupom + missao `booking.created`. UpdateStatus valida transicao por role, incrementa metricas, agenda lembretes e cria ledger (HOLD/FEE). Problemas: cupom marcado como usado duas vezes (criacao e conclusao); missao de primeiro booking nao dispara porque o contador e incrementado antes; lock curto permite duplicidade em picos.
+- Payments: cria Transaction + PaymentIntent PIX (PagSeguro/placeholder) e seta booking PENDING. Falhas: nao verifica se o booking pertence ao solicitante em createPixCharge; permite multiplas transacoes pendentes para o mesmo booking se reprocessar; webhook ignora assinatura se `PIX_WEBHOOK_SECRET` faltar e loga raw body (risco em producao).
+- Payouts: calcula saldo via ledger, trava com lock, processa gateway e webhook para sincronizar status.
+- Notificacoes/Filas/Cache: filas Bull para verificacao/notificacoes/disputas/subscription/emails/support/payouts; lembretes T-24h/T-2h/T-15m/T0.
+- Gamificacao: coupons apply/issue (missao/retorno/referral), loyalty points em conclusao, missions trackEvent (booking.created/completed), referrals convertem no 1o COMPLETED (mas condicao atual pode nao disparar).
+- Trust & Safety: verification/document-processing/safety/disputes/guarantee/compliance e suporte (tickets + escalonamento).
+- Acoes sugeridas: corrigir bugs acima, reforcar idempotencia em pagamentos/saques, aumentar TTL/escopo de lock de booking, usar referral code dedicado com expiracao/limites, e remover logs de raw webhook em producao.
 Este documento detalha a arquitetura, os módulos e as funcionalidades do backend da plataforma LimpeJá, uma aplicação robusta construída com NestJS para conectar clientes a prestadores de serviços domésticos. O sistema é projetado para ser escalável, seguro e eficiente, oferecendo uma experiência completa desde o agendamento até o pagamento e o gerenciamento de disputas.
 
 🎯 Visão Geral do Projeto
