@@ -174,8 +174,9 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: Dimensions.get('window').width - 40,
-    height: 120,
+    height: 100,
     borderRadius: 14,
+    marginTop: 12,
     overflow: 'hidden',
     marginHorizontal: 6,
     ...Platform.select({
