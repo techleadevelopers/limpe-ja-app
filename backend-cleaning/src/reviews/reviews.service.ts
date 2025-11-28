@@ -111,6 +111,14 @@ export class ReviewsService {
       },
     });
 
+    // Vincula a review ao booking para evitar prompts repetidos no app
+    await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        review: { connect: { id: review.id } },
+      },
+    });
+
     this.logger.log(`[ReviewsService] Review ${review.id} criada para booking ${bookingId}.`);
     // Telemetria: review_created
     this.logger.log(`[TELEMETRY] review_created: { reviewId: ${review.id}, bookingId: ${bookingId}, clientId: ${clientId}, providerId: ${booking.providerId}, rating: ${rating} }`);
