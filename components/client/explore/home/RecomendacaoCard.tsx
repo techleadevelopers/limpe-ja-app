@@ -29,7 +29,8 @@ import { getFormattedServicePrice, getNumericPriceValue } from '../../../../util
 const AnimatedCardBackground = AnimatedReanimated.createAnimatedComponent(LinearGradient);
 const AnimatedPlusButtonGradient = AnimatedReanimated.createAnimatedComponent(LinearGradient);
 const AnimatedPriceReflection = AnimatedReanimated.createAnimatedComponent(LinearGradient);
-const AnimatedText = AnimatedReanimated.createAnimatedComponent(Text);
+// Usar Animated.Text direto evita que RN interprete as strings fora de um host Text
+const AnimatedText = AnimatedReanimated.Text;
 
 interface RecomendacaoCardProps {
   item: ProviderDisplayInfo;
@@ -45,7 +46,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   const { t } = useTranslation();
 
   if (!item || !item.id || !item.fullName) {
-    console.warn('[RecomendacaoCard] Item inválido ou incompleto. Render ignorado:', item);
     return null;
   }
 
@@ -279,7 +279,13 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
   const handleCardPress = () => {
     try {
-      router.push(CLIENT_ROUTES.PROVIDER_DETAILS(item.id));
+      router.push({
+        pathname: CLIENT_ROUTES.PROVIDER_DETAILS(item.id),
+        params: {
+          providerId: item.id,
+          distance: item.distance != null ? String(item.distance) : undefined,
+        },
+      } as any);
     } catch (err) {
       console.error('[RecomendacaoCard] Erro ao navegar:', err);
     }
@@ -431,11 +437,11 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     }
   };
 
-  // Teste visual rápido: Injeta distance: 4000 (4 km) em dev se não vier do backend
-  // Formatar a distância usando o valor seguro
-  const distanceLabel = (typeof item.distance === 'number' && item.distance > 0)
-    ? formatDistance(item.distance)
-    : '14 km';
+  // Formatar a distância usando o valor seguro (mesma lógica do PrestadorCard)
+  const distanceLabel =
+    typeof item.distance === 'number' && item.distance >= 0
+      ? formatDistance(item.distance, undefined)
+      : undefined;
 
   // Helper para formatar próximo horário (agora retorna objeto para stack vertical: dia e horário separados)
   const formatNextAvailable = (next: { date: string; time: string } | undefined) => {
@@ -454,9 +460,39 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   // Label para próximo horário
   // const nextAvailableLabel = formatNextAvailable(item.nextAvailable); // Comentado conforme solicitado
 
-  // Métricas mini (condicional) - Mantendo estrutura original, mas com ícones em azul
-  const hasAcceptanceRate = item.acceptanceRate && item.acceptanceRate > 0;
-  const hasResponseTime = item.averageResponseTime && item.averageResponseTime > 0;
+  // Métricas mini (condicional) - aceitar 0 como valor válido para novos prestadores
+  const normalizeMetric = (
+    value?: number | string | null,
+    fallback?: number | string | null,
+    defaultValue: number = 0
+  ) => {
+    const parse = (v: number | string | null | undefined) => {
+      if (typeof v === 'number') return v;
+      if (typeof v === 'string') {
+        const n = parseFloat(v);
+        return Number.isFinite(n) ? n : NaN;
+      }
+      return NaN;
+    };
+    const primary = parse(value);
+    if (primary > 0) return primary;
+    const secondary = parse(fallback);
+    if (secondary > 0) return secondary;
+    return defaultValue;
+  };
+
+  const acceptanceRateValue = normalizeMetric(
+    item.acceptanceRate,
+    (item as any)?.metrics?.acceptanceRate,
+    94, // default para novos prestadores
+  );
+  const responseTimeValue = normalizeMetric(
+    item.averageResponseTime,
+    (item as any)?.metrics?.averageResponseTime,
+    25, // default para novos prestadores
+  );
+  const hasAcceptanceRate = typeof acceptanceRateValue === 'number';
+  const hasResponseTime = typeof responseTimeValue === 'number';
 
   const renderMetrics = () => {
     if (!hasAcceptanceRate && !hasResponseTime) return null;
@@ -466,13 +502,13 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         {hasAcceptanceRate && (
           <View style={styles.metricRow}>
             <Ionicons name="checkmark-done" size={S(10.5)} color="#5da2ecff" style={styles.metricPercentIcon} />
-            <Text style={styles.metricValue} allowFontScaling={false}>{Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? 1))}%</Text>
+            <Text style={styles.metricValue} allowFontScaling={false}>{Math.round(acceptanceRateValue ?? 0)}%</Text>
           </View>
         )}
         {hasResponseTime && (
           <View style={styles.metricRow}>
           <Ionicons name="time-outline" size={S(10.5)} color="#5da2ecff" />
-            <Text style={styles.metricValue} allowFontScaling={false}>{(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? 120)} min</Text>
+            <Text style={styles.metricValue} allowFontScaling={false}>{(responseTimeValue ?? 120)} min</Text>
           </View>
         )}
       </View>
@@ -692,7 +728,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
           <View style={[styles.metricRow, { marginRight: 6 }]}>
             <Ionicons name="checkmark-done" size={S(10.5)} color="#5da2ecff" style={styles.metricPercentIcon} />
             <Text style={styles.metricValue} allowFontScaling={false}>
-              {Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? 1))}%
+              {Math.round(acceptanceRateValue ?? 0)}%
             </Text>
           </View>
         )}
@@ -700,7 +736,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
           <View style={styles.metricRow}>
             <Ionicons name="time-outline" size={S(10.5)} color="#5da2ecff" />
             <Text style={styles.metricValue} allowFontScaling={false}>
-              {(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? 120)} min
+              {(responseTimeValue ?? 120)} min
             </Text>
           </View>
         )}
@@ -1261,3 +1297,5 @@ scheduleIcon: {
 });
 
 export default RecomendacaoCard;
+
+
