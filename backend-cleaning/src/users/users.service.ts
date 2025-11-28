@@ -26,35 +26,61 @@ import { CreateNotificationDto } from '../notifications/dto/create-notification.
 // Type alias para User com includes (baseado no schema.prisma) - EXPANDIDO para ProviderWithCalculatedRating compatibilidade
 // Importante: NÃO misturar include + select em um mesmo nível (Prisma não permite).
 export type UserWithIncludes = Prisma.UserGetPayload<{
-  include: {
+  select: {
+    id: true;
+    email: true;
+    role: true;
+    fullName: true;
+    phone: true;
+    avatarUrl: true;
+    createdAt: true;
+    updatedAt: true;
+    isVerified: true;
     client: {
-      include: { address: true };
-    };
-    provider: {
-      include: {
+      select: {
+        id: true;
+        fullName: true;
+        phone: true;
+        cpf: true;
+        noShowCount: true;
+        cancellationCount: true;
         address: true;
-        user: true; // Inclui User para email, role, etc.
-        providerServices: {
-          include: { service: true }; // Para services do provider
-        };
-        reviewsReceived: {
-          include: {
-            client: {
-              include: { user: true };
-            };
-          };
-        };
-        bookings: {
-          where: { status: 'COMPLETED' };
-          orderBy: { createdAt: 'desc' };
-          take: 100;
-        };
-        availability: true; // Se existir no schema (ex: Availability model)
+        createdAt: true;
+        updatedAt: true;
       };
-    };
+    } | null;
+    provider: {
+      select: {
+        id: true;
+        userId: true;
+        fullName: true;
+        phone: true;
+        bio: true;
+        verificationStatus: true;
+        avatarUrl: true;
+        cpf: true;
+        dateOfBirth: true;
+        yearsOfExperience: true;
+        badges: true;
+        acceptanceRate: true;
+        averageResponseTime: true;
+        address: true;
+        user: true;
+        createdAt: true;
+        updatedAt: true;
+        fiveStarReviewCount: true;
+        monthlyBookingsCount: true;
+        pixKey: true;
+        pixKeyMasked: true;
+        providerServices: { include: { service: true } };
+        reviewsReceived: { include: { client: { include: { user: true } } } };
+        bookings: { where: { status: "COMPLETED" }, orderBy: { createdAt: "desc" }, take: 100 };
+        availability: true;
+      };
+    } | null;
     loyalty: true;
-    referredBy: true; // Indicações recebidas
-    referralsMade: true; // Indicações feitas
+    referredBy: true;
+    referralsMade: true;
   };
 }>;
 
@@ -73,27 +99,55 @@ export class UsersService {
     try {
       const user = (await this.prisma.user.findUnique({
         where: { id },
-        include: {
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          fullName: true,
+          phone: true,
+          avatarUrl: true,
+          createdAt: true,
+          updatedAt: true,
+          isVerified: true,
           client: {
-            include: { address: true },
+            select: {
+              id: true,
+              fullName: true,
+              phone: true,
+              cpf: true,
+              noShowCount: true,
+              cancellationCount: true,
+              address: true,
+            },
           },
           provider: {
-            include: {
+            select: {
+              id: true,
+              userId: true,
+              fullName: true,
+              phone: true,
+              bio: true,
+              verificationStatus: true,
+              avatarUrl: true,
+              cpf: true,
+              dateOfBirth: true,
+              yearsOfExperience: true,
+              badges: true,
+              acceptanceRate: true,
+              averageResponseTime: true,
               address: true,
-              user: true, // Para email e outros do User
-              providerServices: {
-                include: { service: true },
-              },
-              reviewsReceived: {
-                include: {
-                  client: {
-                    include: { user: true },
-                  },
-                },
-              },
+              user: true,
+              createdAt: true,
+              updatedAt: true,
+              fiveStarReviewCount: true,
+              monthlyBookingsCount: true,
+              pixKey: true,
+              pixKeyMasked: true,
+              providerServices: { include: { service: true } },
+              reviewsReceived: { include: { client: { include: { user: true } } } },
               bookings: {
-                where: { status: 'COMPLETED' },
-                orderBy: { createdAt: 'desc' },
+                where: { status: "COMPLETED" },
+                orderBy: { createdAt: "desc" },
                 take: 100,
               },
               availability: true,
@@ -103,7 +157,7 @@ export class UsersService {
           referredBy: true,
           referralsMade: true,
         },
-      })) as UserWithIncludes | null;
+      })) as unknown as UserWithIncludes | null;
 
       this.logger.log(`[UsersService] findOne: Usuário encontrado com includes: ${!!user}`);
       if (!user) {
@@ -114,7 +168,55 @@ export class UsersService {
       this.logger.error(`[UsersService] findOne: Erro na query Prisma para ID ${id}: ${error.message}`);
       // Fallback: Query simples sem includes se falhar (ex: relação inexistente ou erro de include)
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        return (await this.prisma.user.findUnique({ where: { id } })) as UserWithIncludes | null;
+        const fallbackUser = await this.prisma.user.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            fullName: true,
+            phone: true,
+            avatarUrl: true,
+            client: {
+              select: {
+                id: true,
+                fullName: true,
+                phone: true,
+                cpf: true,
+                noShowCount: true,
+                cancellationCount: true,
+                address: true,
+              },
+            },
+            provider: {
+              select: {
+                id: true,
+                userId: true,
+                fullName: true,
+                phone: true,
+                bio: true,
+                verificationStatus: true,
+                avatarUrl: true,
+                cpf: true,
+                dateOfBirth: true,
+                yearsOfExperience: true,
+                badges: true,
+                acceptanceRate: true,
+                averageResponseTime: true,
+                address: true,
+                user: true,
+                providerServices: { include: { service: true } },
+                reviewsReceived: { include: { client: { include: { user: true } } } },
+                bookings: { where: { status: 'COMPLETED' }, orderBy: { createdAt: 'desc' }, take: 100 },
+                availability: true,
+              },
+            },
+            loyalty: true,
+            referredBy: true,
+            referralsMade: true,
+          },
+        });
+        return fallbackUser as unknown as UserWithIncludes | null;
       }
       throw error;
     }
@@ -136,33 +238,61 @@ export class UsersService {
     }
   }
 
-  // Listar com includes tipados
+  // Listar com select consistente
   async findAllUsers(): Promise<UserWithIncludes[]> {
-    this.logger.log('[UsersService] findAllUsers: Listando todos os usuários com includes.');
+    this.logger.log('[UsersService] findAllUsers: Listando todos os usuários com select.');
     try {
       const users = (await this.prisma.user.findMany({
         orderBy: { createdAt: 'desc' },
         where: {
           deletionScheduledAt: null, // Soft delete do schema
         },
-        include: {
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          fullName: true,
+          phone: true,
+          avatarUrl: true,
+          createdAt: true,
+          updatedAt: true,
+          isVerified: true,
           client: {
-            include: { address: true },
+            select: {
+              id: true,
+              fullName: true,
+              phone: true,
+              cpf: true,
+              noShowCount: true,
+              cancellationCount: true,
+              address: true,
+            },
           },
           provider: {
-            include: {
+            select: {
+              id: true,
+              userId: true,
+              fullName: true,
+              phone: true,
+              bio: true,
+              verificationStatus: true,
+              avatarUrl: true,
+              cpf: true,
+              dateOfBirth: true,
+              yearsOfExperience: true,
+              badges: true,
+              acceptanceRate: true,
+              averageResponseTime: true,
               address: true,
               user: true,
-              providerServices: {
-                include: { service: true },
-              },
-              reviewsReceived: {
-                include: {
-                  client: {
-                    include: { user: true },
-                  },
-                },
-              },
+              createdAt: true,
+              updatedAt: true,
+              fiveStarReviewCount: true,
+              monthlyBookingsCount: true,
+              pixKey: true,
+              pixKeyMasked: true,
+              providerServices: { include: { service: true } },
+              reviewsReceived: { include: { client: { include: { user: true } } } },
               bookings: {
                 where: { status: 'COMPLETED' },
                 orderBy: { createdAt: 'desc' },
@@ -175,15 +305,15 @@ export class UsersService {
           referredBy: true,
           referralsMade: true,
         },
-      })) as UserWithIncludes[];
+      })) as unknown as UserWithIncludes[];
 
       this.logger.log(
-        `[UsersService] findAllUsers: Retornando ${users.length} usuários com includes.`,
+        `[UsersService] findAllUsers: Retornando ${users.length} usuários.`,
       );
       return users;
     } catch (error: any) {
       this.logger.error(
-        `[UsersService] findAllUsers: Erro ao listar usuários com includes: ${error.message}`,
+        `[UsersService] findAllUsers: Erro ao listar usuários: ${error.message}`,
       );
       throw error;
     }
@@ -372,4 +502,3 @@ export class UsersService {
     }
   }
 }
-
