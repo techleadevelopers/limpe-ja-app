@@ -118,7 +118,7 @@ export class BookingsService {
     // --- NOVO: Adicionar lock para evitar race conditions na criação de agendamentos ---
     const lockKey = `booking:creation:${clientUserId}:${createBookingDto.providerId}:${createBookingDto.scheduledDate}:${createBookingDto.scheduledTime}`;
     const lockValue = `${clientUserId}_${Date.now()}`; // Valor único para o lock
-    const ttlMs = 5000; // Tempo de vida do lock em ms (5 segundos)
+    const ttlMs = 15000; // Tempo de vida do lock em ms (15 segundos) para evitar duplicidades sob carga
 
     this.logger.log(`[BookingsService] create - Tentando adquirir lock: ${lockKey}`);
     const lockAcquired = await this.redisLockService.acquireLock(lockKey, lockValue, ttlMs);
@@ -306,6 +306,11 @@ export class BookingsService {
 
         // Telemetria: booking_created
         this.logger.log(`[TELEMETRY] booking_created: { bookingId: ${createdBooking.id}, clientId: ${createdBooking.clientId}, providerId: ${createdBooking.providerId}, totalPrice: ${createdBooking.totalPrice.toFixed(2)}, couponId: ${couponId} }`);
+
+        // Se houve cupom, registrar uso (incrementa usesCount/status)
+        if (couponId) {
+          await this.couponsService.markCouponAsUsed(couponId);
+        }
 
         return createdBooking;
 
@@ -535,6 +540,7 @@ export class BookingsService {
       throw new NotFoundException(await this.i18n.translate('booking.notFound', locale, { id }));
     }
     this.logger.log(`[BookingsService] updateStatus - Agendamento encontrado, status atual: ${booking.status}`);
+    const prevCompletedCount = (booking as any).client?.completedBookingsCount ?? 0;
 
     let canUpdate = false;
     let errorMessageKey: string = 'booking.badRequest.invalidStatusTransition';
@@ -662,17 +668,6 @@ export class BookingsService {
       // Telemetria: loyalty_points_earned_service_completed
       this.logger.log(`[TELEMETRY] loyalty_points_earned_service_completed: { userId: ${booking.client.userId}, bookingId: ${booking.id}, points: 10 }`);
 
-
-      // Marcar cupom como usado se um foi aplicado a este booking
-      const bookingWithCoupon = await this.prisma.booking.findUnique({
-        where: { id: booking.id },
-        select: { couponId: true }
-      });
-      if (bookingWithCoupon?.couponId) {
-        await this.couponsService.markCouponAsUsed(bookingWithCoupon.couponId);
-        this.logger.log(`[BookingsService] updateStatus: Cupom ${bookingWithCoupon.couponId} marcado como usado para o agendamento ${booking.id}.`);
-      }
-
       // Enfileira notificação de review
       // Fix: Ensure providerService and provider are included
       const reviewNotificationMessage = await this.i18n.translate('notification.reviewRequest', locale, { serviceName: booking.providerService?.service.name, providerName: booking.provider?.fullName }); // Use optional chaining
@@ -696,7 +691,7 @@ export class BookingsService {
 
         // NOVO: Missões -- evento 'first_booking_completed'
         // Se este é o primeiro booking COMPLETED do cliente
-        if (booking.client?.completedBookingsCount === 1) { // Use optional chaining
+        if (prevCompletedCount === 0) { // Use optional chaining
           await this.missionsService.trackEvent(booking.client.userId, 'first_booking_completed', {
             bookingId: booking.id,
             providerId: booking.providerId,
