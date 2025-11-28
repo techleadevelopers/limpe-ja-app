@@ -1,39 +1,36 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Image,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
-import { Linking } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Image,
+    Linking,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
-import { normalizeBooking } from '../../../utils/normalize';
 import { cancelBooking, getBookingDetails } from '../../../services/bookingService';
 import { getProviderDetails } from '../../../services/providerService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
+import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
+import { normalizeBooking } from '../../../utils/normalize';
 
-import Colors from '../../../constants/Colors';
-import { AppColors } from '../../../constants/appStyles';
 import { useDevice } from '@/utils/responsive';
-import { fix } from '../../utils/platformFix';
+import { AppColors } from '../../../constants/appStyles';
+import { fix } from '../../../utils/platformFix';
 
 import ProviderServicesInline from '../../../components/booking/ProviderServicesInline';
-import { useProviderServices } from '../../../hooks/useProviderServices';
 import TutorialOverlay from '../../../components/ui/TutorialOverlay';
+import { useProviderServices } from '../../../hooks/useProviderServices';
 import { useTutorial } from '../../../hooks/useTutorial';
 
 // =============================================================================
