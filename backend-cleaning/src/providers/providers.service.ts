@@ -25,6 +25,8 @@ import { SortByOption } from '../search/dto/search-query.dto';
 import { ProviderSearchDto } from './dto/provider-search.dto';
 import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 import { Decimal } from '@prisma/client/runtime/library';
+import { geocodeAddress } from '../utils/geocoding.service';
+import { SettingsService } from '../settings/settings.service';
 
 // Type principal para provedores com todas as inclusões necessárias para mapeamento
 export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
@@ -143,7 +145,105 @@ export class ProvidersService {
     private prisma: PrismaService,
     private readonly documentProcessingService: DocumentProcessingService,
     private readonly cacheService: CacheService,
+    private readonly settingsService: SettingsService,
   ) {}
+
+  private buildAddressString(address?: Partial<Address>): string | null {
+    if (!address) return null;
+    const parts = [
+      address.street,
+      address.number,
+      address.complement,
+      address.neighborhood,
+      address.city,
+      address.state,
+      address.cep,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : null;
+  }
+
+  private applyGeocodeFallback(
+    address: Partial<Address>,
+    geocoded?: { latitude: number; longitude: number } | null,
+  ): { latitude?: number; longitude?: number } {
+    const latitude = address.latitude !== undefined ? address.latitude : geocoded?.latitude;
+    const longitude = address.longitude !== undefined ? address.longitude : geocoded?.longitude;
+    return { latitude, longitude };
+  }
+
+  // Distância haversine em metros (fallback quando PostGIS/distância vinda do banco não estiver disponível)
+  private calculateDistanceMeters(
+    baseLat?: number,
+    baseLon?: number,
+    targetLat?: number | null,
+    targetLon?: number | null,
+  ): number | undefined {
+    if (
+      baseLat === undefined ||
+      baseLon === undefined ||
+      targetLat === undefined ||
+      targetLat === null ||
+      targetLon === undefined ||
+      targetLon === null
+    ) {
+      return undefined;
+    }
+
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const R = 6371000; // Earth radius in meters
+    const dLat = toRad(targetLat - baseLat);
+    const dLon = toRad(targetLon - baseLon);
+    const lat1 = toRad(baseLat);
+    const lat2 = toRad(targetLat);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // Aplica filtro de raio salvo do provedor (serviceRadiusKm). Distância em metros.
+  private async applyRadiusFilter(
+    providers: ProviderWithCalculatedRating[],
+    baseLat?: number,
+    baseLon?: number,
+  ): Promise<ProviderWithCalculatedRating[]> {
+    if (baseLat === undefined || baseLon === undefined) return providers;
+    const filtered: ProviderWithCalculatedRating[] = [];
+
+    // Busca radii em paralelo para os provedores com distance conhecido
+    const radii = await Promise.all(
+      providers.map(p => this.settingsService.getProviderRadiusKm(p.id, 15)),
+    );
+
+    providers.forEach((p, idx) => {
+      let distance = p.distance;
+      if (distance === undefined && p.address?.latitude != null && p.address?.longitude != null) {
+        distance = this.calculateDistanceMeters(baseLat, baseLon, p.address.latitude, p.address.longitude);
+      }
+      if (distance === undefined) {
+        // Sem distância calculada, mantemos para não esconder resultado inesperadamente
+        filtered.push(p);
+        return;
+      }
+      const radiusMeters = (radii[idx] ?? 15) * 1000;
+      if (distance <= radiusMeters) {
+        filtered.push(p);
+      }
+    });
+
+    return filtered;
+  }
+
+  private async updateAddressLocationPoint(addressId: string, latitude?: number, longitude?: number) {
+    if (!addressId || latitude === undefined || longitude === undefined) return;
+    await this.prisma.$executeRaw`
+      UPDATE "Address"
+      SET location = ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
+      WHERE id = ${addressId};
+    `;
+  }
 
   // NOVO: Helper para calcular nextAvailable (primeiro slot futuro, alinhado com relatório)
   private async calculateNextAvailable(providerId: string): Promise<{ date: string; time: string } | undefined> {
@@ -461,11 +561,21 @@ export class ProvidersService {
       pixKey: data.pixKey,
     };
 
+    let finalLatitude: number | undefined;
+    let finalLongitude: number | undefined;
     if (data.address) {
+      const addressString = this.buildAddressString(data.address as Partial<Address>);
+      const geo = addressString ? await geocodeAddress(addressString) : null;
+      const coords = this.applyGeocodeFallback(data.address as Partial<Address>, geo);
+      finalLatitude = coords.latitude;
+      finalLongitude = coords.longitude;
+      const addressPayload = { ...data.address } as any;
+      if (finalLatitude !== undefined) addressPayload.latitude = finalLatitude;
+      if (finalLongitude !== undefined) addressPayload.longitude = finalLongitude;
       updateData.address = {
         upsert: {
-          create: data.address,
-          update: data.address,
+          create: addressPayload,
+          update: addressPayload,
         },
       };
     }
@@ -497,6 +607,9 @@ export class ProvidersService {
     await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${updatedProvider.id}`);
     await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:user:${userId}`);
     this.logger.log(`[ProvidersService] updateByUserId: Cache de provedores invalidado após atualização.`);
+    if (updatedProvider.address?.id && finalLatitude !== undefined && finalLongitude !== undefined) {
+      await this.updateAddressLocationPoint(updatedProvider.address.id, finalLatitude, finalLongitude);
+    }
 
     this.logger.log(`[ProvidersService] updateByUserId: Provedor com userId ${userId} atualizado com sucesso.`);
     // Telemetria: provider_profile_updated
@@ -528,11 +641,21 @@ export class ProvidersService {
       pixKey: data.pixKey,
     };
 
+    let finalLatitude: number | undefined;
+    let finalLongitude: number | undefined;
     if (data.address) {
+      const addressString = this.buildAddressString(data.address as Partial<Address>);
+      const geo = addressString ? await geocodeAddress(addressString) : null;
+      const coords = this.applyGeocodeFallback(data.address as Partial<Address>, geo);
+      finalLatitude = coords.latitude;
+      finalLongitude = coords.longitude;
+      const addressPayload = { ...data.address } as any;
+      if (finalLatitude !== undefined) addressPayload.latitude = finalLatitude;
+      if (finalLongitude !== undefined) addressPayload.longitude = finalLongitude;
       updateData.address = {
         upsert: {
-          create: data.address,
-          update: data.address,
+          create: addressPayload,
+          update: addressPayload,
         },
       };
     }
@@ -561,6 +684,9 @@ export class ProvidersService {
     await this.cacheService.del(this.PROVIDERS_CACHE_KEY);
     await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${updatedProvider.id}`);
     this.logger.log(`[ProvidersService] updateById: Cache de provedores invalidado após atualização.`);
+    if (updatedProvider.address?.id && finalLatitude !== undefined && finalLongitude !== undefined) {
+      await this.updateAddressLocationPoint(updatedProvider.address.id, finalLatitude, finalLongitude);
+    }
 
     const mapped = this.mapProviderToCalculatedRating(updatedProvider as ProviderWithIncludes);
     mapped.nextAvailable = await this.calculateNextAvailable(updatedProvider.id);
@@ -569,12 +695,60 @@ export class ProvidersService {
 
   async remove(id: string): Promise<void> {
     this.logger.log(`[ProvidersService] remove: Tentando remover provedor com ID: ${id}`);
-    const provider = await this.prisma.provider.findUnique({ where: { id } });
+    const provider = await this.prisma.provider.findUnique({
+      where: { id },
+      include: {
+        bookings: true,
+        providerServices: true,
+        subscriptions: true,
+        availability: true,
+        address: true,
+      },
+    });
     if (!provider) {
       this.logger.warn(`[ProvidersService] remove: Provedor com ID "${id}" não encontrado.`);
       throw new NotFoundException(`Provedor com ID "${id}" não encontrado.`);
     }
-    await this.prisma.provider.delete({ where: { id } });
+
+    const bookingIds = provider.bookings.map(b => b.id);
+
+    await this.prisma.$transaction(async tx => {
+      if (bookingIds.length > 0) {
+        const intents = await tx.paymentIntent.findMany({
+          where: { bookingId: { in: bookingIds } },
+          select: { id: true },
+        });
+        const intentIds = intents.map(i => i.id);
+
+        if (intentIds.length > 0) {
+          await tx.paymentEvent.deleteMany({ where: { paymentIntentId: { in: intentIds } } });
+        }
+
+        await tx.paymentIntent.deleteMany({ where: { bookingId: { in: bookingIds } } });
+        await tx.ledgerEntry.deleteMany({ where: { bookingId: { in: bookingIds } } });
+        await tx.transaction.deleteMany({ where: { bookingId: { in: bookingIds } } });
+        await tx.couponUsage.deleteMany({ where: { bookingId: { in: bookingIds } } });
+        await tx.dispute.deleteMany({ where: { bookingId: { in: bookingIds } } });
+        await tx.supportTicket.deleteMany({ where: { bookingId: { in: bookingIds } } });
+        await tx.incident.deleteMany({ where: { bookingId: { in: bookingIds } } });
+        await tx.guaranteeClaim.deleteMany({ where: { bookingId: { in: bookingIds } } });
+        await tx.review.deleteMany({ where: { bookingId: { in: bookingIds } } });
+        await tx.booking.deleteMany({ where: { id: { in: bookingIds } } });
+      }
+
+      await tx.subscription.deleteMany({ where: { providerId: id } });
+      await tx.providerServiceVersion.deleteMany({ where: { providerService: { providerId: id } } });
+      await tx.providerService.deleteMany({ where: { providerId: id } });
+      await tx.availability.deleteMany({ where: { providerId: id } });
+      await tx.transaction.deleteMany({ where: { providerId: id } });
+      await tx.guaranteeClaim.deleteMany({ where: { providerId: id } });
+      await tx.review.deleteMany({ where: { providerId: id } });
+      await tx.pricingRule.deleteMany({ where: { providerId: id } });
+      await tx.address.deleteMany({ where: { providerId: id } });
+
+      await tx.provider.delete({ where: { id } });
+    });
+
     await this.cacheService.del(this.PROVIDERS_CACHE_KEY);
     await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${id}`);
     await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:user:${provider.userId}`);
@@ -861,6 +1035,9 @@ export class ProvidersService {
     }
 
     if (providersWithDistance.length > 0) {
+      // Filtra pelo raio salvo do provedor (serviceRadiusKm) se cliente forneceu lat/lon
+      providersWithDistance = await this.applyRadiusFilter(providersWithDistance, latitude, longitude);
+
       if (minRating !== undefined) {
         providersWithDistance = providersWithDistance.filter(p => p.averageRating >= minRating);
       }
@@ -910,13 +1087,25 @@ export class ProvidersService {
     this.logger.log(`[ProvidersService] search (fallback): Encontrados ${providers.length} provedores após filtro.`);
 
     const providersWithCalculatedRating: ProviderWithCalculatedRating[] = await Promise.all(providers.map(async provider => {
-      const mapped = this.mapProviderToCalculatedRating(provider as ProviderWithIncludes);
+      // Fallback: se latitude/longitude foram informados, calcula distância em memória
+      let distance: number | undefined;
+      if (latitude !== undefined && longitude !== undefined) {
+        distance = this.calculateDistanceMeters(
+          latitude,
+          longitude,
+          provider.address?.latitude ?? null,
+          provider.address?.longitude ?? null,
+        );
+      }
+
+      const mapped = this.mapProviderToCalculatedRating(provider as ProviderWithIncludes, distance);
       // O cálculo de nextAvailable é feito aqui, pois mapProviderToCalculatedRating é síncrona
       mapped.nextAvailable = await this.calculateNextAvailable(provider.id);
       return mapped;
     }));
 
-    let filteredProviders = providersWithCalculatedRating;
+    // Filtra pelo raio salvo do provedor (serviceRadiusKm) se cliente forneceu lat/lon
+    let filteredProviders = await this.applyRadiusFilter(providersWithCalculatedRating, latitude, longitude);
 
     if (minRating !== undefined) {
       filteredProviders = filteredProviders.filter(p => p.averageRating >= minRating);
@@ -1129,10 +1318,64 @@ export class ProvidersService {
 
     this.logger.log(`[ProvidersService] findTopRatedOrExperiencedProviders: Encontrados ${providers.length} provedores.`);
 
-    const providersWithCalculatedRating: ProviderWithCalculatedRating[] = await Promise.all(providers.map(async provider => {
+    const providersWithCalculatedRating: ProviderWithCalculatedRating[] = await Promise.all(providers.map(async (provider: any) => {
+      if (!provider.providerServices && provider.providerServicesAgg) {
+        provider.providerServices = provider.providerServicesAgg.map((ps: any) => ({
+          id: ps.id,
+          providerId: ps.providerId,
+          serviceId: ps.serviceId,
+          price: ps.price != null ? new Decimal(ps.price) : new Decimal(0),
+          durationMinutes: ps.durationMinutes,
+          description: ps.description,
+          createdAt: ps.createdAt,
+          updatedAt: ps.updatedAt,
+          pricingType: ps.pricingType,
+          pricePerSquareMeter: ps.pricePerSquareMeter ? new Decimal(ps.pricePerSquareMeter) : null,
+          pricePerRoom: ps.pricePerRoom ? new Decimal(ps.pricePerRoom) : null,
+          service: {
+            id: ps.service.id,
+            name: ps.service.name,
+            description: ps.service.description,
+            icon: ps.service.icon,
+            price: ps.service.price != null ? new Decimal(ps.service.price) : new Decimal(0),
+            createdAt: ps.service.createdAt,
+            updatedAt: ps.service.updatedAt,
+          },
+        }));
+      }
+      if (!provider.address && provider.addressId) {
+        provider.address = {
+          id: provider.addressId,
+          cep: provider.cep,
+          street: provider.street,
+          number: provider.number,
+          complement: provider.complement,
+          neighborhood: provider.neighborhood,
+          city: provider.city,
+          state: provider.state,
+          clientId: null,
+          providerId: provider.providerId,
+          latitude: provider.latitude_val ?? provider.latitude ?? null,
+          longitude: provider.longitude_val ?? provider.longitude ?? null,
+          location: null,
+        } as Address;
+      }
+      if (!provider.user && provider.email) {
+        provider.user = {
+          email: provider.email,
+          role: provider.role,
+          isVerified: provider.isVerified,
+          fullName: provider.user_fullName ?? provider.fullName,
+        };
+      }
+
       let distance = undefined;
-      if (latitude && longitude && typeof provider === 'object' && 'distance_m' in provider) {
+      if (latitude && longitude && typeof provider === 'object' && 'distance_m' in provider && provider.distance_m !== null && provider.distance_m !== undefined) {
         distance = parseFloat(provider.distance_m); // Em metros
+      } else if (latitude !== undefined && longitude !== undefined) {
+        const targetLat = provider.latitude_val ?? provider.address?.latitude ?? null;
+        const targetLon = provider.longitude_val ?? provider.address?.longitude ?? null;
+        distance = this.calculateDistanceMeters(latitude, longitude, targetLat, targetLon);
       }
       const mapped = this.mapProviderToCalculatedRating(provider as ProviderWithIncludes, distance);
       // O cálculo de nextAvailable é feito aqui, pois mapProviderToCalculatedRating é síncrona
@@ -1140,9 +1383,12 @@ export class ProvidersService {
       return mapped;
     }));
 
-    await this.cacheService.set(cacheKey, providersWithCalculatedRating);
+    // Filtra pelo raio salvo do provedor (serviceRadiusKm) se cliente forneceu lat/lon
+    const radiusFiltered = await this.applyRadiusFilter(providersWithCalculatedRating, latitude, longitude);
+
+    await this.cacheService.set(cacheKey, radiusFiltered);
     this.logger.log(`[ProvidersService] findTopRatedOrExperiencedProviders: Resultados adicionados ao cache.`);
-    return providersWithCalculatedRating;
+    return radiusFiltered;
   }
 
   // NEW: Logic to assign/update badges
