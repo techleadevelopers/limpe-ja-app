@@ -36,15 +36,14 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
     }
 
     if (!isAuthenticated) {
-      const title = 'Cadastro necessario';
-      const message = 'Crie seu cadastro para agendar servicos de limpeza';
+      const title = 'Cadastro necessário';
+      const message = 'Crie seu cadastro para continuar.';
 
-      // Android: garantir mensagem nativa visível (toast + overlay leve), mantendo Alert para iOS
+      // Android: mostrar toast rápido; iOS vai direto para o Alert nativo
       if (Platform.OS === 'android') {
         try {
           ToastAndroid.showWithGravity(message, ToastAndroid.LONG, ToastAndroid.CENTER);
         } catch {}
-        NotificationUIService.showInfo(message, title);
       }
 
       Alert.alert(
@@ -52,16 +51,16 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
         message,
         [
           {
+            text: 'Cancelar',
+            style: 'cancel',
+          },
+          {
             text: 'Continuar',
             onPress: () => {
               try {
                 router.push('/(auth)/client-register' as any);
               } catch {}
             },
-          },
-          {
-            text: 'Cancelar',
-            style: 'cancel',
           },
         ],
       );
