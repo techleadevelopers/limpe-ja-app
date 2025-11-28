@@ -86,20 +86,13 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
 
     const avatarSource = item.avatarUrl ? { uri: item.avatarUrl } : Icons3D.facial;
 
-    // Distância: se vier 0 km/ausente do backend, exibe um valor mock para evitar "0 km"
-    let distanceLabel: string;
-    if (typeof item.distance === 'number' && item.distance > 0) {
-      // formatDistance retorna string | null → garante string com fallback
-      distanceLabel = formatDistance(item.distance) ?? '0 km';
-    } else {
-      // Mock simples para 0/ausente: 10–14 km, derivado do id para ter um valor "consistente"
-      const mockDistances = ['10 km', '12 km', '14 km'];
-      const seed = (item?.id || '').length || 0;
-      const index = Math.abs(seed) % mockDistances.length;
-      distanceLabel = mockDistances[index];
-    }
+    // Distância real vinda do backend (metros); sem fallback mock.
+    const distanceLabel =
+      typeof item.distance === 'number' && item.distance >= 0
+        ? formatDistance(item.distance, undefined)
+        : undefined;
 
-    // Track impression (fire-and-forget)
+// Track impression (fire-and-forget)
     useEffect(() => {
         if (item?.id && item.id !== null) {
             AnalyticsService.trackEvent('home_prestador_card_impression', { providerId: item.id! }).catch(() => {});
@@ -176,7 +169,7 @@ const styles = StyleSheet.create({
         left: 2,
         top: 0,
         
-        marginBottom: 18,
+        marginBottom: 8,
         marginTop: 12,
         borderRadius: 42,
         overflow: 'visible',
@@ -303,3 +296,7 @@ const styles = StyleSheet.create({
 });
 
 export default PrestadorCard;
+
+
+
+
