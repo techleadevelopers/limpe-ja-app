@@ -87,13 +87,10 @@ export const ProviderRegistrationProvider: React.FC<{ children: ReactNode }> = (
     };
 
     setIsRegistrationInProgress(true); // Sinaliza que o processo de submissão está em andamento
-    console.log("[ProviderRegistrationContext] Iniciando submissão final do perfil do provedor...");
-    console.log("[ProviderRegistrationContext] Payload para PATCH /providers/me:", updateProviderProfilePayload);
 
     try {
       await updateMyProviderProfile(updateProviderProfilePayload as any);
 
-      console.log("[ProviderRegistrationContext] Perfil do provedor atualizado com sucesso no backend.");
       // O `setServiceDetails` do contexto ainda é útil para manter o estado global atualizado
       // para outras partes do aplicativo que possam depender dele.
       setServiceDetails(currentServiceDetails);
