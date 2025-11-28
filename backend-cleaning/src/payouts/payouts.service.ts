@@ -555,7 +555,7 @@ export class PayoutsService {
     }
   }
 
-  private async tryAcquireLock(key: string, value: string, ttlMs = 5000): Promise<boolean> {
+  private async tryAcquireLock(key: string, value: string, ttlMs = 15000): Promise<boolean> {
     const maxAttempts = 5;
     const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
