@@ -47,7 +47,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             setSettings(parsedSettings as AppSettings);
           } else {
             // Se os dados armazenados estiverem malformados, usa o padrão e salva
-            console.warn("AppContext: Malformed settings found in storage, using defaults.");
             setSettings(defaultSettings);
             await saveSettings(defaultSettings);
           }
