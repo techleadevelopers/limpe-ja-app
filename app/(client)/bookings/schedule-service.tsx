@@ -20,6 +20,8 @@ import {
     ImageBackground,
     ScrollView,
     ToastAndroid,
+    Modal,
+    Pressable,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -452,6 +454,7 @@ export default function ScheduleServiceScreen() {
     const [isBooking, setIsBooking] = useState(false);
     const [isFetchingSlots, setIsFetchingSlots] = useState(false);
     const [isSearchingNextDate, setIsSearchingNextDate] = useState(false); // ? NOVO: Flag para prevenir buscas simultâneas
+    const [isCancellationOverlayVisible, setCancellationOverlayVisible] = useState(false);
 
     const [currentDisplayMonth, setCurrentDisplayMonth] = useState(new Date());
     const shineAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.3)).current;
@@ -966,11 +969,12 @@ export default function ScheduleServiceScreen() {
     }, [displaySlotsInfo, selectionAnim, t, selectedProviderService]);
 
     const showCancellationPolicy = useCallback(() => {
-        NotificationUIService.showInfo(
-            t('schedule_service.cancellation_policy_message', { defaultValue: 'Política de cancelamento: 24h antes sem custo.' }),
-            t('schedule_service.cancellation_policy_title', { defaultValue: 'Política de Cancelamento' })
-        );
-    }, [t]);
+        setCancellationOverlayVisible(true);
+    }, []);
+
+    const hideCancellationPolicy = useCallback(() => {
+        setCancellationOverlayVisible(false);
+    }, []);
 
     const handlePanic = useCallback(() => {
         Alert.alert(
@@ -1855,6 +1859,42 @@ export default function ScheduleServiceScreen() {
                     </Animated.View>
                 )}
             </View>
+
+            <Modal
+                visible={isCancellationOverlayVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={hideCancellationPolicy}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalCard}>
+                        <View style={styles.modalHeaderRow}>
+                            <View style={styles.modalIconBadge}>
+                                <Ionicons name="shield-checkmark" size={18} color={AppColors.white} />
+                            </View>
+                            <Text style={styles.modalTitle}>
+                                {t('schedule_service.cancellation_policy_title', { defaultValue: 'Política de Cancelamento e Pagamento' })}
+                            </Text>
+                        </View>
+
+                        <View style={styles.modalList}>
+                            <Text style={styles.modalListItem}>• Cancelamento sem custo até 24h antes do início.</Text>
+                            <Text style={styles.modalListItem}>• Após 24h, pode haver retenção parcial para compensar bloqueio de agenda.</Text>
+                            <Text style={styles.modalListItem}>• Pagamento via PIX confirmado no app; o repasse ao prestador ocorre só após conclusão.</Text>
+                            <Text style={styles.modalListItem}>• O serviço é monitorado: o prestador inicia e encerra pelo app, garantindo tempo contratado.</Text>
+                            <Text style={styles.modalListItem}>• Segurança: KYC com documentos e selfie, verificação de antecedentes e dados protegidos.</Text>
+                        </View>
+
+                        <Text style={styles.modalFinePrint}>
+                            Precisa alterar algo? Reagende ou cancele com antecedência. Em emergências, fale com o suporte pelo app.
+                        </Text>
+
+                        <Pressable onPress={hideCancellationPolicy} style={styles.modalAction}>
+                            <Text style={styles.modalActionText}>{t('common.got_it', { defaultValue: 'Entendi' })}</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -2196,6 +2236,72 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: AppColors.primaryInteractive,
         textDecorationLine: 'underline',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(15, 23, 42, 0.25)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    modalCard: {
+        width: '100%',
+        maxWidth: 420,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        padding: 20,
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.12,
+        shadowRadius: 24,
+        elevation: 12,
+    },
+    modalHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    modalIconBadge: {
+        width: 34,
+        height: 34,
+        borderRadius: 10,
+        backgroundColor: AppColors.primaryInteractive,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 10,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: AppColors.textBody,
+    },
+    modalList: {
+        marginTop: 4,
+        marginBottom: 12,
+    },
+    modalListItem: {
+        fontSize: 14,
+        lineHeight: 20,
+        color: AppColors.textBody,
+        marginBottom: 6,
+    },
+    modalFinePrint: {
+        fontSize: 12,
+        lineHeight: 18,
+        color: AppColors.mediumGray,
+        marginBottom: 14,
+    },
+    modalAction: {
+        alignSelf: 'flex-start',
+        backgroundColor: AppColors.primaryInteractive,
+        paddingHorizontal: 18,
+        paddingVertical: 10,
+        borderRadius: 14,
+    },
+    modalActionText: {
+        color: AppColors.white,
+        fontSize: 14,
+        fontWeight: '600',
     },
     /* ? NOVO: Estilo específico para seção de notes no final (sem título, espaçamento sutil) */
     notesFinalSection: {
