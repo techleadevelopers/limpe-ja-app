@@ -1,12 +1,11 @@
-// src/bookings/dto/booking-details.dto.ts
+﻿// src/bookings/dto/booking-details.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNumber, IsOptional, IsUUID, IsEnum, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { BookingStatus, Prisma } from '@prisma/client';
-import { AddressDetailsDto } from '../../common/dto/address-details.dto'; // <<-- IMPORTANTE: Importe AddressDetailsDto AQUI
-import { Decimal } from '@prisma/client/runtime/library'; // Explicitamente importar Decimal para verificação de tipo
+import { BookingStatus } from '@prisma/client';
+import { AddressDetailsDto } from '../../common/dto/address-details.dto';
+import { Decimal } from '@prisma/client/runtime/library';
 
-// Função auxiliar (type guard) para verificar se um valor é uma instância de Prisma.Decimal
 function isDecimal(value: any): value is Decimal {
   return value instanceof Decimal;
 }
@@ -44,7 +43,7 @@ export class BookingDetailsDto {
   @IsEnum(BookingStatus)
   status: BookingStatus;
 
-  @ApiProperty({ description: 'Preço total do serviço', example: 120.50 })
+  @ApiProperty({ description: 'Preço total do serviço', example: 120.5 })
   @IsNumber()
   totalPrice: number;
 
@@ -69,8 +68,8 @@ export class BookingDetailsDto {
   @ApiPropertyOptional({ type: AddressDetailsDto, description: 'Detalhes do endereço do agendamento' })
   @IsOptional()
   @ValidateNested()
-  @Type(() => AddressDetailsDto) // <-- AGORA REFERENCIA AddressDetailsDto
-  address?: AddressDetailsDto | null; // <-- TIPO CORRIGIDO AQUI
+  @Type(() => AddressDetailsDto)
+  address?: AddressDetailsDto | null;
 
   @ApiPropertyOptional({ description: 'ID do cupom aplicado, se houver', example: 'uuid-do-cupom' })
   @IsOptional()
@@ -82,10 +81,10 @@ export class BookingDetailsDto {
   @IsString()
   couponCode?: string | null;
 
-  @ApiPropertyOptional({ description: 'Valor do desconto aplicado pelo cupom', example: 10.50 })
+  @ApiPropertyOptional({ description: 'Valor do desconto aplicado pelo cupom', example: 10.5 })
   @IsOptional()
   @IsNumber()
-  discountAmount?: number | null; // <<-- ADICIONADO
+  discountAmount?: number | null;
 
   // Campos achatados do cliente/provedor/serviço para facilitar o consumo no frontend
   @ApiPropertyOptional({ description: 'Nome completo do cliente', example: 'Nome do Cliente' })
@@ -123,7 +122,7 @@ export class BookingDetailsDto {
   @IsString()
   serviceName?: string;
 
-  @ApiPropertyOptional({ description: 'Preço do serviço', example: 100.00 })
+  @ApiPropertyOptional({ description: 'Preço do serviço', example: 100 })
   @IsOptional()
   @IsNumber()
   servicePrice?: number;
@@ -138,6 +137,26 @@ export class BookingDetailsDto {
   @IsString()
   providerServiceDescription?: string | null;
 
+  // Avaliação (se já realizada)
+  @ApiPropertyOptional({ description: 'ID da avaliação do booking', example: 'uuid-da-review' })
+  @IsOptional()
+  @IsString()
+  reviewId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Nota da avaliação (1-5)', example: 5 })
+  @IsOptional()
+  @IsNumber()
+  reviewRating?: number | null;
+
+  @ApiPropertyOptional({ description: 'Comentário da avaliação', example: 'Serviço excelente.' })
+  @IsOptional()
+  @IsString()
+  reviewComment?: string | null;
+
+  @ApiPropertyOptional({ description: 'Indica se o booking já foi avaliado', example: true })
+  @IsOptional()
+  isReviewed?: boolean;
+
   @ApiPropertyOptional({ description: 'Data e hora agendadas combinadas (ISO 8601)', example: '2025-07-01T09:00:00Z' })
   @IsOptional()
   @IsString()
@@ -151,27 +170,26 @@ export class BookingDetailsDto {
     scheduledDate: Date | string;
     scheduledTime: string;
     status: BookingStatus;
-    totalPrice: Decimal | number; // Aceita Decimal ou number
+    totalPrice: Decimal | number;
     notes?: string | null;
     createdAt: Date | string;
     updatedAt: Date | string;
     addressId?: string | null;
-    couponId?: string | null; // NOVO
-    coupon?: { code: string } | null; // NOVO: Inclui código do cupom
-    discountAmount?: Decimal | number | null; // Aceita Decimal ou number
-    // O construtor espera um objeto que tenha o 'id' e as outras propriedades do Address do Prisma
+    couponId?: string | null;
+    coupon?: { code: string } | null;
+    discountAmount?: Decimal | number | null;
+    review?: { id: string; rating: number | Decimal; comment?: string | null } | null;
     address?: {
-      id?: string; // ID pode ser opcional ao construir a partir de um objeto parcial
+      id?: string;
       cep: string; street: string; number: string;
-      complement?: string | null; // CORREÇÃO: Tornar complement opcional aqui
+      complement?: string | null;
       neighborhood: string; city: string; state: string;
-      latitude: Decimal | number; // Aceita Decimal ou number
-      longitude: Decimal | number; // Aceita Decimal ou number
-    } | null; // <-- Tipo no construtor para o que vem do Prisma
-
-    client?: { user?: { avatarUrl?: string | null; }; fullName: string; email?: string; };
-    provider?: { user?: { avatarUrl?: string | null; }; fullName: string; email?: string; };
-    providerService?: { service: { name: string; price: Decimal; }; durationMinutes: number; description?: string | null; }; // Aceita Decimal para preço do serviço
+      latitude: Decimal | number;
+      longitude: Decimal | number;
+    } | null;
+    client?: { user?: { avatarUrl?: string | null }; fullName: string; email?: string };
+    provider?: { user?: { avatarUrl?: string | null }; fullName: string; email?: string };
+    providerService?: { service: { name: string; price: Decimal | number }; durationMinutes: number; description?: string | null };
   }) {
     this.id = data.id;
     this.clientId = data.clientId;
@@ -181,40 +199,27 @@ export class BookingDetailsDto {
     this.scheduledTime = data.scheduledTime;
     this.status = data.status;
 
-    // Converte totalPrice de Decimal para number, se necessário
-    let convertedTotalPrice: number;
-    if (isDecimal(data.totalPrice)) {
-      convertedTotalPrice = data.totalPrice.toNumber();
-    } else {
-      convertedTotalPrice = data.totalPrice;
-    }
-    this.totalPrice = convertedTotalPrice;
-
+    this.totalPrice = isDecimal(data.totalPrice) ? data.totalPrice.toNumber() : data.totalPrice;
     this.notes = data.notes === undefined ? null : data.notes;
-    
     this.createdAt = data.createdAt instanceof Date ? data.createdAt.toISOString() : data.createdAt;
     this.updatedAt = data.updatedAt instanceof Date ? data.updatedAt.toISOString() : data.updatedAt;
 
     this.addressId = data.addressId === undefined ? null : data.addressId;
-    // CORREÇÃO FINAL: Mapeia o objeto 'address' do Prisma para uma nova instância de AddressDetailsDto
-    this.address = data.address ? new AddressDetailsDto({
-      ...data.address,
-      latitude: isDecimal(data.address.latitude) ? data.address.latitude.toNumber() : data.address.latitude,
-      longitude: isDecimal(data.address.longitude) ? data.address.longitude.toNumber() : data.address.longitude,
-    }) : null; 
+    this.address = data.address
+      ? new AddressDetailsDto({
+          ...data.address,
+          latitude: isDecimal(data.address.latitude) ? data.address.latitude.toNumber() : data.address.latitude,
+          longitude: isDecimal(data.address.longitude) ? data.address.longitude.toNumber() : data.address.longitude,
+        })
+      : null;
 
-    this.couponId = data.couponId === undefined ? null : data.couponId; // NOVO
-    this.couponCode = data.coupon?.code || null; // NOVO
-    // Converte discountAmount de Decimal para number, se necessário
-    let convertedDiscountAmount: number | null;
-    if (data.discountAmount === null || data.discountAmount === undefined) {
-      convertedDiscountAmount = null;
-    } else if (isDecimal(data.discountAmount)) {
-      convertedDiscountAmount = data.discountAmount.toNumber();
-    } else {
-      convertedDiscountAmount = data.discountAmount;
-    }
-    this.discountAmount = convertedDiscountAmount; // <<-- ADICIONADO
+    this.couponId = data.couponId === undefined ? null : data.couponId;
+    this.couponCode = data.coupon?.code || null;
+    this.discountAmount = data.discountAmount === null || data.discountAmount === undefined
+      ? null
+      : isDecimal(data.discountAmount)
+        ? data.discountAmount.toNumber()
+        : data.discountAmount;
 
     if (data.client) {
       this.clientFullName = data.client.fullName;
@@ -227,21 +232,27 @@ export class BookingDetailsDto {
       this.providerAvatarUrl = data.provider.user?.avatarUrl;
     }
     if (data.providerService) {
+      const svcPrice = data.providerService.service.price as any;
       this.serviceName = data.providerService.service.name;
-      // Converte servicePrice de Decimal para number, se necessário
-        let convertedServicePrice: number = 0;
-        const svcPrice = data.providerService.service?.price as any;
-        if (svcPrice) {
-          if (isDecimal(svcPrice)) {
-            convertedServicePrice = svcPrice.toNumber();
-          } else if (typeof svcPrice === 'number') {
-            convertedServicePrice = svcPrice;
-          }
-        }
-      this.servicePrice = convertedServicePrice;
+      this.servicePrice = isDecimal(svcPrice) ? svcPrice.toNumber() : svcPrice ?? 0;
       this.serviceDurationMinutes = data.providerService.durationMinutes;
-      this.providerServiceDescription = data.providerService.description;
+      this.providerServiceDescription = data.providerService.description ?? null;
     }
+
+    // Review mapping
+    if (data.review) {
+      this.reviewId = data.review.id;
+      const ratingVal = data.review.rating as any;
+      this.reviewRating = isDecimal(ratingVal) ? ratingVal.toNumber() : ratingVal;
+      this.reviewComment = data.review.comment ?? null;
+      this.isReviewed = true;
+    } else {
+      this.reviewId = null;
+      this.reviewRating = null;
+      this.reviewComment = null;
+      this.isReviewed = false;
+    }
+
     this.scheduledDateTime = `${this.scheduledDate}T${this.scheduledTime}:00Z`;
   }
 }
