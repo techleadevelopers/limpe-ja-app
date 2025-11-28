@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Platform, ActivityIndicator, FlatList } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Platform, ActivityIndicator, FlatList, Image } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -52,13 +52,18 @@ const deriveStatus = (status?: string, validUntil?: string): 'available' | 'used
 const mapApiToUICoupon = (c: MyCouponListItem): CouponItem => {
   const expiresAt = c.validUntil;
   const mappedStatus = deriveStatus(c.status, expiresAt);
+  const normalizedType = normalizeValueType(c.valueType);
+  let normalizedValue = c.value;
+  if (normalizedType === 'PERCENT' && normalizedValue > 0 && normalizedValue <= 1) {
+    normalizedValue = normalizedValue * 100; // backend envia fracionado (0.2 -> 20%)
+  }
   return {
     id: c.id,
     code: c.code,
     title: c.description ? c.description : `Cupom ${c.code}`,
     description: c.description || '',
-    value: c.value,
-    type: normalizeValueType(c.valueType) === 'PERCENT' ? CouponType.PERCENTAGE : CouponType.FIXED,
+    value: normalizedValue,
+    type: normalizedType === 'PERCENT' ? CouponType.PERCENTAGE : CouponType.FIXED,
     minOrderValue: c.minOrderValue,
     expiresAt,
     status: mappedStatus === 'available' ? CouponStatus.AVAILABLE : mappedStatus === 'used' ? CouponStatus.USED : CouponStatus.EXPIRED,
@@ -83,7 +88,13 @@ function CouponCard({ coupon, onUseCoupon, theme }: { coupon: CouponItem; onUseC
   return (
     <View style={[styles.couponCard, { backgroundColor: theme.cardBackground }]}> 
       <View style={styles.couponHeader}>
-        <View style={styles.couponImagePlaceholder} />
+        <View style={styles.couponImagePlaceholder}>
+          <Image
+            source={require('../../../assets/images/logo.png')}
+            style={styles.couponImage}
+            resizeMode="contain"
+          />
+        </View>
         <View style={styles.couponInfo}>
           <Text style={[styles.couponTitle, { color: theme.text }]} numberOfLines={1}>{coupon.title}</Text>
           {!!coupon.description && (
@@ -91,26 +102,35 @@ function CouponCard({ coupon, onUseCoupon, theme }: { coupon: CouponItem; onUseC
           )}
         </View>
       </View>
-      <View style={styles.couponDetails}>
-        {((coupon as any).valueType === 'PERCENT' || (coupon as any).type === CouponType.PERCENTAGE) ? (
-          <Text style={[styles.couponValue, { color: theme.primary }]}>{coupon.value}% OFF</Text>
-        ) : (
-          <Text style={[styles.couponValue, { color: theme.primary }]}>{formatBRL(coupon.value)} OFF</Text>
-        )}
-        {coupon.minOrderValue != null && (
-          <Text style={[styles.couponMinOrder, { color: theme.textMuted }]}>Mín. {formatBRL(coupon.minOrderValue)}</Text>
-        )}
-        <Text style={[styles.couponExpiry, { color: theme.textMuted }]}>Expira em: {new Date(coupon.expiresAt).toLocaleDateString('pt-BR')}</Text>
+      <View style={styles.couponDetailsRow}>
+        <View style={styles.couponDetailsCol}>
+          {((coupon as any).valueType === 'PERCENT' || (coupon as any).type === CouponType.PERCENTAGE) ? (
+            <Text style={[styles.couponValue, { color: theme.primary }]}>{coupon.value}% OFF</Text>
+          ) : (
+            <Text style={[styles.couponValue, { color: theme.primary }]}>{formatBRL(coupon.value)} OFF</Text>
+          )}
+          {coupon.minOrderValue != null && (
+            <Text style={[styles.couponMinOrder, { color: theme.textMuted }]}>Mín. {formatBRL(coupon.minOrderValue)}</Text>
+          )}
+          <Text style={[styles.couponExpiry, { color: theme.textMuted }]}>Expira em: {new Date(coupon.expiresAt).toLocaleDateString('pt-BR')}</Text>
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.primaryBtn,
+            {
+              backgroundColor: isAvailable ? theme.primary : theme.border,
+              opacity: isAvailable ? 1 : 0.6,
+              alignSelf: 'flex-start',
+            },
+          ]}
+          onPress={() => isAvailable && onUseCoupon(coupon)}
+          disabled={!isAvailable}
+          accessibilityLabel={isAvailable ? 'Usar cupom' : buttonText}
+        >
+          <Ionicons name="pricetag-outline" size={16} color="#FFF" />
+          <Text style={styles.primaryBtnText}>{buttonText}</Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity
-        style={[styles.primaryBtn, { backgroundColor: isAvailable ? theme.primary : theme.border, opacity: isAvailable ? 1 : 0.6 }]}
-        onPress={() => isAvailable && onUseCoupon(coupon)}
-        disabled={!isAvailable}
-        accessibilityLabel={isAvailable ? 'Usar cupom' : buttonText}
-      >
-        <Ionicons name="pricetag-outline" size={16} color="#FFF" />
-        <Text style={styles.primaryBtnText}>{buttonText}</Text>
-      </TouchableOpacity>
       {!isAvailable && (
         <View style={styles.couponOverlay}>
           <Text style={styles.couponOverlayText}>{isUsed ? 'USADO' : 'EXPIRADO'}</Text>
@@ -291,11 +311,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginRight: 16,
     backgroundColor: '#F0F2F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  couponImage: {
+    width: 60,
+    height: 60,
   },
   couponInfo: { flex: 1 },
   couponTitle: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
   couponDescription: { fontSize: 12, lineHeight: 18 },
-  couponDetails: { paddingHorizontal: 14, paddingBottom: 8 },
+  couponDetailsRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 8 },
+  couponDetailsCol: { flexShrink: 1, paddingRight: 10 },
   couponValue: { fontSize: 20, fontWeight: '800', marginBottom: 6 },
   couponMinOrder: { fontSize: 12, marginBottom: 2, fontWeight: '600' },
   couponExpiry: { fontSize: 12, fontWeight: '600' },
