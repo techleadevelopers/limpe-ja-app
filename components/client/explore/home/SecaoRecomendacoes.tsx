@@ -48,64 +48,56 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
 
       {/* Scroll premium com snap, escala central e fade nas bordas */}
       <View style={styles.carouselWrapper}>
-        <Animated.ScrollView
-          horizontal={horizontal}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cardsScrollContainer}
-          decelerationRate="fast"
-          snapToInterval={ITEM_FULL_SIZE}
-          snapToAlignment="start"
-          disableIntervalMomentum
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-            { useNativeDriver: true }
-          )}
-          scrollEventThrottle={16}
-        >
-          {safeData.length > 0 ? (
-            safeData.map((item, index) => {
-              try {
-                const inputRange = [
-                  (index - 1) * ITEM_FULL_SIZE,
-                  index * ITEM_FULL_SIZE,
-                  (index + 1) * ITEM_FULL_SIZE,
-                ];
-                const scale = scrollX.interpolate({
-                  inputRange,
-                  outputRange: [0.94, 1.02, 0.94],
-                  extrapolate: 'clamp',
-                });
-                const translateY = scrollX.interpolate({
-                  inputRange,
-                  outputRange: [2, 0, 2],
-                  extrapolate: 'clamp',
-                });
-                const opacity = scrollX.interpolate({
-                  inputRange,
-                  outputRange: [0.9, 1, 0.9],
-                  extrapolate: 'clamp',
-                });
+        {safeData.length > 0 ? (
+          <Animated.ScrollView
+            horizontal={horizontal}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.cardsScrollContainer}
+            decelerationRate="fast"
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+          >
+            {safeData.map((item, index) => {
+              const inputRange = [
+                (index - 1) * ITEM_FULL_SIZE,
+                index * ITEM_FULL_SIZE,
+                (index + 1) * ITEM_FULL_SIZE,
+              ];
+              const scale = scrollX.interpolate({
+                inputRange,
+                outputRange: [0.94, 1.02, 0.94],
+                extrapolate: 'clamp',
+              });
+              const translateY = scrollX.interpolate({
+                inputRange,
+                outputRange: [2, 0, 2],
+                extrapolate: 'clamp',
+              });
+              const opacity = scrollX.interpolate({
+                inputRange,
+                outputRange: [0.9, 1, 0.9],
+                extrapolate: 'clamp',
+              });
 
-                return (
-                  <Animated.View
-                    key={item.id}
-                    style={[
-                      styles.itemWrapper,
-                      { transform: [{ translateY }, { scale }], opacity },
-                    ]}
-                  >
-                    {renderItem({ item, index })}
-                  </Animated.View>
-                );
-              } catch (err) {
-                console.error(`[SecaoRecomendacoes] Erro ao renderizar item no índice ${index}:`, err);
-                return null;
-              }
-            })
-          ) : (
-            <Text style={styles.emptyText}>{noDataText}</Text>
-          )}
-        </Animated.ScrollView>
+              return (
+                <Animated.View
+                  key={item.id}
+                  style={[
+                    styles.itemWrapper,
+                    { transform: [{ translateY }, { scale }], opacity },
+                  ]}
+                >
+                  {renderItem({ item, index })}
+                </Animated.View>
+              );
+            })}
+          </Animated.ScrollView>
+        ) : (
+          <Text style={styles.emptyText}>{noDataText}</Text>
+        )}
 
         {/* Fade lateral sutil para conforto visual */}
         <LinearGradient
