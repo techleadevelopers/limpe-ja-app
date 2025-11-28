@@ -55,6 +55,12 @@ export class UpdateVerificationStatusDto {
   @IsOptional()
   @IsString({ message: 'O motivo da rejeição deve ser uma string.' })
   reason?: string;
+
+  // Compatibilidade: alguns clients enviam rejectionReason
+  @ApiPropertyOptional({ description: 'Alias para o motivo da rejeição (compatibilidade)', required: false })
+  @IsOptional()
+  @IsString({ message: 'O motivo da rejeição deve ser uma string.' })
+  rejectionReason?: string;
 }
 
 @ApiTags('verification')
@@ -222,11 +228,12 @@ export class VerificationController {
     @Param('providerId') providerId: string,
     @Body() updateDto: UpdateVerificationStatusDto,
   ) {
-    this.logger.log(`[VerificationController] updateVerificationStatus: Recebido solicitação para ${providerId}, novo status: ${updateDto.status}. Motivo: ${updateDto.reason || 'N/A'}`);
-    if (updateDto.status === VerificationStatus.REJECTED && !updateDto.reason) {
+    const reason = updateDto.reason ?? updateDto.rejectionReason;
+    this.logger.log(`[VerificationController] updateVerificationStatus: Recebido solicitação para ${providerId}, novo status: ${updateDto.status}. Motivo: ${reason || 'N/A'}`);
+    if (updateDto.status === VerificationStatus.REJECTED && !reason) {
       throw new BadRequestException('O motivo da rejeição é obrigatório ao rejeitar um provedor.');
     }
-    await this.verificationService.updateProviderVerificationStatusManually(providerId, updateDto.status, updateDto.reason);
+    await this.verificationService.updateProviderVerificationStatusManually(providerId, updateDto.status, reason);
     return { message: `Status de verificação para provedor ${providerId} atualizado para ${updateDto.status}.` };
   }
 
