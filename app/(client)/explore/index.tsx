@@ -11,6 +11,7 @@ import {
   Dimensions,
   FlatList,
   ScrollView,
+  InteractionManager,
   StyleSheet,
   StyleProp,
   ViewStyle,
@@ -21,8 +22,8 @@ import {
   RefreshControl,
   Platform,
   Share,
-  SafeAreaView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -51,7 +52,6 @@ import { Offer } from '../../../types/backend/offers';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
 import { Service, PricingType } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
-import HorizontalMiniGrid from '../../../components/client/explore/home/HorizontalMiniGrid';
 
 import { CLIENT_ROUTES } from '../../../constants/routes';
 import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../constants/appStyles';
@@ -62,111 +62,17 @@ import { getNumericPriceValue } from '../../../utils/service-helpers';
 
 // Fallback local: garante render do RecomendacaoCard mesmo se a API falhar
 const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
-  {
-    id: 'fb-caroline',
-    userId: 'fb-caroline',
-    fullName: 'Caroline Silva',
-    email: 'provedor@teste.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=320&q=60',
-    bio: 'Especialista em limpeza residencial detalhada.',
-    providerServices: [
-      {
-        id: 'fb-caroline-svc',
-        providerId: 'fb-caroline',
-        serviceId: 'residential-basic',
-        price: 179,
-        durationMinutes: 180,
-        description: 'Pacote residencial completo.',
-        pricingType: PricingType.FIXED_PRICE,
-        pricePerSquareMeter: null,
-        pricePerRoom: null,
-        service: {
-          id: 'residential-basic',
-          name: 'Limpeza Residencial',
-          icon: 'home',
-          backgroundColor: '#E6EEF9',
-          description: 'Limpeza completa para residências.',
-          price: 179,
-        },
-      },
-    ],
-    averageRating: 4.9,
-    reviewCount: 120,
-    yearsOfExperience: 6,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    user: { email: 'provedor@teste.com', role: 2 as any, isVerified: true },
-  },
-  {
-    id: 'fb-maria',
-    userId: 'fb-maria',
-    fullName: 'Maria',
-    email: 'provedor2@teste.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=320&q=60',
-    bio: 'Atendimento corporativo para escritórios.',
-    providerServices: [
-      {
-        id: 'fb-maria-svc',
-        providerId: 'fb-maria',
-        serviceId: 'office-standard',
-        price: 239,
-        durationMinutes: 210,
-        description: 'Higienização comercial com foco em áreas comuns.',
-        pricingType: PricingType.FIXED_PRICE,
-        pricePerSquareMeter: null,
-        pricePerRoom: null,
-        service: {
-          id: 'office-standard',
-          name: 'Limpeza Comercial',
-          icon: 'briefcase',
-          backgroundColor: '#EAF7FF',
-          description: 'Serviço para escritórios.',
-          price: 239,
-        },
-      },
-    ],
-    averageRating: 4.7,
-    reviewCount: 85,
-    yearsOfExperience: 5,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    user: { email: 'provedor2@teste.com', role: 2 as any, isVerified: true },
-  },
-  {
-    id: 'fb-joana',
-    userId: 'fb-joana',
-    fullName: 'Joana',
-    email: 'provedor3@teste.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1544006659-f0b21884ce1d?auto=format&fit=crop&w=320&q=60',
-    bio: 'Especialista em limpezas completas e avaliações excelentes.',
-    providerServices: [
-      {
-        id: 'fb-joana-svc',
-        providerId: 'fb-joana',
-        serviceId: 'residential-signature',
-        price: 259,
-        durationMinutes: 240,
-        description: 'Limpeza residencial signature com atenção a detalhes.',
-        pricingType: PricingType.FIXED_PRICE,
-        pricePerSquareMeter: null,
-        pricePerRoom: null,
-        service: {
-          id: 'residential-signature',
-          name: 'Limpeza Residencial Signature',
-          icon: 'sparkles',
-          backgroundColor: '#F3E8FF',
-          description: 'Atendimento completo para casas com alto padrão.',
-          price: 259,
-        },
-      },
-    ],
-    averageRating: 4.8,
-    reviewCount: 64,
-    yearsOfExperience: 7,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    user: { email: 'provedor3@teste.com', role: 2 as any, isVerified: true },
-  },
+ 
+ 
+];
+
+const FALLBACK_CATEGORIES: Service[] = [
+  { id: 'residential-basic', name: 'Casa', icon: 'residencial.png' } as Service,
+  { id: 'office-standard', name: 'Empresa', icon: 'comercial.png' } as Service,
+  { id: 'after-build', name: 'Obras', icon: 'obra.png' } as Service,
+  { id: 'windows', name: 'Vidros', icon: 'vidro.png' } as Service,
+  { id: 'upholstery', name: 'Estofados', icon: 'estofados.png' } as Service,
+  { id: 'office-clean', name: 'Escritório', icon: 'escritorio.png' } as Service,
 ];
 
 // --- INTERFACES PARA COMPONENTES (DEFINIDAS AQUI PARA EXEMPLO) ---
@@ -247,7 +153,7 @@ const bannerData: BannerDataItem[] = [
     description: '',
     buttonText: 'Resgatar',
     badgeText: 'Tempo limitado!',
-    onPress: () => console.log('Banner 1 Pressionado'),
+    onPress: () => {},
   },
   {
     id: '2',
@@ -256,7 +162,7 @@ const bannerData: BannerDataItem[] = [
     description: '',
     buttonText: 'Ver',
     badgeText: 'Exclusivo',
-    onPress: () => console.log('Banner 2 Pressionado'),
+    onPress: () => {},
   },
   {
     id: '3',
@@ -265,7 +171,7 @@ const bannerData: BannerDataItem[] = [
     description: 'Para Novos Clientes',
     buttonText: 'Cadastrar',
     badgeText: 'Corra!',
-    onPress: () => console.log('Banner 3 Pressionado'),
+    onPress: () => {},
   },
 ];
 
@@ -311,6 +217,7 @@ export default function ExploreClientScreen() {
   const referralCode = userProfile?.referralCode || 'LIMPEJA123';
   const rewardReferrer = 'Ganhe R$20 ou +300 pts';
   const rewardReferred = 'Seu amigo ganha 20% na primeira reserva';
+  const showVisitorQuickAccess = !isAuthenticated;
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const categoriesAnim = useRef(new Animated.Value(0)).current;
@@ -377,54 +284,95 @@ export default function ExploreClientScreen() {
     }
   }, [isAuthenticated, exploreTutorial.isReady, exploreTutorial.hasSeen, exploreTutorial.show]);
 
-  const fetchData = useCallback(async () => {
-    if (!isMounted.current) {
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    const collectedErrors: string[] = [];
-    let hasSuccessfulData = false;
-
-    const runAndTrack = async <T,>(
-      label: string,
-      runner: () => Promise<T>,
-      onSuccess: (value: T) => void,
-      fallbackMessage: string
-    ) => {
-      try {
-        const result = await runner();
-        if (!isMounted.current) {
-          return;
-        }
-        onSuccess(result);
-        hasSuccessfulData = true;
-      } catch (err: any) {
-        const message = err?.message || err?.response?.data?.message || t('common.network_error');
-        console.warn(`[ExploreClientScreen] ${label} failed:`, message);
-        collectedErrors.push(fallbackMessage);
+  const loadLocationAndNearby = useCallback(async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== PermissionStatus.GRANTED) {
+        return;
       }
-    };
+      const coords = await getCurrentPosition();
+      if (!coords || !isMounted.current) return;
 
-    await runAndTrack<UserProfile>(
+      const [nearbyRes, recommendedRes] = await Promise.allSettled([
+        searchProvidersWithLocation({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          radius: searchRadiusKm,
+        }),
+        getRecommendedProviders({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        }),
+      ]);
+
+      if (nearbyRes.status === 'fulfilled' && isMounted.current) {
+        setNearbyProviders(nearbyRes.value);
+      }
+      if (recommendedRes.status === 'fulfilled' && isMounted.current && recommendedRes.value.length) {
+        setRecommendations(recommendedRes.value);
+      }
+    } catch {
+      // silencioso se falhar
+    }
+  }, [searchRadiusKm]);
+
+
+
+  const fetchData = useCallback(async () => {
+  if (!isMounted.current) {
+    return;
+  }
+
+  setLoading(true);
+  setError(null);
+
+  const collectedErrors: string[] = [];
+  let hasSuccessfulData = false;
+
+  const runAndTrack = async <T,>(
+    label: string,
+    runner: () => Promise<T>,
+    onSuccess: (value: T) => void,
+    fallbackMessage: string
+  ) => {
+    try {
+      const result = await runner();
+      if (!isMounted.current) {
+        return;
+      }
+      onSuccess(result);
+      hasSuccessfulData = true;
+    } catch (err: any) {
+      const message = err?.message || err?.response?.data?.message || t('common.network_error');
+      // log removido para performance
+      collectedErrors.push(fallbackMessage);
+    }
+  };
+
+  const tasks: Promise<any>[] = [];
+
+  tasks.push(
+    runAndTrack<UserProfile>(
       'user profile',
       () => getUserProfile(),
       profile => {
         setUserProfile(profile);
       },
       'Erro ao carregar perfil'
-    );
+    )
+  );
 
-    await runAndTrack<Service[]>(
+  tasks.push(
+    runAndTrack<Service[]>(
       'service categories',
       () => getServiceCategories(),
       data => setServiceCategories(data),
       'Erro ao carregar categorias'
-    );
+    )
+  );
 
-    await runAndTrack<ProviderDisplayInfo[]>(
+  tasks.push(
+    runAndTrack<ProviderDisplayInfo[]>(
       'recommended providers',
       async () => {
         try {
@@ -433,7 +381,6 @@ export default function ExploreClientScreen() {
             const list = Array.isArray(api) ? api : [];
             const seen = new Set<string>();
 
-            // Merge API + fallback, removendo duplicados por id
             const merged = [...list, ...FALLBACK_RECOMMENDATIONS].filter(p => {
               const id = p && typeof p.id === 'string' ? p.id : '';
               if (!id || seen.has(id)) return false;
@@ -441,7 +388,6 @@ export default function ExploreClientScreen() {
               return true;
             });
 
-            // 1º critério: se o usuário logado for provider, colocar seu próprio card em primeiro
             const currentProviderId =
               (user as any)?.providerDetails?.id || (user as any)?.providerDetails?.providerId;
             const currentProviderEmail = user?.email;
@@ -455,7 +401,6 @@ export default function ExploreClientScreen() {
                 return false;
               });
             } else {
-              // 2º critério (fallback antigo): destacar Joana para usuários genéricos
               idx = merged.findIndex(
                 p => p && typeof p.fullName === 'string' && /joana/i.test(p.fullName)
               );
@@ -473,92 +418,65 @@ export default function ExploreClientScreen() {
         }
       },
       data => setRecommendations(data),
-      'Erro ao carregar recomendações'
-    );
+      'Erro ao carregar recomendacoes'
+    )
+  );
 
-    let locationCoords: Location.LocationObjectCoords | null = null;
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== PermissionStatus.GRANTED) {
-        Alert.alert(
-          t('safety.panic.location_permission_denied'),
-          t('safety.panic.location_permission_message')
-        );
-      } else {
-        const currentCoords = await getCurrentPosition();
-        locationCoords = currentCoords || null;
-      }
-    } catch (locError) {
-      console.error('[ExploreClientScreen] Error fetching location:', locError);
+  await Promise.allSettled(tasks);
+
+  if (isMounted.current) { // Precarregar imagens do banner e do DEFENSE_SOS sem bloquear a primeira render
+    InteractionManager.runAfterInteractions(() => {
+      Asset.loadAsync([
+        require('../../../assets/images/banner6.png'),
+        require('../../../assets/images/banner4.png'),
+        require('../../../assets/images/banner3.png'),
+        Icons3D.support,
+      ] as any).catch(() => { });
+    });
+    const D = 240; // duracao padrao
+    const S = 60; // passo de atraso
+    if (reducedMotion) {
+      headerAnim.setValue(1);
+      categoriesAnim.setValue(1);
+      bannerAnim.setValue(1);
+      recommendationsAnim.setValue(1);
+      providersAnim.setValue(1);
+      navBarAnim.setValue(1);
+    } else {
+      Animated.parallel([
+        Animated.timing(headerAnim, { toValue: 1, duration: D, delay: 0, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(categoriesAnim, { toValue: 1, duration: D, delay: S, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(bannerAnim, { toValue: 1, duration: D, delay: S * 2, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(recommendationsAnim, { toValue: 1, duration: D, delay: S * 3, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(providersAnim, { toValue: 1, duration: D, delay: S * 4, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(navBarAnim, { toValue: 1, duration: D, delay: S * 5, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]).start();
     }
 
-    if (locationCoords) {
-      await runAndTrack<ProviderDisplayInfo[]>(
-        'nearby providers',
-        () =>
-          searchProvidersWithLocation({
-            latitude: locationCoords!.latitude,
-            longitude: locationCoords!.longitude,
-            radius: searchRadiusKm, // em km para o backend
-          }),
-        data => setNearbyProviders(data),
-        'Erro ao carregar provedores próximos'
-      );
+    setLoading(false);
+    setIsRefreshing(false);
+
+    if (hasSuccessfulData) {
+      setError(null);
+    } else if (collectedErrors.length > 0) {
+      setError(collectedErrors[0]);
+      // log removido para performance
+    } else {
+      setError(t('common.network_error'));
     }
+  }
+}, [
+  t,
+  headerAnim,
+  categoriesAnim,
+  bannerAnim,
+  recommendationsAnim,
+  providersAnim,
+  navBarAnim,
+  reducedMotion,
+  user,
+]);
 
-    if (isMounted.current) { // Precarregar imagens do banner e do DEFENSE_SOS para evitar atraso de decodificação
-      try {
-        await Asset.loadAsync([
-          require('../../../assets/images/banner6.png'),
-          require('../../../assets/images/banner4.png'),
-          require('../../../assets/images/banner3.png'),
-          Icons3D.support,
-        ] as any);
-      } catch { }
-      const D = 240; // duração padrão
-      const S = 60; // passo de atraso
-      if (reducedMotion) {
-        headerAnim.setValue(1);
-        categoriesAnim.setValue(1);
-        bannerAnim.setValue(1);
-        recommendationsAnim.setValue(1);
-        providersAnim.setValue(1);
-        navBarAnim.setValue(1);
-      } else {
-        Animated.parallel([
-          Animated.timing(headerAnim, { toValue: 1, duration: D, delay: 0, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-          Animated.timing(categoriesAnim, { toValue: 1, duration: D, delay: S, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-          Animated.timing(bannerAnim, { toValue: 1, duration: D, delay: S * 2, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-          Animated.timing(recommendationsAnim, { toValue: 1, duration: D, delay: S * 3, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-          Animated.timing(providersAnim, { toValue: 1, duration: D, delay: S * 4, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-          Animated.timing(navBarAnim, { toValue: 1, duration: D, delay: S * 5, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        ]).start();
-      }
-
-      setLoading(false);
-      setIsRefreshing(false);
-
-      if (hasSuccessfulData) {
-        setError(null);
-      } else if (collectedErrors.length > 0) {
-        setError(collectedErrors[0]);
-        console.warn('[ExploreClientScreen] erro silencioso na home:', collectedErrors[0]);
-      } else {
-        setError(t('common.network_error'));
-      }
-    }
-  }, [
-    t,
-    headerAnim,
-    categoriesAnim,
-    bannerAnim,
-    recommendationsAnim,
-    providersAnim,
-    navBarAnim,
-    searchRadiusKm,
-    reducedMotion,
-    user,
-  ]);
   // Respeitar "reduzir movimento"
   useEffect(() => {
     let mounted = true;
@@ -571,10 +489,11 @@ export default function ExploreClientScreen() {
   useEffect(() => {
     isMounted.current = true; // Componente montado
     fetchData();
+    loadLocationAndNearby();
     return () => {
       isMounted.current = false; // Componente desmontado
     };
-  }, [fetchData]);
+  }, [fetchData, loadLocationAndNearby]);
   // Refetch quando raio foi salvo no painel do provedor
   useFocusEffect(
     React.useCallback(() => {
@@ -585,11 +504,12 @@ export default function ExploreClientScreen() {
           if (!cancelled && flag === '1') {
             await AsyncStorage.removeItem('@settings:radius:changed');
             fetchData();
+            loadLocationAndNearby();
           }
         } catch { }
       })();
       return () => { cancelled = true; };
-    }, [fetchData])
+    }, [fetchData, loadLocationAndNearby])
   );
 
   useFocusEffect(
@@ -599,7 +519,7 @@ export default function ExploreClientScreen() {
       const loadAndSetPromotions = async () => {
         const offersData = await getOffers();
         if (cancelled) return;
-        console.log('DEBUG | offersData:', offersData);
+      // log removido para performance
         const welcomeOffer = offersData.find(
           (offer: any) => offer.target === 'NEW_CLIENTS' && offer.firstBookingOnly
         );
@@ -723,15 +643,49 @@ export default function ExploreClientScreen() {
 
   const handleProviderPress = useCallback(
     (provider: ProviderDisplayInfo) => {
-      router.push(CLIENT_ROUTES.PROVIDER_DETAILS(provider.id));
+      router.push({
+        pathname: CLIENT_ROUTES.PROVIDER_DETAILS(provider.id),
+        params: {
+          providerId: provider.id,
+          distance: provider.distance != null ? String(provider.distance) : undefined,
+        },
+      } as any);
     },
     [router]
   );
 
+  const prioritizeNewest = useCallback(
+    <T extends { createdAt?: string | Date; updatedAt?: string | Date; providerServices?: any[] }>(items: T[]) => {
+      const withIndex = items.map((item, idx) => ({ item, idx }));
+      const getTime = (item: T) => {
+        const candidates: Array<string | Date | undefined> = [
+          item?.createdAt,
+          item?.updatedAt,
+          ...(Array.isArray(item?.providerServices)
+            ? item.providerServices.map((svc: any) => svc?.createdAt)
+            : []),
+        ];
+        const maxTs = candidates
+          .map(v => (v ? new Date(v).getTime() : 0))
+          .filter(t => Number.isFinite(t) && t > 0)
+          .reduce((max, t) => (t > max ? t : max), 0);
+        return maxTs;
+      };
+      return withIndex
+        .sort((a, b) => {
+          const timeA = getTime(a.item);
+          const timeB = getTime(b.item);
+          if (timeA !== timeB) return timeB - timeA; // newer first
+          // If no timestamps, keep latest entries first based on original order
+          return b.idx - a.idx;
+        })
+        .map(w => w.item);
+    },
+    []
+  );
+
   const safeServiceCategories = serviceCategories.filter((c) => c && c.name);
-  const safeRecommendations = (Array.isArray(recommendations) && recommendations.length > 0)
-    ? recommendations.filter((item) => item && typeof item.fullName === 'string')
-    : FALLBACK_RECOMMENDATIONS;
+  const categoriesToRender = safeServiceCategories.length > 0 ? safeServiceCategories : FALLBACK_CATEGORIES;
 
   // Filtrar nearbyProviders com base no priceFilter
   const filteredNearbyProviders = Array.isArray(nearbyProviders)
@@ -749,6 +703,25 @@ export default function ExploreClientScreen() {
       });
     })
     : [];
+  const prioritizedNearbyProviders = prioritizeNewest(filteredNearbyProviders);
+
+  const safeRecommendations = (() => {
+    const valid = Array.isArray(recommendations)
+      ? recommendations.filter((item) => item && typeof item.fullName === 'string')
+      : [];
+    const mergedPool = prioritizeNewest([...valid, ...prioritizedNearbyProviders]);
+    const deduped: ProviderDisplayInfo[] = [];
+    const seen = new Set<string>();
+    mergedPool.forEach(it => {
+      if (it?.id && !seen.has(it.id)) {
+        seen.add(it.id);
+        deduped.push(it);
+      }
+    });
+    if (deduped.length === 0) return FALLBACK_RECOMMENDATIONS;
+    const mergedFallback = FALLBACK_RECOMMENDATIONS.filter(it => it && it.id && !seen.has(it.id));
+    return [...deduped, ...mergedFallback];
+  })();
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
@@ -769,7 +742,8 @@ export default function ExploreClientScreen() {
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     fetchData();
-  }, [fetchData]);
+    loadLocationAndNearby();
+  }, [fetchData, loadLocationAndNearby]);
 
   const handleUseWelcomeCoupon = useCallback(
     async (code: string) => {
@@ -812,13 +786,13 @@ export default function ExploreClientScreen() {
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
-          console.log(`Compartilhado via ${result.activityType}`);
-        } else {
-          console.log('Compartilhado');
-        }
-      } else if (result.action === Share.dismissedAction) {
-        console.log('Compartilhamento cancelado');
+        // log removido para performance
+      } else {
+        // log removido para performance
       }
+    } else if (result.action === Share.dismissedAction) {
+      // log removido para performance
+    }
     } catch (error: any) {
       Alert.alert('Erro ao Compartilhar', error.message);
     }
@@ -878,7 +852,11 @@ export default function ExploreClientScreen() {
           ListHeaderComponent={(
             <>
               {/* NewHeader ÚNICO */}
-                <NewHeader userName={userNameDisplay} userAddress={addressToDisplay} />
+                <NewHeader
+                  userName={userNameDisplay}
+                  userAddress={addressToDisplay}
+                  isVisitor={!isAuthenticated}
+                />
               {/* Mini-tutorial sempre vis?vel */}
               <View style={styles.howItWorksTutorialContainer}>
                 <Text style={styles.howItWorksTitle} allowFontScaling={false}>
@@ -908,48 +886,21 @@ export default function ExploreClientScreen() {
 
               {/* ContentWrapper ÚNICO - TODO o conteúdo aqui */}
               <View style={styles.contentWrapper}>
-                {/* Seção de Categorias */}
-                {!isAuthenticated && (
-                  <Animated.View
-                    style={[
-                      styles.categoriesSection,
-                      {
-                        opacity: categoriesAnim,
-                        transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }]
-                      },
-                    ]}>
-                    <View style={styles.categoryTitleWrapper}>
-                      <Text style={styles.categorySectionTitle} allowFontScaling={false}>
-                        {t('search.all_categories')}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                        style={styles.viewAllButton}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />
-                      </TouchableOpacity>
-                    </View>
-                  <SecaoContainer<Service>
-                    titulo={t('search.all_categories')}
-                    onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                    data={safeServiceCategories}
-                    renderItem={({ item }) => {
-                      if (!item || !item.name) return null;
-                        return (
-                        <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
-                        );
-                    }}
-                    horizontal={true}
-                    noDataText={t('search.no_results')}
-                  />
-                  </Animated.View>
-                )}
-
                 {/* Recomendações ÚNICAS */}
                 <Animated.View
                   style={{
                     opacity: recommendationsAnim,
-                    transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
+                    transform: [
+                      {
+                        translateY:
+                          Platform.OS === 'android'
+                            ? 0
+                            : recommendationsAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [-12, 0],
+                              }),
+                      },
+                    ],
                   }}>
                   <SecaoRecomendacoes
                     titulo={t('search.recommended_providers')}
@@ -957,7 +908,7 @@ export default function ExploreClientScreen() {
                     data={safeRecommendations}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de recomendação inválido filtrado:', item);
+                        // log removido para performance
                         return null;
                       }
                       return <RecomendacaoCard key={item.id} item={item} />;
@@ -970,16 +921,27 @@ export default function ExploreClientScreen() {
                 {/* Profissionais por Perto ÚNICOS */}
                 <Animated.View
                   style={{
-                    opacity: providersAnim,
-                    transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
+                    opacity: providersAnim, 
+                    transform: [
+                      {
+                        translateY:
+                          Platform.OS === 'android'
+                            ? 0
+                            : providersAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [-12, 0],
+                              }),
+                      },
+                    ],
                   }}>
                   <SecaoPrestadores
                     titulo={t('search.nearby_providers')}
                     onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos' as any)}
-                    data={filteredNearbyProviders}
+                    data={prioritizedNearbyProviders}
+                    
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de prestador inválido filtrado:', item);
+                        // log removido para performance
                         return null;
                       }
                       return (
@@ -998,7 +960,17 @@ export default function ExploreClientScreen() {
                     styles.carouselContainer,
                     {
                       opacity: bannerAnim,
-                      transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }]
+                      transform: [
+                        {
+                          translateY:
+                            Platform.OS === 'android'
+                              ? 0
+                              : bannerAnim.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: [-12, 0],
+                                }),
+                        },
+                      ],
                     },
                   ]}>
                   <FlatList<BannerDataItem>
@@ -1018,19 +990,78 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* HorizontalMiniGrid / Acesso Rápido */}
-                {isAuthenticated ? (
+                {/* Acesso rápido (visitante) abaixo do carrossel */}
+                {!isAuthenticated && (
                   <Animated.View
                     style={[
                       styles.categoriesSection,
                       {
                         opacity: categoriesAnim,
-                        transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }]
+                        transform: [
+                          {
+                            translateY:
+                              Platform.OS === 'android'
+                                ? 0
+                                : categoriesAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-12, 0],
+                                  }),
+                          },
+                        ],
                       },
                     ]}>
                     <View style={styles.categoryTitleWrapper}>
                       <Text style={styles.categorySectionTitle} allowFontScaling={false}>
-                        {t('search.all_categories')}
+                        Acesso rápido
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                        style={styles.viewAllButton}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ marginTop: 10 }}>
+                      <SecaoContainer<Service>
+                        titulo={t('search.all_categories')}
+                        onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                        data={categoriesToRender}
+                        renderItem={({ item }) => {
+                          if (!item || !item.name) return null;
+                          return (
+                            <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
+                          );
+                        }}
+                        horizontal={true}
+                        noDataText={t('search.no_results')}
+                      />
+                    </View>
+                </Animated.View>
+                )}
+
+                {/* Acesso rápido (logado) abaixo do carrossel */}
+                {isAuthenticated && (
+                  <Animated.View
+                    style={[
+                      styles.categoriesSection,
+                      {
+                        opacity: categoriesAnim,
+                        transform: [
+                          {
+                            translateY:
+                              Platform.OS === 'android'
+                                ? 0
+                                : categoriesAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-12, 0],
+                                  }),
+                          },
+                        ],
+                      },
+                    ]}>
+                    <View style={styles.categoryTitleWrapper}>
+                      <Text style={styles.categorySectionTitle} allowFontScaling={false}>
+                        Acesso rápido
                       </Text>
                       <TouchableOpacity
                         onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
@@ -1042,33 +1073,20 @@ export default function ExploreClientScreen() {
                     <SecaoContainer<Service>
                       titulo={t('search.all_categories')}
                       onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                      data={safeServiceCategories}
+                      data={categoriesToRender}
                       renderItem={({ item }) => {
                         if (!item || !item.name) return null;
-                          return (
+                        return (
                           <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
-                          );
+                        );
                       }}
                       horizontal={true}
                       noDataText={t('search.no_results')}
                     />
                   </Animated.View>
-                ) : (
-                  <Animated.View
-                    style={{
-                      opacity: providersAnim,
-                      transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
-                    }}>
-                    <View style={styles.exploreMoreSpacing}>
-                      <View style={styles.miniGridHeader}>
-                        <Text style={styles.miniGridTitle} allowFontScaling={false}>
-                          {t('explore_section.title')}
-                        </Text>
-                      </View>
-                      <HorizontalMiniGrid />
-                    </View>
-                  </Animated.View>
                 )}
+
+                {/* (Acesso Rápido removido para visitantes e autenticados conforme solicitação) */}
 
                 {/* Spacer para scroll extra (compensa absolutos) */}
                 <View style={{ height: 20 }} />
@@ -1335,7 +1353,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#F1F2F2',
     paddingTop: 0,
-    paddingBottom: 80,
+    paddingBottom: 20,
     paddingHorizontal: 2,
   },
   searchComponentContainer: {
@@ -1363,10 +1381,11 @@ const styles = StyleSheet.create({
     // PREMIUM: Estilo de título alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
+    marginBottom: 10,
   },
   carouselContainer: {
     marginTop: 10,
-    marginBottom: 20,
+    marginBottom: 35,
     alignItems: 'center',
   },
   navBarContainer: {
@@ -1525,7 +1544,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 29,
     borderRadius: 18,
-    backgroundColor: AppColors.white,
+    backgroundColor: '#ffffffff',
     borderWidth: 1,
     borderColor: COR_BORDA_SUAVE,
     ...AppShadows.small,
