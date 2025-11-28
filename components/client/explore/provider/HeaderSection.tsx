@@ -5,7 +5,7 @@ import { ImageBackground, Platform, StyleSheet, TouchableOpacity, View } from 'r
 
 // Importa os estilos do arquivo externo.
 // É CRUCIAL que este import esteja correto e que o arquivo exista.
-import { styles } from '../../../../app/(client)/explore/styles/providerStyles';
+import { styles } from '../../../../styles/providerStyles';
 
 // Definindo a interface ProviderDetails para espelhar a ProviderDetailsDto do backend
 // Ajuste conforme a estrutura real do seu DTO de provedor.
