@@ -1,5 +1,5 @@
 // src/coupons/coupons.controller.ts
-import { Controller, Get, Param, Query, UseGuards, Req, Logger } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards, Req, Logger, Post, Body, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -62,6 +62,26 @@ export class CouponsController {
   async getMyCoupons(@Req() req) {
     this.logger.log(`[CouponsController] getMyCoupons: Buscando cupons para userId: ${req.user.userId}`);
     return this.couponsService.getMyCoupons(req.user.userId);
+  }
+
+  @Post('apply')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Aplica um cupom e retorna o desconto calculado' })
+  @ApiResponse({ status: 200, description: 'Resultado da aplicação do cupom.', type: Object })
+  async applyCoupon(
+    @Body() payload: { code: string; bookingData?: { originalPrice?: number; clientId?: string; providerServiceId?: string; providerId?: string; scheduledDate?: string } },
+    @Req() req,
+  ): Promise<CouponApplicationResult> {
+    const code = payload?.code;
+    if (!code) {
+      throw new BadRequestException('Código do cupom é obrigatório.');
+    }
+    const bookingData = payload?.bookingData || {};
+    // Garante clientId para regras de elegibilidade firstBooking
+    bookingData.clientId = bookingData.clientId ?? req.user.userId;
+    return this.couponsService.applyCoupon(code, req.user.userId, bookingData);
   }
 
   // --- Métodos CRUD básicos (exemplo, se não existirem) ---
