@@ -82,7 +82,9 @@ export default function WithdrawScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState<boolean>(false);
   const [isWithdrawalSuccessful, setIsWithdrawalSuccessful] = useState<boolean>(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null); // Erros de submissão/API
+  const [amountError, setAmountError] = useState<string | null>(null);
+  const [pixKeyError, setPixKeyError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string>(''); // Notas opcionais
 
   // Taxa fixa em R$ 0,00 (conforme instruções; ajuste se backend retornar taxa dinâmica)
@@ -179,6 +181,7 @@ export default function WithdrawScreen() {
     if (newAmount !== amount) {
       setAmount(newAmount);
     }
+    setAmountError(null);
     setFormError(null);
   };
 
@@ -201,12 +204,14 @@ export default function WithdrawScreen() {
     if (cleanedText !== pixKey) {
       setPixKey(cleanedText);
     }
+    setPixKeyError(null);
     setFormError(null);
   };
 
   const handlePixKeyTypeChange = useCallback((type: PixKeyType) => {
     setPixKeyType(type);
     setPixKey(''); // Limpa chave ao trocar tipo
+    setPixKeyError(null);
     setFormError(null);
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -221,60 +226,73 @@ export default function WithdrawScreen() {
     if (formatted !== amount) {
       setAmount(formatted);
     }
+    setAmountError(null);
     setFormError(null);
   }, [availableBalance, amount]); // Dependências corretas
 
-  const validateForm = (): string | null => {
+  const validateForm = (): boolean => {
+    setAmountError(null);
+    setPixKeyError(null);
+
     const parsedAmount = parseFloat(amount.replace(',', '.'));
     if (isNaN(parsedAmount) || parsedAmount < 10) {
-      return 'Insira um valor válido (mínimo R$ 10,00)';
+      setAmountError('Insira um valor válido (mínimo R$ 10,00)');
+      return false;
     }
     if (parsedAmount > availableBalance) {
-      return `O valor do saque excede o saldo disponível (R$ ${formatCurrency(availableBalance)}).`;
+      setAmountError(`O valor do saque excede o saldo disponível (${formatCurrency(availableBalance)}).`);
+      return false;
     }
     if (!pixKey.trim()) {
-      return 'Por favor, insira uma chave PIX válida.';
+      setPixKeyError('Por favor, insira uma chave PIX válida.');
+      return false;
     }
-    // Validação premium por tipo
     switch (pixKeyType) {
       case PixKeyType.CPF:
-        if (!isValidCPF(pixKey) || pixKey.length !== 11) {
-          return 'CPF inválido (apenas números)';
+        if (!/^\d{11}$/.test(pixKey) || !isValidCPF(pixKey)) {
+          setPixKeyError('CPF inválido (apenas números).');
+          return false;
         }
         break;
       case PixKeyType.CNPJ:
-        if (pixKey.length !== 14 || !/^\d{14}$/.test(pixKey)) {
-          return 'CNPJ inválido. Digite apenas números (ex: 12345678000199).';
+        if (!/^\d{14}$/.test(pixKey)) {
+          setPixKeyError('CNPJ inválido. Digite apenas números (ex: 12345678000199).');
+          return false;
         }
         break;
       case PixKeyType.EMAIL:
-        if (!/\S+@\S+\.\S+/.test(pixKey)) {
-          return 'E-mail inválido.';
+        if (!/^\S+@\S+\.\S+$/.test(pixKey)) {
+          setPixKeyError('E-mail inválido.');
+          return false;
         }
         break;
       case PixKeyType.PHONE:
-        if (!/^(\+55)?\s?(\(?\d{2}\)?\s?)?(\d{4,5}-\d{4})$/.test(pixKey)) {
-          return 'Telefone inválido (ex: +55 11 99999-9999).';
+        // Aceita formatos com ou sem +55, com ou sem parênteses no DDD, com espaço opcional e com ou sem hífen
+        if (!/^(?:\+55\s?)?(?:\(?\d{2}\)?\s?)?(?:\d{4,5}-?\d{4})$/.test(pixKey)) {
+          setPixKeyError('Telefone inválido (ex: +55 11 99999-9999).');
+          return false;
         }
         break;
       case PixKeyType.RANDOM:
         if (pixKey.length < 32 || pixKey.length > 77) {
-          return 'Chave aleatória inválida (UUID ou chave gerada pelo banco).';
+          setPixKeyError('Chave aleatória inválida (UUID ou chave gerada pelo banco).');
+          return false;
         }
         break;
     }
-    return null;
+    return true;
   };
 
   const handleConfirmWithdrawal = useCallback(async () => {
-    const error = validateForm();
-    if (error) {
-      setFormError(error);
+    setFormError(null);
+    const isValid = validateForm();
+    if (!isValid) {
       if (Platform.OS === 'ios') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); // Haptic premium para erro (iOS)
       }
       return;
     }
+
 
     const pixData: RequestWithdrawalDto = {
       amount: parseFloat(amount.replace(',', '.')),
@@ -486,17 +504,28 @@ export default function WithdrawScreen() {
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollViewContent} keyboardShouldPersistTaps="handled">
-        {/* Card: Estado Financeiro (Saldo Disponível atualizado) */}
+        {/* Hero: resumo do saque e status rápido */}
         <Animated.View
-          style={[
-            styles.card,
-            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-          ]}
+          style={[styles.heroCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
         >
-          <Text style={[styles.balanceValue, { color: Colors.primary }]}>{formatCurrency(availableBalance)}</Text>
-          <Text style={styles.balanceSubtitle}>Disponível para saque</Text>
-          <View style={styles.balanceBadge}>
-            <Text style={styles.balanceBadgeText}>Taxa: {formatCurrency(taxa)} · Liquidação: até 24h</Text>
+          <View style={styles.heroTopRow}>
+            <Text style={styles.heroEyebrow}>Solicitar Saque</Text>
+            <View style={styles.heroPill}>
+              <Ionicons name="flash-outline" size={14} color={Colors.primary} />
+              <Text style={[styles.heroPillText, styles.heroInlineText]}>Liquidação até 24h</Text>
+            </View>
+          </View>
+          <Text style={styles.heroTitle}>{formatCurrency(availableBalance)}</Text>
+          <Text style={styles.heroSubtitle}>Disponível para saque</Text>
+          <View style={styles.heroBadges}>
+            <View style={styles.heroBadge}>
+              <Ionicons name="shield-checkmark-outline" size={16} color={Colors.primary} />
+              <Text style={[styles.heroBadgeText, styles.heroInlineText]}>Taxa {formatCurrency(taxa)}</Text>
+            </View>
+            <View style={styles.heroBadge}>
+              <Ionicons name="sparkles-outline" size={16} color={Colors.primary} />
+              <Text style={[styles.heroBadgeText, styles.heroInlineText]}>Fluxo seguro</Text>
+            </View>
           </View>
         </Animated.View>
 
@@ -509,7 +538,7 @@ export default function WithdrawScreen() {
         >
           <Text style={styles.cardTitle}>Quanto deseja transferir?</Text>
           <TextInput
-            style={[styles.amountInput, formError ? styles.inputError : {}]}
+            style={[styles.amountInput, amountError ? styles.inputError : {}]}
             placeholder="0,00"
             placeholderTextColor={Colors.textSubtle}
             keyboardType="decimal-pad" // Premium: Teclado numérico com vírgula (iOS/Android)
@@ -519,7 +548,7 @@ export default function WithdrawScreen() {
             accessibilityLabel="Valor do saque"
             accessibilityHint="Digite o valor em reais para sacar."
           />
-          {formError && <Text style={styles.formErrorText}>{formError}</Text>}
+          {amountError && <Text style={styles.formErrorText}>{amountError}</Text>}
 
           {/* Atalhos de valor (chips) */}
           <View style={styles.shortcutsContainer}>
@@ -557,13 +586,13 @@ export default function WithdrawScreen() {
         >
           <Text style={styles.cardTitle}>Para qual chave PIX?</Text>
           <View style={styles.pixTypeSelector}>
-            {[
-              { type: PixKeyType.CPF, icon: 'id-card-outline', subtitle: '11 dígitos', hint: 'apenas números' },
-              { type: PixKeyType.CNPJ, icon: 'briefcase-outline', subtitle: '14 dígitos', hint: 'apenas números' },
-              { type: PixKeyType.EMAIL, icon: 'mail-outline', subtitle: 'exemplo@domínio', hint: 'formato de e-mail' },
-              { type: PixKeyType.PHONE, icon: 'call-outline', subtitle: '+55 11 99999-9999', hint: 'formato de telefone' },
-              { type: PixKeyType.RANDOM, icon: 'key-outline', subtitle: 'chave UUID', hint: 'chave aleatória' },
-            ].map(({ type, icon, subtitle, hint }) => (
+            {([
+              { type: PixKeyType.CPF, icon: 'id-card-outline' as React.ComponentProps<typeof Ionicons>['name'], subtitle: '11 dígitos', hint: 'apenas números' },
+              { type: PixKeyType.CNPJ, icon: 'briefcase-outline' as React.ComponentProps<typeof Ionicons>['name'], subtitle: '14 dígitos', hint: 'apenas números' },
+              { type: PixKeyType.EMAIL, icon: 'mail-outline' as React.ComponentProps<typeof Ionicons>['name'], subtitle: 'exemplo@domínio', hint: 'formato de e-mail' },
+              { type: PixKeyType.PHONE, icon: 'call-outline' as React.ComponentProps<typeof Ionicons>['name'], subtitle: '+55 11 99999-9999', hint: 'formato de telefone' },
+              { type: PixKeyType.RANDOM, icon: 'key-outline' as React.ComponentProps<typeof Ionicons>['name'], subtitle: 'chave UUID', hint: 'chave aleatória' },
+            ] as { type: PixKeyType; icon: React.ComponentProps<typeof Ionicons>['name']; subtitle: string; hint: string }[]).map(({ type, icon, subtitle, hint }) => (
               <TouchableOpacity
                 key={type}
                 style={[
@@ -594,7 +623,7 @@ export default function WithdrawScreen() {
             ))}
           </View>
           <TextInput
-            style={styles.pixKeyInput}
+            style={[styles.pixKeyInput, pixKeyError ? styles.inputError : {}]}
             placeholder={
               pixKeyType === PixKeyType.CPF ? "12345678900" :
               pixKeyType === PixKeyType.CNPJ ? "12345678000199" :
@@ -616,10 +645,10 @@ export default function WithdrawScreen() {
             accessibilityHint={`Digite a chave PIX do tipo ${pixKeyType.toLowerCase()}.`}
           />
           <Text style={styles.pixKeyHelper}>
-            {/* Expandir helper para todos os tipos conforme necessário */}
-            {pixKeyType === PixKeyType.CPF && pixKey.length === 11 && !isValidCPF(pixKey) && 'CPF inválido. Verifique os dígitos.'}
-            {pixKeyType === PixKeyType.CPF && pixKey.length < 11 && pixKey.length > 0 && 'Digite o CPF completo (11 dígitos).'}
-            {/* Adicione helpers para outros tipos se necessário */}
+            {pixKeyError ||
+              (pixKeyType === PixKeyType.CPF && pixKey.length === 11 && !isValidCPF(pixKey) && 'CPF inválido. Verifique os dígitos.') ||
+              (pixKeyType === PixKeyType.CPF && pixKey.length < 11 && pixKey.length > 0 && 'Digite o CPF completo (11 dígitos).') ||
+              ''}
           </Text>
         </Animated.View>
 
@@ -654,6 +683,11 @@ export default function WithdrawScreen() {
         styles.stickyButtonContainer,
         { paddingBottom: Platform.OS === 'ios' ? insets.bottom + 12 : 12 }
       ]}>
+        {formError && (
+          <Text style={[styles.formErrorText, { marginBottom: Spacing.sm, textAlign: 'center' }]}>
+            {formError}
+          </Text>
+        )}
         <TouchableOpacity
           style={[
             styles.actionButtonPrimary,
@@ -757,6 +791,85 @@ const styles = StyleSheet.create({
         elevation: 4,
       },
     }),
+  },
+  heroCard: {
+    backgroundColor: '#EAF2FF',
+    borderRadius: Radii.xl,
+    padding: Spacing.xl,
+    marginTop: Spacing.lg,
+    borderWidth: 1,
+    borderColor: '#D6E4FF',
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.shadow,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  heroEyebrow: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.primary,
+    letterSpacing: 0.4,
+  },
+  heroPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: Radii.pill,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
+  heroPillText: {
+    color: Colors.primary,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  heroInlineText: {
+    marginLeft: 6,
+  },
+  heroTitle: {
+    fontSize: 38,
+    fontWeight: '800',
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: Colors.textMuted,
+    marginBottom: Spacing.md,
+  },
+  heroBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: Radii.pill,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginRight: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  heroBadgeText: {
+    color: Colors.text,
+    fontWeight: '600',
+    fontSize: 12,
   },
   // Estilos para Card de Saldo (Estado Financeiro)
   balanceValue: {
