@@ -23,10 +23,8 @@ export default function DrawerMenu() {
   const router = useRouter(); // Declaração correta do router
 
   const handleLogout = async () => {
-    console.log("DrawerMenu: Iniciando logout...");
     try {
       await signOut();
-      console.log("DrawerMenu: Usuário deslogado com sucesso.");
       router.push('/(auth)/login'); // Navegar para a tela de login após logout
     } catch (error) {
       console.error("DrawerMenu: Erro ao deslogar:", error);
@@ -34,7 +32,6 @@ export default function DrawerMenu() {
   };
 
   const navigateTo = (path: string, params?: object) => {
-    console.log(`DrawerMenu: Navegando para: ${path}`);
     router.push({ pathname: path, params: params } as any);
   };
 
