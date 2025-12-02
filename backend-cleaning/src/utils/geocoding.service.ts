@@ -2,7 +2,9 @@ import axios from 'axios';
 
 export type GeocodeResult = { latitude: number; longitude: number };
 
-export async function geocodeAddress(addressString: string): Promise<GeocodeResult | null> {
+export async function geocodeAddress(
+  addressString: string,
+): Promise<GeocodeResult | null> {
   if (!addressString || !process.env.GOOGLE_MAPS_API_KEY) return null;
 
   try {
@@ -15,7 +17,11 @@ export async function geocodeAddress(addressString: string): Promise<GeocodeResu
     const response = await axios.get(url, { params });
     const data = response.data;
 
-    if (data?.status === 'OK' && Array.isArray(data.results) && data.results.length > 0) {
+    if (
+      data?.status === 'OK' &&
+      Array.isArray(data.results) &&
+      data.results.length > 0
+    ) {
       const location = data.results[0]?.geometry?.location;
       if (
         location &&
