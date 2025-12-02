@@ -1,5 +1,9 @@
 // src/common/services/sms.service.ts
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 // import twilio from 'twilio'; // Exemplo para Twilio
 
@@ -53,12 +57,16 @@ export class SmsService {
       }
     } catch (error) {
       this.logger.error(`Erro ao enviar SMS para ${to}: ${error.message}`);
-      throw new InternalServerErrorException(`Falha ao enviar SMS: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Falha ao enviar SMS: ${error.message}`,
+      );
     }
   }
 
   private simulateSendSms(to: string, message: string): void {
-    this.logger.warn('Simulando envio de SMS. Nenhuma integração real configurada.');
+    this.logger.warn(
+      'Simulando envio de SMS. Nenhuma integração real configurada.',
+    );
     this.logger.debug(`
       --- SIMULAÇÃO DE SMS ---
       Para: ${to}
