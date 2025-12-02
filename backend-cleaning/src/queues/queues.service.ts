@@ -1,5 +1,10 @@
 // src/queues/queues.service.ts
-import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue, JobOptions } from 'bull';
 import { I18nService } from '../common/i18n/i18n.service';
@@ -33,9 +38,11 @@ export class QueuesService {
     @InjectQueue('notifications') private readonly notificationsQueue: Queue,
     @InjectQueue('disputes') private readonly disputesQueue: Queue,
     @InjectQueue('data_export') private readonly dataExportQueue: Queue,
-    @InjectQueue('subscription-generation') private readonly subscriptionGenerationQueue: Queue,
+    @InjectQueue('subscription-generation')
+    private readonly subscriptionGenerationQueue: Queue,
     @InjectQueue('emails') private readonly emailsQueue: Queue, // NEW: Fila para e-mails
-    @InjectQueue('support-escalations') private readonly supportEscalationsQueue: Queue, // Fila de escalonamento de suporte
+    @InjectQueue('support-escalations')
+    private readonly supportEscalationsQueue: Queue, // Fila de escalonamento de suporte
     @InjectQueue('payouts') private readonly payoutsQueue: Queue,
     private readonly i18n: I18nService,
   ) {}
@@ -93,10 +100,16 @@ export class QueuesService {
       };
 
       await queue.add(jobName, data, finalOptions);
-      this.logger.log(`Tarefa '${jobName}' adicionada à fila '${queueName}' com dados: ${JSON.stringify(data)}.`);
+      this.logger.log(
+        `Tarefa '${jobName}' adicionada à fila '${queueName}' com dados: ${JSON.stringify(data)}.`,
+      );
     } catch (error) {
-      this.logger.error(`Erro ao adicionar tarefa '${jobName}' à fila '${queueName}': ${error.message}`);
-      throw new InternalServerErrorException(`Falha ao adicionar tarefa à fila: ${error.message}`);
+      this.logger.error(
+        `Erro ao adicionar tarefa '${jobName}' à fila '${queueName}': ${error.message}`,
+      );
+      throw new InternalServerErrorException(
+        `Falha ao adicionar tarefa à fila: ${error.message}`,
+      );
     }
   }
 
@@ -114,11 +127,17 @@ export class QueuesService {
         await job.remove();
         this.logger.log(`Job '${jobId}' removido da fila '${queueName}'.`);
       } else {
-        this.logger.warn(`Job '${jobId}' não encontrado na fila '${queueName}'.`);
+        this.logger.warn(
+          `Job '${jobId}' não encontrado na fila '${queueName}'.`,
+        );
       }
     } catch (error) {
-      this.logger.error(`Erro ao remover job '${jobId}' da fila '${queueName}': ${error.message}`);
-      throw new InternalServerErrorException(`Falha ao remover job da fila: ${error.message}`);
+      this.logger.error(
+        `Erro ao remover job '${jobId}' da fila '${queueName}': ${error.message}`,
+      );
+      throw new InternalServerErrorException(
+        `Falha ao remover job da fila: ${error.message}`,
+      );
     }
   }
 
@@ -167,7 +186,14 @@ export class QueuesService {
     deeplinkProvider?: string;
     locale?: string;
   }): Promise<void> {
-    const { bookingId, clientUserId, providerUserId, scheduledAt, deeplinkClient, deeplinkProvider } = params;
+    const {
+      bookingId,
+      clientUserId,
+      providerUserId,
+      scheduledAt,
+      deeplinkClient,
+      deeplinkProvider,
+    } = params;
     const baseId = `booking:${bookingId}`;
     const now = Date.now();
     const t0 = scheduledAt.getTime();
@@ -175,54 +201,120 @@ export class QueuesService {
     const mm = String(scheduledAt.getMinutes()).padStart(2, '0');
     const hora = `${hh}:${mm}`;
     const emits = [
-      { key: 'T-24h',  ms: t0 - 24 * 3600000, title: 'Serviço amanhã',        body: `Limpeza amanhã às ${hora}.` },
-      { key: 'T-2h',   ms: t0 -  2 * 3600000, title: 'Faltam 2 horas',        body: `Prepare-se para ${hora}.` },
-      { key: 'T-15m',  ms: t0 - 15 *   60000, title: 'Faltam 15 minutos',     body: `Início às ${hora}.` },
-      { key: 'T0',     ms: t0,               title: 'É agora',                body: `Inicie o serviço às ${hora}.` },
+      {
+        key: 'T-24h',
+        ms: t0 - 24 * 3600000,
+        title: 'Serviço amanhã',
+        body: `Limpeza amanhã às ${hora}.`,
+      },
+      {
+        key: 'T-2h',
+        ms: t0 - 2 * 3600000,
+        title: 'Faltam 2 horas',
+        body: `Prepare-se para ${hora}.`,
+      },
+      {
+        key: 'T-15m',
+        ms: t0 - 15 * 60000,
+        title: 'Faltam 15 minutos',
+        body: `Início às ${hora}.`,
+      },
+      {
+        key: 'T0',
+        ms: t0,
+        title: 'É agora',
+        body: `Inicie o serviço às ${hora}.`,
+      },
     ];
 
     for (const e of emits) {
       const delay = Math.max(0, e.ms - now);
-      const opts = { attempts: 3, backoff: { type: 'exponential' as const, delay: 1000 }, removeOnFail: false, delay };
+      const opts = {
+        attempts: 3,
+        backoff: { type: 'exponential' as const, delay: 1000 },
+        removeOnFail: false,
+        delay,
+      };
       const locale = params.locale || 'pt-BR';
-      const keyMap: Record<string, string> = { 'T-24h': 't24h', 'T-2h': 't2h', 'T-15m': 't15m', 'T0': 't0' };
+      const keyMap: Record<string, string> = {
+        'T-24h': 't24h',
+        'T-2h': 't2h',
+        'T-15m': 't15m',
+        T0: 't0',
+      };
       const k = keyMap[e.key] || 't0';
-      const translatedTitle = await this.i18n.translate(`notification.reminder.${k}.title`, locale, { hour: hora });
-      const translatedBody = await this.i18n.translate(`notification.reminder.${k}.body`, locale, { hour: hora });
+      const translatedTitle = await this.i18n.translate(
+        `notification.reminder.${k}.title`,
+        locale,
+        { hour: hora },
+      );
+      const translatedBody = await this.i18n.translate(
+        `notification.reminder.${k}.body`,
+        locale,
+        { hour: hora },
+      );
       // Cliente
-      await this.addJob('notifications', 'send-notification', {
-        userId: clientUserId,
-        kind: 'booking_reminder',
-        title: translatedTitle,
-        body: translatedBody,
-        deeplink: deeplinkClient,
-        priority: e.key === 'T0' ? 1 : 2,
-        idempotencyKey: `${baseId}:${e.key}:client`,
-      }, opts);
+      await this.addJob(
+        'notifications',
+        'send-notification',
+        {
+          userId: clientUserId,
+          kind: 'booking_reminder',
+          title: translatedTitle,
+          body: translatedBody,
+          deeplink: deeplinkClient,
+          priority: e.key === 'T0' ? 1 : 2,
+          idempotencyKey: `${baseId}:${e.key}:client`,
+        },
+        opts,
+      );
       // Push com som alto e deeplink (cliente)
-      await this.addJob('notifications', 'send-push-notification', {
-        userId: clientUserId,
-        title: translatedTitle,
-        body: translatedBody,
-        data: { url: deeplinkClient, priority: e.key === 'T0' ? 'max' : 'high', channelId: 'high-priority' },
-      }, opts);
+      await this.addJob(
+        'notifications',
+        'send-push-notification',
+        {
+          userId: clientUserId,
+          title: translatedTitle,
+          body: translatedBody,
+          data: {
+            url: deeplinkClient,
+            priority: e.key === 'T0' ? 'max' : 'high',
+            channelId: 'high-priority',
+          },
+        },
+        opts,
+      );
       // Provedor
-      await this.addJob('notifications', 'send-notification', {
-        userId: providerUserId,
-        kind: 'booking_reminder',
-        title: translatedTitle,
-        body: translatedBody,
-        deeplink: deeplinkProvider,
-        priority: e.key === 'T0' ? 1 : 2,
-        idempotencyKey: `${baseId}:${e.key}:provider`,
-      }, opts);
+      await this.addJob(
+        'notifications',
+        'send-notification',
+        {
+          userId: providerUserId,
+          kind: 'booking_reminder',
+          title: translatedTitle,
+          body: translatedBody,
+          deeplink: deeplinkProvider,
+          priority: e.key === 'T0' ? 1 : 2,
+          idempotencyKey: `${baseId}:${e.key}:provider`,
+        },
+        opts,
+      );
       // Push com som alto e deeplink (provedor)
-      await this.addJob('notifications', 'send-push-notification', {
-        userId: providerUserId,
-        title: translatedTitle,
-        body: translatedBody,
-        data: { url: deeplinkProvider, priority: e.key === 'T0' ? 'max' : 'high', channelId: 'high-priority' },
-      }, opts);
+      await this.addJob(
+        'notifications',
+        'send-push-notification',
+        {
+          userId: providerUserId,
+          title: translatedTitle,
+          body: translatedBody,
+          data: {
+            url: deeplinkProvider,
+            priority: e.key === 'T0' ? 'max' : 'high',
+            channelId: 'high-priority',
+          },
+        },
+        opts,
+      );
     }
   }
 
@@ -259,7 +351,10 @@ export class QueuesService {
    * @param subscriptionId O ID da assinatura.
    * @param delayMs O atraso em milissegundos para a tarefa.
    */
-  async addSubscriptionGenerationJob(subscriptionId: string, delayMs: number): Promise<void> {
+  async addSubscriptionGenerationJob(
+    subscriptionId: string,
+    delayMs: number,
+  ): Promise<void> {
     const jobName = 'generate-recurring-booking';
     const data = { subscriptionId };
     const options: CustomJobOptions = {
@@ -286,7 +381,10 @@ export class QueuesService {
    * @param name Nome da tarefa (ex: 'send-email').
    * @param data Dados da tarefa (to, subject, text, html).
    */
-  async addEmailJob(name: string, data: { to: string; subject: string; text: string; html: string }): Promise<void> {
+  async addEmailJob(
+    name: string,
+    data: { to: string; subject: string; text: string; html: string },
+  ): Promise<void> {
     return this.addJob('emails', name, data, {
       attempts: 5, // Tenta novamente 5 vezes em caso de falha de e-mail
       backoff: {
@@ -302,7 +400,7 @@ export class QueuesService {
    */
   async getAllQueuesStatus(): Promise<any[]> {
     return Promise.all(
-      this.queueNames.map(async (queueName) => this.getQueueStatus(queueName))
+      this.queueNames.map(async (queueName) => this.getQueueStatus(queueName)),
     );
   }
 
@@ -327,19 +425,36 @@ export class QueuesService {
    * @param status Status desejado (waiting, active, completed, failed, delayed ou all).
    * @param limit Quantidade máxima de jobs a retornar.
    */
-  async getJobsByStatus(queueName: string, status: string = 'waiting', limit = 50): Promise<any[]> {
+  async getJobsByStatus(
+    queueName: string,
+    status: string = 'waiting',
+    limit = 50,
+  ): Promise<any[]> {
     const queue = this.getQueueInstance(queueName);
-    const validStatuses = ['waiting', 'active', 'completed', 'failed', 'delayed', 'paused'];
+    const validStatuses = [
+      'waiting',
+      'active',
+      'completed',
+      'failed',
+      'delayed',
+      'paused',
+    ];
 
     const normalizedStatus = status.toLowerCase();
-    const statusesToFetch = normalizedStatus === 'all'
-      ? validStatuses
-      : validStatuses.includes(normalizedStatus)
-        ? [normalizedStatus]
-        : ['waiting'];
+    const statusesToFetch =
+      normalizedStatus === 'all'
+        ? validStatuses
+        : validStatuses.includes(normalizedStatus)
+          ? [normalizedStatus]
+          : ['waiting'];
 
     try {
-      const jobs = await queue.getJobs(statusesToFetch as any, 0, limit - 1, false);
+      const jobs = await queue.getJobs(
+        statusesToFetch as any,
+        0,
+        limit - 1,
+        false,
+      );
 
       return Promise.all(
         jobs.map(async (job) => {
@@ -356,11 +471,15 @@ export class QueuesService {
             failedReason: job.failedReason,
             state: jobState,
           };
-        })
+        }),
       );
     } catch (error) {
-      this.logger.error(`Erro ao listar jobs na fila ${queueName}: ${error.message}`);
-      throw new InternalServerErrorException(`Falha ao listar jobs: ${error.message}`);
+      this.logger.error(
+        `Erro ao listar jobs na fila ${queueName}: ${error.message}`,
+      );
+      throw new InternalServerErrorException(
+        `Falha ao listar jobs: ${error.message}`,
+      );
     }
   }
 
@@ -372,20 +491,26 @@ export class QueuesService {
     const job = await queue.getJob(jobId);
 
     if (!job) {
-      throw new BadRequestException(`Job ${jobId} não encontrado na fila ${queueName}`);
+      throw new BadRequestException(
+        `Job ${jobId} não encontrado na fila ${queueName}`,
+      );
     }
 
     const jobState = await job.getState();
     if (jobState === 'failed') {
       await job.retry();
-      this.logger.log(`Job ${jobId} da fila ${queueName} reenfileirado para nova tentativa.`);
+      this.logger.log(
+        `Job ${jobId} da fila ${queueName} reenfileirado para nova tentativa.`,
+      );
     } else if (jobState === 'completed' || jobState === 'delayed') {
       // FIX: Checagem de estado + type assertion para compatibilidade Bull/BullMQ
       // O método existe runtime, mas TS precisa do 'as any' em alguns tipos
       (job as any).moveToWaiting();
       this.logger.log(`Job ${jobId} da fila ${queueName} movido para waiting.`);
     } else {
-      throw new BadRequestException(`Job ${jobId} está em estado '${jobState}' – não pode ser reenfileirado.`);
+      throw new BadRequestException(
+        `Job ${jobId} está em estado '${jobState}' – não pode ser reenfileirado.`,
+      );
     }
   }
 }
