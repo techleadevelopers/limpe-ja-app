@@ -7,14 +7,11 @@ import { AuthModule } from '../auth/auth.module';
 import { I18nModule } from '../common/i18n/i18n.module';
 
 @Module({
-  imports: [
-    PrismaModule,
-    forwardRef(() => AuthModule),
-  ],
+  imports: [PrismaModule, forwardRef(() => AuthModule)],
   controllers: [NotificationsController],
   providers: [
     NotificationsService,
-    I18nModule,  // <-- disponibiliza o serviço para injeção no NotificationsService
+    I18nModule, // <-- disponibiliza o serviço para injeção no NotificationsService
   ],
   exports: [NotificationsService],
 })
