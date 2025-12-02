@@ -23,7 +23,9 @@ export class CacheService {
       }
       return value;
     } catch (error) {
-      this.logger.error(`Erro ao obter do cache para a chave ${key}: ${error.message}`);
+      this.logger.error(
+        `Erro ao obter do cache para a chave ${key}: ${error.message}`,
+      );
       return undefined;
     }
   }
@@ -39,7 +41,9 @@ export class CacheService {
       await this.cacheManager.set(key, value, ttl);
       this.logger.debug(`Cache SET for key: ${key}`);
     } catch (error) {
-      this.logger.error(`Erro ao definir no cache para a chave ${key}: ${error.message}`);
+      this.logger.error(
+        `Erro ao definir no cache para a chave ${key}: ${error.message}`,
+      );
     }
   }
 
@@ -52,7 +56,9 @@ export class CacheService {
       await this.cacheManager.del(key);
       this.logger.debug(`Cache DEL for key: ${key}`);
     } catch (error) {
-      this.logger.error(`Erro ao deletar do cache para a chave ${key}: ${error.message}`);
+      this.logger.error(
+        `Erro ao deletar do cache para a chave ${key}: ${error.message}`,
+      );
     }
   }
 
@@ -62,7 +68,7 @@ export class CacheService {
   async reset(): Promise<void> {
     try {
       // CORREÇÃO: Usar o método 'clear()' que existe na interface 'Cache'
-      await this.cacheManager.clear(); 
+      await this.cacheManager.clear();
       this.logger.warn('Cache RESET successfully.');
     } catch (error) {
       this.logger.error(`Erro ao resetar o cache: ${error.message}`);
