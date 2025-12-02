@@ -220,8 +220,12 @@ export default function ClientNotificationsScreen() {
           headerShown: true,
           headerBackTitle: '',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: '#F3F6FB' },
-          headerTitleStyle: { fontWeight: '800', color: '#0f172a' },
+          headerStyle: { backgroundColor: '#F3F6FB', height: 110, paddingTop: 44, paddingBottom: 8 },
+          headerTitleContainerStyle: { marginTop: 8 },
+          headerLeftContainerStyle: { marginTop: 8 },
+          headerRightContainerStyle: { marginTop: 8 },
+          contentStyle: undefined,
+          headerTitleStyle: { fontWeight: '800', color: '#0f172a', fontSize: 20 },
           headerLeft: () => (
             <TouchableOpacity style={styles.headerBackBtn} onPress={() => router.back()}>
               <Ionicons name="chevron-back" size={22} color="#0f172a" />
@@ -261,8 +265,8 @@ export default function ClientNotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 12, backgroundColor: '#F3F6FB' },
-  headerBackBtn: { paddingHorizontal: 8, paddingVertical: 4 },
+  container: { flex: 1, paddingTop: 19, backgroundColor: '#F3F6FB', },
+  headerBackBtn: { paddingHorizontal: 18, paddingVertical: 14 },
   markAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -317,15 +321,5 @@ const styles = StyleSheet.create({
   chevron: { marginLeft: 8 },
   thumbnail: { width: 64, height: 64, borderRadius: 6 },
 });
-
-
-
-
-
-
-
-
-
-
 
 
