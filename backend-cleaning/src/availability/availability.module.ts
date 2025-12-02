@@ -11,7 +11,7 @@ import { ProvidersModule } from '../providers/providers.module'; // Importa o Pr
   ],
   controllers: [
     MyAvailabilityController, // Coloque o controlador mais específico primeiro
-    AvailabilityController,   // Em seguida, o controlador mais genérico
+    AvailabilityController, // Em seguida, o controlador mais genérico
   ],
   providers: [AvailabilityService],
   exports: [AvailabilityService],
