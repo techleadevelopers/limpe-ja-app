@@ -10,9 +10,14 @@ export class PrivacyPolicy {
    * @param requestedUserId O ID do usuário cujos dados estão sendo solicitados (se aplicável).
    * @throws UnauthorizedException se os IDs não corresponderem.
    */
-  ensureUserAccess(authenticatedUserId: string, requestedUserId?: string): void {
+  ensureUserAccess(
+    authenticatedUserId: string,
+    requestedUserId?: string,
+  ): void {
     if (requestedUserId && authenticatedUserId !== requestedUserId) {
-      throw new UnauthorizedException('Você não tem permissão para acessar os dados deste usuário.');
+      throw new UnauthorizedException(
+        'Você não tem permissão para acessar os dados deste usuário.',
+      );
     }
     // Se requestedUserId não for fornecido, assume-se que a operação é sobre os dados do próprio authenticatedUserId
   }
