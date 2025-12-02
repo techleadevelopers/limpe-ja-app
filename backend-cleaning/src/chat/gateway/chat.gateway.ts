@@ -9,7 +9,13 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ChatService } from '../chat.service';
 import { SendMessageDto } from '../dto/send-message.dto';
-import { UseGuards, Logger, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common'; // Importado ForbiddenException, NotFoundException, BadRequestException
+import {
+  UseGuards,
+  Logger,
+  ForbiddenException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common'; // Importado ForbiddenException, NotFoundException, BadRequestException
 import { WsAuthGuard } from '../../auth/guards/ws-auth.guard';
 import { Message } from '../entities/message.entity';
 // import { createAdapter } from '@socket.io/redis-adapter'; // Importar o adaptador Redis
@@ -53,12 +59,19 @@ export class ChatGateway {
     const senderId = client.data.userId; // Obtém o userId do socket, definido pelo WsAuthGuard
 
     if (!senderId) {
-      this.logger.error(`[WebSocket] sendMessage: senderId não encontrado no socket para client ${client.id}`);
-      client.emit('errorMessage', { event: 'sendMessage', message: 'Erro de autenticação: ID do remetente não disponível.' });
+      this.logger.error(
+        `[WebSocket] sendMessage: senderId não encontrado no socket para client ${client.id}`,
+      );
+      client.emit('errorMessage', {
+        event: 'sendMessage',
+        message: 'Erro de autenticação: ID do remetente não disponível.',
+      });
       return;
     }
 
-    this.logger.log(`[WebSocket] Mensagem recebida de ${senderId} para chat ${payload.chatId}: ${payload.content}`);
+    this.logger.log(
+      `[WebSocket] Mensagem recebida de ${senderId} para chat ${payload.chatId}: ${payload.content}`,
+    );
 
     try {
       const message = await this.chatService.createMessage(
@@ -70,32 +83,55 @@ export class ChatGateway {
 
       // Emite a mensagem para todos os clientes na sala do chat (ou para os envolvidos)
       this.server.to(payload.chatId).emit('newMessage', message);
-      this.logger.log(`[WebSocket] Mensagem enviada para a sala ${payload.chatId}`);
+      this.logger.log(
+        `[WebSocket] Mensagem enviada para a sala ${payload.chatId}`,
+      );
     } catch (error) {
-      this.logger.error(`[WebSocket] Erro ao enviar mensagem para ${payload.chatId}: ${error.message}`);
+      this.logger.error(
+        `[WebSocket] Erro ao enviar mensagem para ${payload.chatId}: ${error.message}`,
+      );
       if (error instanceof ForbiddenException) {
-        client.emit('errorMessage', { event: 'sendMessage', message: error.message });
+        client.emit('errorMessage', {
+          event: 'sendMessage',
+          message: error.message,
+        });
       } else if (error instanceof NotFoundException) {
-        client.emit('errorMessage', { event: 'sendMessage', message: 'Conversa não encontrada.' });
+        client.emit('errorMessage', {
+          event: 'sendMessage',
+          message: 'Conversa não encontrada.',
+        });
       } else if (error instanceof BadRequestException) {
-        client.emit('errorMessage', { event: 'sendMessage', message: error.message });
+        client.emit('errorMessage', {
+          event: 'sendMessage',
+          message: error.message,
+        });
       } else {
-        client.emit('errorMessage', { event: 'sendMessage', message: 'Não foi possível enviar a mensagem devido a um erro interno.' });
+        client.emit('errorMessage', {
+          event: 'sendMessage',
+          message:
+            'Não foi possível enviar a mensagem devido a um erro interno.',
+        });
       }
     }
   }
 
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('joinChat')
-  async handleJoinChat( // Adicionado 'async' para poder usar await
+  async handleJoinChat(
+    // Adicionado 'async' para poder usar await
     @MessageBody() chatId: string,
     @ConnectedSocket() client: Socket,
   ): Promise<void> {
     const userId = client.data.userId; // Obtém o userId do socket
 
     if (!userId) {
-      this.logger.error(`[WebSocket] joinChat: userId não encontrado no socket para client ${client.id}`);
-      client.emit('errorMessage', { event: 'joinChat', message: 'Erro de autenticação: ID do usuário não disponível.' });
+      this.logger.error(
+        `[WebSocket] joinChat: userId não encontrado no socket para client ${client.id}`,
+      );
+      client.emit('errorMessage', {
+        event: 'joinChat',
+        message: 'Erro de autenticação: ID do usuário não disponível.',
+      });
       return;
     }
 
@@ -107,16 +143,30 @@ export class ChatGateway {
       await this.chatService.getMessagesByChatId(chatId, 0, 1); // Busca 1 mensagem para validar acesso
 
       client.join(chatId);
-      this.logger.log(`[WebSocket] Cliente ${client.id} (User: ${userId}) entrou na sala de chat: ${chatId}`);
+      this.logger.log(
+        `[WebSocket] Cliente ${client.id} (User: ${userId}) entrou na sala de chat: ${chatId}`,
+      );
       client.emit('joinedChat', `Você entrou na sala ${chatId}`);
     } catch (error) {
-      this.logger.error(`[WebSocket] Erro ao tentar entrar na sala ${chatId} para user ${userId}: ${error.message}`);
+      this.logger.error(
+        `[WebSocket] Erro ao tentar entrar na sala ${chatId} para user ${userId}: ${error.message}`,
+      );
       if (error instanceof ForbiddenException) {
-        client.emit('errorMessage', { event: 'joinChat', message: error.message });
+        client.emit('errorMessage', {
+          event: 'joinChat',
+          message: error.message,
+        });
       } else if (error instanceof NotFoundException) {
-        client.emit('errorMessage', { event: 'joinChat', message: 'Conversa não encontrada.' });
+        client.emit('errorMessage', {
+          event: 'joinChat',
+          message: 'Conversa não encontrada.',
+        });
       } else {
-        client.emit('errorMessage', { event: 'joinChat', message: 'Não foi possível entrar na sala de chat devido a um erro interno.' });
+        client.emit('errorMessage', {
+          event: 'joinChat',
+          message:
+            'Não foi possível entrar na sala de chat devido a um erro interno.',
+        });
       }
     }
   }
