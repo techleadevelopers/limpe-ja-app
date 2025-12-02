@@ -1,5 +1,14 @@
 ﻿// src/modules/loyalty/loyalty.controller.ts
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Req,
+  Query,
+} from '@nestjs/common';
 import { LoyaltyService } from './loyalty.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AddPointsDto } from './dto/add-points.dto';
@@ -22,7 +31,9 @@ export class LoyaltyController {
   }
 
   @Get('me/history')
-  @ApiOperation({ summary: 'Obter o histÃ³rico de transaÃ§Ãµes de pontos do usuÃ¡rio logado' })
+  @ApiOperation({
+    summary: 'Obter o histÃ³rico de transaÃ§Ãµes de pontos do usuÃ¡rio logado',
+  })
   async getMyLoyaltyHistory(@Req() req) {
     const userId = req.user.userId;
     return this.loyaltyService.getLoyaltyHistory(userId);
@@ -38,12 +49,16 @@ export class LoyaltyController {
 
   @Get('rewards')
   @ApiOperation({ summary: 'Lista recompensas ativas para resgate' })
-  async getRewards(@Req() req, @Query('limit') limit?: string, @Query('offset') offset?: string, @Query('type') type?: string, @Query('q') q?: string) {
+  async getRewards(
+    @Req() req,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('type') type?: string,
+    @Query('q') q?: string,
+  ) {
     // auth via controller guard; just forward to service
     const take = limit ? parseInt(limit, 10) : undefined;
     const skip = offset ? parseInt(offset, 10) : undefined;
     return this.loyaltyService.getActiveRewards(take, skip, type, q);
-  }}
-
-
-
+  }
+}
