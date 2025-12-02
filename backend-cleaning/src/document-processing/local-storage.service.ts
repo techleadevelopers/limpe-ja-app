@@ -6,7 +6,12 @@ import * as path from 'path';
 @Injectable()
 export class LocalStorageService {
   private readonly logger = new Logger(LocalStorageService.name);
-  private readonly uploadDirectory = path.join(__dirname, '..', '..', 'uploads');
+  private readonly uploadDirectory = path.join(
+    __dirname,
+    '..',
+    '..',
+    'uploads',
+  );
 
   constructor() {
     this.ensureUploadDirectoryExists();
@@ -48,17 +53,26 @@ export class LocalStorageService {
 
   // Métodos mock para as funcionalidades de OCR/Vision
   async processDocumentForOcr(fileName: string): Promise<any> {
-    this.logger.warn('Mock: OCR não está ativo em modo de armazenamento local.');
+    this.logger.warn(
+      'Mock: OCR não está ativo em modo de armazenamento local.',
+    );
     return { mockData: 'OCR data for ' + fileName };
   }
 
   async processSelfieForLiveness(fileName: string): Promise<any> {
-    this.logger.warn('Mock: Liveness não está ativo em modo de armazenamento local.');
+    this.logger.warn(
+      'Mock: Liveness não está ativo em modo de armazenamento local.',
+    );
     return { mockData: 'Liveness data for ' + fileName };
   }
 
-  async compareFaces(selfieFileName: string, documentFileName: string): Promise<any> {
-    this.logger.warn('Mock: Comparação facial não está ativa em modo de armazenamento local.');
+  async compareFaces(
+    selfieFileName: string,
+    documentFileName: string,
+  ): Promise<any> {
+    this.logger.warn(
+      'Mock: Comparação facial não está ativa em modo de armazenamento local.',
+    );
     return { match: true };
   }
 }
