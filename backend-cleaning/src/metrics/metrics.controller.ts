@@ -14,7 +14,9 @@ export class MetricsController {
   constructor(private readonly metricsService: MetricsService) {}
 
   @Get('me/summary')
-  @ApiOperation({ summary: 'Obtém um resumo das métricas do cliente autenticado' })
+  @ApiOperation({
+    summary: 'Obtém um resumo das métricas do cliente autenticado',
+  })
   async getCustomerSummaryMetrics(
     @Request() req,
     @Query() query: CustomerMetricsQueryDto,
@@ -24,7 +26,9 @@ export class MetricsController {
   }
 
   @Get('me/timeseries')
-  @ApiOperation({ summary: 'Obtém métricas do cliente autenticado em série temporal' })
+  @ApiOperation({
+    summary: 'Obtém métricas do cliente autenticado em série temporal',
+  })
   async getCustomerTimeseriesMetrics(
     @Request() req,
     @Query() query: CustomerMetricsQueryDto,
@@ -34,7 +38,9 @@ export class MetricsController {
   }
 
   @Get('me/funnel')
-  @ApiOperation({ summary: 'Obtém dados do funil de conversão do cliente autenticado' })
+  @ApiOperation({
+    summary: 'Obtém dados do funil de conversão do cliente autenticado',
+  })
   async getCustomerFunnelMetrics(@Request() req) {
     const userId = req.user.id;
     return this.metricsService.getCustomerFunnel(userId);
