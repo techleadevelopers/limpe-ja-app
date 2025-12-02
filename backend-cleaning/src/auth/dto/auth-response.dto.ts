@@ -9,7 +9,10 @@ export class AuthResponseDto {
   @IsString()
   accessToken: string;
 
-  @ApiProperty({ type: () => UserProfileDto, description: 'O perfil do usuário autenticado' })
+  @ApiProperty({
+    type: () => UserProfileDto,
+    description: 'O perfil do usuário autenticado',
+  })
   @ValidateNested()
   @Type(() => UserProfileDto)
   user: UserProfileDto;
