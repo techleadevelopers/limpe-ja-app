@@ -7,9 +7,19 @@ export class AdminDashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getDashboardMetrics() {
-    const [activeUsers, approvedProviders, completedBookings, pendingVerifications, revenueSum] = await Promise.all([
-      this.prisma.user.count({ where: { role: UserRole.CLIENT, isVerified: true } }),
-      this.prisma.provider.count({ where: { verificationStatus: VerificationStatus.APPROVED } }),
+    const [
+      activeUsers,
+      approvedProviders,
+      completedBookings,
+      pendingVerifications,
+      revenueSum,
+    ] = await Promise.all([
+      this.prisma.user.count({
+        where: { role: UserRole.CLIENT, isVerified: true },
+      }),
+      this.prisma.provider.count({
+        where: { verificationStatus: VerificationStatus.APPROVED },
+      }),
       this.prisma.booking.count({ where: { status: BookingStatus.COMPLETED } }),
       this.prisma.provider.count({
         where: {
@@ -29,7 +39,9 @@ export class AdminDashboardService {
       }),
     ]);
 
-    const totalRevenue = revenueSum._sum.totalPrice ? Number(revenueSum._sum.totalPrice) : 0;
+    const totalRevenue = revenueSum._sum.totalPrice
+      ? Number(revenueSum._sum.totalPrice)
+      : 0;
 
     return {
       activeUsers,
@@ -43,7 +55,13 @@ export class AdminDashboardService {
   async getRevenueTrend(months: number = 12) {
     const clampedMonths = Math.max(1, Math.min(months, 24));
     const now = new Date();
-    const startMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (clampedMonths - 1), 1));
+    const startMonth = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth() - (clampedMonths - 1),
+        1,
+      ),
+    );
 
     const completedBookings = await this.prisma.booking.findMany({
       where: {
@@ -57,13 +75,18 @@ export class AdminDashboardService {
     const buckets = new Map<string, { month: string; revenue: number }>();
 
     for (let i = 0; i < clampedMonths; i += 1) {
-      const bucketDate = new Date(Date.UTC(startMonth.getUTCFullYear(), startMonth.getUTCMonth() + i, 1));
+      const bucketDate = new Date(
+        Date.UTC(startMonth.getUTCFullYear(), startMonth.getUTCMonth() + i, 1),
+      );
       const key = `${bucketDate.getUTCFullYear()}-${bucketDate.getUTCMonth()}`;
       buckets.set(key, { month: formatter.format(bucketDate), revenue: 0 });
     }
 
     completedBookings.forEach((booking) => {
-      const createdAt = booking.createdAt instanceof Date ? booking.createdAt : new Date(booking.createdAt);
+      const createdAt =
+        booking.createdAt instanceof Date
+          ? booking.createdAt
+          : new Date(booking.createdAt);
       const key = `${createdAt.getUTCFullYear()}-${createdAt.getUTCMonth()}`;
       const bucket = buckets.get(key);
       if (bucket) {
