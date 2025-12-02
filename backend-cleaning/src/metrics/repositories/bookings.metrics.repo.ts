@@ -69,7 +69,7 @@ export class BookingsMetricsRepository {
 
     // Você precisaria de lógica de pós-processamento para agrupar corretamente por dia/semana/mês
     // e preencher lacunas de datas.
-    return result.map(item => ({
+    return result.map((item) => ({
       date: item.createdAt.toISOString().split('T')[0], // Apenas a parte da data
       count: item._count.id,
     }));
