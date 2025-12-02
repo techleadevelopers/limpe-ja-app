@@ -2,7 +2,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProviderRankingDto } from './dto/provider-ranking.dto';
-import { ProvidersService, ProviderWithCalculatedRating } from '../providers/providers.service';
+import {
+  ProvidersService,
+  ProviderWithCalculatedRating,
+} from '../providers/providers.service';
 import { SortByOption } from '../search/dto/search-query.dto';
 
 @Injectable()
@@ -21,24 +24,34 @@ export class RankingService {
    * @param provider O objeto ProviderWithCalculatedRating.
    * @returns O score de ranking calculado.
    */
-  private calculateProviderScore(provider: ProviderWithCalculatedRating): number {
+  private calculateProviderScore(
+    provider: ProviderWithCalculatedRating,
+  ): number {
     // Normalizações (simplificadas para o exemplo)
     const rating_norm = provider.averageRating / 5; // Normaliza de 0 a 1
-    const share5Star_norm = provider.reviewCount > 0 ? provider.fiveStarReviewCount / provider.reviewCount : 0;
+    const share5Star_norm =
+      provider.reviewCount > 0
+        ? provider.fiveStarReviewCount / provider.reviewCount
+        : 0;
     const recency_norm = 1.0; // Placeholder, exigiria lógica de data do último booking/review
-    const distance_norm = provider.distance ? Math.min(provider.distance / 50, 1) : 0; // Normaliza distância (ex: até 50km)
+    const distance_norm = provider.distance
+      ? Math.min(provider.distance / 50, 1)
+      : 0; // Normaliza distância (ex: até 50km)
     const acceptanceRate_norm = (provider.acceptanceRate || 0) / 100; // NOVO: Normaliza de 0 a 1 (padrão 0 se nulo)
-    const avgResponseTime_norm = (provider.averageResponseTime || 60) ? Math.min((provider.averageResponseTime || 60) / 60, 1) : 1; // NOVO: Normaliza tempo de resposta (padrão 60min se nulo)
+    const avgResponseTime_norm =
+      provider.averageResponseTime || 60
+        ? Math.min((provider.averageResponseTime || 60) / 60, 1)
+        : 1; // NOVO: Normaliza tempo de resposta (padrão 60min se nulo)
 
     // Boosts de gamificação (já incluído no provider.rankingBoostScore)
     const boosts_gamificacao = provider.rankingBoostScore || 0;
 
     // Fórmula de score (atualizada com novos pesos para métricas):
     // score = 0.30·rating_norm + 0.15·share5⭐ + 0.15·recency_norm + 0.15·(1 - distance_norm) + 0.15·acceptanceRate_norm + 0.05·(1 - avgResponseTime_norm) + 0.05·badges_bonus + boosts_gamificação
-    let badges_bonus = (provider.badges?.length || 0) * 0.02; // NOVO: Bônus por badges (ex.: 0.02 por badge)
+    const badges_bonus = (provider.badges?.length || 0) * 0.02; // NOVO: Bônus por badges (ex.: 0.02 por badge)
 
     let score =
-      0.30 * rating_norm +
+      0.3 * rating_norm +
       0.15 * share5Star_norm +
       0.15 * recency_norm +
       0.15 * (1 - distance_norm) +
@@ -69,7 +82,9 @@ export class RankingService {
     sortBy: SortByOption = SortByOption.Rating,
     limit: number = 10,
   ): Promise<ProviderRankingDto[]> {
-    this.logger.log(`Gerando ranking de provedores para lat: ${latitude}, lon: ${longitude}, raio: ${radius}km, ordenar por: ${sortBy}.`);
+    this.logger.log(
+      `Gerando ranking de provedores para lat: ${latitude}, lon: ${longitude}, raio: ${radius}km, ordenar por: ${sortBy}.`,
+    );
 
     // Reutilizar o método search do ProvidersService que já lida com busca geoespacial e ordenação
     const providers = await this.providersService.search({
@@ -82,7 +97,7 @@ export class RankingService {
     });
 
     // Calcular o score para cada provedor (atualizado com novos fatores)
-    const providersWithScore = providers.map(p => ({
+    const providersWithScore = providers.map((p) => ({
       provider: p,
       score: this.calculateProviderScore(p),
     }));
@@ -129,15 +144,29 @@ export class RankingService {
     longitude: number,
     radius: number = 10,
     sortBy: SortByOption = SortByOption.Rating,
-  ): Promise<{ position: number | null; totalProvidersInRanking: number; currentProviderData?: ProviderRankingDto }> {
+  ): Promise<{
+    position: number | null;
+    totalProvidersInRanking: number;
+    currentProviderData?: ProviderRankingDto;
+  }> {
     this.logger.log(`Buscando posição do provedor ${providerId} no ranking.`);
 
-    const allRankedProviders = await this.getProviderRanking(latitude, longitude, radius, sortBy, 9999);
+    const allRankedProviders = await this.getProviderRanking(
+      latitude,
+      longitude,
+      radius,
+      sortBy,
+      9999,
+    );
 
-    const providerEntry = allRankedProviders.find(p => p.providerId === providerId);
+    const providerEntry = allRankedProviders.find(
+      (p) => p.providerId === providerId,
+    );
 
     // Telemetria: provider_position_queried
-    this.logger.log(`[TELEMETRY] provider_position_queried: { providerId: ${providerId}, position: ${providerEntry?.position || null} }`);
+    this.logger.log(
+      `[TELEMETRY] provider_position_queried: { providerId: ${providerId}, position: ${providerEntry?.position || null} }`,
+    );
 
     return {
       position: providerEntry ? providerEntry.position : null,
