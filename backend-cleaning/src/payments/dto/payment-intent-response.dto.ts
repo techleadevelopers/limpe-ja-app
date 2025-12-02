@@ -8,6 +8,9 @@ export class PaymentIntentResponseDto {
   status: PaymentIntentStatus;
   gateway: string;
   externalRef?: string | null;
+  externalOrderId?: string | null;
+  externalChargeId?: string | null;
+  externalQrCodeId?: string | null;
   qrCodeUrl?: string | null;
   qrCodeText?: string | null;
   expiresAt?: string | null;
