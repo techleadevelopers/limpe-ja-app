@@ -6,7 +6,8 @@ import { UpdateFaqDto } from './dto/update-faq.dto';
 import { FAQItem } from '@prisma/client'; // Importa o tipo gerado pelo Prisma
 
 @Injectable()
-export class FaqsService { // <--- CORREÇÃO: Adicionado 'export' aqui
+export class FaqsService {
+  // <--- CORREÇÃO: Adicionado 'export' aqui
   constructor(private prisma: PrismaService) {}
 
   async create(createFaqDto: CreateFaqDto): Promise<FAQItem> {
