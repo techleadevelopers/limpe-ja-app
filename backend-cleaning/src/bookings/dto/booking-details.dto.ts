@@ -1,6 +1,13 @@
 ﻿// src/bookings/dto/booking-details.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsUUID, IsEnum, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsUUID,
+  IsEnum,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { BookingStatus } from '@prisma/client';
 import { AddressDetailsDto } from '../../common/dto/address-details.dto';
@@ -11,7 +18,10 @@ function isDecimal(value: any): value is Decimal {
 }
 
 export class BookingDetailsDto {
-  @ApiProperty({ description: 'ID do agendamento', example: 'uuid-do-agendamento' })
+  @ApiProperty({
+    description: 'ID do agendamento',
+    example: 'uuid-do-agendamento',
+  })
   @IsString()
   id: string;
 
@@ -25,12 +35,18 @@ export class BookingDetailsDto {
   @IsUUID()
   providerId: string;
 
-  @ApiProperty({ description: 'ID do serviço oferecido pelo provedor', example: 'uuid-do-provider-service' })
+  @ApiProperty({
+    description: 'ID do serviço oferecido pelo provedor',
+    example: 'uuid-do-provider-service',
+  })
   @IsString()
   @IsUUID()
   providerServiceId: string;
 
-  @ApiProperty({ description: 'Data agendada', example: '2025-07-01T09:00:00.000Z' })
+  @ApiProperty({
+    description: 'Data agendada',
+    example: '2025-07-01T09:00:00.000Z',
+  })
   @IsString()
   scheduledDate: string;
 
@@ -38,7 +54,11 @@ export class BookingDetailsDto {
   @IsString()
   scheduledTime: string;
 
-  @ApiProperty({ enum: BookingStatus, description: 'Status atual do agendamento', example: BookingStatus.PENDING })
+  @ApiProperty({
+    enum: BookingStatus,
+    description: 'Status atual do agendamento',
+    example: BookingStatus.PENDING,
+  })
   @IsString()
   @IsEnum(BookingStatus)
   status: BookingStatus;
@@ -47,77 +67,122 @@ export class BookingDetailsDto {
   @IsNumber()
   totalPrice: number;
 
-  @ApiPropertyOptional({ description: 'Notas adicionais sobre o agendamento', example: 'Limpeza pesada na cozinha.' })
+  @ApiPropertyOptional({
+    description: 'Notas adicionais sobre o agendamento',
+    example: 'Limpeza pesada na cozinha.',
+  })
   @IsOptional()
   @IsString()
   notes?: string | null;
 
-  @ApiProperty({ description: 'Data de criação do agendamento', example: '2025-07-01T08:00:00.000Z' })
+  @ApiProperty({
+    description: 'Data de criação do agendamento',
+    example: '2025-07-01T08:00:00.000Z',
+  })
   @IsString()
   createdAt: string;
 
-  @ApiProperty({ description: 'Data da última atualização do agendamento', example: '2025-07-01T08:30:00.000Z' })
+  @ApiProperty({
+    description: 'Data da última atualização do agendamento',
+    example: '2025-07-01T08:30:00.000Z',
+  })
   @IsString()
   updatedAt: string;
 
-  @ApiPropertyOptional({ description: 'ID do endereço do agendamento', example: 'uuid-do-endereco' })
+  @ApiPropertyOptional({
+    description: 'ID do endereço do agendamento',
+    example: 'uuid-do-endereco',
+  })
   @IsOptional()
   @IsUUID()
   addressId?: string | null;
 
-  @ApiPropertyOptional({ type: AddressDetailsDto, description: 'Detalhes do endereço do agendamento' })
+  @ApiPropertyOptional({
+    type: AddressDetailsDto,
+    description: 'Detalhes do endereço do agendamento',
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => AddressDetailsDto)
   address?: AddressDetailsDto | null;
 
-  @ApiPropertyOptional({ description: 'ID do cupom aplicado, se houver', example: 'uuid-do-cupom' })
+  @ApiPropertyOptional({
+    description: 'ID do cupom aplicado, se houver',
+    example: 'uuid-do-cupom',
+  })
   @IsOptional()
   @IsUUID()
   couponId?: string | null;
 
-  @ApiPropertyOptional({ description: 'Código do cupom aplicado', example: 'DESCONTO10' })
+  @ApiPropertyOptional({
+    description: 'Código do cupom aplicado',
+    example: 'DESCONTO10',
+  })
   @IsOptional()
   @IsString()
   couponCode?: string | null;
 
-  @ApiPropertyOptional({ description: 'Valor do desconto aplicado pelo cupom', example: 10.5 })
+  @ApiPropertyOptional({
+    description: 'Valor do desconto aplicado pelo cupom',
+    example: 10.5,
+  })
   @IsOptional()
   @IsNumber()
   discountAmount?: number | null;
 
   // Campos achatados do cliente/provedor/serviço para facilitar o consumo no frontend
-  @ApiPropertyOptional({ description: 'Nome completo do cliente', example: 'Nome do Cliente' })
+  @ApiPropertyOptional({
+    description: 'Nome completo do cliente',
+    example: 'Nome do Cliente',
+  })
   @IsOptional()
   @IsString()
   clientFullName?: string;
 
-  @ApiPropertyOptional({ description: 'E-mail do cliente', example: 'cliente@email.com' })
+  @ApiPropertyOptional({
+    description: 'E-mail do cliente',
+    example: 'cliente@email.com',
+  })
   @IsOptional()
   @IsString()
   clientEmail?: string;
 
-  @ApiPropertyOptional({ description: 'URL do avatar do cliente', example: 'http://avatar.com/cliente.jpg' })
+  @ApiPropertyOptional({
+    description: 'URL do avatar do cliente',
+    example: 'http://avatar.com/cliente.jpg',
+  })
   @IsOptional()
   @IsString()
   clientAvatarUrl?: string | null;
 
-  @ApiPropertyOptional({ description: 'Nome completo do provedor', example: 'Nome do Provedor' })
+  @ApiPropertyOptional({
+    description: 'Nome completo do provedor',
+    example: 'Nome do Provedor',
+  })
   @IsOptional()
   @IsString()
   providerFullName?: string;
 
-  @ApiPropertyOptional({ description: 'E-mail do provedor', example: 'provedor@email.com' })
+  @ApiPropertyOptional({
+    description: 'E-mail do provedor',
+    example: 'provedor@email.com',
+  })
   @IsOptional()
   @IsString()
   providerEmail?: string;
 
-  @ApiPropertyOptional({ description: 'URL do avatar do provedor', example: 'http://avatar.com/provedor.jpg' })
+  @ApiPropertyOptional({
+    description: 'URL do avatar do provedor',
+    example: 'http://avatar.com/provedor.jpg',
+  })
   @IsOptional()
   @IsString()
   providerAvatarUrl?: string | null;
 
-  @ApiPropertyOptional({ description: 'Nome do serviço', example: 'Limpeza Residencial' })
+  @ApiPropertyOptional({
+    description: 'Nome do serviço',
+    example: 'Limpeza Residencial',
+  })
   @IsOptional()
   @IsString()
   serviceName?: string;
@@ -127,18 +192,27 @@ export class BookingDetailsDto {
   @IsNumber()
   servicePrice?: number;
 
-  @ApiPropertyOptional({ description: 'Duração do serviço em minutos', example: 120 })
+  @ApiPropertyOptional({
+    description: 'Duração do serviço em minutos',
+    example: 120,
+  })
   @IsOptional()
   @IsNumber()
   serviceDurationMinutes?: number;
 
-  @ApiPropertyOptional({ description: 'Descrição do serviço pelo provedor', example: 'Limpeza com produtos ecológicos.' })
+  @ApiPropertyOptional({
+    description: 'Descrição do serviço pelo provedor',
+    example: 'Limpeza com produtos ecológicos.',
+  })
   @IsOptional()
   @IsString()
   providerServiceDescription?: string | null;
 
   // Avaliação (se já realizada)
-  @ApiPropertyOptional({ description: 'ID da avaliação do booking', example: 'uuid-da-review' })
+  @ApiPropertyOptional({
+    description: 'ID da avaliação do booking',
+    example: 'uuid-da-review',
+  })
   @IsOptional()
   @IsString()
   reviewId?: string | null;
@@ -148,16 +222,25 @@ export class BookingDetailsDto {
   @IsNumber()
   reviewRating?: number | null;
 
-  @ApiPropertyOptional({ description: 'Comentário da avaliação', example: 'Serviço excelente.' })
+  @ApiPropertyOptional({
+    description: 'Comentário da avaliação',
+    example: 'Serviço excelente.',
+  })
   @IsOptional()
   @IsString()
   reviewComment?: string | null;
 
-  @ApiPropertyOptional({ description: 'Indica se o booking já foi avaliado', example: true })
+  @ApiPropertyOptional({
+    description: 'Indica se o booking já foi avaliado',
+    example: true,
+  })
   @IsOptional()
   isReviewed?: boolean;
 
-  @ApiPropertyOptional({ description: 'Data e hora agendadas combinadas (ISO 8601)', example: '2025-07-01T09:00:00Z' })
+  @ApiPropertyOptional({
+    description: 'Data e hora agendadas combinadas (ISO 8601)',
+    example: '2025-07-01T09:00:00Z',
+  })
   @IsOptional()
   @IsString()
   scheduledDateTime?: string;
@@ -178,48 +261,84 @@ export class BookingDetailsDto {
     couponId?: string | null;
     coupon?: { code: string } | null;
     discountAmount?: Decimal | number | null;
-    review?: { id: string; rating: number | Decimal; comment?: string | null } | null;
+    review?: {
+      id: string;
+      rating: number | Decimal;
+      comment?: string | null;
+    } | null;
     address?: {
       id?: string;
-      cep: string; street: string; number: string;
+      cep: string;
+      street: string;
+      number: string;
       complement?: string | null;
-      neighborhood: string; city: string; state: string;
+      neighborhood: string;
+      city: string;
+      state: string;
       latitude: Decimal | number;
       longitude: Decimal | number;
     } | null;
-    client?: { user?: { avatarUrl?: string | null }; fullName: string; email?: string };
-    provider?: { user?: { avatarUrl?: string | null }; fullName: string; email?: string };
-    providerService?: { service: { name: string; price: Decimal | number }; durationMinutes: number; description?: string | null };
+    client?: {
+      user?: { avatarUrl?: string | null };
+      fullName: string;
+      email?: string;
+    };
+    provider?: {
+      user?: { avatarUrl?: string | null };
+      fullName: string;
+      email?: string;
+    };
+    providerService?: {
+      service: { name: string; price: Decimal | number };
+      durationMinutes: number;
+      description?: string | null;
+    };
   }) {
     this.id = data.id;
     this.clientId = data.clientId;
     this.providerId = data.providerId;
     this.providerServiceId = data.providerServiceId;
-    this.scheduledDate = data.scheduledDate instanceof Date ? data.scheduledDate.toISOString().split('T')[0] : (data.scheduledDate as string).split('T')[0];
+    this.scheduledDate =
+      data.scheduledDate instanceof Date
+        ? data.scheduledDate.toISOString().split('T')[0]
+        : data.scheduledDate.split('T')[0];
     this.scheduledTime = data.scheduledTime;
     this.status = data.status;
 
-    this.totalPrice = isDecimal(data.totalPrice) ? data.totalPrice.toNumber() : data.totalPrice;
+    this.totalPrice = isDecimal(data.totalPrice)
+      ? data.totalPrice.toNumber()
+      : data.totalPrice;
     this.notes = data.notes === undefined ? null : data.notes;
-    this.createdAt = data.createdAt instanceof Date ? data.createdAt.toISOString() : data.createdAt;
-    this.updatedAt = data.updatedAt instanceof Date ? data.updatedAt.toISOString() : data.updatedAt;
+    this.createdAt =
+      data.createdAt instanceof Date
+        ? data.createdAt.toISOString()
+        : data.createdAt;
+    this.updatedAt =
+      data.updatedAt instanceof Date
+        ? data.updatedAt.toISOString()
+        : data.updatedAt;
 
     this.addressId = data.addressId === undefined ? null : data.addressId;
     this.address = data.address
       ? new AddressDetailsDto({
           ...data.address,
-          latitude: isDecimal(data.address.latitude) ? data.address.latitude.toNumber() : data.address.latitude,
-          longitude: isDecimal(data.address.longitude) ? data.address.longitude.toNumber() : data.address.longitude,
+          latitude: isDecimal(data.address.latitude)
+            ? data.address.latitude.toNumber()
+            : data.address.latitude,
+          longitude: isDecimal(data.address.longitude)
+            ? data.address.longitude.toNumber()
+            : data.address.longitude,
         })
       : null;
 
     this.couponId = data.couponId === undefined ? null : data.couponId;
     this.couponCode = data.coupon?.code || null;
-    this.discountAmount = data.discountAmount === null || data.discountAmount === undefined
-      ? null
-      : isDecimal(data.discountAmount)
-        ? data.discountAmount.toNumber()
-        : data.discountAmount;
+    this.discountAmount =
+      data.discountAmount === null || data.discountAmount === undefined
+        ? null
+        : isDecimal(data.discountAmount)
+          ? data.discountAmount.toNumber()
+          : data.discountAmount;
 
     if (data.client) {
       this.clientFullName = data.client.fullName;
@@ -234,16 +353,21 @@ export class BookingDetailsDto {
     if (data.providerService) {
       const svcPrice = data.providerService.service.price as any;
       this.serviceName = data.providerService.service.name;
-      this.servicePrice = isDecimal(svcPrice) ? svcPrice.toNumber() : svcPrice ?? 0;
+      this.servicePrice = isDecimal(svcPrice)
+        ? svcPrice.toNumber()
+        : (svcPrice ?? 0);
       this.serviceDurationMinutes = data.providerService.durationMinutes;
-      this.providerServiceDescription = data.providerService.description ?? null;
+      this.providerServiceDescription =
+        data.providerService.description ?? null;
     }
 
     // Review mapping
     if (data.review) {
       this.reviewId = data.review.id;
       const ratingVal = data.review.rating as any;
-      this.reviewRating = isDecimal(ratingVal) ? ratingVal.toNumber() : ratingVal;
+      this.reviewRating = isDecimal(ratingVal)
+        ? ratingVal.toNumber()
+        : ratingVal;
       this.reviewComment = data.review.comment ?? null;
       this.isReviewed = true;
     } else {
