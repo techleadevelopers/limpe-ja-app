@@ -29,7 +29,10 @@ export class MissionsController {
   @ApiOperation({ summary: 'Lista suas missões e progresso' })
   async myMissions(@Req() req: Request) {
     const userId = req.user['userId'];
-    return this.missionsService.getMyMissions(userId, req.user['role'] as UserRole); // Passar o role
+    return this.missionsService.getMyMissions(
+      userId,
+      req.user['role'] as UserRole,
+    ); // Passar o role
   }
 
   @Post('claim')
@@ -39,7 +42,10 @@ export class MissionsController {
   @ApiOperation({ summary: 'Resgata a recompensa de uma missão COMPLETED' })
   async claim(@Req() req: Request, @Body() dto: ClaimMissionDto) {
     const userId = req.user['userId'];
-    const result = await this.missionsService.claimMission(userId, dto.missionId);
+    const result = await this.missionsService.claimMission(
+      userId,
+      dto.missionId,
+    );
     if (!result) {
       throw new BadRequestException('Missão não está disponível para resgate.');
     }
