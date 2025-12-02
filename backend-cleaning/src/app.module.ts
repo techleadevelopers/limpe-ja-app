@@ -76,10 +76,12 @@ import { QueuesModule } from './queues/queues.module';
       imports: [CustomConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        throttlers: [{
-          ttl: config.get<number>('throttle.ttl', 60) * 1000,
-          limit: config.get<number>('throttle.limit', 10),
-        }],
+        throttlers: [
+          {
+            ttl: config.get<number>('throttle.ttl', 60) * 1000,
+            limit: config.get<number>('throttle.limit', 10),
+          },
+        ],
       }),
     }),
 
