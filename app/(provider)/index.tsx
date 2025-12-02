@@ -6,7 +6,7 @@ import {
     ActivityIndicator,
     Alert,
     Animated,
-    Image, // Manter se necessário para listas que não sejam SCROLLVIEW
+    Image, // Manter se necess�rio para listas que n�o sejam SCROLLVIEW
     Platform,
     RefreshControl,
     ScrollView,
@@ -17,15 +17,15 @@ import {
 } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
 
-// Importações dos serviços
+// Importa��es dos servi�os
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/providerService';
 
-// Importações das tipagens centralizadas
+// Importa��es das tipagens centralizadas
 import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
-import { ProviderDashboard, ProviderReview } from '../../types/backend/providers'; // Importe ProviderReview aqui também, se ProviderDashboard o usa
+import { ProviderDashboard, ProviderReview } from '../../types/backend/providers'; // Importe ProviderReview aqui tamb�m, se ProviderDashboard o usa
 
-// Hook para animação de toque (reutilizável)
+// Hook para anima��o de toque (reutiliz�vel)
 const useAnimatedTouch = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const onPressIn = () => {
@@ -59,11 +59,11 @@ const WARNING_YELLOW = '#FFC107';
 const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
 const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
 const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
-const PRIMARY_LIGHT = '#EBF5FF'; // Um azul claro para fundos de botões/links
+const PRIMARY_LIGHT = '#EBF5FF'; // Um azul claro para fundos de bot�es/links
 
-// --- Componentes Reutilizáveis (Move para arquivos separados se o projeto crescer) ---
+// --- Componentes Reutiliz�veis (Move para arquivos separados se o projeto crescer) ---
 
-// Componente: DashboardHeader (para saudação e avatar)
+// Componente: DashboardHeader (para sauda��o e avatar)
 const DashboardHeader: React.FC<{
   providerName: string | undefined;
   avatarUrl: string | undefined | null;
@@ -242,7 +242,7 @@ const summaryStyles = StyleSheet.create({
   },
 });
 
-// Componente: QuickActionsSection (botões de ação rápida)
+// Componente: QuickActionsSection (bot�es de a��o r�pida)
 const QuickActionsSection: React.FC<{
   onViewAllServicesPress: () => void;
   onViewAllMessagesPress: () => void;
@@ -271,7 +271,7 @@ const QuickActionsSection: React.FC<{
           <Ionicons name="chatbubbles-outline" size={28} color={ICON_PRIMARY} style={{ textShadowColor: 'rgba(255,255,255,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }} />
           <Text style={quickActionStyles.gridItemText}>Mensagens</Text>
         </TouchableOpacity>
-        {/* Adicione mais ações rápidas conforme necessário, ex: "Meu Perfil", "Ajuda" */}
+        {/* Adicione mais a��es r�pidas conforme necess�rio, ex: "Meu Perfil", "Ajuda" */}
       </View>
     </View>
   );
@@ -281,7 +281,7 @@ const quickActionStyles = StyleSheet.create({
   sectionContainer: {
     backgroundColor: WHITE,
     borderRadius: 18,
-    padding: 20, // Manter ou ajustar este padding se o espaço lateral geral da caixa é o que te incomoda
+    padding: 20, // Manter ou ajustar este padding se o espa�o lateral geral da caixa � o que te incomoda
     marginBottom: 24,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 6 },
@@ -295,22 +295,22 @@ const quickActionStyles = StyleSheet.create({
     marginBottom: 15,
     textAlign: 'center',
   },
-  grid: { // Este é o container dos seus botões
+  grid: { // Este � o container dos seus bot�es
     flexDirection: 'row',
     flexWrap: 'wrap', // Manter wrap para caso haja mais de 3, eles quebrem a linha
     justifyContent: 'space-around', // ou 'space-between', 'center'
     width: '100%', // Isso significa 100% do 'sectionContainer' (que tem padding de 20)
   },
   gridItem: {
-    // ATENÇÃO AQUI: Para 3 itens por linha, você PRECISA de uma largura menor.
+    // ATEN��O AQUI: Para 3 itens por linha, voc� PRECISA de uma largura menor.
     // 30% x 3 = 90%. Sobram 10% para gaps.
-    width: '28.5%', // <--- MUDANÇA ESSENCIAL AQUI para 3 itens por linha!
+    width: '28.5%', // <--- MUDAN�A ESSENCIAL AQUI para 3 itens por linha!
     aspectRatio: 1, // Para manter quadrado
     backgroundColor: BACKGROUND_ALT,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15, // Espaçamento vertical entre as linhas
+    marginBottom: 15, // Espa�amento vertical entre as linhas
     padding: 10,
     borderWidth: 0.3,
     borderColor: BORDER_SUBTLE,
@@ -329,7 +329,7 @@ const quickActionStyles = StyleSheet.create({
 });
 
 
-// Componente de Item de Solicitação (RequestItem) - SEM ALTERAÇÕES NESTE TRECHO
+// Componente de Item de Solicita��o (RequestItem) - SEM ALTERA��ES NESTE TRECHO
 const RequestItem: React.FC<{
   item: BookingDetails;
   onAccept?: (id: string) => void;
@@ -440,7 +440,7 @@ const RequestItem: React.FC<{
   );
 };
 
-// Componente de Item de Serviço Confirmado (ConfirmedServiceItem)
+// Componente de Item de Servi�o Confirmado (ConfirmedServiceItem)
 const ConfirmedServiceItem: React.FC<{
   item: BookingDetails;
   onPress: (id: string) => void;
@@ -512,7 +512,7 @@ export default function ProviderDashboardScreen() {
 
       setDashboardData(dashboard);
 
-      // CORREÇÃO: Mudar PENDING_PROVIDER_CONFIRMATION para PENDING
+      // CORRE��O: Mudar PENDING_PROVIDER_CONFIRMATION para PENDING
       const pendingBookings = await getBookingsForUser(BookingStatus.PENDING);
       console.log("[DashboardScreen] fetchData: Agendamentos pendentes recebidos.", pendingBookings);
       const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
@@ -584,12 +584,12 @@ export default function ProviderDashboardScreen() {
             setIsLoading(true);
             try {
               await updateBookingStatus(bookingId, { status: BookingStatus.CONFIRMED });
-              Alert.alert("Sucesso", "Agendamento aceito com sucesso!");
+              showOverlay({ title: 'Sucesso', subtitle: 'Agendamento aceito com sucesso!', variant: 'success' });
               console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
               fetchData();
             } catch (error: any) {
               console.error("[DashboardScreen] Erro ao aceitar agendamento:", error.response?.data || error.message, error);
-              Alert.alert("Erro", error.response?.data?.message || "Não foi possível aceitar o agendamento.");
+              showOverlay({ title: 'Erro', subtitle: error.response?.data?.message || 'N?o foi poss?vel aceitar o agendamento.', variant: 'error' });
             } finally {
               setIsLoading(false);
             }
@@ -601,32 +601,50 @@ export default function ProviderDashboardScreen() {
 
   const handleRejectRequest = async (bookingId: string) => {
     console.log(`[DashboardScreen] handleRejectRequest: Tentando rejeitar agendamento ${bookingId}.`);
+    const reasons = [
+      "Falta de condução até o endereço",
+      "Problema de saúde",
+      "Imprevisto pessoal",
+      "Área insegura/fora da rota",
+      "Outro motivo",
+    ];
     Alert.alert(
       "Rejeitar Solicitação",
-      `Tem certeza que deseja rejeitar o agendamento ${bookingId}?`,
+      "Selecione o motivo (ajuda a manter sua reputação):",
       [
         { text: "Cancelar", style: "cancel", onPress: () => console.log("[DashboardScreen] Rejeitar cancelado.") },
-        {
-          text: "Rejeitar",
-          onPress: async () => {
-            setIsLoading(true);
-            try {
-              await updateBookingStatus(bookingId, { status: BookingStatus.REJECTED });
-              Alert.alert("Sucesso", "Agendamento rejeitado com sucesso!");
-              console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
-              fetchData();
-            } catch (error: any) {
-              console.error("[DashboardScreen] Erro ao rejeitar agendamento:", error.response?.data || error.message, error);
-              Alert.alert("Erro", error.response?.data?.message || "Não foi possível rejeitar o agendamento.");
-            } finally {
-              setIsLoading(false);
-            }
+        ...reasons.map((reason) => ({
+          text: reason,
+          onPress: () => {
+            Alert.alert(
+              "Confirmar rejeição",
+              "Tem certeza? Cancelamentos repetidos podem afetar sua reputação.",
+              [
+                { text: "Voltar", style: "cancel" },
+                {
+                  text: "Confirmar",
+                  onPress: async () => {
+                    setIsLoading(true);
+                    try {
+                      await updateBookingStatus(bookingId, { status: BookingStatus.REJECTED });
+                      showOverlay({ title: 'Pedido cancelado', subtitle: 'O cliente ser? avisado. Evite novos cancelamentos de ?ltima hora.', variant: 'warning' });
+                      console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado. Motivo: ${reason}`);
+                      fetchData();
+                    } catch (error: any) {
+                      console.error("[DashboardScreen] Erro ao rejeitar agendamento:", error.response?.data || error.message, error);
+                      showOverlay({ title: 'Erro', subtitle: error.response?.data?.message || 'N?o foi poss?vel rejeitar o agendamento.', variant: 'error' });
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  },
+                },
+              ]
+            );
           },
-        },
+        })),
       ]
     );
   };
-
   const handleChatWithClient = (clientId: string, clientName: string) => {
     console.log(`[DashboardScreen] handleChatWithClient: Iniciando chat com cliente ${clientName} (${clientId}).`);
     router.push({ pathname: '/(provider)/messages/[chatId]', params: { chatId: clientId, recipientName: clientName } } as any);
@@ -642,7 +660,7 @@ export default function ProviderDashboardScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <Stack.Screen options={{ title: "Carregando...", headerTransparent: true, headerTintColor: '#333' }} />
+        <Stack.Screen options={{ title: "Carregando", headerTransparent: true, headerTintColor: '#333' }} />
         <ActivityIndicator size="large" color="#007AFF" />
         <Text style={styles.loadingText}>Carregando dashboard...</Text>
       </View>
@@ -715,7 +733,7 @@ export default function ProviderDashboardScreen() {
           onManageAvailability={() => router.push('/(provider)/availability' as any)} // Assumindo uma rota de disponibilidade
         />
 
-        {/* Seção de Novas Solicitações */}
+        {/* Sessão de Novas Solicitações */}
         {upcomingServices.filter(s => s.status === BookingStatus.PENDING).length > 0 && ( /* Correção de PENDING_PROVIDER_CONFIRMATION para PENDING */
           <View style={styles.subsectionWrapper}>
             <View style={styles.subsectionHeader}>
@@ -775,7 +793,7 @@ export default function ProviderDashboardScreen() {
           )}
         </View>
 
-        {/* Seção de Reviews Recentes */}
+        {/* Sessão de Reviews Recentes */}
         {dashboardData?.reviews && dashboardData.reviews.length > 0 ? ( /* Correção: 'reviews' em vez de 'recentReviews' */
             <View style={styles.subsectionWrapper}>
                 <View style={styles.subsectionHeader}>
@@ -1196,4 +1214,5 @@ const styles = StyleSheet.create({
       marginLeft: 12,
   },
 });
+
 
