@@ -1,6 +1,13 @@
 // src/support/dto/create-ticket.dto.ts
 
-import { IsString, IsNotEmpty, IsOptional, IsArray, IsEnum, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  IsEnum,
+  IsUUID,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SupportTicketCategory } from '@prisma/client'; // Assumindo enum do Prisma
 
@@ -24,12 +31,16 @@ export class CreateTicketDto {
   @IsNotEmpty()
   description: string;
 
-  @ApiPropertyOptional({ description: 'ID do agendamento relacionado (se houver)' })
+  @ApiPropertyOptional({
+    description: 'ID do agendamento relacionado (se houver)',
+  })
   @IsOptional()
   @IsUUID()
   bookingId?: string;
 
-  @ApiPropertyOptional({ description: 'URLs de anexos no Google Cloud Storage' })
+  @ApiPropertyOptional({
+    description: 'URLs de anexos no Google Cloud Storage',
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
