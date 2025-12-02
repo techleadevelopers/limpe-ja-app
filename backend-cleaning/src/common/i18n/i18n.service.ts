@@ -48,7 +48,9 @@ export class I18nService {
         }
       }
       if (this.translations.size === 0) {
-        this.logger.warn(`Nenhum arquivo .json de tradução encontrado em: ${localesPath}`);
+        this.logger.warn(
+          `Nenhum arquivo .json de tradução encontrado em: ${localesPath}`,
+        );
       }
     } catch (error: any) {
       // Não travar a aplicação por isso
@@ -64,7 +66,8 @@ export class I18nService {
     args: Record<string, any> = {},
   ): Promise<string> {
     const translationMap =
-      this.translations.get(locale) || this.translations.get(this.defaultLocale);
+      this.translations.get(locale) ||
+      this.translations.get(this.defaultLocale);
 
     let message = translationMap?.[key];
     if (!message) message = key;
