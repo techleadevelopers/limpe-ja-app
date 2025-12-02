@@ -16,9 +16,10 @@ export class ServiceEntity implements PrismaService {
   constructor(partial: Partial<ServiceEntity>) {
     Object.assign(this, partial);
 
-    this.price = partial.price !== undefined && partial.price !== null
-      ? new Prisma.Decimal(partial.price as any)
-      : null;
+    this.price =
+      partial.price !== undefined && partial.price !== null
+        ? new Prisma.Decimal(partial.price as any)
+        : null;
 
     // O Object.assign(this, partial) já deve lidar com defaultPricingType, createdAt e updatedAt
     // se eles estiverem presentes em 'partial'.
@@ -27,13 +28,15 @@ export class ServiceEntity implements PrismaService {
 
     if (partial.createdAt && typeof partial.createdAt === 'string') {
       this.createdAt = new Date(partial.createdAt);
-    } else if (!this.createdAt) { // Se não veio no partial ou não era string, e não foi inicializado
+    } else if (!this.createdAt) {
+      // Se não veio no partial ou não era string, e não foi inicializado
       this.createdAt = new Date();
     }
 
     if (partial.updatedAt && typeof partial.updatedAt === 'string') {
       this.updatedAt = new Date(partial.updatedAt);
-    } else if (!this.updatedAt) { // Se não veio no partial ou não era string, e não foi inicializado
+    } else if (!this.updatedAt) {
+      // Se não veio no partial ou não era string, e não foi inicializado
       this.updatedAt = new Date();
     }
   }
