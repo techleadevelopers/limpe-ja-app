@@ -9,7 +9,11 @@ import { PaymentIntentStatus } from '@prisma/client'; // Assumindo que PaymentIn
 export class PaymentsMetricsRepository {
   constructor(private prisma: PrismaService) {}
 
-  async getTotalSpent(userId: string, from?: string, to?: string): Promise<number> {
+  async getTotalSpent(
+    userId: string,
+    from?: string,
+    to?: string,
+  ): Promise<number> {
     const where: any = {
       // CORREÇÃO: Usar client.userId para filtrar pelo ID do usuário do cliente
       booking: {
@@ -95,7 +99,7 @@ export class PaymentsMetricsRepository {
       },
     });
 
-    return result.map(item => ({
+    return result.map((item) => ({
       date: item.createdAt.toISOString().split('T')[0], // Isso assume que createdAt é uma data e você quer a parte da data
       total_spent_centavos: item._sum.amountCents || 0,
     }));
