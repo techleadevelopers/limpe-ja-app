@@ -42,7 +42,9 @@ export class OffersController {
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
-  async create(@Body() createOfferDto: CreateOfferDto): Promise<OfferDetailsDto> {
+  async create(
+    @Body() createOfferDto: CreateOfferDto,
+  ): Promise<OfferDetailsDto> {
     const offer = await this.offersService.create(createOfferDto);
     return new OfferDetailsDto(offer); // Retorna o DTO
   }
@@ -56,7 +58,7 @@ export class OffersController {
   })
   async findAll(): Promise<OfferDetailsDto[]> {
     const offers = await this.offersService.findAll();
-    return offers.map(offer => new OfferDetailsDto(offer)); // Mapeia para DTO
+    return offers.map((offer) => new OfferDetailsDto(offer)); // Mapeia para DTO
   }
 
   @Get(':id')
