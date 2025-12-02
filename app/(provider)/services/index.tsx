@@ -78,9 +78,9 @@ const BookingCardWithActions: React.FC<{
   const getStatusStyle = (status: BookingStatus) => {
     switch (status) {
       case BookingStatus.PENDING:
-        return { text: '#F57C00', background: 'rgba(255, 152, 0, 0.1)', icon: 'clock-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'PENDENTE' };
+        return { text: '#F57C00', background: 'rgba(255, 152, 0, 0.1)', icon: 'clock-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Pendente' };
       case BookingStatus.CONFIRMED:
-        return { text: '#2E7D32', background: 'rgba(46, 125, 50, 0.1)', icon: 'check-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'CONFIRMADO' };
+        return { text: '#2E7D32', background: 'rgba(46, 125, 50, 0.1)', icon: 'check-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Confirmado' };
       case BookingStatus.COMPLETED:
         return { text: '#546E7A', background: '#ECEFF1', icon: 'check-all' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Concluído' };
       case BookingStatus.CANCELLED:
@@ -88,7 +88,7 @@ const BookingCardWithActions: React.FC<{
       case BookingStatus.REJECTED:
         return { text: '#757575', background: '#F5F5F5', icon: 'minus-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Recusado' };
       case BookingStatus.IN_PROGRESS:
-        return { text: '#007AFF', background: '#E3F2FD', icon: 'sync-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Em Progresso' };
+        return { text: '#007AFF', background: '#E3F2FD', icon: 'sync-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Em andamento' };
       default:
         return { text: '#546E7A', background: '#ECEFF1', icon: 'information-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Desconhecido' };
     }
