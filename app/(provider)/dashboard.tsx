@@ -1132,9 +1132,9 @@ export default function ProviderDashboardScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <Stack.Screen options={{ title: "Carregando...", headerTransparent: true, headerTintColor: '#333' }} />
+        <Stack.Screen options={{ title: "Carregando", headerTransparent: true, headerTintColor: '#333' }} />
         <ActivityIndicator size="large" color={ICON_PRIMARY} accessibilityLabel="Carregando dashboard" />
-        <Text style={styles.loadingText}>Carregando dashboard...</Text>
+        <Text style={styles.loadingText}>Carregando dashboard…</Text>
       </View>
     );
   }
