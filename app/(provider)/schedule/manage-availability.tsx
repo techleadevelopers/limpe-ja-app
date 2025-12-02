@@ -317,7 +317,31 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           <Text style={styles.dayName}>{dayName}</Text>
           {!!dateLabel && <Text style={styles.dayDate}>{dateLabel}</Text>}
         </View>
-        <View style={{ width: 1 }} />
+        <TouchableOpacity
+          style={styles.personalizeHeaderButton}
+          onPress={() => setShowFullGrid((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={showFullGrid ? 'Concluir personalização' : 'Personalizar horários'}
+        >
+          <Ionicons name="options-outline" size={14} color={Colors.primary} />
+          <Text style={styles.personalizeHeaderText}>{showFullGrid ? 'Concluir' : 'Personalizar'}</Text>
+        </TouchableOpacity>
+        <View style={styles.switchWrap}>
+        <Switch
+          trackColor={{ false: Colors.textMuted, true: Colors.primary }}
+          thumbColor={Colors.surface}
+          ios_backgroundColor={Colors.textMuted}
+          onValueChange={(value) => {
+            if (isPastDay) return;
+            onToggleDay(dayOfWeek, value);
+            if (Platform.OS === 'ios') Haptics.selectionAsync();
+          }}
+          value={availability.isEnabled && !isPastDay}
+          disabled={isPastDay}
+          accessibilityLabel={`Ativar ${dayName.toLowerCase()}`}
+          accessibilityHint="Alterna disponibilidade para o dia"
+        />
+        </View>
       </View>
       <View style={styles.periodRow}>
         <TouchableOpacity
@@ -353,6 +377,15 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           <Text style={[styles.periodTileText, currentPeriod === 'evening' && styles.periodTileTextActive]}>Noite</Text>
           <Text style={[styles.periodTileSub, currentPeriod === 'evening' && styles.periodTileTextActive]}>18–21</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.personalizeButton}
+          onPress={() => setShowFullGrid((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel="Personalizar horários"
+        >
+          <Ionicons name="options-outline" size={16} color={Colors.primary} />
+          <Text style={styles.personalizeButtonText}>{showFullGrid ? 'Concluir' : 'Personalizar'}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Correção aqui: Adicionei flexWrap, gap e justifyContent para responsividade */}
@@ -363,7 +396,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           onPress={() => !isPastDay && onApplyPreset(dayOfWeek, 'morning')}
           disabled={isPastDay}
           accessibilityRole="button"
-          accessibilityLabel={`Aplicar manhã em ${dayName}`}
+          accessibilityLabel={`Aplicar Manhã em ${dayName}`}
         >
           <Text style={styles.quickActionText}>Manhã</Text>
         </TouchableOpacity>
@@ -385,42 +418,6 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
         >
           <Text style={styles.quickActionText}>Dia todo</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.quickTile, { width: '30%' }]}
-          onPress={() => setShowFullGrid((v) => !v)}
-          accessibilityRole="button"
-          accessibilityLabel={showFullGrid ? 'Concluir personalização' : 'Personalizar horários'}
-        >
-          <Text style={styles.quickActionText}>{showFullGrid ? 'Concluir' : 'Personalizar'}</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.postQuickRow}>
-        <View style={{ flex: 1 }} />
-        <TouchableOpacity
-          style={styles.personalizeButton}
-          onPress={() => setShowFullGrid((v) => !v)}
-          accessibilityRole="button"
-          accessibilityLabel="Personalizar horários"
-        >
-          <Ionicons name="options-outline" size={16} color={Colors.primary} />
-          <Text style={styles.personalizeButtonText}>{showFullGrid ? 'Concluir' : 'Personalizar'}</Text>
-        </TouchableOpacity>
-        <View style={styles.switchWrap}>
-          <Switch
-            trackColor={{ false: Colors.textMuted, true: Colors.primary }}
-            thumbColor={Colors.surface}
-            ios_backgroundColor={Colors.textMuted}
-            onValueChange={(value) => {
-              if (isPastDay) return;
-              onToggleDay(dayOfWeek, value);
-              if (Platform.OS === 'ios') Haptics.selectionAsync();
-            }}
-            value={availability.isEnabled && !isPastDay}
-            disabled={isPastDay}
-            accessibilityLabel={`Ativar ${dayName.toLowerCase()}`}
-            accessibilityHint="Alterna disponibilidade para o dia"
-          />
-        </View>
       </View>
 
       {availability.isEnabled && !isPastDay && showFullGrid && (
@@ -543,7 +540,7 @@ export default function ManageAvailabilityScreen() {
   // Coverage radius state (moved inside component)
   const [radiusKm, setRadiusKm] = useState<number>(15);
   const [isSavingRadius, setIsSavingRadius] = useState<boolean>(false);
-  const [radiusCollapsed, setRadiusCollapsed] = useState<boolean>(false);
+  const [showRadiusEditor, setShowRadiusEditor] = useState<boolean>(false);
 
   useEffect(() => {
     let mounted = true;
@@ -559,18 +556,15 @@ export default function ManageAvailabilityScreen() {
   }, []);
 
   const saveRadius = useCallback(async () => {
-    let success = false;
     try {
       setIsSavingRadius(true);
       await saveProviderSettings({ serviceRadiusKm: radiusKm });
-      // sinaliza para a tela Explore recarregar recomenda??es
+      // sinaliza para a tela Explore recarregar recomendações
       await AsyncStorage.setItem('@settings:radius:changed', '1');
-      success = true;
     } catch (e) {
       console.warn('[ManageAvailability] Falha ao salvar raio de atendimento:', (e as any)?.message || e);
     } finally {
       setIsSavingRadius(false);
-      if (success) setRadiusCollapsed(true);
     }
   }, [radiusKm]);
 
@@ -579,7 +573,7 @@ export default function ManageAvailabilityScreen() {
 
   const dayNames = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
-  // ===== Handlers movidos para cima (após states, antes de useEffects/JSX) =====
+  // ===== Handlers movidos para cima (apAls states, antes de useEffects/JSX) =====
 
   // getBookedSlotsForDay (mantido como useCallback, movido para cima - depende de bookings)
   const getBookedSlotsForDay = useCallback((dayOfWeek: number): string[] => {
@@ -699,7 +693,7 @@ export default function ManageAvailabilityScreen() {
 
   const loadData = useCallback(async () => {
     if (!user?.id) {
-      console.warn("User ID não disponível, não carregando dados de disponibilidade.");
+      console.warn("User ID nALo disponivel, nALo carregando dados de disponibilidade.");
       setIsLoading(false);
       return;
     }
@@ -755,7 +749,7 @@ export default function ManageAvailabilityScreen() {
 
     } catch (error: any) {
       console.error('Erro ao carregar dados de disponibilidade:', error);
-      showOverlay({ title: 'Erro', subtitle: 'Não foi possível carregar sua disponibilidade. Tente novamente.', variant: 'error' });
+      Alert.alert('Erro', 'Não foi possível carregar sua disponibilidade. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -807,7 +801,7 @@ export default function ManageAvailabilityScreen() {
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     setWeeklyAvailability(prev => prev.map(d => {
       if (!targets.includes(d.dayOfWeek) || d.dayOfWeek === from) return d;
-      // Não copiar para dias passados
+      // NALo copiar para dias passados
       if (d.dayOfWeek < todayDow) return d;
       const booked = getBookedSlotsForDay(d.dayOfWeek);
       const filtered = sourceSlots.filter(s => {
@@ -986,7 +980,7 @@ export default function ManageAvailabilityScreen() {
 
   const handleSaveAvailability = useCallback(async () => {
     if (!user?.id) {
-      showOverlay({ title: 'Erro', subtitle: 'ID do provedor não encontrado. Faça login novamente.', variant: 'error' });
+      Alert.alert("Erro", "ID do provedor não encontrado. Faça login novamente.");
       return;
     }
 
@@ -1040,7 +1034,7 @@ export default function ManageAvailabilityScreen() {
       } else {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
-      showOverlay({ title: 'Sucesso', subtitle: 'Sua disponibilidade foi salva!', variant: 'success' });
+      Alert.alert('Sucesso', 'Sua disponibilidade foi salva!');
       router.back();
     } catch (error: any) {
       console.error('Erro ao salvar disponibilidade:', error.response?.data || error.message);
@@ -1049,7 +1043,7 @@ export default function ManageAvailabilityScreen() {
       } else {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       }
-      showOverlay({ title: 'Erro', subtitle: error.response?.data?.message || 'Não foi possível salvar sua disponibilidade. Tente novamente.', variant: 'error' });
+      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível salvar sua disponibilidade. Tente novamente.');
     } finally {
       setIsSaving(false);
       loadData();
@@ -1173,71 +1167,188 @@ useEffect(() => {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Voltar">
           <Ionicons name="arrow-back" size={24} color="#2F3A4A" accessibilityHidden={true} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gerenciar Disponibilidade</Text>
+        <Text style={styles.headerTitle}>Gerenciar Horários</Text>
         <View style={styles.headerPlaceholder} />
       </Animated.View>
 
-            {/* Cobertura: raio de atendimento (km) */}
-      <View style={{ backgroundColor: Colors.surface, borderRadius: Radii.sm, padding: Spacing.md, marginHorizontal: Spacing.sm, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.border }}>
-        {radiusCollapsed ? (
-          <View style={styles.radiusCollapsedRow}>
-            <Text style={styles.radiusSummaryText}>Raio: {radiusKm} km</Text>
-            <TouchableOpacity onPress={() => setRadiusCollapsed(false)} accessibilityRole='button' accessibilityLabel='Editar raio de atendimento'>
-              <Text style={styles.radiusEditText}>Editar</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 8 }}>Raio de atendimento (km)</Text>
-            <View style={{ paddingHorizontal: Spacing.xs }}>
-              <Slider
-                minimumValue={5}
-                maximumValue={60}
-                step={5}
-                value={radiusKm}
-                onValueChange={(v: number) => {
-                  setRadiusKm(v);
-                  try { Haptics.selectionAsync(); } catch {}
-                }}
-                minimumTrackTintColor={Colors.primary}
-                maximumTrackTintColor={Colors.border}
-                thumbTintColor={Colors.primary}
-              />
-              <View style={{ alignItems: 'center', marginTop: 4 }}>
-                <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.text }}>{radiusKm} km</Text>
-              </View>
-            </View>
-            <TouchableOpacity onPress={saveRadius} disabled={isSavingRadius} style={{ marginTop: 10, backgroundColor: Colors.primary, borderRadius: 8, paddingVertical: 10, alignItems: 'center', opacity: isSavingRadius ? 0.7 : 1 }}>
-              <Text style={{ color: '#fff', fontWeight: '800' }}>{isSavingRadius ? 'Salvando...' : 'Salvar raio'}</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-
-      <View style={styles.segmentedControl}>
-        <TouchableOpacity
-          style={[styles.segment, activeTab === 'weekly' && styles.segmentActive]}
-          onPress={() => setActiveTab('weekly')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'weekly' }}
-        >
-          <Text style={[styles.segmentText, activeTab === 'weekly' && styles.segmentTextActive]}>Semanal</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.segment, activeTab === 'overrides' && styles.segmentActive]}
-          onPress={() => setActiveTab('overrides')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'overrides' }}
-        >
-          <Text style={[styles.segmentText, activeTab === 'overrides' && styles.segmentTextActive]}>Exceções</Text>
-        </TouchableOpacity>
-      </View>
 
       <Animated.ScrollView
         style={[styles.scrollContainer, { opacity: contentAnim }]}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* TOPO COMPLETO -> Duas colunas, responsivo (no corpo, acima do título) */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-evenly",
+            alignItems: "flex-start",
+            paddingHorizontal: Spacing.md,
+            marginTop: 6,
+            marginBottom: Spacing.sm,
+          }}
+        >
+          {/* COLUNA ESQUERDA – Segmented (some quando expande) */}
+          {!showRadiusEditor && (
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <TouchableOpacity
+                onPress={() => setActiveTab("weekly")}
+                style={[
+                  {
+                    paddingVertical: 6,
+                    marginHorizontal: 25,
+                    paddingHorizontal: 18,
+                    marginBottom: -10,
+                  },
+                  activeTab === "weekly" && {
+                    backgroundColor: Colors.surface,
+                    borderRadius: Radii.pill,
+                    borderWidth: 1,
+                    borderColor: Colors.border,
+                    ...Platform.select({
+                      ios: {
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 3 },
+                        shadowOpacity: 0.08,
+                        shadowRadius: 6,
+                      },
+                      android: { elevation: 3 },
+                    }),
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontWeight: '700',
+                    fontSize: 14,
+                    color: activeTab === "weekly" ? Colors.primaryDark : Colors.textMuted,
+                  }}
+                >
+                  Semanal
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setActiveTab("overrides")}
+                style={[
+                  { marginTop: 10, paddingVertical: 10, paddingHorizontal: 4 },
+                  activeTab === "overrides" && {
+                    backgroundColor: Colors.surface,
+                    borderRadius: Radii.pill,
+                    borderWidth: 1,
+                    borderColor: Colors.border,
+                    paddingHorizontal: 18,
+                    ...Platform.select({
+                      ios: {
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 3 },
+                        shadowOpacity: 0.08,
+                        shadowRadius: 6,
+                      },
+                      android: { elevation: 3 },
+                    }),
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontWeight: '700',
+                    fontSize: 14,
+                    color: activeTab === "overrides" ? Colors.primaryDark : Colors.textMuted,
+                  }}
+                >
+                  Exceções
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* COLUNA DIREITA – Editar + KM ou Editor Expandido */}
+          <View style={{ width: showRadiusEditor ? '100%' : 120, alignItems: "center", marginLeft: -Spacing.sm }}>
+            {/* Botão editar */}
+            <TouchableOpacity
+              onPress={() => setShowRadiusEditor(v => !v)}
+              style={{
+                paddingVertical: 6,
+                paddingHorizontal: 18,
+                borderRadius: 50,
+                backgroundColor: "#FFFFFF",
+                borderWidth: 1,
+                borderColor: "#DDE3EB",
+                marginBottom: showRadiusEditor ? 10 : 6,
+              }}
+            >
+              <Text style={{ color: Colors.primary, fontWeight: "700", fontSize: 14 }}>
+                {showRadiusEditor ? "Fechar" : "Editar"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Estado FECHADO -> mostra KM */}
+            {!showRadiusEditor && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: 50,
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderWidth: 1,
+                  borderColor: "#DDE3EB",
+                }}
+              >
+                <Ionicons name="location" size={12} color={Colors.primary} />
+                <Text style={{ fontWeight: "700", fontSize: 13 }}>{radiusKm} km</Text>
+              </View>
+            )}
+
+            {/* Estado ABERTO -> mostra slider */}
+          {showRadiusEditor && (
+            <View style={{ width: "80%", alignSelf: 'center' }}>
+              <Slider
+                minimumValue={5}
+                maximumValue={60}
+                step={5}
+                value={radiusKm}
+                  onSlidingStart={() => {
+                    try {
+                      if (Platform.OS === 'ios') Haptics.selectionAsync();
+                    } catch {}
+                  }}
+                  onValueChange={(v) => {
+                    setRadiusKm(v);
+                    try {
+                      if (Platform.OS === 'ios') Haptics.selectionAsync();
+                    } catch {}
+                }}
+                minimumTrackTintColor={Colors.primary}
+                maximumTrackTintColor={Colors.border}
+                thumbTintColor={Colors.primary}
+                style={{ width: '100%', alignSelf: 'center' }}
+              />
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 6, gap: 6 }}>
+                  <Ionicons name="location" size={12} color={Colors.primary} />
+                  <Text style={{ fontWeight: '700', fontSize: 13, color: Colors.text }}>{radiusKm} km</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={saveRadius}
+                  style={{
+                    marginTop: 8,
+                    backgroundColor: Colors.primary,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#FFF", fontWeight: "700" }}>Salvar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
         {activeTab === 'weekly' && (
           <>
             {false && <View style={styles.quickTilesRow}>
@@ -1259,7 +1370,7 @@ useEffect(() => {
                   const tomorrow = (d.getDay() + 1) % 7;
                   handleApplyPreset(tomorrow, 'afternoon');
                   if (Platform.OS === 'ios') Haptics.selectionAsync();
-                  AccessibilityInfo.announceForAccessibility('Disponibilidade salva para amanhã 13-17');
+                  AccessibilityInfo.announceForAccessibility('Disponibilidade salva para amanhAL 13-17');
                 }}
               >
                 <Text style={styles.quickActionText}>Disponível amanhã 13-17</Text>
@@ -1299,7 +1410,7 @@ useEffect(() => {
               <Text style={styles.primaryCTAButtonText}>Assistente de Horários</Text>
             </TouchableOpacity>)}
             <Text style={styles.sectionTitleImproved}>Disponibilidade Semanal</Text>
-            <InfoCard text="Defina seus horários da semana. Você pode usar horários prontos e copiar para os outros dias." />
+            <InfoCard text="Defina seus horários da semana. Vocês pode usar horários prontos e copiar para os outros dias." />
             {([...weeklyAvailability]
               .sort((a, b) => ((a.dayOfWeek - new Date().getDay() + 7) % 7) - ((b.dayOfWeek - new Date().getDay() + 7) % 7)))
               .map(day => (
@@ -1324,14 +1435,13 @@ useEffect(() => {
 
         {activeTab === 'overrides' && (
           <>
-            <Text style={styles.sectionTitleImproved}>Exceções de Datas</Text>
+            <Text style={styles.sectionTitleImproved}>Calendário</Text>
             <TouchableOpacity 
               style={styles.primaryCTAButton} 
               onPress={() => openSmartStep('override')} 
               accessibilityRole="button" 
               accessibilityLabel="Criar exceção rápida"
             >
-              <Ionicons name="calendar-outline" size={18} color="#fff" style={{ marginRight: 8 }} accessibilityHidden={true} />
               <Text style={styles.primaryCTAButtonText}>Criar exceção rápida</Text>
             </TouchableOpacity>
             <InfoCard text="Selecione uma data no calendário para bloquear ou definir horários personalizados." />
@@ -1691,8 +1801,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 18,
-    paddingVertical: Platform.OS === 'ios' ? 18 : 18,
-    paddingTop: Platform.OS === 'ios' ? 55 : 18,
+    paddingVertical: Platform.OS === 'ios' ? 8 : 8,
+    paddingTop: Platform.OS === 'ios' ? 35 : 18,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -1707,10 +1817,12 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: Spacing.sm + 2,
+    top: 10,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 17,
     left: 6,
+    top: 10,
     fontWeight: '600',
     color: '#2F3A4A',
     flex: 1,
@@ -1722,7 +1834,7 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     flexDirection: 'row',
-    marginHorizontal: Spacing.md + 2,
+    marginHorizontal: Spacing.md + 52,
     marginTop: Spacing.sm,
     backgroundColor: Colors.fieldBg,
     padding: 4,
@@ -1731,7 +1843,7 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 7,
     borderRadius: Radii.pill,
     alignItems: 'center',
   },
@@ -1752,15 +1864,15 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: Spacing.md + 2,
     paddingBottom: Spacing.lg * 2 + 20,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.md - 5,
   },
   sectionTitleImproved: {
     fontSize: 18,
     textAlign: 'center',
     fontWeight: '600',
     color: Colors.primaryDark,
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.sm,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm + 5,
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   primaryCTAButton: {
@@ -1804,7 +1916,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.infoLight,
     borderRadius: Radii.md,
-    padding: Spacing.md + 2,
+    paddingVertical: Spacing.md - 1,
+    paddingHorizontal: Spacing.md + 2,
     marginBottom: Spacing.md,
     borderWidth: 0.5,
     borderColor: Colors.border,
@@ -1823,9 +1936,9 @@ const styles = StyleSheet.create({
   },
   infoText: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 13,
     color: Colors.infoDark,
-    lineHeight: 20,
+    lineHeight: 16,
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   dayCard: {
@@ -1850,40 +1963,19 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   dayTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
   },
   dayDate: {
-    marginLeft: 8,
-    color: Colors.textMuted,
+    marginLeft: 0,
+    color: Colors.text,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
+    marginTop: 2,
   },
   quickActionsRow: {
     flexDirection: 'row',
     marginBottom: Spacing.sm,
-  },
-  radiusCollapsedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  radiusSummaryText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  radiusEditText: {
-    color: Colors.primary,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  postQuickRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: Spacing.xs,
-    gap: Spacing.xs,
   },
   // Quick action tiles (top of weekly tab)
   quickTilesRow: {
@@ -1934,7 +2026,7 @@ const styles = StyleSheet.create({
     marginRight: 0,
     borderWidth: 0.5,
     borderColor: Colors.border,
-    // 3 colunas fixas no topo: Manhã, Tarde, Noite
+    // 3 colunas fixas no topo: ManhAL, Tarde, Noite
     width: '32%',
     minWidth: 96,
     alignItems: 'center',
@@ -1968,7 +2060,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    // Escondido (botão movido para o cabeçalho)
+    // Escondido (botALo movido para o cabeA�alho)
     display: 'none',
   },
   personalizeButtonText: {
@@ -2324,6 +2416,7 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
 });
+
 
 
 
