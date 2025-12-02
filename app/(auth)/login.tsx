@@ -4,6 +4,7 @@ import {
     ActivityIndicator,
     Animated,
     Dimensions,
+    Alert,
     Easing as RNEasing,
     KeyboardAvoidingView,
     Platform,
@@ -323,17 +324,9 @@ export default function LoginScreen() {
             });
             
         } catch (error: any) {
-            console.error('Erro ao fazer login:', error.message, error);
-            const errorMessageFromApi = error.response?.data?.message || 'Credenciais inválidas.';
+            const errorMessageFromApi = 'E-mail ou senha incorretos. Confira e tente novamente.';
             setErrorMessage(errorMessageFromApi);
-
-            Toast.show({
-                type: 'error',
-                text1: 'Erro no login',
-                text2: errorMessageFromApi,
-                visibilityTime: 3000,
-                topOffset: 60
-            });
+            Alert.alert('Não foi possível entrar', errorMessageFromApi, [{ text: 'OK' }], { cancelable: true });
         } finally {
             setLoading(false);
         }
@@ -412,6 +405,7 @@ export default function LoginScreen() {
                             autoCapitalize="none"
                             textContentType="emailAddress"
                             autoComplete="email"
+                            wrapperStyle={styles.loginInput}
                         />
 
                         <InputWithIcon
@@ -423,6 +417,7 @@ export default function LoginScreen() {
                                 if (errorMessage) setErrorMessage(null);
                             }}
                             secureTextEntry={true}
+                            wrapperStyle={styles.loginInput}
                         />
                         
                         <AnimatedErrorMessage message={errorMessage} isVisible={!!errorMessage} centered={true} />
@@ -509,6 +504,9 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 50,
         bottom: 42,
+    },
+    loginInput: {
+        height: 34,
     },
     inputWrapper: {
         flexDirection: 'row',
@@ -663,3 +661,4 @@ const styles = StyleSheet.create({
         color: '#78909C',
     },
 });
+
