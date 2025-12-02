@@ -1,6 +1,12 @@
 // src/missions/progress.service.ts
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma, MissionKind, MissionStatus, MissionAudience, RewardType } from '@prisma/client';
+import {
+  Prisma,
+  MissionKind,
+  MissionStatus,
+  MissionAudience,
+  RewardType,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface TrackEventResult {
@@ -73,17 +79,26 @@ export class MissionsProgressService {
     });
 
     // 2) Descobre missões afetadas
-    const missions = await this.prisma.mission.findMany({ where: { isActive: true, eventName } });
+    const missions = await this.prisma.mission.findMany({
+      where: { isActive: true, eventName },
+    });
 
     const resultUpdates: TrackEventResult['updated'] = [];
 
     // 3) Para cada missão, aplica a lógica de progresso
     for (const mission of missions) {
       const progress = await this.getOrCreateProgress(userId, mission.id);
-      const updated = await this.applyEventToMission(userId, mission.id, occurredAt);
+      const updated = await this.applyEventToMission(
+        userId,
+        mission.id,
+        occurredAt,
+      );
 
       if (updated) {
-        const percent = this.calcPercent(updated.currentValue, mission.targetValue);
+        const percent = this.calcPercent(
+          updated.currentValue,
+          mission.targetValue,
+        );
         resultUpdates.push({
           missionId: mission.id,
           status: updated.status,
@@ -103,9 +118,14 @@ export class MissionsProgressService {
    * Lista todas as missões ativas + progresso do usuário.
    * (útil para GET /missions/my)
    */
-  async getUserMissionsWithProgress(userId: string): Promise<MissionWithProgressView[]> {
+  async getUserMissionsWithProgress(
+    userId: string,
+  ): Promise<MissionWithProgressView[]> {
     const [missions, progresses] = await Promise.all([
-      this.prisma.mission.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } }),
+      this.prisma.mission.findMany({
+        where: { isActive: true },
+        orderBy: { createdAt: 'asc' },
+      }),
       this.prisma.missionProgress.findMany({ where: { userId } }),
     ]);
 
@@ -124,7 +144,7 @@ export class MissionsProgressService {
           eventName: m.eventName,
           targetValue: m.targetValue,
           timeWindowDays: m.timeWindowDays, // Não usar '!' aqui, pois o tipo é 'number | null'
-          rewardType: m.rewardType as RewardType,
+          rewardType: m.rewardType,
           rewardValue: m.rewardValue,
           couponTemplateId: m.couponTemplateId, // Não usar '!' aqui, pois o tipo é 'string | null'
           isActive: m.isActive,
@@ -151,12 +171,19 @@ export class MissionsProgressService {
    * Recalcula o progresso de uma missão específica a partir do histórico de eventos.
    * Útil para correções/higienizações.
    */
-  async recomputeMissionForUser(userId: string, missionId: string): Promise<MissionWithProgressView> {
-    const mission = await this.prisma.mission.findUnique({ where: { id: missionId } });
+  async recomputeMissionForUser(
+    userId: string,
+    missionId: string,
+  ): Promise<MissionWithProgressView> {
+    const mission = await this.prisma.mission.findUnique({
+      where: { id: missionId },
+    });
     if (!mission) throw new Error('Mission not found');
 
     // Estratégia: zera currentValue e reconta a partir dos eventos
-    await this.prisma.missionProgress.deleteMany({ where: { userId, missionId } });
+    await this.prisma.missionProgress.deleteMany({
+      where: { userId, missionId },
+    });
     const progress = await this.getOrCreateProgress(userId, missionId);
 
     // Pega todos eventos do tipo observado pela missão
@@ -184,7 +211,7 @@ export class MissionsProgressService {
         eventName: mission.eventName,
         targetValue: mission.targetValue,
         timeWindowDays: mission.timeWindowDays, // Não usar '!' aqui
-        rewardType: mission.rewardType as RewardType,
+        rewardType: mission.rewardType,
         rewardValue: mission.rewardValue,
         couponTemplateId: mission.couponTemplateId, // Não usar '!' aqui
         isActive: mission.isActive,
@@ -201,7 +228,10 @@ export class MissionsProgressService {
             lastEventAt: finalProgress.lastEventAt ?? null,
           }
         : null,
-      percent: this.calcPercent(finalProgress?.currentValue ?? 0, mission.targetValue),
+      percent: this.calcPercent(
+        finalProgress?.currentValue ?? 0,
+        mission.targetValue,
+      ),
       canClaim: finalProgress?.status === MissionStatus.COMPLETED,
     };
   }
@@ -210,8 +240,14 @@ export class MissionsProgressService {
   // Core: applyEventToMission
   // =========================
 
-  private async applyEventToMission(userId: string, missionId: string, occurredAt: Date) {
-    const mission = await this.prisma.mission.findUnique({ where: { id: missionId } });
+  private async applyEventToMission(
+    userId: string,
+    missionId: string,
+    occurredAt: Date,
+  ) {
+    const mission = await this.prisma.mission.findUnique({
+      where: { id: missionId },
+    });
     if (!mission || !mission.isActive) return null;
 
     let progress = await this.getOrCreateProgress(userId, missionId);
@@ -221,23 +257,44 @@ export class MissionsProgressService {
 
     switch (mission.kind) {
       case MissionKind.COUNT_EVENT:
-        progress = await this.applyCountEvent(missionId, userId, progress, occurredAt);
+        progress = await this.applyCountEvent(
+          missionId,
+          userId,
+          progress,
+          occurredAt,
+        );
         break;
 
       case MissionKind.WITHIN_WINDOW:
         // Se timeWindowDays é opcional, precisamos garantir que ele não é null/undefined aqui
-        if (mission.timeWindowDays === null || mission.timeWindowDays === undefined) {
-            this.logger.error(`Mission ${missionId} (kind: WITHIN_WINDOW) has null/undefined timeWindowDays. This might be an error in mission setup.`);
-            // Decida como lidar com isso: lançar um erro, usar um valor padrão, ou pular.
-            // Por simplicidade, vou usar um valor padrão de 0, mas o ideal é validar a configuração da missão.
-            // Ou, se a lógica de WITHIN_WINDOW sempre requer um valor, o campo no DB não deveria ser opcional para este tipo de missão.
-            mission.timeWindowDays = 0; // Fallback para evitar erro de tipo
+        if (
+          mission.timeWindowDays === null ||
+          mission.timeWindowDays === undefined
+        ) {
+          this.logger.error(
+            `Mission ${missionId} (kind: WITHIN_WINDOW) has null/undefined timeWindowDays. This might be an error in mission setup.`,
+          );
+          // Decida como lidar com isso: lançar um erro, usar um valor padrão, ou pular.
+          // Por simplicidade, vou usar um valor padrão de 0, mas o ideal é validar a configuração da missão.
+          // Ou, se a lógica de WITHIN_WINDOW sempre requer um valor, o campo no DB não deveria ser opcional para este tipo de missão.
+          mission.timeWindowDays = 0; // Fallback para evitar erro de tipo
         }
-        progress = await this.applyWithinWindow(missionId, userId, progress, occurredAt, mission.timeWindowDays);
+        progress = await this.applyWithinWindow(
+          missionId,
+          userId,
+          progress,
+          occurredAt,
+          mission.timeWindowDays,
+        );
         break;
 
       case MissionKind.STREAK_DAYS:
-        progress = await this.applyStreakDays(missionId, userId, progress, occurredAt);
+        progress = await this.applyStreakDays(
+          missionId,
+          userId,
+          progress,
+          occurredAt,
+        );
         break;
 
       default:
@@ -245,7 +302,10 @@ export class MissionsProgressService {
     }
 
     // Checagem de conclusão
-    if (progress.currentValue >= mission.targetValue && progress.status !== MissionStatus.CLAIMED) {
+    if (
+      progress.currentValue >= mission.targetValue &&
+      progress.status !== MissionStatus.CLAIMED
+    ) {
       progress = await this.prisma.missionProgress.update({
         where: { userId_missionId: { userId, missionId } },
         data: {
@@ -296,7 +356,9 @@ export class MissionsProgressService {
     from.setDate(from.getDate() - windowDays + 1); // janela inclusiva
 
     // Busca missão (para recuperar eventName)
-    const mission = await this.prisma.mission.findUnique({ where: { id: missionId } });
+    const mission = await this.prisma.mission.findUnique({
+      where: { id: missionId },
+    });
     if (!mission) return progress as any;
 
     const countInWindow = await this.prisma.missionEvent.count({
@@ -367,7 +429,7 @@ export class MissionsProgressService {
     if (!target || target <= 0) return 0;
     const pct = Math.floor((value / target) * 100);
     return Math.max(0, Math.min(100, pct));
-    }
+  }
 
   private isSameDay(a: Date, b: Date) {
     return (
