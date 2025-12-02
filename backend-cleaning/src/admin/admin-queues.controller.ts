@@ -20,7 +20,12 @@ export class AdminQueuesController {
   }
 
   @Get(':queueName/jobs')
-  @ApiQuery({ name: 'status', required: false, description: 'Filtrar por status (waiting, active, completed, failed, delayed, paused, all)' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description:
+      'Filtrar por status (waiting, active, completed, failed, delayed, paused, all)',
+  })
   async getJobs(
     @Param('queueName') queueName: string,
     @Query('status') status?: string,
