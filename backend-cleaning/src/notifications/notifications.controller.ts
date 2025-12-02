@@ -53,16 +53,29 @@ export class NotificationsController {
   @Post()
   @Roles(UserRole.ADMIN) // Protege esta rota para admins
   @UseGuards(RolesGuard) // Ativa a guarda de roles
-  @ApiOperation({ summary: 'Criar uma nova notificação (apenas para administradores)' })
-  @ApiBody({ type: CreateNotificationDto, description: 'Dados para criar uma nova notificação' })
-  @ApiResponse({ status: 201, description: 'Notificação criada com sucesso.', type: NotificationEntity })
+  @ApiOperation({
+    summary: 'Criar uma nova notificação (apenas para administradores)',
+  })
+  @ApiBody({
+    type: CreateNotificationDto,
+    description: 'Dados para criar uma nova notificação',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Notificação criada com sucesso.',
+    type: NotificationEntity,
+  })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 403, description: 'Acesso proibido (requer função de ADMIN).' })
-  async create(@Body() createNotificationDto: CreateNotificationDto): Promise<NotificationEntity> {
-    const createdNotification = await this.notificationsService.createNotification(
-      createNotificationDto,
-    );
+  @ApiResponse({
+    status: 403,
+    description: 'Acesso proibido (requer função de ADMIN).',
+  })
+  async create(
+    @Body() createNotificationDto: CreateNotificationDto,
+  ): Promise<NotificationEntity> {
+    const createdNotification =
+      await this.notificationsService.createNotification(createNotificationDto);
     return new NotificationEntity(createdNotification);
   }
 
@@ -88,7 +101,9 @@ export class NotificationsController {
   }
 
   @Patch('me/mark-as-read')
-  @ApiOperation({ summary: 'Marcar notificações como lidas para o usuário logado' })
+  @ApiOperation({
+    summary: 'Marcar notificações como lidas para o usuário logado',
+  })
   @ApiResponse({
     status: 200,
     description: 'Notificações marcadas como lidas com sucesso.',
@@ -114,24 +129,34 @@ export class NotificationsController {
     type: NotificationEntity,
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 404, description: 'Notificação não encontrada ou acesso negado.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Notificação não encontrada ou acesso negado.',
+  })
   async markNotificationByIdAsRead(
     @Req() req: Request,
     @Param('id') notificationId: string,
   ): Promise<NotificationEntity> {
     const userId = req.user['userId'];
-    const updatedNotification = await this.notificationsService.markNotificationByIdAsRead(
-      notificationId,
-      userId,
-    );
+    const updatedNotification =
+      await this.notificationsService.markNotificationByIdAsRead(
+        notificationId,
+        userId,
+      );
     return new NotificationEntity(updatedNotification);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Excluir uma notificação específica' })
-  @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Notificação excluída com sucesso.' })
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'Notificação excluída com sucesso.',
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 404, description: 'Notificação não encontrada ou acesso negado.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Notificação não encontrada ou acesso negado.',
+  })
   async deleteNotification(
     @Req() req: Request,
     @Param('id') notificationId: string,
@@ -157,28 +182,46 @@ export class NotificationsController {
   async schedule(@Body() body: any) {
     // scheduleAt opcional; por ora, cria a notificação imediatamente e retorna
     const { scheduleAt, ...rest } = body || {};
-    return this.notificationsService.createNotification(rest as CreateNotificationDto);
+    return this.notificationsService.createNotification(
+      rest as CreateNotificationDto,
+    );
   }
   @Get('suggestions')
-  @ApiOperation({ summary: 'Obter sugestões inteligentes baseadas em um contexto' })
+  @ApiOperation({
+    summary: 'Obter sugestões inteligentes baseadas em um contexto',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de sugestões.',
     type: [String],
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  async getSuggestions(
-    @Query('context') context: string,
-  ): Promise<string[]> {
+  async getSuggestions(@Query('context') context: string): Promise<string[]> {
     return this.notificationsService.getSmartSuggestions(context);
   }
 
   @Post('quick-action/:action')
-  @ApiOperation({ summary: 'Executar uma ação rápida associada a uma notificação' })
-  @ApiParam({ name: 'action', description: 'Tipo de ação rápida (ex: accept_booking, respond_review)', type: String })
-  @ApiBody({ description: 'Dados adicionais para a ação rápida', required: false, type: Object }) // Tipo Object para dados genéricos
-  @ApiResponse({ status: 200, description: 'Ação rápida executada com sucesso.' })
-  @ApiResponse({ status: 400, description: 'Ação rápida desconhecida ou dados inválidos.' })
+  @ApiOperation({
+    summary: 'Executar uma ação rápida associada a uma notificação',
+  })
+  @ApiParam({
+    name: 'action',
+    description: 'Tipo de ação rápida (ex: accept_booking, respond_review)',
+    type: String,
+  })
+  @ApiBody({
+    description: 'Dados adicionais para a ação rápida',
+    required: false,
+    type: Object,
+  }) // Tipo Object para dados genéricos
+  @ApiResponse({
+    status: 200,
+    description: 'Ação rápida executada com sucesso.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Ação rápida desconhecida ou dados inválidos.',
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   async executeQuickAction(
     @Param('action') action: string,
@@ -188,8 +231,14 @@ export class NotificationsController {
   }
 
   @Post('register-token')
-  @ApiOperation({ summary: 'Registrar/atualizar o token de push do dispositivo para o usuário atual' })
-  async registerToken(@Req() req: Request, @Body() body: RegisterTokenDto): Promise<{ ok: true }> {
+  @ApiOperation({
+    summary:
+      'Registrar/atualizar o token de push do dispositivo para o usuário atual',
+  })
+  async registerToken(
+    @Req() req: Request,
+    @Body() body: RegisterTokenDto,
+  ): Promise<{ ok: true }> {
     const userId = req.user?.['userId'];
 
     if (!userId) {
