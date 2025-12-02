@@ -1,5 +1,20 @@
 // src/bookings/bookings.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Query, BadRequestException, HttpCode, HttpStatus } from '@nestjs/common'; // CORREÇÃO: Importar BadRequestException, HttpCode, HttpStatus
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  UseGuards,
+  Req,
+  NotFoundException,
+  ForbiddenException,
+  Query,
+  BadRequestException,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common'; // CORREÇÃO: Importar BadRequestException, HttpCode, HttpStatus
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
@@ -9,7 +24,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { BookingStatus, UserRole } from '@prisma/client';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request } from 'express';
 import { ReportDisputeDto, DisputeReason } from './dto/report-dispute.dto'; // Importe o novo DTO de disputa
 import { MessageResponseDto } from '../common/dto/message-response.dto'; // Para mensagens de sucesso
@@ -29,27 +49,55 @@ export class BookingsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Listar todos os agendamentos (apenas admin)' })
-  @ApiResponse({ status: 200, description: 'Lista de agendamentos.', type: [BookingDetailsDto] })
-  async findAllBookings(@Req() req: Request, @Query('status') status?: BookingStatus): Promise<BookingDetailsDto[]> {
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de agendamentos.',
+    type: [BookingDetailsDto],
+  })
+  async findAllBookings(
+    @Req() req: Request,
+    @Query('status') status?: BookingStatus,
+  ): Promise<BookingDetailsDto[]> {
     const userId = req.user['userId'];
     const role = req.user['role'];
-    const bookings = await this.bookingsService.findUserBookings(userId, role, status as any, req);
-    return bookings.map(b => new BookingDetailsDto(b));
+    const bookings = await this.bookingsService.findUserBookings(
+      userId,
+      role,
+      status as any,
+      req,
+    );
+    return bookings.map((b) => new BookingDetailsDto(b));
   }
 
   @Post()
   @Roles(UserRole.CLIENT) // Apenas clientes podem criar agendamentos
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Criar um novo agendamento (somente o agendamento)' }) // Atualizado o summary
-  @ApiResponse({ status: 201, description: 'Agendamento criado com sucesso.', type: BookingDetailsDto })
+  @ApiOperation({
+    summary: 'Criar um novo agendamento (somente o agendamento)',
+  }) // Atualizado o summary
+  @ApiResponse({
+    status: 201,
+    description: 'Agendamento criado com sucesso.',
+    type: BookingDetailsDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
-  @ApiResponse({ status: 404, description: 'Provedor ou serviço do provedor não encontrado.' })
-  async create(@Req() req: Request, @Body() createBookingDto: CreateBookingDto): Promise<BookingDetailsDto> {
+  @ApiResponse({
+    status: 404,
+    description: 'Provedor ou serviço do provedor não encontrado.',
+  })
+  async create(
+    @Req() req: Request,
+    @Body() createBookingDto: CreateBookingDto,
+  ): Promise<BookingDetailsDto> {
     const userId = req.user['userId'];
     // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
-    const booking = await this.bookingsService.create(userId, createBookingDto, req);
+    const booking = await this.bookingsService.create(
+      userId,
+      createBookingDto,
+      req,
+    );
     return new BookingDetailsDto(booking);
   }
 
@@ -58,7 +106,9 @@ export class BookingsController {
   @Roles(UserRole.CLIENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Cria um novo agendamento e gera a cobrança PIX associada' })
+  @ApiOperation({
+    summary: 'Cria um novo agendamento e gera a cobrança PIX associada',
+  })
   @ApiResponse({
     status: 201,
     description: 'Agendamento criado e cobrança PIX gerada com sucesso.',
@@ -66,15 +116,26 @@ export class BookingsController {
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
-  @ApiResponse({ status: 404, description: 'Provedor, serviço ou cliente não encontrado.' })
-  @ApiResponse({ status: 500, description: 'Erro interno ao criar agendamento ou cobrança PIX.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Provedor, serviço ou cliente não encontrado.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Erro interno ao criar agendamento ou cobrança PIX.',
+  })
   async scheduleAndPay(
     @Req() req: Request,
     @Body() createBookingDto: CreateBookingDto, // O mesmo DTO de entrada do agendamento
   ): Promise<BookingAndPixResponseDto> {
     const userId = req.user['userId'];
     // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
-    const { booking, pixCharge } = await this.bookingsService.createBookingAndPixCharge(userId, createBookingDto, req);
+    const { booking, pixCharge } =
+      await this.bookingsService.createBookingAndPixCharge(
+        userId,
+        createBookingDto,
+        req,
+      );
 
     // Retorna o DTO combinado
     return {
@@ -86,26 +147,47 @@ export class BookingsController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Obter agendamentos do usuário logado (cliente ou provedor)' })
-  @ApiResponse({ status: 200, description: 'Lista de agendamentos do usuário.', type: [BookingDetailsDto] })
+  @ApiOperation({
+    summary: 'Obter agendamentos do usuário logado (cliente ou provedor)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de agendamentos do usuário.',
+    type: [BookingDetailsDto],
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  async findMyBookings(@Req() req: Request, @Query('status') status?: BookingStatus): Promise<BookingDetailsDto[]> {
+  async findMyBookings(
+    @Req() req: Request,
+    @Query('status') status?: BookingStatus,
+  ): Promise<BookingDetailsDto[]> {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
     // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
-    const bookings = await this.bookingsService.findUserBookings(userId, userRole, status, req);
-    return bookings.map(booking => new BookingDetailsDto(booking));
+    const bookings = await this.bookingsService.findUserBookings(
+      userId,
+      userRole,
+      status,
+      req,
+    );
+    return bookings.map((booking) => new BookingDetailsDto(booking));
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obter detalhes de um agendamento específico' })
-  @ApiResponse({ status: 200, description: 'Detalhes do agendamento.', type: BookingDetailsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Detalhes do agendamento.',
+    type: BookingDetailsDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
-  async findOne(@Req() req: Request, @Param('id') id: string): Promise<BookingDetailsDto> {
+  async findOne(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ): Promise<BookingDetailsDto> {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
     // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
@@ -113,7 +195,11 @@ export class BookingsController {
 
     if (!booking) {
       // Usar o I18nService para mensagens de erro
-      throw new NotFoundException(await this.i18n.translate('booking.notFound', (req as any).locale, { id }));
+      throw new NotFoundException(
+        await this.i18n.translate('booking.notFound', (req as any).locale, {
+          id,
+        }),
+      );
     }
 
     // Verifica se o usuário tem permissão para ver este agendamento
@@ -123,7 +209,12 @@ export class BookingsController {
 
     if (!isClientOfBooking && !isProviderOfBooking && !isAdmin) {
       // Usar o I18nService para mensagens de erro
-      throw new ForbiddenException(await this.i18n.translate('booking.forbidden.access', (req as any).locale));
+      throw new ForbiddenException(
+        await this.i18n.translate(
+          'booking.forbidden.access',
+          (req as any).locale,
+        ),
+      );
     }
 
     return new BookingDetailsDto(booking);
@@ -134,7 +225,11 @@ export class BookingsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Atualizar o status de um agendamento' })
-  @ApiResponse({ status: 200, description: 'Status do agendamento atualizado com sucesso.', type: BookingDetailsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Status do agendamento atualizado com sucesso.',
+    type: BookingDetailsDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
@@ -150,21 +245,40 @@ export class BookingsController {
     const booking = await this.bookingsService.findOne(id, req);
     if (!booking) {
       // Usar o I18nService para mensagens de erro
-      throw new NotFoundException(await this.i18n.translate('booking.notFound', (req as any).locale, { id }));
+      throw new NotFoundException(
+        await this.i18n.translate('booking.notFound', (req as any).locale, {
+          id,
+        }),
+      );
     }
 
     // Lógica de autorização para atualização de status
     if (userRole === UserRole.CLIENT && booking.client.userId !== userId) {
       // Usar o I18nService para mensagens de erro
-      throw new ForbiddenException(await this.i18n.translate('booking.forbidden.updateStatus', (req as any).locale));
+      throw new ForbiddenException(
+        await this.i18n.translate(
+          'booking.forbidden.updateStatus',
+          (req as any).locale,
+        ),
+      );
     }
     if (userRole === UserRole.PROVIDER && booking.provider.userId !== userId) {
       // Usar o I18nService para mensagens de erro
-      throw new ForbiddenException(await this.i18n.translate('booking.forbidden.updateStatus', (req as any).locale));
+      throw new ForbiddenException(
+        await this.i18n.translate(
+          'booking.forbidden.updateStatus',
+          (req as any).locale,
+        ),
+      );
     }
 
     // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
-    const updatedBooking = await this.bookingsService.updateStatus(id, updateBookingStatusDto.status, userRole, req);
+    const updatedBooking = await this.bookingsService.updateStatus(
+      id,
+      updateBookingStatusDto.status,
+      userRole,
+      req,
+    );
     return new BookingDetailsDto(updatedBooking);
   }
 
@@ -174,26 +288,47 @@ export class BookingsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cancelar um agendamento (pelo cliente)' })
-  @ApiResponse({ status: 200, description: 'Agendamento cancelado com sucesso.', type: BookingDetailsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Agendamento cancelado com sucesso.',
+    type: BookingDetailsDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
-  async cancelBooking(@Req() req: Request, @Param('id') id: string): Promise<BookingDetailsDto> {
+  async cancelBooking(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ): Promise<BookingDetailsDto> {
     const userId = req.user['userId'];
     // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const booking = await this.bookingsService.findOne(id, req);
 
     if (!booking) {
       // Usar o I18nService para mensagens de erro
-      throw new NotFoundException(await this.i18n.translate('booking.notFound', (req as any).locale, { id }));
+      throw new NotFoundException(
+        await this.i18n.translate('booking.notFound', (req as any).locale, {
+          id,
+        }),
+      );
     }
     if (booking.client.userId !== userId) {
       // Usar o I18nService para mensagens de erro
-      throw new ForbiddenException(await this.i18n.translate('booking.forbidden.updateStatus', (req as any).locale));
+      throw new ForbiddenException(
+        await this.i18n.translate(
+          'booking.forbidden.updateStatus',
+          (req as any).locale,
+        ),
+      );
     }
 
     // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
-    const updatedBooking = await this.bookingsService.updateStatus(id, BookingStatus.CANCELED, UserRole.CLIENT, req);
+    const updatedBooking = await this.bookingsService.updateStatus(
+      id,
+      BookingStatus.CANCELED,
+      UserRole.CLIENT,
+      req,
+    );
     return new BookingDetailsDto(updatedBooking);
   }
 
@@ -201,8 +336,14 @@ export class BookingsController {
   @Get('check-active-chat/:clientId/:providerId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Verifica se há agendamento ativo entre cliente e provedor para permitir chat' })
-  @ApiResponse({ status: 200, description: 'Retorna se pode abrir chat e o bookingId, se existir.' })
+  @ApiOperation({
+    summary:
+      'Verifica se há agendamento ativo entre cliente e provedor para permitir chat',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Retorna se pode abrir chat e o bookingId, se existir.',
+  })
   async checkActiveChat(
     @Param('clientId') clientId: string,
     @Param('providerId') providerId: string,
@@ -215,7 +356,12 @@ export class BookingsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Reportar um problema com um agendamento' })
-  @ApiResponse({ status: 200, description: 'Problema reportado com sucesso. Status do agendamento alterado para PENDING_DISPUTE.', type: BookingDetailsDto })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Problema reportado com sucesso. Status do agendamento alterado para PENDING_DISPUTE.',
+    type: BookingDetailsDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
@@ -227,12 +373,23 @@ export class BookingsController {
   ): Promise<BookingDetailsDto> {
     if (!reason || reason.trim().length === 0) {
       // Usar o I18nService para mensagens de erro
-      throw new BadRequestException(await this.i18n.translate('booking.badRequest.issueReasonRequired', (req as any).locale));
+      throw new BadRequestException(
+        await this.i18n.translate(
+          'booking.badRequest.issueReasonRequired',
+          (req as any).locale,
+        ),
+      );
     }
     const userId = req.user['userId'];
     const userRole = req.user['role'];
     // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
-    const updatedBooking = await this.bookingsService.reportIssue(id, userId, userRole, reason, req);
+    const updatedBooking = await this.bookingsService.reportIssue(
+      id,
+      userId,
+      userRole,
+      reason,
+      req,
+    );
     return new BookingDetailsDto(updatedBooking);
   }
 
@@ -242,7 +399,12 @@ export class BookingsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Reportar uma disputa para um agendamento' })
-  @ApiResponse({ status: 202, description: 'Disputa reportada com sucesso. Será processada em segundo plano.', type: MessageResponseDto })
+  @ApiResponse({
+    status: 202,
+    description:
+      'Disputa reportada com sucesso. Será processada em segundo plano.',
+    type: MessageResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
@@ -256,20 +418,41 @@ export class BookingsController {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
     // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
-    await this.bookingsService.reportDispute(bookingId, userId, userRole, reportDisputeDto, req);
+    await this.bookingsService.reportDispute(
+      bookingId,
+      userId,
+      userRole,
+      reportDisputeDto,
+      req,
+    );
     // Usar o I18nService para mensagens de sucesso
-    return { message: await this.i18n.translate('booking.disputeReportedSuccess', (req as any).locale) };
+    return {
+      message: await this.i18n.translate(
+        'booking.disputeReportedSuccess',
+        (req as any).locale,
+      ),
+    };
   }
 
   @Patch(':id/resolve-dispute')
   @Roles(UserRole.ADMIN) // Apenas administradores podem resolver disputas
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Resolver uma disputa de agendamento (apenas para administradores)' })
-  @ApiResponse({ status: 200, description: 'Disputa resolvida com sucesso.', type: BookingDetailsDto })
+  @ApiOperation({
+    summary:
+      'Resolver uma disputa de agendamento (apenas para administradores)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Disputa resolvida com sucesso.',
+    type: BookingDetailsDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
-  @ApiResponse({ status: 404, description: 'Agendamento ou disputa não encontrada.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Agendamento ou disputa não encontrada.',
+  })
   @ApiResponse({ status: 400, description: 'Requisição inválida.' })
   async resolveDispute(
     @Req() req: Request, // Adicionado req aqui
@@ -280,10 +463,21 @@ export class BookingsController {
   ): Promise<BookingDetailsDto> {
     if (!resolution || resolution.trim().length === 0) {
       // Usar o I18nService para mensagens de erro
-      throw new BadRequestException(await this.i18n.translate('booking.badRequest.disputeResolutionRequired', (req as any).locale));
+      throw new BadRequestException(
+        await this.i18n.translate(
+          'booking.badRequest.disputeResolutionRequired',
+          (req as any).locale,
+        ),
+      );
     }
     // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
-    const updatedBooking = await this.bookingsService.resolveDispute(bookingId, resolution, refundAmount, newStatus, req);
+    const updatedBooking = await this.bookingsService.resolveDispute(
+      bookingId,
+      resolution,
+      refundAmount,
+      newStatus,
+      req,
+    );
     return new BookingDetailsDto(updatedBooking);
   }
 }
