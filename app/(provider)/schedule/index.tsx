@@ -339,7 +339,7 @@ export default function MyScheduleScreen() {
       ]).start();
     } catch (err) {
       console.error('[MyScheduleScreen] Erro ao buscar agendamentos:', err);
-      Alert.alert('Erro', 'Não foi possível carregar os dados da agenda.');
+      showOverlay({ title: 'Erro', subtitle: 'Não foi possível carregar os dados da agenda.', variant: 'error' });
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
