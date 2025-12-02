@@ -317,31 +317,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           <Text style={styles.dayName}>{dayName}</Text>
           {!!dateLabel && <Text style={styles.dayDate}>{dateLabel}</Text>}
         </View>
-        <TouchableOpacity
-          style={styles.personalizeHeaderButton}
-          onPress={() => setShowFullGrid((v) => !v)}
-          accessibilityRole="button"
-          accessibilityLabel={showFullGrid ? 'Concluir personalização' : 'Personalizar horários'}
-        >
-          <Ionicons name="options-outline" size={14} color={Colors.primary} />
-          <Text style={styles.personalizeHeaderText}>{showFullGrid ? 'Concluir' : 'Personalizar'}</Text>
-        </TouchableOpacity>
-        <View style={styles.switchWrap}>
-        <Switch
-          trackColor={{ false: Colors.textMuted, true: Colors.primary }}
-          thumbColor={Colors.surface}
-          ios_backgroundColor={Colors.textMuted}
-          onValueChange={(value) => {
-            if (isPastDay) return;
-            onToggleDay(dayOfWeek, value);
-            if (Platform.OS === 'ios') Haptics.selectionAsync();
-          }}
-          value={availability.isEnabled && !isPastDay}
-          disabled={isPastDay}
-          accessibilityLabel={`Ativar ${dayName.toLowerCase()}`}
-          accessibilityHint="Alterna disponibilidade para o dia"
-        />
-        </View>
+        <View style={{ width: 1 }} />
       </View>
       <View style={styles.periodRow}>
         <TouchableOpacity
@@ -377,15 +353,6 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           <Text style={[styles.periodTileText, currentPeriod === 'evening' && styles.periodTileTextActive]}>Noite</Text>
           <Text style={[styles.periodTileSub, currentPeriod === 'evening' && styles.periodTileTextActive]}>18–21</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.personalizeButton}
-          onPress={() => setShowFullGrid((v) => !v)}
-          accessibilityRole="button"
-          accessibilityLabel="Personalizar horários"
-        >
-          <Ionicons name="options-outline" size={16} color={Colors.primary} />
-          <Text style={styles.personalizeButtonText}>{showFullGrid ? 'Concluir' : 'Personalizar'}</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Correção aqui: Adicionei flexWrap, gap e justifyContent para responsividade */}
@@ -418,6 +385,42 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
         >
           <Text style={styles.quickActionText}>Dia todo</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.quickTile, { width: '30%' }]}
+          onPress={() => setShowFullGrid((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={showFullGrid ? 'Concluir personalização' : 'Personalizar horários'}
+        >
+          <Text style={styles.quickActionText}>{showFullGrid ? 'Concluir' : 'Personalizar'}</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.postQuickRow}>
+        <View style={{ flex: 1 }} />
+        <TouchableOpacity
+          style={styles.personalizeButton}
+          onPress={() => setShowFullGrid((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel="Personalizar horários"
+        >
+          <Ionicons name="options-outline" size={16} color={Colors.primary} />
+          <Text style={styles.personalizeButtonText}>{showFullGrid ? 'Concluir' : 'Personalizar'}</Text>
+        </TouchableOpacity>
+        <View style={styles.switchWrap}>
+          <Switch
+            trackColor={{ false: Colors.textMuted, true: Colors.primary }}
+            thumbColor={Colors.surface}
+            ios_backgroundColor={Colors.textMuted}
+            onValueChange={(value) => {
+              if (isPastDay) return;
+              onToggleDay(dayOfWeek, value);
+              if (Platform.OS === 'ios') Haptics.selectionAsync();
+            }}
+            value={availability.isEnabled && !isPastDay}
+            disabled={isPastDay}
+            accessibilityLabel={`Ativar ${dayName.toLowerCase()}`}
+            accessibilityHint="Alterna disponibilidade para o dia"
+          />
+        </View>
       </View>
 
       {availability.isEnabled && !isPastDay && showFullGrid && (
@@ -540,6 +543,7 @@ export default function ManageAvailabilityScreen() {
   // Coverage radius state (moved inside component)
   const [radiusKm, setRadiusKm] = useState<number>(15);
   const [isSavingRadius, setIsSavingRadius] = useState<boolean>(false);
+  const [radiusCollapsed, setRadiusCollapsed] = useState<boolean>(false);
 
   useEffect(() => {
     let mounted = true;
@@ -555,15 +559,18 @@ export default function ManageAvailabilityScreen() {
   }, []);
 
   const saveRadius = useCallback(async () => {
+    let success = false;
     try {
       setIsSavingRadius(true);
       await saveProviderSettings({ serviceRadiusKm: radiusKm });
-      // sinaliza para a tela Explore recarregar recomendações
+      // sinaliza para a tela Explore recarregar recomenda??es
       await AsyncStorage.setItem('@settings:radius:changed', '1');
+      success = true;
     } catch (e) {
       console.warn('[ManageAvailability] Falha ao salvar raio de atendimento:', (e as any)?.message || e);
     } finally {
       setIsSavingRadius(false);
+      if (success) setRadiusCollapsed(true);
     }
   }, [radiusKm]);
 
@@ -748,7 +755,7 @@ export default function ManageAvailabilityScreen() {
 
     } catch (error: any) {
       console.error('Erro ao carregar dados de disponibilidade:', error);
-      Alert.alert('Erro', 'Não foi possível carregar sua disponibilidade. Tente novamente.');
+      showOverlay({ title: 'Erro', subtitle: 'Não foi possível carregar sua disponibilidade. Tente novamente.', variant: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -979,7 +986,7 @@ export default function ManageAvailabilityScreen() {
 
   const handleSaveAvailability = useCallback(async () => {
     if (!user?.id) {
-      Alert.alert("Erro", "ID do provedor não encontrado. Faça login novamente.");
+      showOverlay({ title: 'Erro', subtitle: 'ID do provedor não encontrado. Faça login novamente.', variant: 'error' });
       return;
     }
 
@@ -1033,7 +1040,7 @@ export default function ManageAvailabilityScreen() {
       } else {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
-      Alert.alert('Sucesso', 'Sua disponibilidade foi salva!');
+      showOverlay({ title: 'Sucesso', subtitle: 'Sua disponibilidade foi salva!', variant: 'success' });
       router.back();
     } catch (error: any) {
       console.error('Erro ao salvar disponibilidade:', error.response?.data || error.message);
@@ -1042,7 +1049,7 @@ export default function ManageAvailabilityScreen() {
       } else {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       }
-      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível salvar sua disponibilidade. Tente novamente.');
+      showOverlay({ title: 'Erro', subtitle: error.response?.data?.message || 'Não foi possível salvar sua disponibilidade. Tente novamente.', variant: 'error' });
     } finally {
       setIsSaving(false);
       loadData();
@@ -1172,29 +1179,42 @@ useEffect(() => {
 
             {/* Cobertura: raio de atendimento (km) */}
       <View style={{ backgroundColor: Colors.surface, borderRadius: Radii.sm, padding: Spacing.md, marginHorizontal: Spacing.sm, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.border }}>
-        <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 8 }}>Raio de atendimento (km)</Text>
-        <View style={{ paddingHorizontal: Spacing.xs }}>
-          <Slider
-            minimumValue={5}
-            maximumValue={60}
-            step={5}
-            value={radiusKm}
-            onValueChange={(v: number) => {
-              setRadiusKm(v);
-              try { Haptics.selectionAsync(); } catch {}
-            }}
-            minimumTrackTintColor={Colors.primary}
-            maximumTrackTintColor={Colors.border}
-            thumbTintColor={Colors.primary}
-          />
-          <View style={{ alignItems: 'center', marginTop: 4 }}>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.text }}>{radiusKm} km</Text>
+        {radiusCollapsed ? (
+          <View style={styles.radiusCollapsedRow}>
+            <Text style={styles.radiusSummaryText}>Raio: {radiusKm} km</Text>
+            <TouchableOpacity onPress={() => setRadiusCollapsed(false)} accessibilityRole='button' accessibilityLabel='Editar raio de atendimento'>
+              <Text style={styles.radiusEditText}>Editar</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-        <TouchableOpacity onPress={saveRadius} disabled={isSavingRadius} style={{ marginTop: 10, backgroundColor: Colors.primary, borderRadius: 8, paddingVertical: 10, alignItems: 'center', opacity: isSavingRadius ? 0.7 : 1 }}>
-          <Text style={{ color: '#fff', fontWeight: '800' }}>{isSavingRadius ? 'Salvando...' : 'Salvar raio'}</Text>
-        </TouchableOpacity>
-      </View><View style={styles.segmentedControl}>
+        ) : (
+          <>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 8 }}>Raio de atendimento (km)</Text>
+            <View style={{ paddingHorizontal: Spacing.xs }}>
+              <Slider
+                minimumValue={5}
+                maximumValue={60}
+                step={5}
+                value={radiusKm}
+                onValueChange={(v: number) => {
+                  setRadiusKm(v);
+                  try { Haptics.selectionAsync(); } catch {}
+                }}
+                minimumTrackTintColor={Colors.primary}
+                maximumTrackTintColor={Colors.border}
+                thumbTintColor={Colors.primary}
+              />
+              <View style={{ alignItems: 'center', marginTop: 4 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.text }}>{radiusKm} km</Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={saveRadius} disabled={isSavingRadius} style={{ marginTop: 10, backgroundColor: Colors.primary, borderRadius: 8, paddingVertical: 10, alignItems: 'center', opacity: isSavingRadius ? 0.7 : 1 }}>
+              <Text style={{ color: '#fff', fontWeight: '800' }}>{isSavingRadius ? 'Salvando...' : 'Salvar raio'}</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+
+      <View style={styles.segmentedControl}>
         <TouchableOpacity
           style={[styles.segment, activeTab === 'weekly' && styles.segmentActive]}
           onPress={() => setActiveTab('weekly')}
@@ -1842,6 +1862,28 @@ const styles = StyleSheet.create({
   quickActionsRow: {
     flexDirection: 'row',
     marginBottom: Spacing.sm,
+  },
+  radiusCollapsedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  radiusSummaryText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  radiusEditText: {
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  postQuickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: Spacing.xs,
+    gap: Spacing.xs,
   },
   // Quick action tiles (top of weekly tab)
   quickTilesRow: {
