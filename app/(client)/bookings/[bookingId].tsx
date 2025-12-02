@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -250,7 +251,10 @@ function ActionsCard({
       {/* Contatar (ação principal) */}
       <TouchableOpacity
         style={[premium.button, premium.primaryButton]}
-        onPress={onContact}
+        onPress={() => {
+          if (Platform.OS === 'ios') Haptics.selectionAsync();
+          onContact();
+        }}
         activeOpacity={0.9}
       >
         <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" style={styles.iconAdjust} />
@@ -261,7 +265,10 @@ function ActionsCard({
       {canReview && (
         <TouchableOpacity
           style={[premium.button, premium.lightButton]}
-          onPress={onReview}
+          onPress={() => {
+            if (Platform.OS === 'ios') Haptics.selectionAsync();
+            onReview();
+          }}
           activeOpacity={0.9}
         >
           <Ionicons name="star-outline" size={20} color={UI.accent} style={styles.iconAdjust} />
@@ -272,7 +279,10 @@ function ActionsCard({
       {/* Ver perfil */}
       <TouchableOpacity
         style={[premium.button, premium.lightButton]}
-        onPress={onViewProfile}
+        onPress={() => {
+          if (Platform.OS === 'ios') Haptics.selectionAsync();
+          onViewProfile();
+        }}
         activeOpacity={0.9}
       >
         <Ionicons name="person-circle-outline" size={20} color={UI.accent} style={styles.iconAdjust} />
@@ -283,7 +293,10 @@ function ActionsCard({
       {canCancel && (
         <TouchableOpacity
           style={[premium.button, premium.dangerButton]}
-          onPress={onCancel}
+          onPress={() => {
+            if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            onCancel();
+          }}
           activeOpacity={0.9}
         >
           <Ionicons name="close-circle-outline" size={20} color={UI.danger} style={styles.iconAdjust} />
