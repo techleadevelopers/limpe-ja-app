@@ -37,7 +37,11 @@ export class FaqsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Criar um novo item de FAQ (apenas ADMIN)' })
   @ApiBody({ type: CreateFaqDto })
-  @ApiResponse({ status: 201, description: 'FAQ criado com sucesso.', type: FaqItemEntity })
+  @ApiResponse({
+    status: 201,
+    description: 'FAQ criado com sucesso.',
+    type: FaqItemEntity,
+  })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
@@ -48,7 +52,11 @@ export class FaqsController {
 
   @Get()
   @ApiOperation({ summary: 'Obter todos os itens de FAQ' })
-  @ApiResponse({ status: 200, description: 'Lista de FAQs.', type: [FaqItemEntity] })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de FAQs.',
+    type: [FaqItemEntity],
+  })
   async findAll(): Promise<FaqItemEntity[]> {
     const faqs = await this.faqsService.findAll();
     return faqs.map((faq) => new FaqItemEntity(faq));
@@ -56,7 +64,11 @@ export class FaqsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Obter um item de FAQ por ID' })
-  @ApiResponse({ status: 200, description: 'FAQ encontrado.', type: FaqItemEntity })
+  @ApiResponse({
+    status: 200,
+    description: 'FAQ encontrado.',
+    type: FaqItemEntity,
+  })
   @ApiResponse({ status: 404, description: 'FAQ não encontrado.' })
   async findOne(@Param('id') id: string): Promise<FaqItemEntity> {
     const faq = await this.faqsService.findOne(id);
@@ -69,12 +81,19 @@ export class FaqsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Atualizar um item de FAQ por ID (apenas ADMIN)' })
   @ApiBody({ type: UpdateFaqDto })
-  @ApiResponse({ status: 200, description: 'FAQ atualizado com sucesso.', type: FaqItemEntity })
+  @ApiResponse({
+    status: 200,
+    description: 'FAQ atualizado com sucesso.',
+    type: FaqItemEntity,
+  })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'FAQ não encontrado.' })
-  async update(@Param('id') id: string, @Body() updateFaqDto: UpdateFaqDto): Promise<FaqItemEntity> {
+  async update(
+    @Param('id') id: string,
+    @Body() updateFaqDto: UpdateFaqDto,
+  ): Promise<FaqItemEntity> {
     const faq = await this.faqsService.update(id, updateFaqDto);
     return new FaqItemEntity(faq);
   }
@@ -84,7 +103,10 @@ export class FaqsController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Excluir um item de FAQ por ID (apenas ADMIN)' })
-  @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'FAQ excluído com sucesso.' })
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'FAQ excluído com sucesso.',
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'FAQ não encontrado.' })
