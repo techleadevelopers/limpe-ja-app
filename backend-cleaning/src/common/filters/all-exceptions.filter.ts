@@ -41,7 +41,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
         error = (responseBody as any).error || HttpStatus[status];
 
         // Tenta extrair chave de i18n se a mensagem for um objeto com 'key'
-        if ((responseBody as any).message && typeof (responseBody as any).message === 'object' && (responseBody as any).message.key) {
+        if (
+          (responseBody as any).message &&
+          typeof (responseBody as any).message === 'object' &&
+          (responseBody as any).message.key
+        ) {
           i18nKey = (responseBody as any).message.key;
           i18nArgs = (responseBody as any).message.args || {};
         }
@@ -74,18 +78,26 @@ export class AllExceptionsFilter implements ExceptionFilter {
           i18nArgs = { message: exception.message };
           break;
       }
-      this.logger.error(`Prisma Error (${exception.code}): ${exception.message}`, exception.stack);
+      this.logger.error(
+        `Prisma Error (${exception.code}): ${exception.message}`,
+        exception.stack,
+      );
     } else {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
       message = 'Erro interno do servidor.';
       error = 'Internal Server Error';
       i18nKey = 'error.internalServerError';
-      this.logger.error(`Unhandled Exception: ${exception instanceof Error ? exception.message : 'Unknown error'}`, exception instanceof Error ? exception.stack : undefined);
+      this.logger.error(
+        `Unhandled Exception: ${exception instanceof Error ? exception.message : 'Unknown error'}`,
+        exception instanceof Error ? exception.stack : undefined,
+      );
     }
 
     // Tentar traduzir a mensagem se uma chave i18n foi fornecida
     const lang = request.headers['accept-language'] || 'pt-BR'; // Obter idioma do cabeçalho
-    const translatedMessage = i18nKey ? await this.i18n.translate(i18nKey, lang as string, i18nArgs) : message;
+    const translatedMessage = i18nKey
+      ? await this.i18n.translate(i18nKey, lang, i18nArgs)
+      : message;
 
     response.status(status).json({
       statusCode: status,
