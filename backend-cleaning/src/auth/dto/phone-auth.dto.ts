@@ -25,7 +25,10 @@ export class LoginWithPhoneNumberAndPasswordDto {
   @Matches(/^[1-9][1-9]\d{9}$/, { message: 'Formato de telefone inválido.' })
   phoneNumber: string;
 
-  @ApiProperty({ description: 'Senha do usuário', example: 'SuaSenhaSegura123!' })
+  @ApiProperty({
+    description: 'Senha do usuário',
+    example: 'SuaSenhaSegura123!',
+  })
   @IsString({ message: 'A senha deve ser uma string.' })
   @IsNotEmpty({ message: 'A senha é obrigatória.' })
   password: string;
