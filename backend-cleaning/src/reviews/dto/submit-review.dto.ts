@@ -1,8 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsInt, Min, Max, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsInt,
+  Min,
+  Max,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 
 export class SubmitReviewDto {
-  @ApiProperty({ description: 'ID do agendamento ao qual esta avaliação se refere', example: 'uuid-do-agendamento' })
+  @ApiProperty({
+    description: 'ID do agendamento ao qual esta avaliação se refere',
+    example: 'uuid-do-agendamento',
+  })
   @IsUUID()
   @IsNotEmpty()
   bookingId: string;
@@ -13,7 +24,11 @@ export class SubmitReviewDto {
   @Max(5)
   rating: number;
 
-  @ApiPropertyOptional({ description: 'Comentário detalhado sobre o serviço', example: 'O provedor foi muito atencioso e o resultado superou minhas expectativas.' })
+  @ApiPropertyOptional({
+    description: 'Comentário detalhado sobre o serviço',
+    example:
+      'O provedor foi muito atencioso e o resultado superou minhas expectativas.',
+  })
   @IsOptional()
   @IsString()
   comment?: string;
