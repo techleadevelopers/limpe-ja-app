@@ -1,10 +1,33 @@
 // src/providers/dto/provider-details.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Provider, User, Address, ProviderService, Review, Service, UserRole, Client as PrismaClient, VerificationStatus } from '@prisma/client';
-import { IsString, IsInt, IsBoolean, IsUrl, IsNumber, IsEmail, IsOptional, IsEnum, ValidateNested } from 'class-validator';
+import {
+  Provider,
+  User,
+  Address,
+  ProviderService,
+  Review,
+  Service,
+  UserRole,
+  Client as PrismaClient,
+  VerificationStatus,
+} from '@prisma/client';
+import {
+  IsString,
+  IsInt,
+  IsBoolean,
+  IsUrl,
+  IsNumber,
+  IsEmail,
+  IsOptional,
+  IsEnum,
+  ValidateNested,
+} from 'class-validator';
 import { CreateAddressDto } from '../../common/dto/create-address.dto';
 import { Type } from 'class-transformer';
-import { ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers.service'; // <-- AGORA ProviderWithIncludes É EXPORTADO
+import {
+  ProviderWithIncludes,
+  ProviderWithCalculatedRating,
+} from '../providers.service'; // <-- AGORA ProviderWithIncludes É EXPORTADO
 import { ProviderServiceOfferingDto } from './provider-service-offering.dto';
 
 export class ProviderReviewDto {
@@ -14,16 +37,28 @@ export class ProviderReviewDto {
   @ApiProperty({ description: 'Classificação (estrelas)', example: 5 })
   rating: number;
 
-  @ApiPropertyOptional({ description: 'Comentário da avaliação', example: 'Serviço excelente!' })
+  @ApiPropertyOptional({
+    description: 'Comentário da avaliação',
+    example: 'Serviço excelente!',
+  })
   comment?: string | null;
 
-  @ApiProperty({ description: 'Nome do cliente que fez a avaliação', example: 'Laura Avaliadora' })
+  @ApiProperty({
+    description: 'Nome do cliente que fez a avaliação',
+    example: 'Laura Avaliadora',
+  })
   reviewerName: string;
 
-  @ApiProperty({ description: 'URL do avatar do cliente que fez a avaliação', example: 'http://example.com/client_avatar.jpg' })
+  @ApiProperty({
+    description: 'URL do avatar do cliente que fez a avaliação',
+    example: 'http://example.com/client_avatar.jpg',
+  })
   reviewerAvatarUrl?: string | null;
 
-  @ApiProperty({ description: 'Data e hora da avaliação', example: '2023-10-26T10:00:00.000Z' })
+  @ApiProperty({
+    description: 'Data e hora da avaliação',
+    example: '2023-10-26T10:00:00.000Z',
+  })
   createdAt: Date;
 
   constructor(review: Review & { client: PrismaClient & { user: User } }) {
@@ -43,36 +78,59 @@ export class ProviderDetailsDto {
   @IsString()
   id: string;
 
-  @ApiProperty({ description: 'Nome completo do provedor', example: 'Maria da Silva' })
+  @ApiProperty({
+    description: 'Nome completo do provedor',
+    example: 'Maria da Silva',
+  })
   @IsString()
   fullName: string;
 
-  @ApiProperty({ description: 'Email do provedor', example: 'maria.silva@example.com' })
+  @ApiProperty({
+    description: 'Email do provedor',
+    example: 'maria.silva@example.com',
+  })
   @IsEmail()
   email: string;
 
-  @ApiPropertyOptional({ description: 'URL do avatar do provedor', example: 'http://example.com/avatar.jpg' })
+  @ApiPropertyOptional({
+    description: 'URL do avatar do provedor',
+    example: 'http://example.com/avatar.jpg',
+  })
   @IsOptional()
   @IsUrl()
   avatarUrl: string | null;
 
-  @ApiPropertyOptional({ description: 'Anos de experiência do provedor', example: 5 })
+  @ApiPropertyOptional({
+    description: 'Anos de experiência do provedor',
+    example: 5,
+  })
   @IsOptional()
   @IsInt()
   yearsOfExperience: number | null;
 
-  @ApiPropertyOptional({ enum: VerificationStatus, description: 'Status de verificação do provedor (opcional para selo nos cards)', example: VerificationStatus.APPROVED }) // NOVO: Opcional para relatório
+  @ApiPropertyOptional({
+    enum: VerificationStatus,
+    description:
+      'Status de verificação do provedor (opcional para selo nos cards)',
+    example: VerificationStatus.APPROVED,
+  }) // NOVO: Opcional para relatório
   @IsOptional()
   @IsEnum(VerificationStatus)
   verificationStatus?: VerificationStatus;
 
-  @ApiPropertyOptional({ type: () => CreateAddressDto, description: 'Informações de endereço do provedor' })
+  @ApiPropertyOptional({
+    type: () => CreateAddressDto,
+    description: 'Informações de endereço do provedor',
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => CreateAddressDto)
   address?: CreateAddressDto | null;
 
-  @ApiPropertyOptional({ description: 'Cidade do provedor', example: 'São Paulo' })
+  @ApiPropertyOptional({
+    description: 'Cidade do provedor',
+    example: 'São Paulo',
+  })
   @IsOptional()
   @IsString()
   city: string | null;
@@ -82,52 +140,84 @@ export class ProviderDetailsDto {
   @IsString()
   state: string | null;
 
-  @ApiPropertyOptional({ description: 'Biografia do provedor', example: 'Profissional dedicada à limpeza...' })
+  @ApiPropertyOptional({
+    description: 'Biografia do provedor',
+    example: 'Profissional dedicada à limpeza...',
+  })
   @IsOptional()
   @IsString()
   bio: string | null;
 
-  @ApiPropertyOptional({ description: 'Média de avaliação do provedor', example: 4.5 })
+  @ApiPropertyOptional({
+    description: 'Média de avaliação do provedor',
+    example: 4.5,
+  })
   @IsOptional()
   @IsNumber()
   averageRating: number | null;
 
-  @ApiPropertyOptional({ description: 'Total de avaliações recebidas', example: 120 })
+  @ApiPropertyOptional({
+    description: 'Total de avaliações recebidas',
+    example: 120,
+  })
   @IsOptional()
   @IsInt()
   reviewCount: number;
 
-  @ApiPropertyOptional({ type: () => [String], description: 'Badges do provedor (opcional para exibição)', example: ['TOP_RATED', 'VERIFIED'] }) // NOVO: Opcional para badges
+  @ApiPropertyOptional({
+    type: () => [String],
+    description: 'Badges do provedor (opcional para exibição)',
+    example: ['TOP_RATED', 'VERIFIED'],
+  }) // NOVO: Opcional para badges
   @IsOptional()
   badges?: string[];
 
-  @ApiProperty({ type: () => [ProviderServiceOfferingDto], description: 'Serviços oferecidos por este provedor' })
+  @ApiProperty({
+    type: () => [ProviderServiceOfferingDto],
+    description: 'Serviços oferecidos por este provedor',
+  })
   @ValidateNested({ each: true })
   @Type(() => ProviderServiceOfferingDto)
   providerServices: ProviderServiceOfferingDto[];
 
-  @ApiProperty({ type: () => [ProviderReviewDto], description: 'Lista de avaliações recebidas pelo provedor' })
+  @ApiProperty({
+    type: () => [ProviderReviewDto],
+    description: 'Lista de avaliações recebidas pelo provedor',
+  })
   @ValidateNested({ each: true })
   @Type(() => ProviderReviewDto)
   reviews: ProviderReviewDto[];
 
   // NOVAS PROPRIEDADES (alinhado com relatório: opcionais para métricas mini e chip horário)
-  @ApiPropertyOptional({ description: 'Taxa de aceitação de agendamentos do provedor (em %)', example: 90 })
+  @ApiPropertyOptional({
+    description: 'Taxa de aceitação de agendamentos do provedor (em %)',
+    example: 90,
+  })
   @IsOptional()
   @IsNumber()
   acceptanceRate?: number;
 
-  @ApiPropertyOptional({ description: 'Tempo médio de resposta do provedor (em minutos)', example: 15 })
+  @ApiPropertyOptional({
+    description: 'Tempo médio de resposta do provedor (em minutos)',
+    example: 15,
+  })
   @IsOptional()
   @IsInt()
   averageResponseTime?: number;
 
-  @ApiPropertyOptional({ description: 'Próximo horário disponível (opcional para chip nos cards)', example: { date: '2025-09-29', time: '09:00' } }) // NOVO: Para chip de horário
+  @ApiPropertyOptional({
+    description: 'Próximo horário disponível (opcional para chip nos cards)',
+    example: { date: '2025-09-29', time: '09:00' },
+  }) // NOVO: Para chip de horário
   @IsOptional()
   nextAvailable?: { date: string; time: string };
 
   // CORREÇÃO: Adicionado distance (em metros, calculado via PostGIS se lat/lng fornecidos)
-  @ApiPropertyOptional({ description: 'Distância em metros do provedor (calculada se lat/lng do cliente fornecidos; front formata pra km)', example: 4200 })
+  @ApiPropertyOptional({
+    description:
+      'Distância em metros do provedor (calculada se lat/lng do cliente fornecidos; front formata pra km)',
+    example: 4200,
+  })
   @IsOptional()
   @IsNumber()
   distance?: number;
@@ -163,7 +253,9 @@ export class ProviderDetailsDto {
 
     // Mapear os serviços oferecidos
     if (source.providerServices) {
-      this.providerServices = source.providerServices.map(ps => new ProviderServiceOfferingDto(ps));
+      this.providerServices = source.providerServices.map(
+        (ps) => new ProviderServiceOfferingDto(ps),
+      );
     } else {
       this.providerServices = [];
     }
