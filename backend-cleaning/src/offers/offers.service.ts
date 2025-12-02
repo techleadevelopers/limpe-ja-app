@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   Prisma, // Importe Prisma para usar Prisma.Decimal
@@ -20,20 +24,31 @@ export class OffersService {
         'Informe apenas um tipo de desconto: "discountPercentage" OU "fixedDiscountAmount".',
       );
     }
-    if (dto.discountPercentage != null && (dto.discountPercentage < 0 || dto.discountPercentage > 100)) {
-      throw new BadRequestException('discountPercentage deve estar entre 0 e 100.');
+    if (
+      dto.discountPercentage != null &&
+      (dto.discountPercentage < 0 || dto.discountPercentage > 100)
+    ) {
+      throw new BadRequestException(
+        'discountPercentage deve estar entre 0 e 100.',
+      );
     }
     if (dto.fixedDiscountAmount != null && dto.fixedDiscountAmount < 0) {
-      throw new BadRequestException('fixedDiscountAmount não pode ser negativo.');
+      throw new BadRequestException(
+        'fixedDiscountAmount não pode ser negativo.',
+      );
     }
     // Removido o check !dto.validUntil, pois é obrigatório no DTO e no schema (validFrom é opcional)
 
-    const target: OfferTarget = (dto.target as OfferTarget) ?? OfferTarget.GENERAL;
+    const target: OfferTarget =
+      (dto.target as OfferTarget) ?? OfferTarget.GENERAL;
     if (target !== OfferTarget.GENERAL && !dto.targetId) {
-      throw new BadRequestException('targetId é obrigatório para ofertas específicas.');
+      throw new BadRequestException(
+        'targetId é obrigatório para ofertas específicas.',
+      );
     }
 
-    const status: OfferStatus = (dto.status as OfferStatus) ?? OfferStatus.ACTIVE;
+    const status: OfferStatus =
+      (dto.status as OfferStatus) ?? OfferStatus.ACTIVE;
 
     return this.prisma.offer.create({
       data: {
@@ -45,7 +60,10 @@ export class OffersService {
         validFrom: dto.validFrom ? new Date(dto.validFrom) : null, // CORREÇÃO: Adicionado validFrom
         validUntil: new Date(dto.validUntil),
         discountPercentage: dto.discountPercentage ?? null,
-        fixedDiscountAmount: dto.fixedDiscountAmount != null ? new Prisma.Decimal(dto.fixedDiscountAmount) : null, // CORREÇÃO: Converte para Prisma.Decimal
+        fixedDiscountAmount:
+          dto.fixedDiscountAmount != null
+            ? new Prisma.Decimal(dto.fixedDiscountAmount)
+            : null, // CORREÇÃO: Converte para Prisma.Decimal
         imageUrl: dto.imageUrl ?? null,
       },
     });
@@ -70,14 +88,28 @@ export class OffersService {
         'Informe apenas um tipo de desconto: "discountPercentage" OU "fixedDiscountAmount".',
       );
     }
-    if (dto.discountPercentage != null && (dto.discountPercentage < 0 || dto.discountPercentage > 100)) {
-      throw new BadRequestException('discountPercentage deve estar entre 0 e 100.');
+    if (
+      dto.discountPercentage != null &&
+      (dto.discountPercentage < 0 || dto.discountPercentage > 100)
+    ) {
+      throw new BadRequestException(
+        'discountPercentage deve estar entre 0 e 100.',
+      );
     }
     if (dto.fixedDiscountAmount != null && dto.fixedDiscountAmount < 0) {
-      throw new BadRequestException('fixedDiscountAmount não pode ser negativo.');
+      throw new BadRequestException(
+        'fixedDiscountAmount não pode ser negativo.',
+      );
     }
-    if (dto.target && dto.target !== OfferTarget.GENERAL && !dto.targetId && !existing.targetId) {
-      throw new BadRequestException('targetId é obrigatório para ofertas específicas.');
+    if (
+      dto.target &&
+      dto.target !== OfferTarget.GENERAL &&
+      !dto.targetId &&
+      !existing.targetId
+    ) {
+      throw new BadRequestException(
+        'targetId é obrigatório para ofertas específicas.',
+      );
     }
 
     return this.prisma.offer.update({
@@ -89,14 +121,26 @@ export class OffersService {
         targetId:
           dto.target === OfferTarget.GENERAL
             ? null
-            : dto.targetId ?? undefined,
+            : (dto.targetId ?? undefined),
         status: (dto.status as OfferStatus) ?? undefined,
-        validFrom: dto.validFrom !== undefined ? (dto.validFrom ? new Date(dto.validFrom) : null) : undefined, // CORREÇÃO: Adicionado validFrom
-        validUntil: dto.validUntil !== undefined ? new Date(dto.validUntil) : undefined, // Permite definir explicitamente para null ou undefined
+        validFrom:
+          dto.validFrom !== undefined
+            ? dto.validFrom
+              ? new Date(dto.validFrom)
+              : null
+            : undefined, // CORREÇÃO: Adicionado validFrom
+        validUntil:
+          dto.validUntil !== undefined ? new Date(dto.validUntil) : undefined, // Permite definir explicitamente para null ou undefined
         discountPercentage:
-          dto.discountPercentage !== undefined ? dto.discountPercentage : undefined,
+          dto.discountPercentage !== undefined
+            ? dto.discountPercentage
+            : undefined,
         fixedDiscountAmount:
-          dto.fixedDiscountAmount !== undefined ? (dto.fixedDiscountAmount != null ? new Prisma.Decimal(dto.fixedDiscountAmount) : null) : undefined, // CORREÇÃO: Converte para Prisma.Decimal
+          dto.fixedDiscountAmount !== undefined
+            ? dto.fixedDiscountAmount != null
+              ? new Prisma.Decimal(dto.fixedDiscountAmount)
+              : null
+            : undefined, // CORREÇÃO: Converte para Prisma.Decimal
         imageUrl: dto.imageUrl ?? undefined,
       },
     });
