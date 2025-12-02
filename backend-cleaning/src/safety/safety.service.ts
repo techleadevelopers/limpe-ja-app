@@ -1,5 +1,9 @@
 // backend-cleaning/src/safety/safety.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportPanicDto } from './dto/report-panic.dto';
 import { ReportIncidentDto } from './dto/report-incident.dto';
@@ -35,23 +39,33 @@ export class SafetyService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { phone: true } // CORRIGIDO: Usando 'phone' conforme o schema.prisma
+      select: { phone: true }, // CORRIGIDO: Usando 'phone' conforme o schema.prisma
     });
 
     // Notify administrators/security team immediately
-    const adminUsers = await this.prisma.user.findMany({ where: { role: 'ADMIN' } });
-    const notificationPromises = adminUsers.map(admin =>
+    const adminUsers = await this.prisma.user.findMany({
+      where: { role: 'ADMIN' },
+    });
+    const notificationPromises = adminUsers.map((admin) =>
       this.notificationsService.sendPushNotification(
         admin.id,
         'ALERTA DE PÂNICO!',
         `Usuário ${userId} acionou o botão de pânico em ${latitude}, ${longitude}. Tipo: ${type}. Mensagem: ${message || 'N/A'}`,
-        { type: 'panic_alert', panicAlertId: panicAlert.id }
-      )
+        { type: 'panic_alert', panicAlertId: panicAlert.id },
+      ),
     );
 
-    const smsPromise = user && user.phone
-      ? this.smsService.sendPanicAlertSms(user.phone, panicAlert.message || 'Alerta de pânico sem mensagem específica.')
-      : Promise.resolve(console.warn(`[SafetyService] Não foi possível enviar SMS de pânico para o usuário ${userId}: número de telefone não encontrado.`));
+    const smsPromise =
+      user && user.phone
+        ? this.smsService.sendPanicAlertSms(
+            user.phone,
+            panicAlert.message || 'Alerta de pânico sem mensagem específica.',
+          )
+        : Promise.resolve(
+            console.warn(
+              `[SafetyService] Não foi possível enviar SMS de pânico para o usuário ${userId}: número de telefone não encontrado.`,
+            ),
+          );
 
     await Promise.all([
       this.emailService.sendPanicAlertEmail(panicAlert),
@@ -60,22 +74,31 @@ export class SafetyService {
     ]);
 
     // Usando a fila 'verification' e adicionando o jobName 'process-panic-alert'
-    await this.queuesService.addJob('verification', 'process-panic-alert', { panicAlertId: panicAlert.id });
+    await this.queuesService.addJob('verification', 'process-panic-alert', {
+      panicAlertId: panicAlert.id,
+    });
 
     return { message: 'Alerta de pânico registrado e equipe notificada.' };
   }
 
-  async reportIncident(reporterId: string, reportIncidentDto: ReportIncidentDto) {
-    const { type, description, bookingId, involvedUsers, attachments } = reportIncidentDto;
+  async reportIncident(
+    reporterId: string,
+    reportIncidentDto: ReportIncidentDto,
+  ) {
+    const { type, description, bookingId, involvedUsers, attachments } =
+      reportIncidentDto;
 
     if (bookingId) {
-      const booking = await this.prisma.booking.findUnique({ where: { id: bookingId } });
+      const booking = await this.prisma.booking.findUnique({
+        where: { id: bookingId },
+      });
       if (!booking) {
         throw new BadRequestException('Booking ID provided is invalid.');
       }
     }
 
-    const incident = await this.prisma.incident.create({ // Assumindo que 'incident' é o nome do modelo no Prisma
+    const incident = await this.prisma.incident.create({
+      // Assumindo que 'incident' é o nome do modelo no Prisma
       data: {
         reporterId,
         type,
@@ -88,7 +111,9 @@ export class SafetyService {
     });
 
     // Usando a fila 'disputes' e adicionando o jobName 'process-incident-report'
-    await this.queuesService.addJob('disputes', 'process-incident-report', { incidentId: incident.id });
+    await this.queuesService.addJob('disputes', 'process-incident-report', {
+      incidentId: incident.id,
+    });
 
     return incident;
   }
@@ -116,7 +141,11 @@ export class SafetyService {
     });
   }
 
-  async updateIncidentStatus(id: string, updateIncidentDto: UpdateIncidentDto, adminId: string) {
+  async updateIncidentStatus(
+    id: string,
+    updateIncidentDto: UpdateIncidentDto,
+    adminId: string,
+  ) {
     const incident = await this.prisma.incident.findUnique({ where: { id } });
 
     if (!incident) {
@@ -128,8 +157,10 @@ export class SafetyService {
       data: {
         status: updateIncidentDto.status,
         resolution: updateIncidentDto.resolution,
-        resolvedBy: updateIncidentDto.status === 'RESOLVED' ? adminId : undefined,
-        resolvedAt: updateIncidentDto.status === 'RESOLVED' ? new Date() : undefined,
+        resolvedBy:
+          updateIncidentDto.status === 'RESOLVED' ? adminId : undefined,
+        resolvedAt:
+          updateIncidentDto.status === 'RESOLVED' ? new Date() : undefined,
       },
     });
 
@@ -137,7 +168,7 @@ export class SafetyService {
       updatedIncident.reporterId,
       'Atualização do Relatório de Incidente',
       `Seu incidente (${updatedIncident.type}) foi atualizado para: ${updatedIncident.status}.`,
-      { type: 'incident_update', incidentId: updatedIncident.id }
+      { type: 'incident_update', incidentId: updatedIncident.id },
     );
     this.emailService.sendIncidentStatusUpdateEmail(updatedIncident);
 
@@ -155,7 +186,8 @@ export class SafetyService {
   // Admin: atualizar status de alerta de pânico
   async updatePanicAlertStatus(id: string, status: string) {
     const alert = await this.prisma.panicAlert.findUnique({ where: { id } });
-    if (!alert) throw new NotFoundException(`PanicAlert with ID ${id} not found.`);
+    if (!alert)
+      throw new NotFoundException(`PanicAlert with ID ${id} not found.`);
     return this.prisma.panicAlert.update({ where: { id }, data: { status } });
   }
 }
