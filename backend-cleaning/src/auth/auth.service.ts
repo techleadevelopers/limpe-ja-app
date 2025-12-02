@@ -1,5 +1,15 @@
 // src/auth/auth.service.ts
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, NotFoundException, Logger, InternalServerErrorException, forwardRef, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+  InternalServerErrorException,
+  forwardRef,
+  Inject,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -8,8 +18,24 @@ import { RegisterProviderDto } from './dto/register-provider.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
-import { Prisma, UserRole, User, Client, Provider, Address, ProviderService, Service, Review, VerificationStatus, Booking, BookingStatus } from '@prisma/client';
-import { ProvidersService, ProviderWithCalculatedRating } from '../providers/providers.service';
+import {
+  Prisma,
+  UserRole,
+  User,
+  Client,
+  Provider,
+  Address,
+  ProviderService,
+  Service,
+  Review,
+  VerificationStatus,
+  Booking,
+  BookingStatus,
+} from '@prisma/client';
+import {
+  ProvidersService,
+  ProviderWithCalculatedRating,
+} from '../providers/providers.service';
 import { ClientWithIncludes as ImportedClientWithIncludes } from '../clients/clients.service';
 import { EmailService } from '../common/services/email.service';
 import { GeocodingService } from '../common/services/geocoding.service';
@@ -22,15 +48,15 @@ const loginProviderInclude = {
   address: true,
   providerServices: {
     include: {
-      service: true
-    }
+      service: true,
+    },
   },
   reviewsReceived: {
     include: {
       client: {
-        include: { user: true }
-      }
-    }
+        include: { user: true },
+      },
+    },
   },
   bookings: {
     where: { status: BookingStatus.COMPLETED },
@@ -47,8 +73,8 @@ const loginClientInclude = {
   bookings: true,
   reviewsMade: true,
   _count: {
-    select: { bookings: true }
-  }
+    select: { bookings: true },
+  },
 };
 
 export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
@@ -126,7 +152,7 @@ export class AuthService {
   }
 
   async login(user: User): Promise<AuthResponseDto> {
-    const fullUser = await this.prisma.user.findUnique({
+    const fullUser = (await this.prisma.user.findUnique({
       where: { id: user.id },
       include: {
         client: {
@@ -139,30 +165,38 @@ export class AuthService {
         referredBy: true, // Incluído
         referralsMade: true, // Incluído
       },
-    }) as UserWithAllRelations;
+    })) as UserWithAllRelations;
 
     if (!fullUser) {
       throw new UnauthorizedException('Usuário não encontrado após validação.');
     }
 
-    const payload = { email: fullUser.email, sub: fullUser.id, role: fullUser.role };
+    const payload = {
+      email: fullUser.email,
+      sub: fullUser.id,
+      role: fullUser.role,
+    };
     const expiresIn = this.configService.get<string>('jwt.expirationTime');
     const accessToken = this.jwtService.sign(payload, { expiresIn });
 
     let mappedProvider: ProviderWithCalculatedRating | undefined;
     if (fullUser.provider) {
       // CORREÇÃO: Agora o include tem availability, então a tipagem bate
-      mappedProvider = this.providersService.mapProviderToCalculatedRating(fullUser.provider);
+      mappedProvider = this.providersService.mapProviderToCalculatedRating(
+        fullUser.provider,
+      );
     }
 
     // CORREÇÃO: O objeto passado para o DTO deve incluir as relações de Loyalty e Referral
     const userProfileDataForDto = {
       ...fullUser,
-      client: fullUser.client ? {
-        ...(fullUser.client as ClientWithIncludes),
-        noShowCount: (fullUser.client as any).noShowCount,
-        cancellationCount: (fullUser.client as any).cancellationCount,
-      } : undefined,
+      client: fullUser.client
+        ? {
+            ...fullUser.client,
+            noShowCount: (fullUser.client as any).noShowCount,
+            cancellationCount: (fullUser.client as any).cancellationCount,
+          }
+        : undefined,
       provider: mappedProvider, // mappedProvider já é ProviderWithCalculatedRating
       loyalty: fullUser.loyalty, // Adicionado
       referredBy: fullUser.referredBy, // Adicionado
@@ -172,7 +206,9 @@ export class AuthService {
     const userProfile = new UserProfileDto(userProfileDataForDto as any); // Usando 'as any' temporariamente para o objeto complexo
 
     // Telemetria: user_logged_in
-    this.logger.log(`[TELEMETRY] user_logged_in: { userId: ${fullUser.id}, role: ${fullUser.role} }`);
+    this.logger.log(
+      `[TELEMETRY] user_logged_in: { userId: ${fullUser.id}, role: ${fullUser.role} }`,
+    );
 
     return {
       accessToken,
@@ -180,23 +216,36 @@ export class AuthService {
     };
   }
 
-  async registerClient(registerClientDto: RegisterClientDto): Promise<AuthResponseDto> {
-    const { email, password, fullName, phone, address, cpf, referralCode } = registerClientDto; // NOVO: referralCode
+  async registerClient(
+    registerClientDto: RegisterClientDto,
+  ): Promise<AuthResponseDto> {
+    const { email, password, fullName, phone, address, cpf, referralCode } =
+      registerClientDto; // NOVO: referralCode
 
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
     if (existingUser) {
       throw new ConflictException('Este email já está cadastrado.');
     }
     if (phone) {
-      const existingPhoneUser = await this.prisma.user.findUnique({ where: { phone } });
+      const existingPhoneUser = await this.prisma.user.findUnique({
+        where: { phone },
+      });
       if (existingPhoneUser) {
-        throw new ConflictException('Este número de telefone já está cadastrado.');
+        throw new ConflictException(
+          'Este número de telefone já está cadastrado.',
+        );
       }
     }
     if (cpf) {
-      const existingCpfClient = await this.prisma.client.findUnique({ where: { cpf } });
+      const existingCpfClient = await this.prisma.client.findUnique({
+        where: { cpf },
+      });
       if (existingCpfClient) {
-        throw new ConflictException('Este CPF já está cadastrado como cliente.');
+        throw new ConflictException(
+          'Este CPF já está cadastrado como cliente.',
+        );
       }
     }
 
@@ -204,50 +253,52 @@ export class AuthService {
 
     try {
       const geoCoordinates = await this.geocodingService.geocodeAddress(
-        `${address.street}, ${address.number}, ${address.neighborhood}, ${address.city}, ${address.state}, ${address.cep}`
+        `${address.street}, ${address.number}, ${address.neighborhood}, ${address.city}, ${address.state}, ${address.cep}`,
       );
 
-      const newUserClient: NewUserClientPayload = await this.prisma.user.create({
-        data: {
-          email,
-          phone: phone || null,
-          passwordHash: hashedPassword,
-          role: UserRole.CLIENT,
-          isPhoneVerified: !!phone,
-          fullName: fullName, // Adicionado fullName ao User
-          client: {
-            create: {
-              fullName,
-              phone: phone ?? null,
-              cpf: cpf ?? null,
-              noShowCount: 0,
-              cancellationCount: 0,
-              address: {
-                create: {
-                  cep: address.cep,
-                  street: address.street,
-                  number: address.number,
-                  neighborhood: address.neighborhood,
-                  city: address.city,
-                  state: address.state,
-                  complement: address.complement ?? null,
-                  // PROVISÓRIO: evitar 22P03 no cadastro de provedor (lat/lng nulos aqui, tratar depois no perfil)
-                  latitude: null,
-                  longitude: null,
+      const newUserClient: NewUserClientPayload = await this.prisma.user.create(
+        {
+          data: {
+            email,
+            phone: phone || null,
+            passwordHash: hashedPassword,
+            role: UserRole.CLIENT,
+            isPhoneVerified: !!phone,
+            fullName: fullName, // Adicionado fullName ao User
+            client: {
+              create: {
+                fullName,
+                phone: phone ?? null,
+                cpf: cpf ?? null,
+                noShowCount: 0,
+                cancellationCount: 0,
+                address: {
+                  create: {
+                    cep: address.cep,
+                    street: address.street,
+                    number: address.number,
+                    neighborhood: address.neighborhood,
+                    city: address.city,
+                    state: address.state,
+                    complement: address.complement ?? null,
+                    // PROVISÓRIO: evitar 22P03 no cadastro de provedor (lat/lng nulos aqui, tratar depois no perfil)
+                    latitude: null,
+                    longitude: null,
+                  },
                 },
               },
             },
           },
-        },
-        include: {
-          client: {
-            include: loginClientInclude
+          include: {
+            client: {
+              include: loginClientInclude,
+            },
+            loyalty: true, // Incluído
+            referredBy: true, // Incluído
+            referralsMade: true, // Incluído
           },
-          loyalty: true, // Incluído
-          referredBy: true, // Incluído
-          referralsMade: true, // Incluído
-        }
-      });
+        },
+      );
 
       if (geoCoordinates && newUserClient.client?.address?.id) {
         const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`;
@@ -256,7 +307,9 @@ export class AuthService {
             SET location = ST_GeomFromText(${wktPoint}, 4326)
             WHERE id = ${newUserClient.client.address.id}
         `);
-        this.logger.log(`[AuthService] Endereço do cliente ID: ${newUserClient.client.address.id} atualizado com localização geoespacial.`);
+        this.logger.log(
+          `[AuthService] Endereço do cliente ID: ${newUserClient.client.address.id} atualizado com localização geoespacial.`,
+        );
       }
 
       // --- NOVO: Lógica de Indicação no Registro ---
@@ -266,43 +319,59 @@ export class AuthService {
       // --- Fim da Lógica de Indicação ---
 
       // Telemetria: client_registered
-      this.logger.log(`[TELEMETRY] client_registered: { userId: ${newUserClient.id}, email: ${newUserClient.email} }`);
+      this.logger.log(
+        `[TELEMETRY] client_registered: { userId: ${newUserClient.id}, email: ${newUserClient.email} }`,
+      );
 
       return this.login(newUserClient);
     } catch (error) {
       this.logger.error('Erro ao registrar cliente:', {
         message: error.message,
-        code: (error as any).code,
-        meta: (error as any).meta,
-        stack: (error as any).stack,
-        data: registerClientDto // Log dos dados de entrada (sem senha)
+        code: error.code,
+        meta: error.meta,
+        stack: error.stack,
+        data: registerClientDto, // Log dos dados de entrada (sem senha)
       });
 
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           if (error.meta?.target === 'User_phone_key') {
-            throw new ConflictException('Este número de telefone já está cadastrado.');
+            throw new ConflictException(
+              'Este número de telefone já está cadastrado.',
+            );
           }
           if (error.meta?.target === 'Client_cpf_key') {
-            throw new ConflictException('Este CPF já está cadastrado como cliente.');
+            throw new ConflictException(
+              'Este CPF já está cadastrado como cliente.',
+            );
           }
-          throw new ConflictException('Dados duplicados. Verifique email, telefone ou CPF.');
+          throw new ConflictException(
+            'Dados duplicados. Verifique email, telefone ou CPF.',
+          );
         }
         if (error.code === 'P2000') {
-          throw new BadRequestException('Dados inválidos (ex: valores decimais ou datas incorretas). Verifique o formato.');
+          throw new BadRequestException(
+            'Dados inválidos (ex: valores decimais ou datas incorretas). Verifique o formato.',
+          );
         }
         if (error.code === 'P2025') {
-          throw new NotFoundException('Usuário ou entidade relacionada não encontrada.');
+          throw new NotFoundException(
+            'Usuário ou entidade relacionada não encontrada.',
+          );
         }
       }
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException('Não foi possível registrar o cliente. Verifique os dados.');
+      throw new BadRequestException(
+        'Não foi possível registrar o cliente. Verifique os dados.',
+      );
     }
   }
 
-  async registerProvider(registerProviderDto: RegisterProviderDto): Promise<AuthResponseDto> {
+  async registerProvider(
+    registerProviderDto: RegisterProviderDto,
+  ): Promise<AuthResponseDto> {
     this.logger.log('[AuthService] registerProvider VERSION=v5-minimal');
     const {
       email,
@@ -317,18 +386,26 @@ export class AuthService {
       referralCode, // NOVO: referralCode
     } = registerProviderDto;
 
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
     if (existingUser) {
       throw new ConflictException('Este email já está cadastrado.');
     }
-    const existingProvider = await this.prisma.provider.findUnique({ where: { cpf } });
+    const existingProvider = await this.prisma.provider.findUnique({
+      where: { cpf },
+    });
     if (existingProvider) {
       throw new ConflictException('Este CPF já está cadastrado como provedor.');
     }
     if (phone) {
-      const existingPhoneUser = await this.prisma.user.findUnique({ where: { phone } });
+      const existingPhoneUser = await this.prisma.user.findUnique({
+        where: { phone },
+      });
       if (existingPhoneUser) {
-        throw new ConflictException('Este número de telefone já está cadastrado.');
+        throw new ConflictException(
+          'Este número de telefone já está cadastrado.',
+        );
       }
     }
 
@@ -340,10 +417,14 @@ export class AuthService {
       if (dateOfBirth) {
         parsedDateOfBirth = new Date(dateOfBirth);
         if (isNaN(parsedDateOfBirth.getTime())) {
-          throw new BadRequestException('Data de nascimento inválida. Use o formato YYYY-MM-DD.');
+          throw new BadRequestException(
+            'Data de nascimento inválida. Use o formato YYYY-MM-DD.',
+          );
         }
       } else {
-        throw new BadRequestException('Data de nascimento é obrigatória para provedores.');
+        throw new BadRequestException(
+          'Data de nascimento é obrigatória para provedores.',
+        );
       }
 
       // Etapa 1: cria apenas o User (sem nested provider)
@@ -365,13 +446,27 @@ export class AuthService {
         const latRaw: any = (address as any).latitude;
         const lonRaw: any = (address as any).longitude;
 
-        const latNum = typeof latRaw === 'number' ? latRaw : (latRaw !== undefined && latRaw !== null ? Number(latRaw) : null);
-        const lonNum = typeof lonRaw === 'number' ? lonRaw : (lonRaw !== undefined && lonRaw !== null ? Number(lonRaw) : null);
+        const latNum =
+          typeof latRaw === 'number'
+            ? latRaw
+            : latRaw !== undefined && latRaw !== null
+              ? Number(latRaw)
+              : null;
+        const lonNum =
+          typeof lonRaw === 'number'
+            ? lonRaw
+            : lonRaw !== undefined && lonRaw !== null
+              ? Number(lonRaw)
+              : null;
 
-        normalizedLatitude = latNum !== null && Number.isFinite(latNum) ? latNum : null;
-        normalizedLongitude = lonNum !== null && Number.isFinite(lonNum) ? lonNum : null;
+        normalizedLatitude =
+          latNum !== null && Number.isFinite(latNum) ? latNum : null;
+        normalizedLongitude =
+          lonNum !== null && Number.isFinite(lonNum) ? lonNum : null;
 
-        this.logger.log(`[AuthService] registerProvider address lat/lng normalizados: lat=${normalizedLatitude}, lng=${normalizedLongitude}`);
+        this.logger.log(
+          `[AuthService] registerProvider address lat/lng normalizados: lat=${normalizedLatitude}, lng=${normalizedLongitude}`,
+        );
       }
 
       // Etapa 2: cria o Provider sem address nested (evita bind incorreto no campo geometry)
@@ -427,7 +522,9 @@ export class AuthService {
       }
 
       // Telemetria: provider_registered
-      this.logger.log(`[TELEMETRY] provider_registered: { userId: ${createdUser.id}, email: ${createdUser.email} }`);
+      this.logger.log(
+        `[TELEMETRY] provider_registered: { userId: ${createdUser.id}, email: ${createdUser.email} }`,
+      );
 
       // Reusa lógica do login para montar o payload completo
       return this.login(createdUser);
@@ -435,52 +532,77 @@ export class AuthService {
       // MELHORIA: Logging mais detalhado no catch para debug
       this.logger.error('Erro ao registrar provedor:', {
         message: error.message,
-        code: (error as any).code,
-        meta: (error as any).meta,
-        stack: (error as any).stack,
-        data: { email, cpf, phone, dateOfBirth, referralCode } // Log dos dados de entrada (sem senha)
+        code: error.code,
+        meta: error.meta,
+        stack: error.stack,
+        data: { email, cpf, phone, dateOfBirth, referralCode }, // Log dos dados de entrada (sem senha)
       });
 
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           if (error.meta?.target === 'User_phone_key') {
-            throw new ConflictException('Este número de telefone já está cadastrado.');
+            throw new ConflictException(
+              'Este número de telefone já está cadastrado.',
+            );
           }
           if (error.meta?.target === 'Provider_cpf_key') {
-            throw new ConflictException('Este CPF já está cadastrado como provedor.');
+            throw new ConflictException(
+              'Este CPF já está cadastrado como provedor.',
+            );
           }
-          if (error.meta?.target === 'User_email_idx') { // Assumindo unique index para email
+          if (error.meta?.target === 'User_email_idx') {
+            // Assumindo unique index para email
             throw new ConflictException('Este email já está cadastrado.');
           }
-          throw new ConflictException('Dados duplicados. Verifique email, telefone ou CPF.');
+          throw new ConflictException(
+            'Dados duplicados. Verifique email, telefone ou CPF.',
+          );
         }
-        if (error.code === 'P2000') { // Validação de tipo/dados inválidos
-          throw new BadRequestException('Dados inválidos (ex: data de nascimento ou valores numéricos incorretos). Verifique o formato.');
+        if (error.code === 'P2000') {
+          // Validação de tipo/dados inválidos
+          throw new BadRequestException(
+            'Dados inválidos (ex: data de nascimento ou valores numéricos incorretos). Verifique o formato.',
+          );
         }
-        if (error.code === 'P2025') { // Record not found (ex: foreign key)
-          throw new NotFoundException('Entidade relacionada não encontrada (ex: endereço ou serviço).');
+        if (error.code === 'P2025') {
+          // Record not found (ex: foreign key)
+          throw new NotFoundException(
+            'Entidade relacionada não encontrada (ex: endereço ou serviço).',
+          );
         }
-        if (error.code === 'P2021') { // Input required
-          throw new BadRequestException('Campos obrigatórios ausentes. Verifique CPF, data de nascimento ou endereço.');
+        if (error.code === 'P2021') {
+          // Input required
+          throw new BadRequestException(
+            'Campos obrigatórios ausentes. Verifique CPF, data de nascimento ou endereço.',
+          );
         }
       }
       if (error instanceof BadRequestException) {
         throw error; // Relança se já for BadRequest (ex: de validação de data)
       }
       // Para erros não-Prisma (ex: geocoding falhou, mas isolado acima)
-      throw new BadRequestException('Não foi possível registrar o provedor. Verifique os dados e consulte o console do servidor para detalhes técnicos.');
+      throw new BadRequestException(
+        'Não foi possível registrar o provedor. Verifique os dados e consulte o console do servidor para detalhes técnicos.',
+      );
     }
   }
 
   async forgotPassword(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      this.logger.warn(`Tentativa de redefinição de senha para email não encontrado: ${email}`);
+      this.logger.warn(
+        `Tentativa de redefinição de senha para email não encontrado: ${email}`,
+      );
       return;
     }
 
-    const resetToken = this.jwtService.sign({ userId: user.id }, { expiresIn: '1h' });
-    const appBaseUrl = this.configService.get<string>('appBaseUrl') || this.configService.get<string>('APP_BASE_URL');
+    const resetToken = this.jwtService.sign(
+      { userId: user.id },
+      { expiresIn: '1h' },
+    );
+    const appBaseUrl =
+      this.configService.get<string>('appBaseUrl') ||
+      this.configService.get<string>('APP_BASE_URL');
     const resetLink = `${appBaseUrl}/reset-password?token=${resetToken}`;
 
     try {
@@ -510,15 +632,21 @@ export class AuthService {
         <p>Este link de redefinição de senha expirará em 1 hora.</p>
         <p>Se você não solicitou uma redefinição de senha, por favor, ignore este este e-mail.</p>
         <p>Atenciosamente,<br>Equipe Limpeja</p>
-        `
+        `,
       );
       this.logger.log(`Email de redefinição de senha enviado para ${email}`);
       // Telemetria: forgot_password_email_sent
-      this.logger.log(`[TELEMETRY] forgot_password_email_sent: { email: ${email} }`);
+      this.logger.log(
+        `[TELEMETRY] forgot_password_email_sent: { email: ${email} }`,
+      );
     } catch (emailError: any) {
-      this.logger.error(`Falha ao enviar email de redefinição de senha para ${email}: ${emailError.message}`);
+      this.logger.error(
+        `Falha ao enviar email de redefinição de senha para ${email}: ${emailError.message}`,
+      );
       // Telemetria: forgot_password_email_failed
-      this.logger.log(`[TELEMETRY] forgot_password_email_failed: { email: ${email}, error: ${emailError.message} }`);
+      this.logger.log(
+        `[TELEMETRY] forgot_password_email_failed: { email: ${email}, error: ${emailError.message} }`,
+      );
     }
   }
 
@@ -526,7 +654,10 @@ export class AuthService {
    * Resolve e aplica um código de indicação seguro, evitando uso direto do userId.
    * Aceita apenas códigos registrados em myReferralCode; em desenvolvimento permite fallback para id.
    */
-  private async handleReferralCode(referralCode: string, referredUserId: string) {
+  private async handleReferralCode(
+    referralCode: string,
+    referredUserId: string,
+  ) {
     const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
     const referrerUser = await this.prisma.user.findFirst({
       where: {
@@ -536,7 +667,9 @@ export class AuthService {
 
     if (!referrerUser && nodeEnv !== 'production') {
       // Fallback apenas para ambientes não-prod para compatibilidade legada
-      const legacy = await this.prisma.user.findUnique({ where: { id: referralCode } });
+      const legacy = await this.prisma.user.findUnique({
+        where: { id: referralCode },
+      });
       if (legacy) {
         await this.referralsService.createReferral({
           referredUserId,
@@ -551,7 +684,9 @@ export class AuthService {
     }
 
     if (!referrerUser) {
-      this.logger.warn(`[AuthService] Código de indicação inválido ou expirado: ${referralCode}. Ignorando vínculo.`);
+      this.logger.warn(
+        `[AuthService] Código de indicação inválido ou expirado: ${referralCode}. Ignorando vínculo.`,
+      );
       return;
     }
 
