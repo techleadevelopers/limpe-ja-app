@@ -1,12 +1,21 @@
 // src/providers/dto/provider-service-offering.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, ValidateNested, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  ValidateNested,
+  IsInt,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ServiceDetailsDto } from '../../services/dto/service-details.dto';
 import { Prisma } from '@prisma/client'; // <-- ADICIONADO: Importar Prisma aqui!
 
 export class ProviderServiceOfferingDto {
-  @ApiProperty({ description: 'ID da oferta de serviço do provedor', example: 'uuid-do-providerservice' })
+  @ApiProperty({
+    description: 'ID da oferta de serviço do provedor',
+    example: 'uuid-do-providerservice',
+  })
   @IsString()
   id: string;
 
@@ -14,43 +23,67 @@ export class ProviderServiceOfferingDto {
   @IsString()
   providerId: string;
 
-  @ApiProperty({ description: 'ID do serviço base (categoria)', example: 'uuid-do-servico-base' })
+  @ApiProperty({
+    description: 'ID do serviço base (categoria)',
+    example: 'uuid-do-servico-base',
+  })
   @IsString()
   serviceId: string;
 
-  @ApiProperty({ description: 'Preço que o provedor cobra por este serviço', example: 150.00 })
+  @ApiProperty({
+    description: 'Preço que o provedor cobra por este serviço',
+    example: 150.0,
+  })
   @IsNumber()
   price: number;
 
-  @ApiPropertyOptional({ description: 'Duração do serviço em minutos', example: 120 })
+  @ApiPropertyOptional({
+    description: 'Duração do serviço em minutos',
+    example: 120,
+  })
   @IsOptional()
   @IsInt()
   durationMinutes?: number | null;
 
-  @ApiPropertyOptional({ description: 'Descrição específica do provedor para este serviço' })
+  @ApiPropertyOptional({
+    description: 'Descrição específica do provedor para este serviço',
+  })
   @IsOptional()
   @IsString()
   description?: string | null;
 
-  @ApiProperty({ type: () => ServiceDetailsDto, description: 'Detalhes do serviço base (categoria)' })
+  @ApiProperty({
+    type: () => ServiceDetailsDto,
+    description: 'Detalhes do serviço base (categoria)',
+  })
   @ValidateNested()
   @Type(() => ServiceDetailsDto)
   service: ServiceDetailsDto;
 
-  @ApiProperty({ description: 'Data de criação', example: '2023-01-01T10:00:00.000Z' })
+  @ApiProperty({
+    description: 'Data de criação',
+    example: '2023-01-01T10:00:00.000Z',
+  })
   @IsString()
   createdAt: string;
 
-  @ApiProperty({ description: 'Data da última atualização', example: '2023-01-01T10:00:00.000Z' })
+  @ApiProperty({
+    description: 'Data da última atualização',
+    example: '2023-01-01T10:00:00.000Z',
+  })
   @IsString()
   updatedAt: string;
 
-  constructor(source: any) { // `source` será um ProviderService & { service: Service }
+  constructor(source: any) {
+    // `source` será um ProviderService & { service: Service }
     this.id = source.id;
     this.providerId = source.providerId;
     this.serviceId = source.serviceId;
     // Lógica defensiva para price: pode vir do DB como Prisma.Decimal, mas precisa ser number
-    this.price = source.price instanceof Prisma.Decimal ? source.price.toNumber() : source.price;
+    this.price =
+      source.price instanceof Prisma.Decimal
+        ? source.price.toNumber()
+        : source.price;
     this.durationMinutes = source.durationMinutes;
     this.description = source.description;
 
@@ -70,7 +103,9 @@ export class ProviderServiceOfferingDto {
       formattedCreatedAt = source.createdAt;
     } else {
       // Fallback seguro: se o tipo for inesperado, usa a data atual
-      console.warn(`[ProviderServiceOfferingDto] Tipo inesperado para createdAt: ${typeof source.createdAt}. Usando data atual como fallback.`);
+      console.warn(
+        `[ProviderServiceOfferingDto] Tipo inesperado para createdAt: ${typeof source.createdAt}. Usando data atual como fallback.`,
+      );
       formattedCreatedAt = new Date().toISOString();
     }
     this.createdAt = formattedCreatedAt;
@@ -82,7 +117,9 @@ export class ProviderServiceOfferingDto {
       formattedUpdatedAt = source.updatedAt;
     } else {
       // Fallback seguro: se o tipo for inesperado, usa a data atual
-      console.warn(`[ProviderServiceOfferingDto] Tipo inesperado para updatedAt: ${typeof source.updatedAt}. Usando data atual como fallback.`);
+      console.warn(
+        `[ProviderServiceOfferingDto] Tipo inesperado para updatedAt: ${typeof source.updatedAt}. Usando data atual como fallback.`,
+      );
       formattedUpdatedAt = new Date().toISOString();
     }
     this.updatedAt = formattedUpdatedAt;
