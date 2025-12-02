@@ -11,6 +11,10 @@ export class PayoutsWebhookController {
     @Headers('x-event-id') eventId: string,
     @Body() payload: any,
   ) {
-    return this.payoutsService.handleGatewayWebhook(signature, eventId, payload);
+    return this.payoutsService.handleGatewayWebhook(
+      signature,
+      eventId,
+      payload,
+    );
   }
 }
