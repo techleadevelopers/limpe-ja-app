@@ -13,13 +13,18 @@ export class AddPointsDto {
   points: number;
 
   @ApiProperty({
-    description: 'Tipo de transação de fidelidade (e.g., SERVICE_COMPLETED, REVIEW_SUBMITTED, REFERRAL).',
+    description:
+      'Tipo de transação de fidelidade (e.g., SERVICE_COMPLETED, REVIEW_SUBMITTED, REFERRAL).',
     enum: LoyaltyTransactionType,
   })
   @IsEnum(LoyaltyTransactionType)
   type: LoyaltyTransactionType;
 
-  @ApiProperty({ description: 'ID da entidade de referência (e.g., bookingId, reviewId, referralId).', required: false })
+  @ApiProperty({
+    description:
+      'ID da entidade de referência (e.g., bookingId, reviewId, referralId).',
+    required: false,
+  })
   @IsUUID()
   @IsString()
   referenceId?: string;
