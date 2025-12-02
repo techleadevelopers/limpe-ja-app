@@ -34,16 +34,26 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   // O payload que vem do JWT geralmente tem 'sub' como o ID do usuário.
   // A tipagem do retorno deve ser RequestUserPayload para consistência.
-  async validate(payload: { sub: string; email: string; role: UserRole }): Promise<RequestUserPayload> {
-    this.logger.log(`[JwtStrategy] validate: Payload JWT recebido: ${JSON.stringify(payload)}`);
+  async validate(payload: {
+    sub: string;
+    email: string;
+    role: UserRole;
+  }): Promise<RequestUserPayload> {
+    this.logger.log(
+      `[JwtStrategy] validate: Payload JWT recebido: ${JSON.stringify(payload)}`,
+    );
 
     // Verifique se o 'sub' (ID do usuário) está presente no payload
     if (!payload.sub) {
-      this.logger.error('[JwtStrategy] validate: Payload JWT não contém "sub" (ID do usuário).');
+      this.logger.error(
+        '[JwtStrategy] validate: Payload JWT não contém "sub" (ID do usuário).',
+      );
       throw new UnauthorizedException('Token inválido: ID do usuário ausente.');
     }
 
-    let user: (User & { client?: { id: string }; provider?: { id: string } }) | null; // Tipagem mais precisa para 'user'
+    let user:
+      | (User & { client?: { id: string }; provider?: { id: string } })
+      | null; // Tipagem mais precisa para 'user'
 
     try {
       user = await this.prisma.user.findUnique({
@@ -54,12 +64,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
       });
     } catch (dbError) {
-      this.logger.error(`[JwtStrategy] validate: Erro ao buscar usuário no DB para ID ${payload.sub}: ${dbError.message}`, dbError.stack);
-      throw new UnauthorizedException('Erro de validação de token: Falha no acesso ao usuário.');
+      this.logger.error(
+        `[JwtStrategy] validate: Erro ao buscar usuário no DB para ID ${payload.sub}: ${dbError.message}`,
+        dbError.stack,
+      );
+      throw new UnauthorizedException(
+        'Erro de validação de token: Falha no acesso ao usuário.',
+      );
     }
 
     if (!user) {
-      this.logger.warn(`[JwtStrategy] validate: Usuário com ID ${payload.sub} não encontrado ou inativo no DB.`);
+      this.logger.warn(
+        `[JwtStrategy] validate: Usuário com ID ${payload.sub} não encontrado ou inativo no DB.`,
+      );
       throw new UnauthorizedException('Usuário não encontrado ou inativo.');
     }
 
@@ -73,24 +90,34 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // Adiciona o clientId ou providerId se o usuário tiver o perfil correspondente
     if (user.role === UserRole.CLIENT && user.client) {
       userPayload.clientId = user.client.id;
-      this.logger.debug(`[JwtStrategy] validate: Usuário CLIENT. clientId: ${userPayload.clientId}`);
+      this.logger.debug(
+        `[JwtStrategy] validate: Usuário CLIENT. clientId: ${userPayload.clientId}`,
+      );
     } else if (user.role === UserRole.PROVIDER && user.provider) {
       userPayload.providerId = user.provider.id;
-      this.logger.debug(`[JwtStrategy] validate: Usuário PROVIDER. providerId: ${userPayload.providerId}`);
+      this.logger.debug(
+        `[JwtStrategy] validate: Usuário PROVIDER. providerId: ${userPayload.providerId}`,
+      );
     }
     // Para administradores, você pode querer adicionar ambos os IDs se eles tiverem perfis associados
     else if (user.role === UserRole.ADMIN) {
-        if (user.client) {
-            userPayload.clientId = user.client.id;
-            this.logger.debug(`[JwtStrategy] validate: Usuário ADMIN com clientId: ${userPayload.clientId}`);
-        }
-        if (user.provider) {
-            userPayload.providerId = user.provider.id;
-            this.logger.debug(`[JwtStrategy] validate: Usuário ADMIN com providerId: ${userPayload.providerId}`);
-        }
+      if (user.client) {
+        userPayload.clientId = user.client.id;
+        this.logger.debug(
+          `[JwtStrategy] validate: Usuário ADMIN com clientId: ${userPayload.clientId}`,
+        );
+      }
+      if (user.provider) {
+        userPayload.providerId = user.provider.id;
+        this.logger.debug(
+          `[JwtStrategy] validate: Usuário ADMIN com providerId: ${userPayload.providerId}`,
+        );
+      }
     }
 
-    this.logger.log(`[JwtStrategy] validate: Usuário ${user.email} (ID: ${user.id}) validado com sucesso. Objeto final de req.user: ${JSON.stringify(userPayload)}`);
+    this.logger.log(
+      `[JwtStrategy] validate: Usuário ${user.email} (ID: ${user.id}) validado com sucesso. Objeto final de req.user: ${JSON.stringify(userPayload)}`,
+    );
     return userPayload; // Retorna o objeto que será populado em req.user
   }
 }
