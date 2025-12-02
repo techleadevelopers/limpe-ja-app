@@ -10,9 +10,15 @@ interface Transition {
 export const supportTicketTransitions: Transition[] = [
   { from: SupportTicketStatus.OPEN, to: SupportTicketStatus.IN_PROGRESS },
   { from: SupportTicketStatus.OPEN, to: SupportTicketStatus.CLOSED }, // Cliente pode fechar
-  { from: SupportTicketStatus.IN_PROGRESS, to: SupportTicketStatus.WAITING_USER },
+  {
+    from: SupportTicketStatus.IN_PROGRESS,
+    to: SupportTicketStatus.WAITING_USER,
+  },
   { from: SupportTicketStatus.IN_PROGRESS, to: SupportTicketStatus.RESOLVED },
-  { from: SupportTicketStatus.WAITING_USER, to: SupportTicketStatus.IN_PROGRESS }, // Cliente respondeu
+  {
+    from: SupportTicketStatus.WAITING_USER,
+    to: SupportTicketStatus.IN_PROGRESS,
+  }, // Cliente respondeu
   { from: SupportTicketStatus.WAITING_USER, to: SupportTicketStatus.CLOSED }, // Cliente pode fechar
   { from: SupportTicketStatus.RESOLVED, to: SupportTicketStatus.CLOSED },
   { from: SupportTicketStatus.RESOLVED, to: SupportTicketStatus.IN_PROGRESS }, // Cliente reabriu
@@ -20,10 +26,17 @@ export const supportTicketTransitions: Transition[] = [
 ];
 
 export class SupportStateMachine {
-  canTransition(currentStatus: SupportTicketStatus, newStatus: SupportTicketStatus): boolean {
-    return supportTicketTransitions.some(transition => {
-      const fromStatuses = Array.isArray(transition.from) ? transition.from : [transition.from];
-      return fromStatuses.includes(currentStatus) && transition.to === newStatus;
+  canTransition(
+    currentStatus: SupportTicketStatus,
+    newStatus: SupportTicketStatus,
+  ): boolean {
+    return supportTicketTransitions.some((transition) => {
+      const fromStatuses = Array.isArray(transition.from)
+        ? transition.from
+        : [transition.from];
+      return (
+        fromStatuses.includes(currentStatus) && transition.to === newStatus
+      );
     });
   }
 
