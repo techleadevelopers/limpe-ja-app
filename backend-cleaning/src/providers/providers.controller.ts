@@ -43,7 +43,10 @@ import { SortByOption } from '../search/dto/search-query.dto';
 // Importe os tipos auxiliares do service
 // ALTERADO: 'Offer' foi removido daqui. O tipo de retorno do serviço para ofertas agora será PrismaOffer[],
 // que é mapeado para OfferDetailsDto. Não precisamos de um tipo 'Offer' customizado no controller.
-import { ProviderWithCalculatedRating, ProviderMetrics } from './providers.service'; 
+import {
+  ProviderWithCalculatedRating,
+  ProviderMetrics,
+} from './providers.service';
 // Importe os novos DTOs
 import { OfferDetailsDto } from '../offers/dto/offer-details.dto'; // Verifique o caminho relativo!
 
@@ -68,90 +71,231 @@ export class ProvidersController {
   @Get('recommended')
   @ApiOperation({ summary: 'Obter provedores recomendados' })
   // CORREÇÃO: Adicionado queries opcionais para lat/lng (pra calcular distance se fornecido)
-  @ApiQuery({ name: 'latitude', required: false, type: Number, description: 'Latitude do cliente para cálculo de distância' })
-  @ApiQuery({ name: 'longitude', required: false, type: Number, description: 'Longitude do cliente para cálculo de distância' })
-  @ApiResponse({ status: 200, description: 'Lista de provedores recomendados.', type: [ProviderDetailsDto] })
+  @ApiQuery({
+    name: 'latitude',
+    required: false,
+    type: Number,
+    description: 'Latitude do cliente para cálculo de distância',
+  })
+  @ApiQuery({
+    name: 'longitude',
+    required: false,
+    type: Number,
+    description: 'Longitude do cliente para cálculo de distância',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de provedores recomendados.',
+    type: [ProviderDetailsDto],
+  })
   async findRecommendedProviders(
     @Query('latitude') latitude?: number,
     @Query('longitude') longitude?: number,
   ): Promise<ProviderDetailsDto[]> {
-    this.logger.log('[ProvidersController] findRecommendedProviders: Chamando serviço.');
+    this.logger.log(
+      '[ProvidersController] findRecommendedProviders: Chamando serviço.',
+    );
     // CORREÇÃO: Coerção explícita de query params para números
-    const lat = latitude !== undefined && latitude !== null ? Number(latitude) : undefined;
-    const lon = longitude !== undefined && longitude !== null ? Number(longitude) : undefined;
+    const lat =
+      latitude !== undefined && latitude !== null
+        ? Number(latitude)
+        : undefined;
+    const lon =
+      longitude !== undefined && longitude !== null
+        ? Number(longitude)
+        : undefined;
 
-    const safeLat = typeof lat === 'number' && !Number.isNaN(lat) ? lat : undefined;
-    const safeLon = typeof lon === 'number' && !Number.isNaN(lon) ? lon : undefined;
+    const safeLat =
+      typeof lat === 'number' && !Number.isNaN(lat) ? lat : undefined;
+    const safeLon =
+      typeof lon === 'number' && !Number.isNaN(lon) ? lon : undefined;
 
     try {
       // CORREÇÃO: Passe lat/lng numéricos pro service pra cálculo de distance (se fornecidos)
-      const providers = await this.providersService.findTopRatedOrExperiencedProviders(safeLat, safeLon);
-      this.logger.log(`[ProvidersController] findRecommendedProviders: Retornando ${providers.length} provedores.`);
-      return providers.map(provider => new ProviderDetailsDto(provider));
+      const providers =
+        await this.providersService.findTopRatedOrExperiencedProviders(
+          safeLat,
+          safeLon,
+        );
+      this.logger.log(
+        `[ProvidersController] findRecommendedProviders: Retornando ${providers.length} provedores.`,
+      );
+      return providers.map((provider) => new ProviderDetailsDto(provider));
     } catch (err: any) {
       // Fallback hardening: nunca retornar 500 para recomendações
-      this.logger.error(`[ProvidersController] findRecommendedProviders: erro interno, retornando fallback simples. Erro: ${err?.message || err}`);
-      const fallback = await this.providersService.findAllProviders({ limit: 5 });
-      return fallback.map(p => new ProviderDetailsDto(p));
+      this.logger.error(
+        `[ProvidersController] findRecommendedProviders: erro interno, retornando fallback simples. Erro: ${err?.message || err}`,
+      );
+      const fallback = await this.providersService.findAllProviders({
+        limit: 5,
+      });
+      return fallback.map((p) => new ProviderDetailsDto(p));
     }
   }
 
   @Get('nearby')
   @ApiOperation({ summary: 'Obter provedores por perto' })
-  @ApiQuery({ name: 'latitude', required: false, type: Number, description: 'Latitude para busca geoespacial' })
-  @ApiQuery({ name: 'longitude', required: false, type: Number, description: 'Longitude para busca geoespacial' })
-  @ApiQuery({ name: 'radius', required: false, type: Number, description: 'Raio de busca em km' })
-  @ApiQuery({ name: 'sortBy', required: false, enum: SortByOption, description: 'Critério de ordenação' })
-  @ApiResponse({ status: 200, description: 'Lista de provedores próximos (ou ativos).', type: [ProviderDetailsDto] })
+  @ApiQuery({
+    name: 'latitude',
+    required: false,
+    type: Number,
+    description: 'Latitude para busca geoespacial',
+  })
+  @ApiQuery({
+    name: 'longitude',
+    required: false,
+    type: Number,
+    description: 'Longitude para busca geoespacial',
+  })
+  @ApiQuery({
+    name: 'radius',
+    required: false,
+    type: Number,
+    description: 'Raio de busca em km',
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    enum: SortByOption,
+    description: 'Critério de ordenação',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de provedores próximos (ou ativos).',
+    type: [ProviderDetailsDto],
+  })
   async findNearbyProviders(
     @Query('latitude') latitude?: number,
     @Query('longitude') longitude?: number,
     @Query('radius') radius?: number,
     @Query('sortBy') sortBy?: SortByOption,
   ): Promise<ProviderDetailsDto[]> {
-    this.logger.log('[ProvidersController] findNearbyProviders: Chamando serviço.');
+    this.logger.log(
+      '[ProvidersController] findNearbyProviders: Chamando serviço.',
+    );
 
     // Coerção de tipos de query
-    const lat = latitude !== undefined && latitude !== null ? Number(latitude) : undefined;
-    const lon = longitude !== undefined && longitude !== null ? Number(longitude) : undefined;
-    const rad = radius !== undefined && radius !== null ? Number(radius) : undefined;
-    const safeLat = typeof lat === 'number' && !Number.isNaN(lat) ? lat : undefined;
-    const safeLon = typeof lon === 'number' && !Number.isNaN(lon) ? lon : undefined;
-    const safeRadius = typeof rad === 'number' && !Number.isNaN(rad) ? rad : undefined;
+    const lat =
+      latitude !== undefined && latitude !== null
+        ? Number(latitude)
+        : undefined;
+    const lon =
+      longitude !== undefined && longitude !== null
+        ? Number(longitude)
+        : undefined;
+    const rad =
+      radius !== undefined && radius !== null ? Number(radius) : undefined;
+    const safeLat =
+      typeof lat === 'number' && !Number.isNaN(lat) ? lat : undefined;
+    const safeLon =
+      typeof lon === 'number' && !Number.isNaN(lon) ? lon : undefined;
+    const safeRadius =
+      typeof rad === 'number' && !Number.isNaN(rad) ? rad : undefined;
 
-    const findAllParams: { limit?: number; latitude?: number; longitude?: number; radius?: number; sortBy?: SortByOption } = {
+    const findAllParams: {
+      limit?: number;
+      latitude?: number;
+      longitude?: number;
+      radius?: number;
+      sortBy?: SortByOption;
+    } = {
       limit: 10,
       latitude: safeLat,
       longitude: safeLon,
       radius: safeRadius,
-      sortBy: sortBy
+      sortBy: sortBy,
     };
 
-    const providers = await this.providersService.findAllProviders(findAllParams);
-    this.logger.log(`[ProvidersController] findNearbyProviders: Retornando ${providers.length} provedores.`);
+    const providers =
+      await this.providersService.findAllProviders(findAllParams);
+    this.logger.log(
+      `[ProvidersController] findNearbyProviders: Retornando ${providers.length} provedores.`,
+    );
     // NOVO: Mapeamento inclui novos campos opcionais (ex.: nextAvailable, acceptanceRate)
-    return providers.map(provider => new ProviderDetailsDto(provider));
+    return providers.map((provider) => new ProviderDetailsDto(provider));
   }
 
   @Get()
-  @ApiOperation({ summary: 'Buscar provedores com filtros (geral, incluindo geoespacial)' })
-  @ApiQuery({ name: 'searchTerm', required: false, type: String, description: 'Termo de busca (nome, bio, serviço)' })
-  @ApiQuery({ name: 'serviceId', required: false, type: String, description: 'ID do tipo de serviço' })
-  @ApiQuery({ name: 'location', required: false, type: String, description: 'Localização textual (cidade, rua)' })
-  @ApiQuery({ name: 'minRating', required: false, type: Number, description: 'Avaliação mínima' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Limite de resultados' })
-  @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Offset para paginação' })
-  @ApiQuery({ name: 'sortBy', required: false, enum: SortByOption, description: 'Critério de ordenação' })
-  @ApiQuery({ name: 'latitude', required: false, type: Number, description: 'Latitude para busca geoespacial' })
-  @ApiQuery({ name: 'longitude', required: false, type: Number, description: 'Longitude para busca geoespacial' })
-  @ApiQuery({ name: 'radius', required: false, type: Number, description: 'Raio de busca em km' })
-  @ApiResponse({ status: 200, description: 'Lista de provedores com filtros aplicados.', type: [ProviderDetailsDto] })
-  async search(@Query() searchDto: ProviderSearchDto): Promise<ProviderDetailsDto[]> {
-    this.logger.log(`[ProvidersController] search: Chamando serviço com DTO de busca: ${JSON.stringify(searchDto)}`);
+  @ApiOperation({
+    summary: 'Buscar provedores com filtros (geral, incluindo geoespacial)',
+  })
+  @ApiQuery({
+    name: 'searchTerm',
+    required: false,
+    type: String,
+    description: 'Termo de busca (nome, bio, serviço)',
+  })
+  @ApiQuery({
+    name: 'serviceId',
+    required: false,
+    type: String,
+    description: 'ID do tipo de serviço',
+  })
+  @ApiQuery({
+    name: 'location',
+    required: false,
+    type: String,
+    description: 'Localização textual (cidade, rua)',
+  })
+  @ApiQuery({
+    name: 'minRating',
+    required: false,
+    type: Number,
+    description: 'Avaliação mínima',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Limite de resultados',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    type: Number,
+    description: 'Offset para paginação',
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    enum: SortByOption,
+    description: 'Critério de ordenação',
+  })
+  @ApiQuery({
+    name: 'latitude',
+    required: false,
+    type: Number,
+    description: 'Latitude para busca geoespacial',
+  })
+  @ApiQuery({
+    name: 'longitude',
+    required: false,
+    type: Number,
+    description: 'Longitude para busca geoespacial',
+  })
+  @ApiQuery({
+    name: 'radius',
+    required: false,
+    type: Number,
+    description: 'Raio de busca em km',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de provedores com filtros aplicados.',
+    type: [ProviderDetailsDto],
+  })
+  async search(
+    @Query() searchDto: ProviderSearchDto,
+  ): Promise<ProviderDetailsDto[]> {
+    this.logger.log(
+      `[ProvidersController] search: Chamando serviço com DTO de busca: ${JSON.stringify(searchDto)}`,
+    );
     const providers = await this.providersService.search(searchDto);
-    this.logger.log(`[ProvidersController] search: Retornando ${providers.length} provedores.`);
+    this.logger.log(
+      `[ProvidersController] search: Retornando ${providers.length} provedores.`,
+    );
     // NOVO: Mapeamento inclui novos campos opcionais para cards (ex.: nextAvailable calculado no service)
-    return providers.map(provider => new ProviderDetailsDto(provider));
+    return providers.map((provider) => new ProviderDetailsDto(provider));
   }
 
   // =================================================================================================
@@ -163,18 +307,30 @@ export class ProvidersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obter o perfil do provedor logado' })
-  @ApiResponse({ status: 200, description: 'Perfil do provedor.', type: ProviderDetailsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil do provedor.',
+    type: ProviderDetailsDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   async getMyProfile(@Req() req: ExpressRequest): Promise<ProviderDetailsDto> {
     const userId = req.user['userId'];
-    this.logger.log(`[ProvidersController] getMyProfile: Buscando perfil para userId: ${userId}`);
+    this.logger.log(
+      `[ProvidersController] getMyProfile: Buscando perfil para userId: ${userId}`,
+    );
     const provider = await this.providersService.findByUserId(userId);
     if (!provider) {
-      this.logger.warn(`[ProvidersController] getMyProfile: Provedor não encontrado para userId: ${userId}`);
-      throw new NotFoundException(`Provedor com User ID "${userId}" não encontrado.`);
+      this.logger.warn(
+        `[ProvidersController] getMyProfile: Provedor não encontrado para userId: ${userId}`,
+      );
+      throw new NotFoundException(
+        `Provedor com User ID "${userId}" não encontrado.`,
+      );
     }
-    this.logger.log(`[ProvidersController] getMyProfile: Perfil encontrado para userId ${userId}.`);
+    this.logger.log(
+      `[ProvidersController] getMyProfile: Perfil encontrado para userId ${userId}.`,
+    );
     // NOVO: Inclui novos campos opcionais no mapeamento
     return new ProviderDetailsDto(provider);
   }
@@ -184,19 +340,37 @@ export class ProvidersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Atualizar o perfil do provedor logado' })
-  @ApiResponse({ status: 200, description: 'Perfil do provedor atualizado com sucesso.', type: ProviderDetailsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil do provedor atualizado com sucesso.',
+    type: ProviderDetailsDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
-  async updateMyProfile(@Req() req: ExpressRequest, @Body() updateProviderProfileDto: UpdateProviderProfileDto): Promise<ProviderDetailsDto> {
+  async updateMyProfile(
+    @Req() req: ExpressRequest,
+    @Body() updateProviderProfileDto: UpdateProviderProfileDto,
+  ): Promise<ProviderDetailsDto> {
     const userId = req.user['userId'];
-    this.logger.log(`[ProvidersController] updateMyProfile: Atualizando perfil para userId: ${userId}`);
-    const updatedProvider = await this.providersService.updateByUserId(userId, updateProviderProfileDto);
+    this.logger.log(
+      `[ProvidersController] updateMyProfile: Atualizando perfil para userId: ${userId}`,
+    );
+    const updatedProvider = await this.providersService.updateByUserId(
+      userId,
+      updateProviderProfileDto,
+    );
     if (!updatedProvider) {
-      this.logger.warn(`[ProvidersController] updateMyProfile: Provedor não encontrado para userId: ${userId}`);
-      throw new NotFoundException(`Provedor com User ID "${userId}" não encontrado.`);
+      this.logger.warn(
+        `[ProvidersController] updateMyProfile: Provedor não encontrado para userId: ${userId}`,
+      );
+      throw new NotFoundException(
+        `Provedor com User ID "${userId}" não encontrado.`,
+      );
     }
-    this.logger.log(`[ProvidersController] updateMyProfile: Perfil atualizado com sucesso para userId ${userId}.`);
+    this.logger.log(
+      `[ProvidersController] updateMyProfile: Perfil atualizado com sucesso para userId ${userId}.`,
+    );
     // NOVO: Inclui novos campos opcionais após atualização (ex.: recalcular métricas se necessário)
     return new ProviderDetailsDto(updatedProvider);
   }
@@ -220,16 +394,27 @@ export class ProvidersController {
       },
     },
   })
-  @ApiOperation({ summary: 'Fazer upload da foto de perfil do provedor logado' })
-  @ApiResponse({ status: 201, description: 'Avatar atualizado com sucesso.', schema: {
+  @ApiOperation({
+    summary: 'Fazer upload da foto de perfil do provedor logado',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Avatar atualizado com sucesso.',
+    schema: {
       type: 'object',
       properties: {
         message: { type: 'string', example: 'Avatar atualizado com sucesso.' },
-        url: { type: 'string', example: 'http://gcs.com/provider-avatars/123/avatar.jpg' },
+        url: {
+          type: 'string',
+          example: 'http://gcs.com/provider-avatars/123/avatar.jpg',
+        },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Nenhum arquivo enviado ou arquivo inválido.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Nenhum arquivo enviado ou arquivo inválido.',
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   @UseInterceptors(FileInterceptor('file'))
@@ -241,7 +426,9 @@ export class ProvidersController {
     if (!file) {
       throw new BadRequestException('Nenhum arquivo de imagem enviado.');
     }
-    this.logger.log(`[ProvidersController] uploadAvatar: Recebido arquivo de avatar para userId: ${userId}`);
+    this.logger.log(
+      `[ProvidersController] uploadAvatar: Recebido arquivo de avatar para userId: ${userId}`,
+    );
     const avatarUrl = await this.providersService.updateAvatar(userId, file);
     return { message: 'Avatar atualizado com sucesso.', url: avatarUrl };
   }
@@ -249,11 +436,21 @@ export class ProvidersController {
 
   // NEW ENDPOINT: Get provider performance metrics
   @Get(':providerId/metrics')
-  @ApiOperation({ summary: 'Obter métricas de performance de um provedor por ID' })
-  @ApiResponse({ status: 200, description: 'Métricas de performance do provedor.', type: ProviderMetricsDto }) // Alterado para ProviderMetricsDto
+  @ApiOperation({
+    summary: 'Obter métricas de performance de um provedor por ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Métricas de performance do provedor.',
+    type: ProviderMetricsDto,
+  }) // Alterado para ProviderMetricsDto
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
-  async getProviderMetrics(@Param('providerId') providerId: string): Promise<ProviderMetrics> {
-    this.logger.log(`[ProvidersController] getProviderMetrics: Buscando métricas para provedor ID: ${providerId}`);
+  async getProviderMetrics(
+    @Param('providerId') providerId: string,
+  ): Promise<ProviderMetrics> {
+    this.logger.log(
+      `[ProvidersController] getProviderMetrics: Buscando métricas para provedor ID: ${providerId}`,
+    );
     return this.providersService.getProviderPerformanceMetrics(providerId);
   }
 
@@ -261,16 +458,24 @@ export class ProvidersController {
   @Get(':providerId/offers')
   @ApiOperation({ summary: 'Obter ofertas de um provedor por ID' })
   // ALTERADO: type: [OfferDetailsDto] para usar o DTO correto para Swagger
-  @ApiResponse({ status: 200, description: 'Lista de ofertas do provedor.', type: [OfferDetailsDto] }) 
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de ofertas do provedor.',
+    type: [OfferDetailsDto],
+  })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   // ALTERADO: Promise<OfferDetailsDto[]> para refletir o tipo de retorno
-  async getProviderOffers(@Param('providerId') providerId: string): Promise<OfferDetailsDto[]> {
-    this.logger.log(`[ProvidersController] getProviderOffers: Buscando ofertas para provedor ID: ${providerId}`);
+  async getProviderOffers(
+    @Param('providerId') providerId: string,
+  ): Promise<OfferDetailsDto[]> {
+    this.logger.log(
+      `[ProvidersController] getProviderOffers: Buscando ofertas para provedor ID: ${providerId}`,
+    );
     // ASSUMIMOS QUE this.providersService.getProviderOffers AGORA RETORNA Promise<PrismaOffer[]>
     const offers = await this.providersService.getProviderOffers(providerId);
     // ADICIONADO: Mapeamento para converter objetos Offer do Prisma para OfferDetailsDto
     // AQUI, 'offer' agora será do tipo PrismaOffer devido à correção no serviço.
-    return offers.map(offer => new OfferDetailsDto(offer)); 
+    return offers.map((offer) => new OfferDetailsDto(offer));
   }
 
   // =============== Provider settings (radius) ===============
@@ -278,7 +483,10 @@ export class ProvidersController {
   @Roles(UserRole.PROVIDER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Salvar configurações do provedor autenticado (raio de atendimento)' })
+  @ApiOperation({
+    summary:
+      'Salvar configurações do provedor autenticado (raio de atendimento)',
+  })
   @ApiResponse({ status: 200, description: 'Configurações salvas.' })
   async saveMySettings(
     @Req() req: ExpressRequest,
@@ -288,7 +496,10 @@ export class ProvidersController {
     const me = await this.providersService.findByUserId(userId);
     if (!me) throw new NotFoundException('Provedor não encontrado.');
     if (typeof body.serviceRadiusKm === 'number') {
-      const clamped = Math.max(1, Math.min(200, Math.floor(body.serviceRadiusKm)));
+      const clamped = Math.max(
+        1,
+        Math.min(200, Math.floor(body.serviceRadiusKm)),
+      );
       await this.settingsService.setProviderRadiusKm(me.id, clamped);
     }
     return { ok: true };
@@ -298,15 +509,19 @@ export class ProvidersController {
   @Roles(UserRole.PROVIDER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Obter configurações do provedor autenticado (raio de atendimento)' })
+  @ApiOperation({
+    summary:
+      'Obter configurações do provedor autenticado (raio de atendimento)',
+  })
   @ApiResponse({ status: 200, description: 'Configurações atuais.' })
-  async getMySettings(
-    @Req() req: ExpressRequest,
-  ) {
+  async getMySettings(@Req() req: ExpressRequest) {
     const userId = req.user['userId'];
     const me = await this.providersService.findByUserId(userId);
     if (!me) throw new NotFoundException('Provedor não encontrado.');
-    const serviceRadiusKm = await this.settingsService.getProviderRadiusKm(me.id, 15);
+    const serviceRadiusKm = await this.settingsService.getProviderRadiusKm(
+      me.id,
+      15,
+    );
     return { serviceRadiusKm };
   }
 
@@ -315,14 +530,25 @@ export class ProvidersController {
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Atualizar perfil de um provedor por ID (apenas admin)' })
-  @ApiResponse({ status: 200, description: 'Perfil atualizado com sucesso.', type: ProviderDetailsDto })
+  @ApiOperation({
+    summary: 'Atualizar perfil de um provedor por ID (apenas admin)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil atualizado com sucesso.',
+    type: ProviderDetailsDto,
+  })
   async updateProviderById(
     @Param('id') id: string,
     @Body() updateProviderProfileDto: UpdateProviderProfileDto,
   ): Promise<ProviderDetailsDto> {
-    this.logger.log(`[ProvidersController] updateProviderById: Atualizando provedor ${id}`);
-    const updated = await this.providersService.updateById(id, updateProviderProfileDto);
+    this.logger.log(
+      `[ProvidersController] updateProviderById: Atualizando provedor ${id}`,
+    );
+    const updated = await this.providersService.updateById(
+      id,
+      updateProviderProfileDto,
+    );
     if (!updated) {
       throw new NotFoundException(`Provedor com ID "${id}" não encontrado.`);
     }
@@ -335,17 +561,35 @@ export class ProvidersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Obter detalhes de um provedor por ID' })
-  @ApiQuery({ name: 'includeReviews', required: false, type: Boolean, description: 'Incluir avaliações do provedor' })
-  @ApiResponse({ status: 200, description: 'Detalhes do provedor.', type: ProviderDetailsDto })
+  @ApiQuery({
+    name: 'includeReviews',
+    required: false,
+    type: Boolean,
+    description: 'Incluir avaliações do provedor',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Detalhes do provedor.',
+    type: ProviderDetailsDto,
+  })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
-  async findOne(@Param('id') id: string, @Query('includeReviews') includeReviews?: boolean): Promise<ProviderDetailsDto> {
-    this.logger.log(`[ProvidersController] findOne: Buscando provedor por ID: ${id}`);
+  async findOne(
+    @Param('id') id: string,
+    @Query('includeReviews') includeReviews?: boolean,
+  ): Promise<ProviderDetailsDto> {
+    this.logger.log(
+      `[ProvidersController] findOne: Buscando provedor por ID: ${id}`,
+    );
     const provider = await this.providersService.findOne(id);
     if (!provider) {
-      this.logger.warn(`[ProvidersController] findOne: Provedor com ID "${id}" não encontrado.`);
+      this.logger.warn(
+        `[ProvidersController] findOne: Provedor com ID "${id}" não encontrado.`,
+      );
       throw new NotFoundException(`Provedor com ID "${id}" não encontrado.`);
     }
-    this.logger.log(`[ProvidersController] findOne: Provedor ${id} encontrado.`);
+    this.logger.log(
+      `[ProvidersController] findOne: Provedor ${id} encontrado.`,
+    );
     // NOVO: Inclui novos campos opcionais (ex.: nextAvailable, badges)
     return new ProviderDetailsDto(provider);
   }
@@ -354,14 +598,23 @@ export class ProvidersController {
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Deletar um provedor (apenas para administradores)' })
+  @ApiOperation({
+    summary: 'Deletar um provedor (apenas para administradores)',
+  })
   @ApiResponse({ status: 204, description: 'Provedor deletado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 403, description: 'Acesso proibido (requer função de ADMIN).' })
+  @ApiResponse({
+    status: 403,
+    description: 'Acesso proibido (requer função de ADMIN).',
+  })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   async remove(@Param('id') id: string): Promise<void> {
-    this.logger.log(`[ProvidersController] remove: Tentando deletar provedor com ID: ${id}`);
+    this.logger.log(
+      `[ProvidersController] remove: Tentando deletar provedor com ID: ${id}`,
+    );
     await this.providersService.remove(id);
-    this.logger.log(`[ProvidersController] remove: Provedor ${id} deletado com sucesso.`);
+    this.logger.log(
+      `[ProvidersController] remove: Provedor ${id} deletado com sucesso.`,
+    );
   }
 }
