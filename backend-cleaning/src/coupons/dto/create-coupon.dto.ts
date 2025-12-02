@@ -1,5 +1,16 @@
 // backend-cleaning/src/coupons/dto/create-coupon.dto.ts
-import { IsString, IsEnum, IsNumber, IsPositive, Min, IsISO8601, IsOptional, IsInt, Max, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsNumber,
+  IsPositive,
+  Min,
+  IsISO8601,
+  IsOptional,
+  IsInt,
+  Max,
+  IsBoolean,
+} from 'class-validator';
 import { CouponType, CouponTarget, CouponStatus } from '@prisma/client'; // <<-- FIXED: Import from @prisma/client
 
 export class CreateCouponDto {
