@@ -6,7 +6,7 @@ export class ReferralEntity implements PrismaReferral {
   referrerUserId: string;
   referredUserId: string;
   // CORREÇÃO: Adicionada a propriedade 'referralCode'
-  referralCode: string; 
+  referralCode: string;
   createdAt: Date;
   updatedAt: Date;
 
