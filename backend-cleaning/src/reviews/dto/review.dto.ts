@@ -19,7 +19,9 @@ export class ReviewDto {
   @IsString()
   id: string; // Assuming ID is a string (UUID)
 
-  @ApiProperty({ description: 'ID do agendamento ao qual a avaliação se refere.' })
+  @ApiProperty({
+    description: 'ID do agendamento ao qual a avaliação se refere.',
+  })
   @IsString()
   bookingId: string;
 
@@ -37,7 +39,10 @@ export class ReviewDto {
   @Max(5)
   rating: number;
 
-  @ApiPropertyOptional({ description: 'Comentário da avaliação.', required: false })
+  @ApiPropertyOptional({
+    description: 'Comentário da avaliação.',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   comment?: string;
@@ -48,6 +53,9 @@ export class ReviewDto {
   @ApiProperty({ description: 'Data de atualização da avaliação.' })
   updatedAt: Date; // Assuming this is a Date object from Prisma
 
-  @ApiProperty({ type: ClientReviewerDto, description: 'Detalhes do cliente que fez a avaliação.' })
+  @ApiProperty({
+    type: ClientReviewerDto,
+    description: 'Detalhes do cliente que fez a avaliação.',
+  })
   client: ClientReviewerDto; // Include client details for display (e.g., from Prisma's `include`)
 }
