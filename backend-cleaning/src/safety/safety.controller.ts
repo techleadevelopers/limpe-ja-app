@@ -1,5 +1,14 @@
 // backend-cleaning/src/safety/safety.controller.ts
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { SafetyService } from './safety.service';
 import { ReportPanicDto } from './dto/report-panic.dto';
 import { ReportIncidentDto } from './dto/report-incident.dto';
@@ -8,7 +17,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Assuming JWT gu
 import { RolesGuard } from '../auth/guards/roles.guard'; // Assuming Roles guard
 import { Roles } from '../auth/decorators/roles.decorator'; // Assuming Roles decorator
 import { UserRole } from '@prisma/client'; // Assuming Prisma enum for roles
-import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger'; // Importações adicionadas para Swagger
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+  ApiResponse,
+} from '@nestjs/swagger'; // Importações adicionadas para Swagger
 
 @ApiBearerAuth() // Adiciona o cabeçalho de autenticação Bearer para Swagger
 @ApiTags('safety') // Agrupa endpoints sob a tag 'safety' no Swagger
@@ -20,7 +34,10 @@ export class SafetyController {
   @Post('panic')
   @Roles(UserRole.CLIENT, UserRole.PROVIDER) // Both clients and providers can report panic
   @ApiOperation({ summary: 'Reporta um incidente de pânico' }) // Descrição para Swagger
-  @ApiResponse({ status: 201, description: 'Incidente de pânico reportado com sucesso.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Incidente de pânico reportado com sucesso.',
+  })
   async reportPanic(@Body() reportPanicDto: ReportPanicDto, @Req() req) {
     return this.safetyService.reportPanic(req.user.id, reportPanicDto);
   }
@@ -28,15 +45,26 @@ export class SafetyController {
   @Post('incident')
   @Roles(UserRole.CLIENT, UserRole.PROVIDER) // Both clients and providers can report incidents
   @ApiOperation({ summary: 'Reporta um incidente de segurança' }) // Descrição para Swagger
-  @ApiResponse({ status: 201, description: 'Incidente de segurança reportado com sucesso.' })
-  async reportIncident(@Body() reportIncidentDto: ReportIncidentDto, @Req() req) {
+  @ApiResponse({
+    status: 201,
+    description: 'Incidente de segurança reportado com sucesso.',
+  })
+  async reportIncident(
+    @Body() reportIncidentDto: ReportIncidentDto,
+    @Req() req,
+  ) {
     return this.safetyService.reportIncident(req.user.id, reportIncidentDto);
   }
 
   @Get('me/incidents')
   @Roles(UserRole.CLIENT, UserRole.PROVIDER) // Users can list their own incidents
-  @ApiOperation({ summary: 'Lista os incidentes de segurança reportados pelo usuário logado' }) // Descrição para Swagger
-  @ApiResponse({ status: 200, description: 'Lista de incidentes do usuário retornada com sucesso.' })
+  @ApiOperation({
+    summary: 'Lista os incidentes de segurança reportados pelo usuário logado',
+  }) // Descrição para Swagger
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de incidentes do usuário retornada com sucesso.',
+  })
   async getIncidentsForUser(@Req() req) {
     return this.safetyService.getIncidentsForUser(req.user.id);
   }
@@ -44,25 +72,47 @@ export class SafetyController {
   // NOVO ENDPOINT: Para administradores listarem todos os incidentes
   @Get('incidents') // Caminho específico para listar todos os incidentes
   @Roles(UserRole.ADMIN) // Apenas administradores podem acessar
-  @ApiOperation({ summary: 'Lista todos os incidentes de segurança (apenas para administradores)' }) // Descrição para Swagger
-  @ApiResponse({ status: 200, description: 'Lista de todos os incidentes retornada com sucesso.' })
+  @ApiOperation({
+    summary:
+      'Lista todos os incidentes de segurança (apenas para administradores)',
+  }) // Descrição para Swagger
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de todos os incidentes retornada com sucesso.',
+  })
   async getAllIncidents() {
     return this.safetyService.listAllIncidents(); // Você precisará implementar este método no SafetyService
   }
 
   @Patch('incident/:id/status')
   @Roles(UserRole.ADMIN) // Only admins can update incident status
-  @ApiOperation({ summary: 'Atualiza o status de um incidente de segurança (apenas para administradores)' }) // Descrição para Swagger
-  @ApiResponse({ status: 200, description: 'Status do incidente atualizado com sucesso.' })
+  @ApiOperation({
+    summary:
+      'Atualiza o status de um incidente de segurança (apenas para administradores)',
+  }) // Descrição para Swagger
+  @ApiResponse({
+    status: 200,
+    description: 'Status do incidente atualizado com sucesso.',
+  })
   @ApiResponse({ status: 404, description: 'Incidente não encontrado.' })
-  async updateIncidentStatus(@Param('id') id: string, @Body() updateIncidentDto: UpdateIncidentDto, @Req() req) {
-    return this.safetyService.updateIncidentStatus(id, updateIncidentDto, req.user.id);
+  async updateIncidentStatus(
+    @Param('id') id: string,
+    @Body() updateIncidentDto: UpdateIncidentDto,
+    @Req() req,
+  ) {
+    return this.safetyService.updateIncidentStatus(
+      id,
+      updateIncidentDto,
+      req.user.id,
+    );
   }
 
   // NOVO: Listar alertas de pânico (admin)
   @Get('panic-alerts')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Lista todos os alertas de pânico (apenas administradores)' })
+  @ApiOperation({
+    summary: 'Lista todos os alertas de pânico (apenas administradores)',
+  })
   @ApiResponse({ status: 200, description: 'Lista de alertas de pânico.' })
   async listPanicAlerts(@Req() req) {
     const status = req.query?.status as string | undefined;
@@ -72,9 +122,15 @@ export class SafetyController {
   // NOVO: Atualizar status de alerta de pânico (admin)
   @Patch('panic-alerts/:id/status')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Atualiza o status de um alerta de pânico (apenas administradores)' })
+  @ApiOperation({
+    summary:
+      'Atualiza o status de um alerta de pânico (apenas administradores)',
+  })
   @ApiResponse({ status: 200, description: 'Status do alerta atualizado.' })
-  async updatePanicStatus(@Param('id') id: string, @Body() body: { status: string }) {
+  async updatePanicStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string },
+  ) {
     return this.safetyService.updatePanicAlertStatus(id, body?.status);
   }
 }
