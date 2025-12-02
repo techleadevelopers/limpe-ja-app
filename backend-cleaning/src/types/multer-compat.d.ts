@@ -14,4 +14,3 @@ declare module 'multer' {
     export interface File extends Express.Multer.File {}
   }
 }
-
