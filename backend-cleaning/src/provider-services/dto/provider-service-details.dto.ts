@@ -17,34 +17,54 @@ export class ProviderServiceDetailsDto {
   @IsString()
   serviceId: string;
 
-  @ApiProperty({ description: 'Preço do serviço', example: 150.00 })
+  @ApiProperty({ description: 'Preço do serviço', example: 150.0 })
   @IsNumber()
   price: number;
 
-  @ApiProperty({ description: 'Duração estimada em minutos', example: 120, required: false })
+  @ApiProperty({
+    description: 'Duração estimada em minutos',
+    example: 120,
+    required: false,
+  })
   @IsOptional()
   @IsNumber()
   durationMinutes?: number | null;
 
-  @ApiProperty({ description: 'Descrição detalhada do serviço oferecido', required: false })
+  @ApiProperty({
+    description: 'Descrição detalhada do serviço oferecido',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   description?: string | null;
 
-  @ApiProperty({ enum: PricingType, description: 'Tipo de precificação do serviço', example: PricingType.FIXED_PRICE })
+  @ApiProperty({
+    enum: PricingType,
+    description: 'Tipo de precificação do serviço',
+    example: PricingType.FIXED_PRICE,
+  })
   @IsEnum(PricingType)
   pricingType: PricingType;
 
-  @ApiProperty({ description: 'Preço por metro quadrado (se pricingType for BY_SIZE)', required: false })
+  @ApiProperty({
+    description: 'Preço por metro quadrado (se pricingType for BY_SIZE)',
+    required: false,
+  })
   @IsOptional()
   @IsNumber()
   pricePerSquareMeter?: number | null;
 
-  @ApiProperty({ description: 'Preço por cômodo (se pricingType for BY_SIZE)', required: false })
+  @ApiProperty({
+    description: 'Preço por cômodo (se pricingType for BY_SIZE)',
+    required: false,
+  })
   @IsOptional()
   @IsNumber()
   pricePerRoom?: number | null;
 
-  @ApiProperty({ type: () => ServiceEntity, description: 'Detalhes do tipo de serviço global' }) // <--- CORREÇÃO AQUI
+  @ApiProperty({
+    type: () => ServiceEntity,
+    description: 'Detalhes do tipo de serviço global',
+  }) // <--- CORREÇÃO AQUI
   service: ServiceEntity; // Ou um DTO simplificado para Service, se preferir
 }
