@@ -24,7 +24,9 @@ import { ReferralsModule } from '../referrals/referrals.module'; // NOVO: Import
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: configService.get<string>('JWT_EXPIRATION_TIME') },
+        signOptions: {
+          expiresIn: configService.get<string>('JWT_EXPIRATION_TIME'),
+        },
       }),
     }),
     forwardRef(() => UsersModule),
@@ -34,16 +36,7 @@ import { ReferralsModule } from '../referrals/referrals.module'; // NOVO: Import
     forwardRef(() => ReferralsModule), // NOVO: Adicionar forwardRef para ReferralsModule
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    LocalStrategy,
-    JwtStrategy,
-    WsAuthGuard,
-  ],
-  exports: [
-    AuthService,
-    JwtModule,
-    WsAuthGuard,
-  ],
+  providers: [AuthService, LocalStrategy, JwtStrategy, WsAuthGuard],
+  exports: [AuthService, JwtModule, WsAuthGuard],
 })
 export class AuthModule {}
