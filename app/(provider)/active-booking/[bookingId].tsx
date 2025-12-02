@@ -153,14 +153,51 @@ export default function ActiveBookingDetails() {
       setBooking(updated);
       NotificationUIService.showSuccess('Serviço finalizado.');
       await tryBeepLocalNotification('Serviço finalizado', 'Atendimento concluído com sucesso.');
-      // Alert removido: feedback não-bloqueante já exibido (toast + haptics)
       return;
     } catch (e: any) {
-      NotificationUIService.showError(e);
+      const message = String(e?.message || '').toLowerCase();
+      const isLoyaltyDup =
+        message.includes('unique constraint failed') ||
+        message.includes('p2002') ||
+        message.includes('loyaltytransaction') ||
+        message.includes('referenceid');
+      const isFinishTooEarly =
+        message.includes('cedo') ||
+        message.includes('too early') ||
+        (message.includes('finish') && message.includes('early'));
+
+      if (isLoyaltyDup) {
+        NotificationUIService.showSuccess('Serviço finalizado. Pontuação já registrada.');
+        await fetchDetails();
+        return;
+      }
+      if (isFinishTooEarly) {
+        Alert.alert(
+          'Ainda não é possível finalizar',
+          'Aguarde alguns minutos para concluir, de acordo com o tempo mínimo do serviço.',
+          [{ text: 'Entendi', style: 'default' }],
+        );
+        return;
+      }
+      NotificationUIService.showError('Não foi possível finalizar agora. Verifique a conexão ou tente novamente.');
     } finally {
       setSubmitting('NONE');
     }
   }, [booking, bookingId, canComplete]);
+
+  const handleSupportPress = useCallback(() => {
+    Alert.alert(
+      'Precisa de ajuda?',
+      'Selecione uma opção:',
+      [
+        { text: 'Problema no endereço / cliente não responde', onPress: () => NotificationUIService.showInfo('Avise o cliente pelo chat e registre o ocorrido.') },
+        { text: 'Atraso / trânsito', onPress: () => NotificationUIService.showInfo('Informe o cliente e ajuste o horário se preciso.') },
+        { text: 'Falar com suporte', onPress: () => router.push('/(provider)/messages' as any) },
+        { text: 'Fechar', style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
+  }, [router]);
 
   if (loading || !booking) {
     return (
@@ -194,6 +231,18 @@ export default function ActiveBookingDetails() {
 
   const isInProgress = booking.status === BookingStatus.IN_PROGRESS;
   const isCompleted = booking.status === BookingStatus.COMPLETED;
+  const statusLabelMap: Record<string, string> = {
+    [BookingStatus.PENDING]: 'Pendente',
+    [BookingStatus.CONFIRMED]: 'Confirmado',
+    [BookingStatus.IN_PROGRESS]: 'Em andamento',
+    [BookingStatus.COMPLETED]: 'Conclu?do',
+    [BookingStatus.CANCELLED]: 'Cancelado',
+    [BookingStatus.REJECTED]: 'Recusado',
+  };
+  const getStatusLabel = (status: any) => {
+    const key = String(status || '').toUpperCase();
+    return statusLabelMap[key] || String(status || '');
+  };
 
   return (
     <View style={styles.container}>
@@ -275,8 +324,14 @@ export default function ActiveBookingDetails() {
 
         <View style={{ height: 4 }} />
         <Text style={[styles.muted, { fontSize: 12 }]}>
-          Status: {booking.status}
+          Status: {getStatusLabel(booking.status)}
         </Text>
+        <TouchableOpacity style={styles.supportLink} onPress={handleSupportPress} accessibilityRole="button" accessibilityLabel="Acionar suporte ou ajuda">
+          <Ionicons name="help-circle-outline" size={16} color={PRIMARY} style={{ marginRight: 6 }} />
+          <Text style={[styles.muted, { color: PRIMARY, fontSize: 13, fontWeight: '600' }]}>
+            Preciso de ajuda
+          </Text>
+        </TouchableOpacity>
       </Animated.View>
     </View>
   );
@@ -298,6 +353,11 @@ const styles = StyleSheet.create({
   icon: { marginRight: 8 },
   title: { fontSize: 18, fontWeight: '700', color: TEXT },
   muted: { color: MUTED, marginTop: 2 },
+  supportLink: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
   btn: { flex: 1, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   btnOutline: { backgroundColor: WHITE, borderColor: PRIMARY },
