@@ -97,7 +97,8 @@ export default () => ({
   geocoding: {
     provider: process.env.GEOCODING_API_PROVIDER || undefined,
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || undefined,
-    openStreetMapNominatimUrl: process.env.OPENSTREETMAP_NOMINATIM_URL || undefined,
+    openStreetMapNominatimUrl:
+      process.env.OPENSTREETMAP_NOMINATIM_URL || undefined,
   },
 
   // PagSeguro
