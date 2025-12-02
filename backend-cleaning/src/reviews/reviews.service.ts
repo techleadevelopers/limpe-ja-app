@@ -75,21 +75,30 @@ export class ReviewsService {
     private missionsService: MissionsService,
   ) {}
 
-  async submitReview(clientId: string, submitReviewDto: SubmitReviewDto): Promise<Review> {
+  async submitReview(
+    clientId: string,
+    submitReviewDto: SubmitReviewDto,
+  ): Promise<Review> {
     const { bookingId, rating, comment } = submitReviewDto;
 
     const booking = await this.bookingsService.findOne(bookingId); // findOne já inclui client e provider
     if (!booking) {
-      throw new NotFoundException(`Agendamento com ID "${bookingId}" não encontrado.`);
+      throw new NotFoundException(
+        `Agendamento com ID "${bookingId}" não encontrado.`,
+      );
     }
 
     // Garantir que a review é do cliente certo
     if (booking.clientId !== clientId) {
-      throw new ForbiddenException('Você não tem permissão para avaliar este agendamento.');
+      throw new ForbiddenException(
+        'Você não tem permissão para avaliar este agendamento.',
+      );
     }
 
     if (booking.status !== BookingStatus.COMPLETED) {
-      throw new BadRequestException('A avaliação só pode ser enviada para agendamentos concluídos.');
+      throw new BadRequestException(
+        'A avaliação só pode ser enviada para agendamentos concluídos.',
+      );
     }
 
     // Impedir review duplicada
@@ -97,7 +106,9 @@ export class ReviewsService {
       where: { bookingId },
     });
     if (existingReview) {
-      throw new ConflictException(`Agendamento com ID "${bookingId}" já possui uma avaliação.`);
+      throw new ConflictException(
+        `Agendamento com ID "${bookingId}" já possui uma avaliação.`,
+      );
     }
 
     // Criar review
@@ -119,21 +130,25 @@ export class ReviewsService {
       },
     });
 
-    this.logger.log(`[ReviewsService] Review ${review.id} criada para booking ${bookingId}.`);
+    this.logger.log(
+      `[ReviewsService] Review ${review.id} criada para booking ${bookingId}.`,
+    );
     // Telemetria: review_created
-    this.logger.log(`[TELEMETRY] review_created: { reviewId: ${review.id}, bookingId: ${bookingId}, clientId: ${clientId}, providerId: ${booking.providerId}, rating: ${rating} }`);
-
+    this.logger.log(
+      `[TELEMETRY] review_created: { reviewId: ${review.id}, bookingId: ${bookingId}, clientId: ${clientId}, providerId: ${booking.providerId}, rating: ${rating} }`,
+    );
 
     // Fidelidade (pontos)
     // Usar o completedBookingsCount do Client para verificar se é a primeira review
     const client = await this.prisma.client.findUnique({
       where: { id: booking.clientId },
-      select: { userId: true, reviewsMade: { select: { id: true } } } // Incluir reviewsMade para contar
+      select: { userId: true, reviewsMade: { select: { id: true } } }, // Incluir reviewsMade para contar
     });
 
     const clientReviewsCount = client?.reviewsMade.length || 0;
 
-    if (clientReviewsCount === 1) { // Se esta é a primeira review do cliente
+    if (clientReviewsCount === 1) {
+      // Se esta é a primeira review do cliente
       await this.loyaltyService.addPoints({
         userId: booking.client.userId,
         points: 20,
@@ -157,24 +172,36 @@ export class ReviewsService {
 
     // >>> MISSIONS: Track event "review.created" para o cliente
     try {
-      await this.missionsService.trackEvent(booking.client.userId, 'review.created', {
-        bookingId: booking.id,
-        providerId: booking.providerId,
-        rating,
-      });
-      this.logger.log(`[ReviewsService] Evento de missão 'review.created' disparado para o cliente ${booking.client.userId}.`);
+      await this.missionsService.trackEvent(
+        booking.client.userId,
+        'review.created',
+        {
+          bookingId: booking.id,
+          providerId: booking.providerId,
+          rating,
+        },
+      );
+      this.logger.log(
+        `[ReviewsService] Evento de missão 'review.created' disparado para o cliente ${booking.client.userId}.`,
+      );
     } catch (e) {
-      this.logger.warn(`[ReviewsService] submitReview: falha ao trackear missão review.created: ${e?.message || e}`);
+      this.logger.warn(
+        `[ReviewsService] submitReview: falha ao trackear missão review.created: ${e?.message || e}`,
+      );
     }
 
     // Atualizar badges do provedor (mantido)
     await this.providersService.updateProviderBadges(booking.providerId);
-    this.logger.log(`[ReviewsService] Badges do provedor ${booking.providerId} atualizados.`);
+    this.logger.log(
+      `[ReviewsService] Badges do provedor ${booking.providerId} atualizados.`,
+    );
 
     return review;
   }
 
-  async findReviews(getReviewsDto: GetReviewsDto): Promise<ReviewWithIncludes[]> {
+  async findReviews(
+    getReviewsDto: GetReviewsDto,
+  ): Promise<ReviewWithIncludes[]> {
     const { providerId, clientId, minRating, maxRating } = getReviewsDto;
     const limit = 10;
     const page = 1;
@@ -193,7 +220,9 @@ export class ReviewsService {
       include: {
         client: { include: { user: true } },
         provider: { include: { user: true } },
-        booking: { include: { providerService: { include: { service: true } } } },
+        booking: {
+          include: { providerService: { include: { service: true } } },
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
@@ -201,11 +230,15 @@ export class ReviewsService {
     });
   }
 
-  async getDetailedRatingBreakdown(providerId: string): Promise<DetailedRatingBreakdown> {
+  async getDetailedRatingBreakdown(
+    providerId: string,
+  ): Promise<DetailedRatingBreakdown> {
     const reviews = await this.prisma.review.findMany({
       where: { providerId },
       include: {
-        booking: { include: { providerService: { include: { service: true } } } },
+        booking: {
+          include: { providerService: { include: { service: true } } },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -232,34 +265,44 @@ export class ReviewsService {
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-    const recentReviews = reviews.filter(r => new Date(r.createdAt) >= thirtyDaysAgo);
+    const recentReviews = reviews.filter(
+      (r) => new Date(r.createdAt) >= thirtyDaysAgo,
+    );
     const previousReviews = reviews.filter(
-      r => new Date(r.createdAt) >= sixtyDaysAgo && new Date(r.createdAt) < thirtyDaysAgo,
+      (r) =>
+        new Date(r.createdAt) >= sixtyDaysAgo &&
+        new Date(r.createdAt) < thirtyDaysAgo,
     );
 
     const recentAvg =
       recentReviews.length > 0
-        ? recentReviews.reduce((sum, r) => sum + r.rating, 0) / recentReviews.length
+        ? recentReviews.reduce((sum, r) => sum + r.rating, 0) /
+          recentReviews.length
         : averageRating;
 
     const previousAvg =
       previousReviews.length > 0
-        ? previousReviews.reduce((sum, r) => sum + r.rating, 0) / previousReviews.length
+        ? previousReviews.reduce((sum, r) => sum + r.rating, 0) /
+          previousReviews.length
         : averageRating;
 
     let recentTrend: 'improving' | 'declining' | 'stable' = 'stable';
     if (recentAvg > previousAvg + 0.2) recentTrend = 'improving';
     else if (recentAvg < previousAvg - 0.2) recentTrend = 'declining';
 
-    const satisfiedReviews = reviews.filter(r => r.rating >= 4).length;
+    const satisfiedReviews = reviews.filter((r) => r.rating >= 4).length;
     const satisfactionRate = (satisfiedReviews / reviews.length) * 100;
 
     return {
       overall: Math.round(averageRating * 10) / 10,
-      punctuality: Math.round((averageRating + (Math.random() * 0.4 - 0.2)) * 10) / 10,
-      quality: Math.round((averageRating + (Math.random() * 0.3 - 0.15)) * 10) / 10,
-      communication: Math.round((averageRating + (Math.random() * 0.3 - 0.15)) * 10) / 10,
-      value: Math.round((averageRating + (Math.random() * 0.2 - 0.1)) * 10) / 10,
+      punctuality:
+        Math.round((averageRating + (Math.random() * 0.4 - 0.2)) * 10) / 10,
+      quality:
+        Math.round((averageRating + (Math.random() * 0.3 - 0.15)) * 10) / 10,
+      communication:
+        Math.round((averageRating + (Math.random() * 0.3 - 0.15)) * 10) / 10,
+      value:
+        Math.round((averageRating + (Math.random() * 0.2 - 0.1)) * 10) / 10,
       totalReviews: reviews.length,
       recentTrend,
       satisfactionRate: Math.round(satisfactionRate * 10) / 10,
@@ -267,7 +310,9 @@ export class ReviewsService {
     };
   }
 
-  async generateSmartSuggestions(providerId: string): Promise<SmartSuggestion[]> {
+  async generateSmartSuggestions(
+    providerId: string,
+  ): Promise<SmartSuggestion[]> {
     const suggestions: SmartSuggestion[] = [];
 
     const provider = (await this.prisma.provider.findUnique({
@@ -302,8 +347,10 @@ export class ReviewsService {
     // 2) Precificação
     if (provider.providerServices.length > 0) {
       const avgPrice =
-        provider.providerServices.reduce((sum, ps) => sum + ps.price.toNumber(), 0) /
-        provider.providerServices.length;
+        provider.providerServices.reduce(
+          (sum, ps) => sum + ps.price.toNumber(),
+          0,
+        ) / provider.providerServices.length;
 
       const marketAverage = avgPrice * (0.9 + Math.random() * 0.2); // ±10%
 
@@ -322,7 +369,7 @@ export class ReviewsService {
     }
 
     // 3) Disponibilidade
-    const recentBookings = provider.bookings.filter(b => {
+    const recentBookings = provider.bookings.filter((b) => {
       const bookingDate = new Date(b.createdAt as unknown as string);
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -333,7 +380,8 @@ export class ReviewsService {
       suggestions.push({
         type: 'availability',
         title: 'Aumente sua disponibilidade',
-        description: 'Você teve poucos agendamentos este mês. Considere aumentar seus horários disponíveis.',
+        description:
+          'Você teve poucos agendamentos este mês. Considere aumentar seus horários disponíveis.',
         impact: 'medium',
         actionable: true,
         data: { recentBookings: recentBookings.length, targetBookings: 15 },
@@ -348,7 +396,10 @@ export class ReviewsService {
         description: `Com ${ratingBreakdown.totalReviews} avaliações e nota ${ratingBreakdown.overall}, você pode se promover como "Prestador Premium".`,
         impact: 'medium',
         actionable: true,
-        data: { rating: ratingBreakdown.overall, reviews: ratingBreakdown.totalReviews },
+        data: {
+          rating: ratingBreakdown.overall,
+          reviews: ratingBreakdown.totalReviews,
+        },
       });
     }
 
