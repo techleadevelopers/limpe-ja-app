@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Patch, Param, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Param,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -23,7 +32,15 @@ export class AdminWithdrawalsController {
     @Query('sortBy') sortBy?: string,
     @Query('sortDir') sortDir?: 'asc' | 'desc',
   ) {
-    return this.payouts.listAdminWithdrawals(status, email, userId, from, to, sortBy, sortDir);
+    return this.payouts.listAdminWithdrawals(
+      status,
+      email,
+      userId,
+      from,
+      to,
+      sortBy,
+      sortDir,
+    );
   }
 
   @Patch(':id/confirm')
