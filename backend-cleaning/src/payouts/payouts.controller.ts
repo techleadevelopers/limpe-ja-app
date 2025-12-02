@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Headers, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -35,6 +43,10 @@ export class PayoutsController {
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     const user = req.user as RequestUserPayload;
-    return this.payoutsService.requestWithdrawal(user.userId, dto, idempotencyKey);
+    return this.payoutsService.requestWithdrawal(
+      user.userId,
+      dto,
+      idempotencyKey,
+    );
   }
 }
