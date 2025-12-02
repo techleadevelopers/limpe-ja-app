@@ -1,5 +1,12 @@
 // backend-cleaning/src/safety/dto/report-panic.dto.ts
-import { IsEnum, IsNumber, IsOptional, IsString, Min, Max } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  Max,
+} from 'class-validator';
 import { PanicType } from '../entities/panic-alert.entity'; // Assuming entity defines enum
 
 export class ReportPanicDto {
