@@ -32,33 +32,79 @@ interface Transition {
 }
 
 export const bookingTransitions: Transition[] = [
-  { from: BookingStatus.PENDING, to: BookingStatus.ACCEPTED, event: BookingEvent.ACCEPT },
-  { from: BookingStatus.PENDING, to: BookingStatus.REJECTED, event: BookingEvent.REJECT },
-  { from: [BookingStatus.PENDING, BookingStatus.ACCEPTED], to: BookingStatus.CANCELED_BY_CUSTOMER, event: BookingEvent.CANCEL_BY_CUSTOMER },
-  { from: [BookingStatus.PENDING, BookingStatus.ACCEPTED], to: BookingStatus.CANCELED_BY_PROVIDER, event: BookingEvent.CANCEL_BY_PROVIDER },
-  { from: BookingStatus.ACCEPTED, to: BookingStatus.STARTED, event: BookingEvent.START },
-  { from: BookingStatus.STARTED, to: BookingStatus.COMPLETED, event: BookingEvent.COMPLETE },
-  { from: BookingStatus.COMPLETED, to: BookingStatus.PAID, event: BookingEvent.PAY },
-  { from: BookingStatus.PAID, to: BookingStatus.REVIEWED, event: BookingEvent.REVIEW },
-  { from: [BookingStatus.COMPLETED, BookingStatus.PAID], to: BookingStatus.DISPUTED, event: BookingEvent.OPEN_DISPUTE },
+  {
+    from: BookingStatus.PENDING,
+    to: BookingStatus.ACCEPTED,
+    event: BookingEvent.ACCEPT,
+  },
+  {
+    from: BookingStatus.PENDING,
+    to: BookingStatus.REJECTED,
+    event: BookingEvent.REJECT,
+  },
+  {
+    from: [BookingStatus.PENDING, BookingStatus.ACCEPTED],
+    to: BookingStatus.CANCELED_BY_CUSTOMER,
+    event: BookingEvent.CANCEL_BY_CUSTOMER,
+  },
+  {
+    from: [BookingStatus.PENDING, BookingStatus.ACCEPTED],
+    to: BookingStatus.CANCELED_BY_PROVIDER,
+    event: BookingEvent.CANCEL_BY_PROVIDER,
+  },
+  {
+    from: BookingStatus.ACCEPTED,
+    to: BookingStatus.STARTED,
+    event: BookingEvent.START,
+  },
+  {
+    from: BookingStatus.STARTED,
+    to: BookingStatus.COMPLETED,
+    event: BookingEvent.COMPLETE,
+  },
+  {
+    from: BookingStatus.COMPLETED,
+    to: BookingStatus.PAID,
+    event: BookingEvent.PAY,
+  },
+  {
+    from: BookingStatus.PAID,
+    to: BookingStatus.REVIEWED,
+    event: BookingEvent.REVIEW,
+  },
+  {
+    from: [BookingStatus.COMPLETED, BookingStatus.PAID],
+    to: BookingStatus.DISPUTED,
+    event: BookingEvent.OPEN_DISPUTE,
+  },
 ];
 
 export class BookingStateMachine {
-  static canTransition(currentStatus: BookingStatus, event: BookingEvent): boolean {
-    return bookingTransitions.some(transition => {
-      const fromStatuses = Array.isArray(transition.from) ? transition.from : [transition.from];
+  static canTransition(
+    currentStatus: BookingStatus,
+    event: BookingEvent,
+  ): boolean {
+    return bookingTransitions.some((transition) => {
+      const fromStatuses = Array.isArray(transition.from)
+        ? transition.from
+        : [transition.from];
       return fromStatuses.includes(currentStatus) && transition.event === event;
     });
   }
 
-  static getNextStatus(currentStatus: BookingStatus, event: BookingEvent): BookingStatus {
-    const transition = bookingTransitions.find(t => {
+  static getNextStatus(
+    currentStatus: BookingStatus,
+    event: BookingEvent,
+  ): BookingStatus {
+    const transition = bookingTransitions.find((t) => {
       const fromStatuses = Array.isArray(t.from) ? t.from : [t.from];
       return fromStatuses.includes(currentStatus) && t.event === event;
     });
 
     if (!transition) {
-      throw new Error(`Invalid transition from status ${currentStatus} with event ${event}`);
+      throw new Error(
+        `Invalid transition from status ${currentStatus} with event ${event}`,
+      );
     }
     return transition.to;
   }
