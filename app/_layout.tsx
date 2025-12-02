@@ -1,5 +1,5 @@
 ﻿import { Slot, SplashScreen, usePathname, useRouter, useSegments } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     ActivityIndicator,
     StyleSheet,
@@ -250,25 +250,92 @@ function resolveSocketUrl() {
 }
 
 function useNotificationsSocket(authToken?: string | null) {
+    const isPlayingRef = useRef(false);
+
+    const playAlertSound = async () => {
+        if (isPlayingRef.current) return;
+        isPlayingRef.current = true;
+        try {
+            const { Audio } = await import('expo-av');
+            const sound = new Audio.Sound();
+            await sound.loadAsync(require('../assets/sounds/new-booking.mp3'));
+            let plays = 0;
+            await sound.playAsync();
+            sound.setOnPlaybackStatusUpdate((status: any) => {
+                if (status?.isLoaded && status.didJustFinish) {
+                    plays += 1;
+                    if (plays < 3) {
+                        sound.replayAsync().catch(() => {
+                            isPlayingRef.current = false;
+                            sound.unloadAsync().catch(() => {});
+                        });
+                    } else {
+                        sound.unloadAsync().catch(() => {});
+                        isPlayingRef.current = false;
+                    }
+                }
+            });
+        } catch (err) {
+            console.warn('[notifications socket] failed to play mp3 sound:', err);
+            isPlayingRef.current = false;
+        }
+    };
+
     useEffect(() => {
         if (!authToken) {
             return;
         }
+
         const socket = io(resolveSocketUrl(), {
             auth: { token: authToken },
             transports: ['websocket'],
         });
-        socket.on('notification', (payload: any) => {
-            NotificationUIService.showInfo(payload?.message ?? 'VocÃª tem uma nova notificaÃ§Ã£o.', payload?.title ?? 'NotificaÃ§Ã£o');
+
+        socket.on('notification', async (payload: any) => {
+            const title = payload?.title ?? 'Notificacao';
+            const message = payload?.message ?? 'Voce tem uma nova notificacao.';
+            NotificationUIService.showInfo(message, title);
+
+            // Beep para servico/agendamento (prestador): notificacao local com som padrao + mp3 no foreground.
+            const kind = (payload?.type || payload?.category || '').toString().toLowerCase();
+            const isService =
+                kind.includes('service') ||
+                kind.includes('servico') ||
+                kind.includes('agendamento') ||
+                kind.includes('booking');
+            if (isService) {
+                try {
+                    // Dispara notificação local com som default (background/foreground).
+                    const Notifications =
+                        (await import('expo-notifications')).default || (await import('expo-notifications'));
+                    await (Notifications as any)?.scheduleNotificationAsync?.({
+                        content: {
+                            title,
+                            body: message,
+                            sound: 'default',
+                            data: payload,
+                        },
+                        trigger: null,
+                    });
+                } catch (err) {
+                    console.warn('[notifications socket] failed to play sound notification:', err);
+                }
+
+                // Toca MP3 custom 3x no foreground para reforcar o alerta sonoro.
+                playAlertSound();
+            }
         });
+
         socket.on('mission-progress', () => {
-            NotificationUIService.showInfo('Seu progresso nas missÃµes foi atualizado.', 'MissÃµes');
+            NotificationUIService.showInfo('Seu progresso nas missões foi atualizado.', 'Missões');
         });
+
         return () => {
             socket.disconnect();
         };
     }, [authToken]);
 }
+
 
 function RootLayoutContent() {
     const { isAuthenticated, isLoading: authIsLoading, user, token } = useAuth();
