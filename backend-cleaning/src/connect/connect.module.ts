@@ -11,4 +11,3 @@ import { ConnectController } from './connect.controller';
   exports: [ConnectService],
 })
 export class ConnectModule {}
-
