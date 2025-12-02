@@ -21,12 +21,30 @@ export class MetricsService {
 
     const { from, to } = query;
 
-    const totalBookings = await this.bookingsRepo.countBookings(userId, from, to);
-    const completedBookings = await this.bookingsRepo.countBookings(userId, from, to, 'COMPLETED');
+    const totalBookings = await this.bookingsRepo.countBookings(
+      userId,
+      from,
+      to,
+    );
+    const completedBookings = await this.bookingsRepo.countBookings(
+      userId,
+      from,
+      to,
+      'COMPLETED',
+    );
     // CORREÇÃO AQUI: 'CANCELED_BY_CUSTOMER' foi alterado para 'CANCELED'
-    const canceledBookings = await this.bookingsRepo.countBookings(userId, from, to, 'CANCELED');
+    const canceledBookings = await this.bookingsRepo.countBookings(
+      userId,
+      from,
+      to,
+      'CANCELED',
+    );
     const avgRating = await this.reviewsRepo.getAverageRating(userId, from, to);
-    const totalSpentCents = await this.paymentsRepo.getTotalSpent(userId, from, to);
+    const totalSpentCents = await this.paymentsRepo.getTotalSpent(
+      userId,
+      from,
+      to,
+    );
 
     // TODO: Implement repeat_rate logic if needed, possibly based on multiple bookings over time
 
@@ -46,9 +64,19 @@ export class MetricsService {
     const { from, to, granularity, metric } = query;
 
     if (metric === 'bookings') {
-      return this.bookingsRepo.getBookingCountsByGranularity(userId, from, to, granularity);
+      return this.bookingsRepo.getBookingCountsByGranularity(
+        userId,
+        from,
+        to,
+        granularity,
+      );
     } else if (metric === 'spent') {
-      return this.paymentsRepo.getTotalSpentByGranularity(userId, from, to, granularity);
+      return this.paymentsRepo.getTotalSpentByGranularity(
+        userId,
+        from,
+        to,
+        granularity,
+      );
     }
     // Adicionar outros tipos de métricas conforme necessário
     return [];
@@ -63,10 +91,22 @@ export class MetricsService {
 
     const totalSearches = await this.bookingsRepo.countBookings(userId); // Proxy: count all bookings ever initiated
     const totalViewProviders = totalSearches; // Proxy: assume every search leads to view (needs real event tracking)
-    const totalStartCheckout = await this.bookingsRepo.countBookings(userId, undefined, undefined, undefined, true); // Proxy: bookings with payment intent
-    const totalPaymentInitiated = await this.paymentsRepo.countPaymentIntents(userId);
+    const totalStartCheckout = await this.bookingsRepo.countBookings(
+      userId,
+      undefined,
+      undefined,
+      undefined,
+      true,
+    ); // Proxy: bookings with payment intent
+    const totalPaymentInitiated =
+      await this.paymentsRepo.countPaymentIntents(userId);
     const totalPaid = await this.paymentsRepo.countPaidPayments(userId);
-    const totalCompleted = await this.bookingsRepo.countBookings(userId, undefined, undefined, 'COMPLETED');
+    const totalCompleted = await this.bookingsRepo.countBookings(
+      userId,
+      undefined,
+      undefined,
+      'COMPLETED',
+    );
 
     return {
       search: totalSearches,
