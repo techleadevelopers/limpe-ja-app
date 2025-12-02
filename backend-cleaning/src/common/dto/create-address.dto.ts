@@ -1,12 +1,23 @@
 // src/common/dto/create-address.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNotEmpty, Length, IsAlphanumeric, IsNumber, Min, Max } from 'class-validator'; // Importe IsNumber, Min, Max
+import {
+  IsString,
+  IsOptional,
+  IsNotEmpty,
+  Length,
+  IsAlphanumeric,
+  IsNumber,
+  Min,
+  Max,
+} from 'class-validator'; // Importe IsNumber, Min, Max
 
 export class CreateAddressDto {
   @ApiProperty({ description: 'CEP', example: '01001000' })
   @IsString({ message: 'O CEP deve ser uma string.' })
   @IsNotEmpty({ message: 'O CEP é obrigatório.' })
-  @Length(8, 9, { message: 'O CEP deve ter 8 ou 9 caracteres (com ou sem hífen).' }) // Validação para 8 ou 9 caracteres
+  @Length(8, 9, {
+    message: 'O CEP deve ter 8 ou 9 caracteres (com ou sem hífen).',
+  }) // Validação para 8 ou 9 caracteres
   cep: string;
 
   @ApiProperty({ description: 'Rua', example: 'Praça da Sé' })
@@ -22,7 +33,9 @@ export class CreateAddressDto {
   @ApiPropertyOptional({ description: 'Complemento', example: 'Apto 10' })
   @IsOptional()
   @IsString({ message: 'O complemento deve ser uma string.' })
-  @Length(0, 100, { message: 'O complemento deve ter no máximo 100 caracteres.' }) // Validação de comprimento para complemento
+  @Length(0, 100, {
+    message: 'O complemento deve ter no máximo 100 caracteres.',
+  }) // Validação de comprimento para complemento
   complement?: string;
 
   @ApiProperty({ description: 'Bairro', example: 'Sé' })
@@ -39,7 +52,10 @@ export class CreateAddressDto {
   @IsString({ message: 'O estado deve ser uma string.' })
   @IsNotEmpty({ message: 'O estado é obrigatório.' })
   @Length(2, 2, { message: 'O estado deve ter 2 caracteres (UF).' }) // Validação para 2 caracteres
-  @IsAlphanumeric('pt-BR', { message: 'O estado deve conter apenas letras e números, mas para UF geralmente são apenas letras.' }) // Opcional, para garantir que seja alfanumérico
+  @IsAlphanumeric('pt-BR', {
+    message:
+      'O estado deve conter apenas letras e números, mas para UF geralmente são apenas letras.',
+  }) // Opcional, para garantir que seja alfanumérico
   state: string;
 
   @ApiProperty({ description: 'Latitude do endereço', example: -23.55052 })
