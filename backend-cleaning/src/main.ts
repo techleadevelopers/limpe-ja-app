@@ -85,8 +85,8 @@ async function bootstrap() {
         enableImplicitConversion: true,
       },
       // Configura as mensagens de erro de validação para serem localizadas
-      exceptionFactory: errors => {
-        const messages = errors.map(error => {
+      exceptionFactory: (errors) => {
+        const messages = errors.map((error) => {
           // Assume que a primeira mensagem de erro de cada validação é a mais relevante
           const constraintMessage = Object.values(error.constraints ?? {})[0];
           return constraintMessage;
@@ -101,23 +101,34 @@ async function bootstrap() {
 
   try {
     admin.initializeApp();
-    console.log('[Firebase Admin] SDK inicializado automaticamente no ambiente Cloud Run ou GCP.');
+    console.log(
+      '[Firebase Admin] SDK inicializado automaticamente no ambiente Cloud Run ou GCP.',
+    );
   } catch (error: any) {
-    console.error(`[Firebase Admin] Erro na inicialização automática do SDK: ${error.message}`);
+    console.error(
+      `[Firebase Admin] Erro na inicialização automática do SDK: ${error.message}`,
+    );
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       try {
-        const serviceAccountPath = path.resolve(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS);
+        const serviceAccountPath = path.resolve(
+          process.cwd(),
+          process.env.GOOGLE_APPLICATION_CREDENTIALS,
+        );
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const serviceAccount = require(serviceAccountPath);
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
         });
-        console.log('[Firebase Admin] SDK inicializado via GOOGLE_APPLICATION_CREDENTIALS.');
+        console.log(
+          '[Firebase Admin] SDK inicializado via GOOGLE_APPLICATION_CREDENTIALS.',
+        );
       } catch (innerError: any) {
         console.error(
           `[Firebase Admin] Erro ao carregar credenciais de GOOGLE_APPLICATION_CREDENTIALS: ${innerError.message}`,
         );
-        throw new Error('Firebase Admin SDK failed to initialize via GOOGLE_APPLICATION_CREDENTIALS.');
+        throw new Error(
+          'Firebase Admin SDK failed to initialize via GOOGLE_APPLICATION_CREDENTIALS.',
+        );
       }
     } else {
       console.warn(
@@ -164,4 +175,3 @@ async function bootstrap() {
 }
 
 bootstrap();
-
