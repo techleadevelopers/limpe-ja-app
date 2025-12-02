@@ -14,13 +14,13 @@ if (sentryDsn) {
     environment: nodeEnv,
     tracesSampleRate: 1.0,
     profilesSampleRate: 1.0,
-    integrations: [
-      nodeProfilingIntegration(),
-    ],
+    integrations: [nodeProfilingIntegration()],
   });
   console.log('[Sentry] Inicializado com sucesso.');
 } else {
-  console.warn('[Sentry] SENTRY_DSN não configurado. O monitoramento de erros e performance do Sentry está desativado.');
+  console.warn(
+    '[Sentry] SENTRY_DSN não configurado. O monitoramento de erros e performance do Sentry está desativado.',
+  );
 }
 
 export { Sentry };
