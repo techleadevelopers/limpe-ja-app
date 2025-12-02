@@ -14,8 +14,10 @@ type TokenResponse = {
 @Injectable()
 export class ConnectService {
   private readonly logger = new Logger(ConnectService.name);
-  private readonly connectAuthorizeBaseSandbox = 'https://connect.sandbox.pagbank.com.br/oauth2/authorize';
-  private readonly connectAuthorizeBaseProd = 'https://connect.pagbank.com.br/oauth2/authorize';
+  private readonly connectAuthorizeBaseSandbox =
+    'https://connect.sandbox.pagbank.com.br/oauth2/authorize';
+  private readonly connectAuthorizeBaseProd =
+    'https://connect.pagbank.com.br/oauth2/authorize';
 
   constructor(
     private readonly config: ConfigService,
@@ -23,7 +25,9 @@ export class ConnectService {
   ) {}
 
   private apiBase(): string {
-    const base = this.config.get<string>('PAGSEGURO_API_BASE_URL') || 'https://sandbox.api.pagseguro.com';
+    const base =
+      this.config.get<string>('PAGSEGURO_API_BASE_URL') ||
+      'https://sandbox.api.pagseguro.com';
     return base.replace(/\/$/, '');
   }
 
@@ -31,9 +35,13 @@ export class ConnectService {
 
   buildAuthorizeUrl(scope: string, state = 'limpeja_auth'): string {
     const clientId = this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_ID');
-    const redirectUri = this.config.get<string>('PAGSEGURO_CONNECT_REDIRECT_URI');
+    const redirectUri = this.config.get<string>(
+      'PAGSEGURO_CONNECT_REDIRECT_URI',
+    );
     const isSandbox = /sandbox\./i.test(this.apiBase());
-    const authorizeBase = isSandbox ? this.connectAuthorizeBaseSandbox : this.connectAuthorizeBaseProd;
+    const authorizeBase = isSandbox
+      ? this.connectAuthorizeBaseSandbox
+      : this.connectAuthorizeBaseProd;
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: clientId || '',
@@ -45,9 +53,12 @@ export class ConnectService {
   }
 
   async exchangeAuthorizationCode(code: string): Promise<TokenResponse> {
-    const client_id = this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_ID') || '';
-    const client_secret = this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_SECRET') || '';
-    const redirect_uri = this.config.get<string>('PAGSEGURO_CONNECT_REDIRECT_URI') || '';
+    const client_id =
+      this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_ID') || '';
+    const client_secret =
+      this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_SECRET') || '';
+    const redirect_uri =
+      this.config.get<string>('PAGSEGURO_CONNECT_REDIRECT_URI') || '';
     const url = `${this.apiBase()}/oauth2/token`;
     const body = {
       grant_type: 'authorization_code',
@@ -59,30 +70,39 @@ export class ConnectService {
     const bearer = this.config.get<string>('PAGSEGURO_API_TOKEN') || '';
     const headers: any = {
       'Content-Type': 'application/json',
-      'X_CLIENT_ID': client_id,
-      'X_CLIENT_SECRET': client_secret,
+      X_CLIENT_ID: client_id,
+      X_CLIENT_SECRET: client_secret,
     };
     if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
-    const res = await axios.post<TokenResponse>(url, body, { timeout: 15000, headers });
+    const res = await axios.post<TokenResponse>(url, body, {
+      timeout: 15000,
+      headers,
+    });
     await this.saveTokens(res.data);
     return res.data;
   }
 
   async refreshAccessToken(): Promise<TokenResponse> {
-    const refresh_token = (await this.cache.get<string>('connect:pagbank:refresh_token')) || '';
+    const refresh_token =
+      (await this.cache.get<string>('connect:pagbank:refresh_token')) || '';
     if (!refresh_token) throw new Error('No refresh_token stored');
     const url = `${this.apiBase()}/oauth2/token`;
-    const client_id = this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_ID') || '';
-    const client_secret = this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_SECRET') || '';
+    const client_id =
+      this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_ID') || '';
+    const client_secret =
+      this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_SECRET') || '';
     const body = { grant_type: 'refresh_token', refresh_token } as const;
     const bearer = this.config.get<string>('PAGSEGURO_API_TOKEN') || '';
     const headers: any = {
       'Content-Type': 'application/json',
-      'X_CLIENT_ID': client_id,
-      'X_CLIENT_SECRET': client_secret,
+      X_CLIENT_ID: client_id,
+      X_CLIENT_SECRET: client_secret,
     };
     if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
-    const res = await axios.post<TokenResponse>(url, body, { timeout: 15000, headers });
+    const res = await axios.post<TokenResponse>(url, body, {
+      timeout: 15000,
+      headers,
+    });
     await this.saveTokens(res.data);
     return res.data;
   }
@@ -95,7 +115,9 @@ export class ConnectService {
     }
 
     const access = await this.cache.get<string>('connect:pagbank:access_token');
-    const expiresAt = await this.cache.get<number>('connect:pagbank:expires_at'); // epoch ms
+    const expiresAt = await this.cache.get<number>(
+      'connect:pagbank:expires_at',
+    ); // epoch ms
     const now = Date.now();
     if (access && expiresAt && now < expiresAt - 30_000) {
       return access;
@@ -115,10 +137,22 @@ export class ConnectService {
   private async saveTokens(t: TokenResponse): Promise<void> {
     const ttlSeconds = Math.max(60, Math.floor(t.expires_in));
     const expiresAt = Date.now() + ttlSeconds * 1000;
-    await this.cache.set('connect:pagbank:access_token', t.access_token, ttlSeconds);
+    await this.cache.set(
+      'connect:pagbank:access_token',
+      t.access_token,
+      ttlSeconds,
+    );
     // store refresh without TTL to survive a bit longer; optionally set a long TTL
-    await this.cache.set('connect:pagbank:refresh_token', t.refresh_token, 7 * 24 * 3600);
-    await this.cache.set('connect:pagbank:expires_at', expiresAt, 7 * 24 * 3600);
+    await this.cache.set(
+      'connect:pagbank:refresh_token',
+      t.refresh_token,
+      7 * 24 * 3600,
+    );
+    await this.cache.set(
+      'connect:pagbank:expires_at',
+      expiresAt,
+      7 * 24 * 3600,
+    );
   }
 
   /**
@@ -126,24 +160,29 @@ export class ConnectService {
    * It sends the public key and created_at to /oauth2/token with grant_type=challenge.
    */
   async runChallenge(): Promise<any> {
-    const client_id = this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_ID') || '';
-    const client_secret = this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_SECRET') || '';
+    const client_id =
+      this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_ID') || '';
+    const client_secret =
+      this.config.get<string>('PAGSEGURO_CONNECT_CLIENT_SECRET') || '';
     const url = `${this.apiBase()}/oauth2/token`;
 
     // Read public key (PEM) and created_at (epoch ms) from filesystem
-    const keyPath = this.config.get<string>('PAGSEGURO_PUBLIC_KEY_PATH')
-      || path.resolve(process.cwd(), 'public-key');
+    const keyPath =
+      this.config.get<string>('PAGSEGURO_PUBLIC_KEY_PATH') ||
+      path.resolve(process.cwd(), 'public-key');
     if (!fs.existsSync(keyPath)) {
       throw new Error(`Public key not found at ${keyPath}`);
     }
     const public_key = fs.readFileSync(keyPath, 'utf8');
     const stat = fs.statSync(keyPath);
-    const created_at = Math.floor((stat.birthtimeMs || stat.mtimeMs || Date.now()));
+    const created_at = Math.floor(
+      stat.birthtimeMs || stat.mtimeMs || Date.now(),
+    );
 
     const headers: any = {
       'Content-Type': 'application/json',
-      'X_CLIENT_ID': client_id,
-      'X_CLIENT_SECRET': client_secret,
+      X_CLIENT_ID: client_id,
+      X_CLIENT_SECRET: client_secret,
       Authorization: `Bearer ${await this.getAccessToken()}`,
     };
     const body = {
@@ -158,7 +197,9 @@ export class ConnectService {
       this.logger.log(`[ConnectService] Challenge response received.`);
       return res.data;
     } catch (e: any) {
-      this.logger.error(`[ConnectService] Challenge error: ${e?.response?.status} ${JSON.stringify(e?.response?.data || e.message)}`);
+      this.logger.error(
+        `[ConnectService] Challenge error: ${e?.response?.status} ${JSON.stringify(e?.response?.data || e.message)}`,
+      );
       throw e;
     }
   }
@@ -178,7 +219,10 @@ export class ConnectService {
       throw new BadRequestException('name and redirect_uri are required');
     }
     const url = `${this.apiBase()}/oauth2/application`;
-    const bearer = (await this.getAccessToken()) || this.config.get<string>('PAGSEGURO_API_TOKEN') || '';
+    const bearer =
+      (await this.getAccessToken()) ||
+      this.config.get<string>('PAGSEGURO_API_TOKEN') ||
+      '';
     const headers: any = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${bearer}`,
@@ -196,8 +240,12 @@ export class ConnectService {
     } catch (e: any) {
       const status = e?.response?.status;
       const data = e?.response?.data;
-      this.logger.error(`[ConnectService] createApplication error: ${status} ${JSON.stringify(data || e.message)}`);
-      throw new BadRequestException(data?.message || 'Falha ao criar aplicação no PagBank');
+      this.logger.error(
+        `[ConnectService] createApplication error: ${status} ${JSON.stringify(data || e.message)}`,
+      );
+      throw new BadRequestException(
+        data?.message || 'Falha ao criar aplicação no PagBank',
+      );
     }
   }
 
@@ -206,7 +254,10 @@ export class ConnectService {
    */
   async getApplication(clientId: string): Promise<any> {
     const url = `${this.apiBase()}/oauth2/application/${encodeURIComponent(clientId)}`;
-    const bearer = (await this.getAccessToken()) || this.config.get<string>('PAGSEGURO_API_TOKEN') || '';
+    const bearer =
+      (await this.getAccessToken()) ||
+      this.config.get<string>('PAGSEGURO_API_TOKEN') ||
+      '';
     const headers: any = {
       Authorization: `Bearer ${bearer}`,
     };
