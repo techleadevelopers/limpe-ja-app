@@ -6,7 +6,7 @@ import {
   ProviderService,
   Review,
   Prisma, // <-- Importe Prisma para o tipo Decimal
-  BookingStatus // <-- Importe o enum BookingStatus COMPLETO
+  BookingStatus, // <-- Importe o enum BookingStatus COMPLETO
 } from '@prisma/client';
 
 // Esta classe serve como uma representação da entidade Booking
@@ -37,8 +37,13 @@ export class BookingEntity implements PrismaBooking {
   // ADICIONADO: Relação address também pode ser null
   address?: {
     id?: string; // Adicionado id como opcional para o construtor
-    cep: string; street: string; number: string;
-    complement: string | null; neighborhood: string; city: string; state: string;
+    cep: string;
+    street: string;
+    number: string;
+    complement: string | null;
+    neighborhood: string;
+    city: string;
+    state: string;
     // CORREÇÃO: Adicionado latitude e longitude à tipagem do Address
     latitude: Prisma.Decimal;
     longitude: Prisma.Decimal;
@@ -67,7 +72,10 @@ export class BookingEntity implements PrismaBooking {
     }
 
     // ADICIONADO: Assegurar que discountAmount seja Prisma.Decimal
-    if (partial.discountAmount !== undefined && partial.discountAmount !== null) {
+    if (
+      partial.discountAmount !== undefined &&
+      partial.discountAmount !== null
+    ) {
       this.discountAmount = new Prisma.Decimal(partial.discountAmount);
     } else {
       this.discountAmount = new Prisma.Decimal(0); // Valor padrão
@@ -92,23 +100,33 @@ export class BookingEntity implements PrismaBooking {
       this.scheduledDate = partial.scheduledDate;
     }
 
-
     // O status é atribuído diretamente, o TS agora deve aceitar o enum completo
     // Se partial.status for undefined, o tipo inferido será BookingStatus | undefined
-    this.status = partial.status as BookingStatus; // Força o cast, assumindo que partial.status é válido ou será tratado.
+    this.status = partial.status; // Força o cast, assumindo que partial.status é válido ou será tratado.
 
     // Garanta que addressId e address sejam null se não forem fornecidos ou se o tipo do prisma for null
     this.addressId = partial.addressId === undefined ? null : partial.addressId;
     this.address = partial.address === undefined ? null : partial.address;
 
     // CORREÇÃO: Inicializar subscriptionId e couponId
-    this.subscriptionId = partial.subscriptionId === undefined ? null : partial.subscriptionId;
+    this.subscriptionId =
+      partial.subscriptionId === undefined ? null : partial.subscriptionId;
     this.couponId = partial.couponId === undefined ? null : partial.couponId;
 
     // Auditoria: parse de datas e FKs
-    this.startedAt = partial.startedAt ? new Date(partial.startedAt as any) : null;
-    this.completedAt = partial.completedAt ? new Date(partial.completedAt as any) : null;
-    this.startedByUserId = partial.startedByUserId === undefined ? null : (partial.startedByUserId as any);
-    this.completedByUserId = partial.completedByUserId === undefined ? null : (partial.completedByUserId as any);
+    this.startedAt = partial.startedAt
+      ? new Date(partial.startedAt as any)
+      : null;
+    this.completedAt = partial.completedAt
+      ? new Date(partial.completedAt as any)
+      : null;
+    this.startedByUserId =
+      partial.startedByUserId === undefined
+        ? null
+        : (partial.startedByUserId as any);
+    this.completedByUserId =
+      partial.completedByUserId === undefined
+        ? null
+        : (partial.completedByUserId as any);
   }
 }
