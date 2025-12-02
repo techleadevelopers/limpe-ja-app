@@ -1,5 +1,14 @@
 // backend-cleaning/src/subscriptions/subscriptions.controller.ts
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
@@ -15,9 +24,15 @@ export class SubscriptionsController {
 
   @Post()
   @Roles(UserRole.CLIENT) // Only clients can create subscriptions
-  async create(@Body() createSubscriptionDto: CreateSubscriptionDto, @Req() req) {
+  async create(
+    @Body() createSubscriptionDto: CreateSubscriptionDto,
+    @Req() req,
+  ) {
     // Ensure the subscription is for the authenticated client
-    if (req.user.role === UserRole.CLIENT && req.user.id !== createSubscriptionDto.clientId) {
+    if (
+      req.user.role === UserRole.CLIENT &&
+      req.user.id !== createSubscriptionDto.clientId
+    ) {
       // Or, better, derive clientId from req.user.id directly if it's a client's subscription
       createSubscriptionDto.clientId = req.user.id;
     }
@@ -42,14 +57,27 @@ export class SubscriptionsController {
   @Roles(UserRole.CLIENT, UserRole.ADMIN) // Clients can view their own, Admin can view any
   async getSubscriptionDetails(@Param('id') id: string, @Req() req) {
     // Add logic to ensure client can only see their own subscription
-    return this.subscriptionsService.getSubscriptionDetails(id, req.user.id, req.user.role);
+    return this.subscriptionsService.getSubscriptionDetails(
+      id,
+      req.user.id,
+      req.user.role,
+    );
   }
 
   @Patch(':id')
   @Roles(UserRole.CLIENT, UserRole.ADMIN) // Clients can update their own (e.g., pause/cancel), Admin can update any
-  async update(@Param('id') id: string, @Body() updateSubscriptionDto: UpdateSubscriptionDto, @Req() req) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateSubscriptionDto: UpdateSubscriptionDto,
+    @Req() req,
+  ) {
     // Add logic to ensure client can only update their own subscription
-    return this.subscriptionsService.update(id, updateSubscriptionDto, req.user.id, req.user.role);
+    return this.subscriptionsService.update(
+      id,
+      updateSubscriptionDto,
+      req.user.id,
+      req.user.role,
+    );
   }
 
   // Internal endpoint, possibly for admin or triggered by a webhook/scheduled job
