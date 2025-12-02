@@ -25,7 +25,11 @@ export class RedisLockService implements OnModuleDestroy {
    * @param ttlMs O tempo de vida do lock em milissegundos (opcional, padrão 5s).
    * @returns true se o lock foi adquirido, false caso contrário.
    */
-  async acquireLock(key: string, value: string, ttlMs: number = this.defaultTtlMs): Promise<boolean> {
+  async acquireLock(
+    key: string,
+    value: string,
+    ttlMs: number = this.defaultTtlMs,
+  ): Promise<boolean> {
     // SET key value PX ttlMs NX
     // PX: Set the specified expire time, in milliseconds.
     // NX: Only set the key if it does not already exist.
