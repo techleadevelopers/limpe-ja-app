@@ -16,7 +16,8 @@ export class ServicesService {
   ) {}
 
   async create(createServiceDto: CreateServiceDto): Promise<Service> {
-    const { name, description, icon, defaultPricingType } = createServiceDto as any;
+    const { name, description, icon, defaultPricingType } =
+      createServiceDto as any;
     const newService = await this.prisma.service.create({
       data: {
         name,
@@ -31,7 +32,9 @@ export class ServicesService {
   }
 
   async findAll(): Promise<Service[]> {
-    let services = await this.cacheService.get<Service[]>(this.SERVICES_CACHE_KEY);
+    let services = await this.cacheService.get<Service[]>(
+      this.SERVICES_CACHE_KEY,
+    );
     if (services) return services;
     services = await this.prisma.service.findMany();
     await this.cacheService.set(this.SERVICES_CACHE_KEY, services);
@@ -47,14 +50,19 @@ export class ServicesService {
     return service;
   }
 
-  async update(id: string, updateServiceDto: UpdateServiceDto): Promise<Service | null> {
+  async update(
+    id: string,
+    updateServiceDto: UpdateServiceDto,
+  ): Promise<Service | null> {
     try {
-      const { name, description, icon, defaultPricingType } = updateServiceDto as any;
+      const { name, description, icon, defaultPricingType } =
+        updateServiceDto as any;
       const data: Prisma.ServiceUpdateInput = {};
       if (name !== undefined) data.name = name;
       if (description !== undefined) data.description = description;
       if (icon !== undefined) data.icon = icon;
-      if (defaultPricingType !== undefined) data.defaultPricingType = defaultPricingType as any;
+      if (defaultPricingType !== undefined)
+        data.defaultPricingType = defaultPricingType;
 
       const updated = await this.prisma.service.update({ where: { id }, data });
       await this.cacheService.del(this.SERVICES_CACHE_KEY);
@@ -62,7 +70,9 @@ export class ServicesService {
       return updated;
     } catch (error: any) {
       if (error.code === 'P2025') {
-        throw new NotFoundException(`Tipo de serviço com ID "${id}" não encontrado.`);
+        throw new NotFoundException(
+          `Tipo de serviço com ID "${id}" não encontrado.`,
+        );
       }
       throw error;
     }
@@ -75,13 +85,16 @@ export class ServicesService {
       await this.cacheService.del(`${this.SERVICES_CACHE_KEY}:${id}`);
     } catch (error: any) {
       if (error.code === 'P2025') {
-        throw new NotFoundException(`Tipo de serviço com ID "${id}" não encontrado.`);
+        throw new NotFoundException(
+          `Tipo de serviço com ID "${id}" não encontrado.`,
+        );
       }
       if (error.code === 'P2003') {
-        throw new Error(`Não é possível deletar o tipo de serviço com ID "${id}" porque ele está associado a serviços de provedores.`);
+        throw new Error(
+          `Não é possível deletar o tipo de serviço com ID "${id}" porque ele está associado a serviços de provedores.`,
+        );
       }
       throw error;
     }
   }
 }
-
