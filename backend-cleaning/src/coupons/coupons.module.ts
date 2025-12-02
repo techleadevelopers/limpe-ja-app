@@ -7,11 +7,11 @@ import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    PrismaModule,                 // Usa PrismaService via módulo (boa prática)
-    forwardRef(() => UsersModule) // Necessário pois CouponsService depende de UsersService
+    PrismaModule, // Usa PrismaService via módulo (boa prática)
+    forwardRef(() => UsersModule), // Necessário pois CouponsService depende de UsersService
   ],
   controllers: [CouponsController],
   providers: [CouponsService],
-  exports: [CouponsService],      // Para MissionsModule (e outros) consumirem
+  exports: [CouponsService], // Para MissionsModule (e outros) consumirem
 })
 export class CouponsModule {}
