@@ -11,7 +11,7 @@ import { QueuesModule } from '../queues/queues.module';
   imports: [
     forwardRef(() => BookingsModule), // CORREÇÃO: Adicionado forwardRef para BookingsModule
     PaymentsModule,
-    forwardRef(() => QueuesModule),   // CORREÇÃO: Adicionado forwardRef para QueuesModule
+    forwardRef(() => QueuesModule), // CORREÇÃO: Adicionado forwardRef para QueuesModule
   ],
   controllers: [SubscriptionsController],
   providers: [SubscriptionsService, PrismaService],
