@@ -1,5 +1,14 @@
 // backend-cleaning/src/guarantee/dto/submit-claim.dto.ts
-import { IsString, IsUUID, IsOptional, IsArray, IsUrl, IsNumber, IsPositive, Min } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsArray,
+  IsUrl,
+  IsNumber,
+  IsPositive,
+  Min,
+} from 'class-validator';
 
 export class SubmitClaimDto {
   @IsUUID()
