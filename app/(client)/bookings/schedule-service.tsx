@@ -2050,7 +2050,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-start',
     },
     sectionTitlePlain: {
-        fontSize: 18,                 // um pouco menor que antes pra ficar refinado
+        fontSize: 22,                 // maior para dar mais destaque ao título do review
         fontWeight: Platform.OS === 'ios' ? '600' : '700', // heavy on android, sem exagero no iOS
         color: AppColors.textBody,
         letterSpacing: 0.2,
@@ -2159,11 +2159,12 @@ const styles = StyleSheet.create({
     },
     summaryText: {
         flex: 1,
-        fontSize: 14,
+        fontSize: 16,
         color: AppColors.textBody,
-        lineHeight: 20,
+        lineHeight: 24,
     },
     summaryLabel: {
+        fontSize: 16,
         fontWeight: '600',
     },
     priceSummary: {
@@ -2198,11 +2199,11 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     priceLabel: {
-        fontSize: 14,
+        fontSize: 15,
         color: AppColors.textBody,
     },
     priceValue: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
         color: AppColors.textBody,
     },
