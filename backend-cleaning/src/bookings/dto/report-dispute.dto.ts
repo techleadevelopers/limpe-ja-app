@@ -1,5 +1,12 @@
 // backend-cleaning/src/bookings/dto/report-dispute.dto.ts
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsPositive } from 'class-validator'; // Adicionado IsNumber, IsPositive
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsNumber,
+  IsPositive,
+} from 'class-validator'; // Adicionado IsNumber, IsPositive
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum DisputeReason {
@@ -30,7 +37,7 @@ export class ReportDisputeDto {
 
   @ApiProperty({
     description: 'Valor solicitado para reembolso, se aplicável.',
-    example: 50.00,
+    example: 50.0,
     required: false,
   })
   @IsOptional()
