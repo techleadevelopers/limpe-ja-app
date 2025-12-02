@@ -352,7 +352,6 @@ export default function MyBookingsScreen() {
     async (currentFilter: FilterType, refreshing: boolean = false) => {
       if (!refreshing) {
         setIsLoading(true);
-        setHeaderTitle('Carregando agendamentos...');
       }
       setBookings([]);
       Animated.timing(contentAnim, { toValue: 0, duration: 200, easing: Easing.out(Easing.ease), useNativeDriver: true }).start(async () => {
