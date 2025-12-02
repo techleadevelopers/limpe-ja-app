@@ -56,7 +56,13 @@ import { I18nModule } from '../common/i18n/i18n.module';
     I18nModule, // ✅ garante I18nService aqui também
   ],
   controllers: [],
-  providers: [QueuesService, VerificationWorker, NotificationWorker, DisputeWorker, PayoutWorker],
+  providers: [
+    QueuesService,
+    VerificationWorker,
+    NotificationWorker,
+    DisputeWorker,
+    PayoutWorker,
+  ],
   exports: [QueuesService, BullModule],
 })
 export class QueuesModule {}
