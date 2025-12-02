@@ -20,7 +20,9 @@ export class EscalationsJobProcessor extends WorkerHost {
 
   async process(job: Job<CheckSlaJobData, any, string>): Promise<any> {
     const { ticketId, category } = job.data;
-    console.log(`Processing SLA check for ticket ${ticketId}, category ${category}`);
+    console.log(
+      `Processing SLA check for ticket ${ticketId}, category ${category}`,
+    );
     await this.supportService.handleSlaEscalation(ticketId, category);
   }
 
@@ -33,6 +35,8 @@ export class EscalationsJobProcessor extends WorkerHost {
   @OnWorkerEvent('failed')
   onFailed(job: Job, err: Error) {
     // Usando o nome da fila diretamente, pois é conhecido
-    console.error(`Job ${job.id} failed for queue ${QUEUE_NAME} with error ${err.message}`);
+    console.error(
+      `Job ${job.id} failed for queue ${QUEUE_NAME} with error ${err.message}`,
+    );
   }
 }
