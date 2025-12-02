@@ -9,7 +9,11 @@ import { AdminSettingsController } from './admin-settings.controller';
 
 @Module({
   imports: [PrismaModule, forwardRef(() => QueuesModule), SettingsModule],
-  controllers: [AdminDashboardController, AdminQueuesController, AdminSettingsController],
+  controllers: [
+    AdminDashboardController,
+    AdminQueuesController,
+    AdminSettingsController,
+  ],
   providers: [AdminDashboardService],
 })
 export class AdminModule {}
