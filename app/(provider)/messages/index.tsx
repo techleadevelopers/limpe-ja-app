@@ -328,6 +328,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     marginHorizontal: 10,
+    position: 'absolute',
+    left: 0,
+    right: 0,
   },
   greetingText: {
     fontSize: 18, // Aumentado para 18px para um look mais premium e legível
