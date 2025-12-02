@@ -1,8 +1,25 @@
 ﻿// backend-cleaning/src/disputes/dispute.service.ts
 
-import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { BookingStatus, DisputeStatus, Prisma, TransactionType, UserRole, SupportTicketCategory, SupportTicketStatus, LedgerEntryType } from '@prisma/client';
+import {
+  BookingStatus,
+  DisputeStatus,
+  Prisma,
+  TransactionType,
+  UserRole,
+  SupportTicketCategory,
+  SupportTicketStatus,
+  LedgerEntryType,
+} from '@prisma/client';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { UpdateDisputeDto } from './dto/update-dispute.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -27,23 +44,40 @@ export class DisputeService {
    * @param reporterRole Função do usuário que está reportando.
    * @returns A disputa criada.
    */
-  async createDispute(createDisputeDto: CreateDisputeDto, reporterUserId: string, reporterRole: UserRole) {
-    this.logger.log(`[DisputeService] createDispute: Iniciando criação de disputa para booking ${createDisputeDto.bookingId} por user ${reporterUserId}.`);
+  async createDispute(
+    createDisputeDto: CreateDisputeDto,
+    reporterUserId: string,
+    reporterRole: UserRole,
+  ) {
+    this.logger.log(
+      `[DisputeService] createDispute: Iniciando criação de disputa para booking ${createDisputeDto.bookingId} por user ${reporterUserId}.`,
+    );
 
     const booking = await this.prisma.booking.findUnique({
       where: { id: createDisputeDto.bookingId },
-      include: { client: { include: { user: true } }, provider: { include: { user: true } } }
+      include: {
+        client: { include: { user: true } },
+        provider: { include: { user: true } },
+      },
     });
 
     if (!booking) {
-      throw new NotFoundException(`Agendamento com ID "${createDisputeDto.bookingId}" não encontrado.`);
+      throw new NotFoundException(
+        `Agendamento com ID "${createDisputeDto.bookingId}" não encontrado.`,
+      );
     }
 
     const isClientOfBooking = booking.client.userId === reporterUserId;
     const isProviderOfBooking = booking.provider.userId === reporterUserId;
 
-    if (!isClientOfBooking && !isProviderOfBooking && reporterRole !== UserRole.ADMIN) {
-      throw new ForbiddenException('Você não tem permissão para abrir uma disputa neste agendamento.');
+    if (
+      !isClientOfBooking &&
+      !isProviderOfBooking &&
+      reporterRole !== UserRole.ADMIN
+    ) {
+      throw new ForbiddenException(
+        'Você não tem permissão para abrir uma disputa neste agendamento.',
+      );
     }
 
     const existingActiveDispute = await this.prisma.dispute.findFirst({
@@ -56,11 +90,14 @@ export class DisputeService {
     });
 
     if (existingActiveDispute) {
-      throw new BadRequestException(`Já existe uma disputa ativa (${existingActiveDispute.id}) para o agendamento ${createDisputeDto.bookingId}.`);
+      throw new BadRequestException(
+        `Já existe uma disputa ativa (${existingActiveDispute.id}) para o agendamento ${createDisputeDto.bookingId}.`,
+      );
     }
 
     try {
-      const newDispute = await this.prisma.$transaction(async (prisma) => { // NEW: Atomic transaction
+      const newDispute = await this.prisma.$transaction(async (prisma) => {
+        // NEW: Atomic transaction
         const createdDispute = await prisma.dispute.create({
           data: {
             bookingId: createDisputeDto.bookingId,
@@ -69,18 +106,26 @@ export class DisputeService {
             description: createDisputeDto.description,
             status: DisputeStatus.PENDING,
             attachments: createDisputeDto.attachments || [],
-            refundAmountProposed: createDisputeDto.refundAmountProposed ? new Prisma.Decimal(createDisputeDto.refundAmountProposed) : null,
+            refundAmountProposed: createDisputeDto.refundAmountProposed
+              ? new Prisma.Decimal(createDisputeDto.refundAmountProposed)
+              : null,
           },
         });
 
         // Update booking status
-        await this.bookingsService.updateStatus(booking.id, BookingStatus.PENDING_DISPUTE, UserRole.ADMIN);
+        await this.bookingsService.updateStatus(
+          booking.id,
+          BookingStatus.PENDING_DISPUTE,
+          UserRole.ADMIN,
+        );
 
         // Ledger HOLD (cap no totalPrice)
         try {
           const providerUserId = booking.provider.userId;
           const bookingTotal = Number(booking.totalPrice.toFixed(2));
-          const proposed = createDisputeDto.refundAmountProposed ? Number(createDisputeDto.refundAmountProposed) : bookingTotal;
+          const proposed = createDisputeDto.refundAmountProposed
+            ? Number(createDisputeDto.refundAmountProposed)
+            : bookingTotal;
           const holdAmount = Math.max(0, Math.min(bookingTotal, proposed));
           if (holdAmount > 0) {
             await prisma.ledgerEntry.create({
@@ -96,7 +141,8 @@ export class DisputeService {
         } catch {}
 
         // Send notification to admin
-        await this.notificationsService.createNotification({ // Using createNotification for consistency
+        await this.notificationsService.createNotification({
+          // Using createNotification for consistency
           userId: 'ADMIN_USER_ID', // Placeholder for admin user ID
           type: 'DISPUTE_CREATED',
           title: 'Nova Disputa Aberta',
@@ -104,17 +150,26 @@ export class DisputeService {
           targetUrl: `/app/disputes/${createdDispute.id}`,
           category: 'dispute', // NEW: Added category
           actionButtons: {
-            primary: { text: 'Ver Disputa', action: 'view_dispute', data: { disputeId: createdDispute.id } }
-          }
+            primary: {
+              text: 'Ver Disputa',
+              action: 'view_dispute',
+              data: { disputeId: createdDispute.id },
+            },
+          },
         });
-        this.logger.log(`[DisputeService] createDispute: Disputa ${createdDispute.id} criada e notificação enviada para admins.`);
+        this.logger.log(
+          `[DisputeService] createDispute: Disputa ${createdDispute.id} criada e notificação enviada para admins.`,
+        );
 
         return createdDispute;
       });
 
       return newDispute;
     } catch (error) {
-      this.logger.error(`Erro ao criar disputa para booking ${createDisputeDto.bookingId}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Erro ao criar disputa para booking ${createDisputeDto.bookingId}: ${error.message}`,
+        error.stack,
+      );
       Sentry.captureException(error); // NEW: Capture exception with Sentry
       throw error;
     }
@@ -139,13 +194,15 @@ export class DisputeService {
         },
         messages: {
           orderBy: { createdAt: 'asc' },
-          include: { sender: true }
+          include: { sender: true },
         },
       },
     });
 
     if (!dispute) {
-      throw new NotFoundException(`Disputa com ID "${disputeId}" não encontrada.`);
+      throw new NotFoundException(
+        `Disputa com ID "${disputeId}" não encontrada.`,
+      );
     }
     return dispute;
   }
@@ -186,42 +243,49 @@ export class DisputeService {
    * @param content Conteúdo da mensagem.
    * @returns A mensagem criada.
    */
-  async addMessageToDispute(disputeId: string, senderUserId: string, content: string) {
+  async addMessageToDispute(
+    disputeId: string,
+    senderUserId: string,
+    content: string,
+  ) {
     const dispute = await this.prisma.dispute.findUnique({
-        where: { id: disputeId },
-        select: { id: true, bookingId: true, reporterUserId: true }
+      where: { id: disputeId },
+      select: { id: true, bookingId: true, reporterUserId: true },
     });
     if (!dispute) {
-      throw new NotFoundException(`Disputa com ID "${disputeId}" não encontrada.`);
+      throw new NotFoundException(
+        `Disputa com ID "${disputeId}" não encontrada.`,
+      );
     }
 
     try {
-      const message = await this.prisma.$transaction(async (prisma) => { // NEW: Atomic transaction
+      const message = await this.prisma.$transaction(async (prisma) => {
+        // NEW: Atomic transaction
         // --- Lógica para encontrar ou criar o SupportTicket associado ---
         let supportTicket = await prisma.supportTicket.findFirst({
-            where: {
-                bookingId: dispute.bookingId,
-            },
-            orderBy: { createdAt: 'desc' }
+          where: {
+            bookingId: dispute.bookingId,
+          },
+          orderBy: { createdAt: 'desc' },
         });
 
         if (!supportTicket) {
-            const reporter = await prisma.user.findUnique({
-                where: { id: dispute.reporterUserId },
-                select: { role: true }
-            });
+          const reporter = await prisma.user.findUnique({
+            where: { id: dispute.reporterUserId },
+            select: { role: true },
+          });
 
-            supportTicket = await prisma.supportTicket.create({
-                data: {
-                    user: { connect: { id: dispute.reporterUserId } },
-                    role: reporter?.role || UserRole.SYSTEM,
-                    subject: `Disputa referente ao Agendamento ${dispute.bookingId}`,
-                    category: SupportTicketCategory.OTHER,
-                    description: `Este ticket foi gerado automaticamente para gerenciar as mensagens da disputa ${dispute.id}.`,
-                    booking: { connect: { id: dispute.bookingId } },
-                    status: SupportTicketStatus.OPEN,
-                },
-            });
+          supportTicket = await prisma.supportTicket.create({
+            data: {
+              user: { connect: { id: dispute.reporterUserId } },
+              role: reporter?.role || UserRole.SYSTEM,
+              subject: `Disputa referente ao Agendamento ${dispute.bookingId}`,
+              category: SupportTicketCategory.OTHER,
+              description: `Este ticket foi gerado automaticamente para gerenciar as mensagens da disputa ${dispute.id}.`,
+              booking: { connect: { id: dispute.bookingId } },
+              status: SupportTicketStatus.OPEN,
+            },
+          });
         }
         // --- Fim da lógica do SupportTicket ---
 
@@ -246,13 +310,17 @@ export class DisputeService {
         where: { id: dispute.bookingId },
         select: {
           client: { select: { userId: true } },
-          provider: { select: { userId: true } }
-        }
+          provider: { select: { userId: true } },
+        },
       });
 
-      const recipientUserId = (booking.client.userId === senderUserId) ? booking.provider.userId : booking.client.userId;
+      const recipientUserId =
+        booking.client.userId === senderUserId
+          ? booking.provider.userId
+          : booking.client.userId;
 
-      await this.notificationsService.createNotification({ // Using createNotification
+      await this.notificationsService.createNotification({
+        // Using createNotification
         userId: recipientUserId,
         type: 'DISPUTE_MESSAGE',
         title: 'Nova Mensagem na Disputa',
@@ -260,10 +328,15 @@ export class DisputeService {
         targetUrl: `/app/disputes/${dispute.id}`,
         category: 'dispute',
         actionButtons: {
-          primary: { text: 'Ver Mensagem', action: 'view_dispute_message', data: { disputeId: dispute.id } }
-        }
+          primary: {
+            text: 'Ver Mensagem',
+            action: 'view_dispute_message',
+            data: { disputeId: dispute.id },
+          },
+        },
       });
-      await this.notificationsService.createNotification({ // Using createNotification
+      await this.notificationsService.createNotification({
+        // Using createNotification
         userId: 'ADMIN_USER_ID', // Placeholder for admin user ID
         type: 'DISPUTE_MESSAGE_ADMIN',
         title: 'Nova Mensagem na Disputa (Admin)',
@@ -271,13 +344,20 @@ export class DisputeService {
         targetUrl: `/app/disputes/${dispute.id}`,
         category: 'dispute',
         actionButtons: {
-          primary: { text: 'Ver Disputa', action: 'view_dispute', data: { disputeId: dispute.id } }
-        }
+          primary: {
+            text: 'Ver Disputa',
+            action: 'view_dispute',
+            data: { disputeId: dispute.id },
+          },
+        },
       });
 
       return message;
     } catch (error) {
-      this.logger.error(`Erro ao adicionar mensagem à disputa ${disputeId}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Erro ao adicionar mensagem à disputa ${disputeId}: ${error.message}`,
+        error.stack,
+      );
       Sentry.captureException(error); // NEW: Capture exception with Sentry
       throw error;
     }
@@ -290,40 +370,72 @@ export class DisputeService {
    * @param adminUserId ID do administrador que está resolvendo a disputa.
    * @returns A disputa atualizada.
    */
-  async updateDisputeStatus(disputeId: string, updateDisputeDto: UpdateDisputeDto, adminUserId: string) {
-    this.logger.log(`[DisputeService] updateDisputeStatus: Atualizando disputa ${disputeId} para status ${updateDisputeDto.status}.`);
+  async updateDisputeStatus(
+    disputeId: string,
+    updateDisputeDto: UpdateDisputeDto,
+    adminUserId: string,
+  ) {
+    this.logger.log(
+      `[DisputeService] updateDisputeStatus: Atualizando disputa ${disputeId} para status ${updateDisputeDto.status}.`,
+    );
 
-    const dispute = await this.prisma.dispute.findUnique({ where: { id: disputeId }, include: { booking: true } });
+    const dispute = await this.prisma.dispute.findUnique({
+      where: { id: disputeId },
+      include: { booking: true },
+    });
     if (!dispute) {
-      throw new NotFoundException(`Disputa com ID "${disputeId}" não encontrada.`);
+      throw new NotFoundException(
+        `Disputa com ID "${disputeId}" não encontrada.`,
+      );
     }
 
-    if (updateDisputeDto.status === DisputeStatus.RESOLVED && !updateDisputeDto.resolutionNotes) {
-      throw new BadRequestException('As notas de resolução são obrigatórias ao definir o status como RESOLVED.');
+    if (
+      updateDisputeDto.status === DisputeStatus.RESOLVED &&
+      !updateDisputeDto.resolutionNotes
+    ) {
+      throw new BadRequestException(
+        'As notas de resolução são obrigatórias ao definir o status como RESOLVED.',
+      );
     }
 
     try {
-      const updatedDispute = await this.prisma.$transaction(async (prisma) => { // NEW: Atomic transaction
+      const updatedDispute = await this.prisma.$transaction(async (prisma) => {
+        // NEW: Atomic transaction
         const updated = await prisma.dispute.update({
           where: { id: disputeId },
           data: {
             status: updateDisputeDto.status,
             resolutionNotes: updateDisputeDto.resolutionNotes,
-            resolvedByUserId: updateDisputeDto.status === DisputeStatus.RESOLVED ? adminUserId : null,
-            resolvedAt: updateDisputeDto.status === DisputeStatus.RESOLVED ? new Date() : null,
+            resolvedByUserId:
+              updateDisputeDto.status === DisputeStatus.RESOLVED
+                ? adminUserId
+                : null,
+            resolvedAt:
+              updateDisputeDto.status === DisputeStatus.RESOLVED
+                ? new Date()
+                : null,
           },
         });
 
         // Ledger RELEASE/REFUND conforme decisão
         try {
-          const bkg = await prisma.booking.findUnique({ where: { id: dispute.bookingId }, include: { provider: { include: { user: true } } } });
+          const bkg = await prisma.booking.findUnique({
+            where: { id: dispute.bookingId },
+            include: { provider: { include: { user: true } } },
+          });
           if (bkg?.provider?.userId) {
             // RELEASE total de HOLD somado
             const holds = await prisma.ledgerEntry.aggregate({
               _sum: { amount: true },
-              where: { bookingId: bkg.id, userId: bkg.provider.userId, type: LedgerEntryType.HOLD },
+              where: {
+                bookingId: bkg.id,
+                userId: bkg.provider.userId,
+                type: LedgerEntryType.HOLD,
+              },
             });
-            const holdSum = holds._sum.amount ? Math.abs(Number(holds._sum.amount)) : 0;
+            const holdSum = holds._sum.amount
+              ? Math.abs(Number(holds._sum.amount))
+              : 0;
             if (holdSum > 0) {
               await prisma.ledgerEntry.create({
                 data: {
@@ -336,12 +448,18 @@ export class DisputeService {
               });
             }
             // Se RESOLVED com refund definido, lança REFUND (negativo)
-            if (updated.status === DisputeStatus.RESOLVED && updateDisputeDto.refundAmount && updateDisputeDto.refundAmount > 0) {
+            if (
+              updated.status === DisputeStatus.RESOLVED &&
+              updateDisputeDto.refundAmount &&
+              updateDisputeDto.refundAmount > 0
+            ) {
               await prisma.ledgerEntry.create({
                 data: {
                   userId: bkg.provider.userId,
                   bookingId: bkg.id,
-                  amount: new Prisma.Decimal(-Number(updateDisputeDto.refundAmount)),
+                  amount: new Prisma.Decimal(
+                    -Number(updateDisputeDto.refundAmount),
+                  ),
                   type: LedgerEntryType.REFUND,
                   note: `Dispute REFUND for booking ${bkg.id}`,
                 },
@@ -350,15 +468,25 @@ export class DisputeService {
           }
         } catch {}
 
-
         if (updated.status === DisputeStatus.RESOLVED) {
-          await this.bookingsService.updateStatus(dispute.bookingId, BookingStatus.COMPLETED, UserRole.ADMIN);
+          await this.bookingsService.updateStatus(
+            dispute.bookingId,
+            BookingStatus.COMPLETED,
+            UserRole.ADMIN,
+          );
         }
         return updated;
       });
 
-      const booking = await this.prisma.booking.findUnique({ where: { id: dispute.bookingId }, select: { client: { select: { userId: true } }, provider: { select: { userId: true } } } });
-      await this.notificationsService.createNotification({ // Using createNotification
+      const booking = await this.prisma.booking.findUnique({
+        where: { id: dispute.bookingId },
+        select: {
+          client: { select: { userId: true } },
+          provider: { select: { userId: true } },
+        },
+      });
+      await this.notificationsService.createNotification({
+        // Using createNotification
         userId: booking.client.userId,
         type: 'DISPUTE_RESOLVED',
         title: 'Disputa Resolvida',
@@ -366,10 +494,15 @@ export class DisputeService {
         targetUrl: `/app/disputes/${updatedDispute.id}`,
         category: 'dispute',
         actionButtons: {
-          primary: { text: 'Ver Resolução', action: 'view_dispute_resolution', data: { disputeId: updatedDispute.id } }
-        }
+          primary: {
+            text: 'Ver Resolução',
+            action: 'view_dispute_resolution',
+            data: { disputeId: updatedDispute.id },
+          },
+        },
       });
-      await this.notificationsService.createNotification({ // Using createNotification
+      await this.notificationsService.createNotification({
+        // Using createNotification
         userId: booking.provider.userId,
         type: 'DISPUTE_RESOLVED',
         title: 'Disputa Resolvida',
@@ -377,14 +510,23 @@ export class DisputeService {
         targetUrl: `/app/disputes/${updatedDispute.id}`,
         category: 'dispute',
         actionButtons: {
-          primary: { text: 'Ver Resolução', action: 'view_dispute_resolution', data: { disputeId: updatedDispute.id } }
-        }
+          primary: {
+            text: 'Ver Resolução',
+            action: 'view_dispute_resolution',
+            data: { disputeId: updatedDispute.id },
+          },
+        },
       });
-      this.logger.log(`[DisputeService] Notificações de resolução enviadas para cliente e provedor da disputa ${disputeId}.`);
+      this.logger.log(
+        `[DisputeService] Notificações de resolução enviadas para cliente e provedor da disputa ${disputeId}.`,
+      );
 
       return updatedDispute;
     } catch (error) {
-      this.logger.error(`Erro ao atualizar status da disputa ${disputeId}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Erro ao atualizar status da disputa ${disputeId}: ${error.message}`,
+        error.stack,
+      );
       Sentry.captureException(error); // NEW: Capture exception with Sentry
       throw error;
     }
