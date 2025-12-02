@@ -1,5 +1,9 @@
 // src/common/services/email.service.ts
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 // import * as nodemailer from 'nodemailer'; // Exemplo para SMTP
 // import * as sgMail from '@sendgrid/mail'; // Exemplo para SendGrid
@@ -17,7 +21,9 @@ export class EmailService {
     this.defaultFromEmail = this.configService.get<string>('email.defaultFrom');
 
     if (!this.defaultFromEmail) {
-      this.logger.error('DEFAULT_EMAIL_FROM não configurado. O serviço de e-mail pode não funcionar corretamente.');
+      this.logger.error(
+        'DEFAULT_EMAIL_FROM não configurado. O serviço de e-mail pode não funcionar corretamente.',
+      );
       this.defaultFromEmail = 'noreply@example.com'; // Fallback
     }
 
@@ -56,7 +62,12 @@ export class EmailService {
    * @param text Conteúdo do e-mail em texto puro.
    * @param html Conteúdo do e-mail em HTML (opcional).
    */
-  async sendEmail(to: string, subject: string, text: string, html?: string): Promise<void> {
+  async sendEmail(
+    to: string,
+    subject: string,
+    text: string,
+    html?: string,
+  ): Promise<void> {
     const mailOptions = {
       from: this.defaultFromEmail,
       to,
@@ -81,12 +92,16 @@ export class EmailService {
       }
     } catch (error) {
       this.logger.error(`Erro ao enviar e-mail para ${to}: ${error.message}`);
-      throw new InternalServerErrorException(`Falha ao enviar e-mail: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Falha ao enviar e-mail: ${error.message}`,
+      );
     }
   }
 
   private simulateSendEmail(mailOptions: any): void {
-    this.logger.warn('Simulando envio de e-mail. Nenhuma integração real configurada.');
+    this.logger.warn(
+      'Simulando envio de e-mail. Nenhuma integração real configurada.',
+    );
     this.logger.debug(`
       --- SIMULAÇÃO DE E-MAIL ---
       De: ${mailOptions.from}
