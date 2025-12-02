@@ -20,4 +20,3 @@ export class CreateServiceDto {
   @IsEnum(PricingType)
   defaultPricingType?: PricingType;
 }
-
