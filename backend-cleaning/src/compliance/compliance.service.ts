@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, Prisma } from '@prisma/client'; // Adicionando a importação de 'Prisma'
 
@@ -16,8 +21,10 @@ export class ComplianceService {
    * @returns O registro de consentimento criado/atualizado.
    */
   async recordConsent(userId: string, documentType: string, version: string) {
-    this.logger.log(`[ComplianceService] Registrando consentimento para userId: ${userId}, tipo: ${documentType}, versão: ${version}`);
-    
+    this.logger.log(
+      `[ComplianceService] Registrando consentimento para userId: ${userId}, tipo: ${documentType}, versão: ${version}`,
+    );
+
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException(`Usuário com ID ${userId} não encontrado.`);
@@ -43,7 +50,9 @@ export class ComplianceService {
       },
     });
 
-    this.logger.log(`[ComplianceService] Consentimento registrado com sucesso para userId: ${userId}.`);
+    this.logger.log(
+      `[ComplianceService] Consentimento registrado com sucesso para userId: ${userId}.`,
+    );
     return consent;
   }
 
@@ -54,9 +63,15 @@ export class ComplianceService {
    * @param requiredVersion Versão mínima exigida.
    * @returns True se o usuário consentiu com a versão exigida ou superior, false caso contrário.
    */
-  async checkConsent(userId: string, documentType: string, requiredVersion: string): Promise<boolean> {
-    this.logger.log(`[ComplianceService] Verificando consentimento para userId: ${userId}, tipo: ${documentType}, versão mínima: ${requiredVersion}`);
-    
+  async checkConsent(
+    userId: string,
+    documentType: string,
+    requiredVersion: string,
+  ): Promise<boolean> {
+    this.logger.log(
+      `[ComplianceService] Verificando consentimento para userId: ${userId}, tipo: ${documentType}, versão mínima: ${requiredVersion}`,
+    );
+
     const consent = await this.prisma.userConsent.findUnique({
       where: {
         userId_documentType: {
@@ -67,13 +82,17 @@ export class ComplianceService {
     });
 
     if (!consent) {
-      this.logger.warn(`[ComplianceService] Consentimento para ${documentType} não encontrado para userId: ${userId}.`);
+      this.logger.warn(
+        `[ComplianceService] Consentimento para ${documentType} não encontrado para userId: ${userId}.`,
+      );
       return false;
     }
 
     // Lógica simples de comparação de versão (pode ser mais complexa dependendo do formato da versão)
     const hasConsent = consent.version >= requiredVersion;
-    this.logger.log(`[ComplianceService] Consentimento para ${documentType} (versão ${consent.version}) para userId: ${userId} é ${hasConsent ? 'válido' : 'inválido'} para a versão ${requiredVersion}.`);
+    this.logger.log(
+      `[ComplianceService] Consentimento para ${documentType} (versão ${consent.version}) para userId: ${userId} é ${hasConsent ? 'válido' : 'inválido'} para a versão ${requiredVersion}.`,
+    );
     return hasConsent;
   }
 
@@ -84,20 +103,24 @@ export class ComplianceService {
    * @returns Objeto com os detalhes do orçamento.
    */
   async generateItemizedQuote(bookingId: string) {
-    this.logger.log(`[ComplianceService] Gerando orçamento itemizado para agendamento: ${bookingId}`);
-    
+    this.logger.log(
+      `[ComplianceService] Gerando orçamento itemizado para agendamento: ${bookingId}`,
+    );
+
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
         providerService: { include: { service: true } },
         address: true,
         provider: { select: { fullName: true } },
-        client: { select: { fullName: true } }
+        client: { select: { fullName: true } },
       },
     });
 
     if (!booking) {
-      throw new NotFoundException(`Agendamento com ID ${bookingId} não encontrado.`);
+      throw new NotFoundException(
+        `Agendamento com ID ${bookingId} não encontrado.`,
+      );
     }
 
     // Exemplo simplificado de orçamento itemizado
@@ -125,7 +148,9 @@ export class ComplianceService {
       validity: '7 dias a partir da emissão.',
     };
 
-    this.logger.log(`[ComplianceService] Orçamento itemizado gerado para agendamento ${bookingId}.`);
+    this.logger.log(
+      `[ComplianceService] Orçamento itemizado gerado para agendamento ${bookingId}.`,
+    );
     return quoteDetails;
   }
 
@@ -135,13 +160,24 @@ export class ComplianceService {
    * @returns Um objeto contendo os dados do usuário.
    */
   async processDataSubjectAccessRequest(userId: string) {
-    this.logger.log(`[ComplianceService] Processando solicitação de acesso de dados (DSAR) para userId: ${userId}`);
+    this.logger.log(
+      `[ComplianceService] Processando solicitação de acesso de dados (DSAR) para userId: ${userId}`,
+    );
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        client: { include: { address: true, bookings: true, reviewsMade: true } },
-        provider: { include: { address: true, bookings: true, reviewsReceived: true, providerServices: true } },
+        client: {
+          include: { address: true, bookings: true, reviewsMade: true },
+        },
+        provider: {
+          include: {
+            address: true,
+            bookings: true,
+            reviewsReceived: true,
+            providerServices: true,
+          },
+        },
         notifications: true,
         userConsents: true,
       },
@@ -162,32 +198,71 @@ export class ComplianceService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       // Incluir outros dados relevantes, excluindo senhas e dados sensíveis de terceiros
-      clientDetails: user.client ? {
-        id: user.client.id,
-        cpf: user.client.cpf,
-        dateOfBirth: user.client.dateOfBirth,
-        address: user.client.address,
-        bookings: user.client.bookings.map(b => ({ id: b.id, scheduledDate: b.scheduledDate, totalPrice: b.totalPrice, status: b.status })),
-        reviewsMade: user.client.reviewsMade.map(r => ({ id: r.id, rating: r.rating, comment: r.comment })),
-      } : null,
-      providerDetails: user.provider ? {
-        id: user.provider.id,
-        cpf: user.provider.cpf,
-        dateOfBirth: user.provider.dateOfBirth,
-        bio: user.provider.bio,
-        yearsOfExperience: user.provider.yearsOfExperience,
-        pixKey: user.provider.pixKey,
-        verificationStatus: user.provider.verificationStatus,
-        address: user.provider.address,
-        providerServices: user.provider.providerServices.map(ps => ({ id: ps.id, serviceId: ps.serviceId, price: ps.price, pricingType: ps.pricingType })),
-        bookings: user.provider.bookings.map(b => ({ id: b.id, scheduledDate: b.scheduledDate, totalPrice: b.totalPrice, status: b.status })),
-        reviewsReceived: user.provider.reviewsReceived.map(r => ({ id: r.id, rating: r.rating, comment: r.comment })),
-      } : null,
-      notifications: user.notifications.map(n => ({ id: n.id, type: n.type, message: n.message, isRead: n.isRead, createdAt: n.createdAt })),
-      consents: user.userConsents.map(c => ({ documentType: c.documentType, version: c.version, consentedAt: c.consentedAt })),
+      clientDetails: user.client
+        ? {
+            id: user.client.id,
+            cpf: user.client.cpf,
+            dateOfBirth: user.client.dateOfBirth,
+            address: user.client.address,
+            bookings: user.client.bookings.map((b) => ({
+              id: b.id,
+              scheduledDate: b.scheduledDate,
+              totalPrice: b.totalPrice,
+              status: b.status,
+            })),
+            reviewsMade: user.client.reviewsMade.map((r) => ({
+              id: r.id,
+              rating: r.rating,
+              comment: r.comment,
+            })),
+          }
+        : null,
+      providerDetails: user.provider
+        ? {
+            id: user.provider.id,
+            cpf: user.provider.cpf,
+            dateOfBirth: user.provider.dateOfBirth,
+            bio: user.provider.bio,
+            yearsOfExperience: user.provider.yearsOfExperience,
+            pixKey: user.provider.pixKey,
+            verificationStatus: user.provider.verificationStatus,
+            address: user.provider.address,
+            providerServices: user.provider.providerServices.map((ps) => ({
+              id: ps.id,
+              serviceId: ps.serviceId,
+              price: ps.price,
+              pricingType: ps.pricingType,
+            })),
+            bookings: user.provider.bookings.map((b) => ({
+              id: b.id,
+              scheduledDate: b.scheduledDate,
+              totalPrice: b.totalPrice,
+              status: b.status,
+            })),
+            reviewsReceived: user.provider.reviewsReceived.map((r) => ({
+              id: r.id,
+              rating: r.rating,
+              comment: r.comment,
+            })),
+          }
+        : null,
+      notifications: user.notifications.map((n) => ({
+        id: n.id,
+        type: n.type,
+        message: n.message,
+        isRead: n.isRead,
+        createdAt: n.createdAt,
+      })),
+      consents: user.userConsents.map((c) => ({
+        documentType: c.documentType,
+        version: c.version,
+        consentedAt: c.consentedAt,
+      })),
     };
 
-    this.logger.log(`[ComplianceService] DSAR para userId: ${userId} processado. Retornando dados.`);
+    this.logger.log(
+      `[ComplianceService] DSAR para userId: ${userId} processado. Retornando dados.`,
+    );
     return userData;
   }
 
@@ -197,15 +272,17 @@ export class ComplianceService {
    * @param userId ID do usuário a ser anonimizado/excluído.
    */
   async processErasureRequest(userId: string) {
-    this.logger.warn(`[ComplianceService] Processando solicitação de exclusão de dados (Right to Erasure) para userId: ${userId}.`);
+    this.logger.warn(
+      `[ComplianceService] Processando solicitação de exclusão de dados (Right to Erasure) para userId: ${userId}.`,
+    );
 
     // Correção: Adicionar 'include' para garantir que os dados de client e provider estejam disponíveis
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
         client: true,
-        provider: true
-      }
+        provider: true,
+      },
     });
 
     if (!user) {
@@ -229,7 +306,8 @@ export class ComplianceService {
     });
 
     // Remover ou anonimizar dados específicos de cliente/provedor se existirem
-    if (user.role === 'CLIENT' && user.client) { // Verificando se user.client existe
+    if (user.role === 'CLIENT' && user.client) {
+      // Verificando se user.client existe
       await this.prisma.client.update({
         where: { userId: userId },
         data: {
@@ -237,22 +315,23 @@ export class ComplianceService {
           cpf: null,
           dateOfBirth: null,
           // Anonimizar endereço ou remover
-              address: {
-             update: {
-               street: 'Anonimizado',
-               number: '0',
-               complement: null,
-               neighborhood: 'Anonimizado',
-               city: 'Anonimizado',
-               state: 'AN',
-               cep: '00000-000',
-               latitude: 0,
-               longitude: 0,
-             }
-           }
-        }
+          address: {
+            update: {
+              street: 'Anonimizado',
+              number: '0',
+              complement: null,
+              neighborhood: 'Anonimizado',
+              city: 'Anonimizado',
+              state: 'AN',
+              cep: '00000-000',
+              latitude: 0,
+              longitude: 0,
+            },
+          },
+        },
       });
-    } else if (user.role === 'PROVIDER' && user.provider) { // Verificando se user.provider existe
+    } else if (user.role === 'PROVIDER' && user.provider) {
+      // Verificando se user.provider existe
       await this.prisma.provider.update({
         where: { userId: userId },
         data: {
@@ -269,20 +348,20 @@ export class ComplianceService {
           ocrResult: Prisma.JsonNull,
           livenessResult: Prisma.JsonNull,
           rejectionReason: null,
-           address: {
-             update: {
-               street: 'Anonimizado',
-               number: '0',
-               complement: null,
-               neighborhood: 'Anonimizado',
-               city: 'Anonimizado',
-               state: 'AN',
-               cep: '00000-000',
-               latitude: 0,
-               longitude: 0,
-             }
-           }
-        }
+          address: {
+            update: {
+              street: 'Anonimizado',
+              number: '0',
+              complement: null,
+              neighborhood: 'Anonimizado',
+              city: 'Anonimizado',
+              state: 'AN',
+              cep: '00000-000',
+              latitude: 0,
+              longitude: 0,
+            },
+          },
+        },
       });
     }
 
@@ -290,7 +369,11 @@ export class ComplianceService {
     await this.prisma.notification.deleteMany({ where: { userId: userId } });
     await this.prisma.userConsent.deleteMany({ where: { userId: userId } });
 
-    this.logger.log(`[ComplianceService] Dados do userId: ${userId} foram anonimizados.`);
-    return { message: `Dados do usuário ${userId} foram anonimizados com sucesso.` };
+    this.logger.log(
+      `[ComplianceService] Dados do userId: ${userId} foram anonimizados.`,
+    );
+    return {
+      message: `Dados do usuário ${userId} foram anonimizados com sucesso.`,
+    };
   }
 }
