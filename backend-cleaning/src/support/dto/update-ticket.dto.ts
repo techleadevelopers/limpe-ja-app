@@ -4,7 +4,9 @@ import { IsString, IsNotEmpty, IsOptional, IsArray } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateTicketDto {
-  @ApiPropertyOptional({ description: 'Corpo da mensagem a ser adicionada ao ticket' })
+  @ApiPropertyOptional({
+    description: 'Corpo da mensagem a ser adicionada ao ticket',
+  })
   @IsOptional()
   @IsString()
   @IsNotEmpty()
