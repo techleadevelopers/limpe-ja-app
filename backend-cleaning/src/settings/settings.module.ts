@@ -9,4 +9,3 @@ import { ConfigModule } from '../config/config.module';
   exports: [SettingsService],
 })
 export class SettingsModule {}
-
