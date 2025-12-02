@@ -3,7 +3,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsUUID } from 'class-validator';
 
 export class ChatDetailsDto {
-  @ApiProperty({ description: 'ID único da conversa de chat', example: 'uuid-do-chat-gerado-ou-encontrado' })
+  @ApiProperty({
+    description: 'ID único da conversa de chat',
+    example: 'uuid-do-chat-gerado-ou-encontrado',
+  })
   @IsString()
   @IsUUID() // Assumindo que o chatId gerado/encontrado será um UUID
   chatId: string;
