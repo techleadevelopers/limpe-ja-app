@@ -14,7 +14,9 @@ export class EmailService {
   ) {
     const mailgunApiKey = this.configService.get<string>('MAILGUN_API_KEY');
     if (!mailgunApiKey) {
-      this.logger.warn('MAILGUN_API_KEY não configurada. O envio de e-mails pode não funcionar.');
+      this.logger.warn(
+        'MAILGUN_API_KEY não configurada. O envio de e-mails pode não funcionar.',
+      );
     }
   }
 
@@ -26,7 +28,12 @@ export class EmailService {
    * @param text Conteúdo do e-mail em texto puro
    * @param html Conteúdo do e-mail em HTML
    */
-  async sendEmail(to: string, subject: string, text: string, html: string): Promise<void> {
+  async sendEmail(
+    to: string,
+    subject: string,
+    text: string,
+    html: string,
+  ): Promise<void> {
     try {
       // TODO: Implementar a lógica real de envio de e-mail aqui
       // Exemplo com Nodemailer (requer instalação e configuração):
@@ -51,7 +58,10 @@ export class EmailService {
       */
       this.logger.log(`E-mail enviado para: ${to}, Assunto: ${subject}`);
     } catch (error) {
-      this.logger.error(`Falha ao enviar e-mail para ${to}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Falha ao enviar e-mail para ${to}: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -69,7 +79,9 @@ export class EmailService {
     if (adminEmail) {
       await this.sendEmail(adminEmail, subject, text, html);
     } else {
-      this.logger.warn('ADMIN_EMAIL não configurado para enviar alertas de pânico.');
+      this.logger.warn(
+        'ADMIN_EMAIL não configurado para enviar alertas de pânico.',
+      );
     }
   }
 
@@ -83,14 +95,16 @@ export class EmailService {
     const html = `<p>Seu incidente (<strong>${incident.type}</strong>) foi atualizado para: <strong>${incident.status}</strong>.</p><p>Resolução: ${incident.resolutionNotes || 'N/A'}.</p>`;
 
     const reporterUser = await this.prisma.user.findUnique({
-        where: { id: incident.reporterId },
-        select: { email: true }
+      where: { id: incident.reporterId },
+      select: { email: true },
     });
 
     if (reporterUser?.email) {
-        await this.sendEmail(reporterUser.email, subject, text, html);
+      await this.sendEmail(reporterUser.email, subject, text, html);
     } else {
-        this.logger.warn(`Não foi possível encontrar o e-mail do reporterId ${incident.reporterId} para enviar atualização de incidente.`);
+      this.logger.warn(
+        `Não foi possível encontrar o e-mail do reporterId ${incident.reporterId} para enviar atualização de incidente.`,
+      );
     }
   }
 
@@ -180,12 +194,18 @@ export class EmailService {
    * @param text Conteúdo do e-mail em texto puro.
    * @param html Conteúdo do e-mail em HTML.
    */
-  async sendAdminWithdrawalFailedEmail(subject: string, text: string, html: string): Promise<void> {
+  async sendAdminWithdrawalFailedEmail(
+    subject: string,
+    text: string,
+    html: string,
+  ): Promise<void> {
     const adminEmail = this.configService.get<string>('ADMIN_EMAIL'); // Assumindo que ADMIN_EMAIL está configurado
     if (adminEmail) {
       await this.sendEmail(adminEmail, subject, text, html);
     } else {
-      this.logger.warn('ADMIN_EMAIL não configurado para enviar alertas de saque falho.');
+      this.logger.warn(
+        'ADMIN_EMAIL não configurado para enviar alertas de saque falho.',
+      );
     }
   }
 }
