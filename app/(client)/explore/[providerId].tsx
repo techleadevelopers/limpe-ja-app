@@ -1,10 +1,11 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
   Easing,
@@ -50,27 +51,65 @@ type PromiseRejectedResult = {
   reason: any;
 };
 
-function RecommendationsSection() {
-  const avatarImages = [
-    'https://randomuser.me/api/portraits/men/32.jpg',
-    'https://randomuser.me/api/portraits/women/44.jpg',
-    'https://randomuser.me/api/portraits/men/50.jpg',
-    'https://randomuser.me/api/portraits/women/61.jpg',
-    'https://randomuser.me/api/portraits/men/73.jpg',
-  ];
+function RecommendationsSection({ reviews }: { reviews?: ProviderReview[] }) {
+  const hasReviews = (reviews?.length ?? 0) > 0;
+  const displayed = (reviews ?? []).slice(0, 5);
+  const remainingCount = Math.max((reviews?.length ?? 0) - displayed.length, 0);
+
+  const renderAvatarContent = (review: ProviderReview) => {
+    const avatarUrl = review.client?.user?.avatarUrl;
+    const name = review.client?.fullName || review.client?.user?.name || 'Cliente';
+    const initial = name.trim().charAt(0).toUpperCase();
+    if (avatarUrl) {
+      return <Image source={{ uri: avatarUrl }} style={recommendationStyles.avatarImg} />;
+    }
+    return (
+      <View style={recommendationStyles.avatarInitial}>
+        <Text style={recommendationStyles.avatarInitialText}>{initial || 'C'}</Text>
+      </View>
+    );
+  };
 
   return (
     <View style={recommendationStyles.avatarsRow}>
-      {avatarImages.map((uri, i) => (
-        <Image
-          key={i}
-          source={{ uri }}
-          style={[recommendationStyles.avatarImg, { marginLeft: i === 0 ? 0 : -12 }]}
-        />
-      ))}
-      <View style={[recommendationStyles.moreBadge, { marginLeft: -12 }]}>
-        <Text style={recommendationStyles.moreBadgeTxt}>+25</Text>
-      </View>
+      {hasReviews ? (
+        <>
+          {displayed.map((review, i) => (
+            <View
+              key={review.id || i}
+              style={[
+                recommendationStyles.avatarWrapper,
+                { marginLeft: i === 0 ? 0 : -12 },
+              ]}
+            >
+              {renderAvatarContent(review)}
+            </View>
+          ))}
+          {remainingCount > 0 && (
+            <View style={[recommendationStyles.moreBadge, { marginLeft: -12 }]}>
+              <Text style={recommendationStyles.moreBadgeTxt}>+{remainingCount}</Text>
+            </View>
+          )}
+        </>
+      ) : (
+        <>
+          {[0, 1, 2, 3].map((i) => (
+            <LinearGradient
+              key={i}
+              colors={['#eef2f7', '#dce3ed']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[
+                recommendationStyles.placeholderDot,
+                { marginLeft: i === 0 ? 0 : -8, opacity: 0.8 - i * 0.1 },
+              ]}
+            />
+          ))}
+          <View style={[recommendationStyles.moreBadge, recommendationStyles.placeholderBadge]}>
+            <Text style={recommendationStyles.moreBadgeTxt}>Novo</Text>
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -84,12 +123,31 @@ const recommendationStyles = StyleSheet.create({
     paddingHorizontal: 11,
     left: 5,
   },
+  avatarWrapper: {
+    width: 42,
+    height: 42,
+    borderRadius: 44,
+    borderWidth: 1,
+    borderColor: AppColors.borderNeutral,
+    overflow: 'hidden',
+  },
   avatarImg: {
     width: 42,
     height: 42,
     borderRadius: 44,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral,
+  },
+  avatarInitial: {
+    flex: 1,
+    backgroundColor: '#E5ECF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitialText: {
+    color: '#1E293B',
+    fontSize: 15,
+    fontWeight: '700',
   },
   moreBadge: {
     width: 42,
@@ -104,6 +162,16 @@ const recommendationStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'RedHatMono' : 'Montserrat-Regular', // Android usa a mesma família visível no iOS
+  },
+  placeholderDot: {
+    width: 42,
+    height: 42,
+    borderRadius: 44,
+    borderWidth: 1,
+    borderColor: AppColors.borderNeutral,
+  },
+  placeholderBadge: {
+    backgroundColor: '#0f172a',
   },
 });
 
@@ -530,8 +598,15 @@ if (isAuthenticated && user?.id) {
             )
           : t('auth.registration_required', 'Crie seu cadastro para continuar.');
 
-      NotificationUIService.showInfo(message, title);
-      router.push('/(auth)/client-register' as any);
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: t('common.cancel', 'Cancelar'), style: 'cancel' },
+          { text: t('common.continue', 'Continuar'), onPress: () => router.push('/(auth)/client-register' as any) },
+        ],
+        { cancelable: true }
+      );
       return false;
     },
     [isAuthenticated, router, t]
@@ -940,7 +1015,7 @@ if (isAuthenticated && user?.id) {
             </Animated.View>
 
             <SecurityBanner
-              onPress={() => router.push('/(client)/explore/sercurity/index' as any)}
+              onPress={() => router.push('/(client)/explore/security' as any)}
             />
 
             {provider && (
@@ -1068,7 +1143,7 @@ if (isAuthenticated && user?.id) {
             <Text style={styles.sectionTitle}>
               {t('provider_details.reviews_and_recommendations_title', 'Avaliações & Recomendações')}
             </Text>
-            <RecommendationsSection />
+            <RecommendationsSection reviews={provider.reviews || []} />
 
             {provider.reviews && provider.reviews.length > 0 ? (
               <View style={styles.reviewsDetailContainer}>
@@ -1134,3 +1209,5 @@ if (isAuthenticated && user?.id) {
     </View>
   );
 }
+
+
