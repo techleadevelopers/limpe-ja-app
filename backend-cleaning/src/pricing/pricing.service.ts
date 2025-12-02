@@ -1,7 +1,16 @@
 // backend-cleaning/src/pricing/pricing.service.ts
-import { Injectable, NotFoundException, BadRequestException, forwardRef, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  forwardRef,
+  Inject,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CalculatePriceDto, DynamicPriceResult } from './dto/calculate-price.dto';
+import {
+  CalculatePriceDto,
+  DynamicPriceResult,
+} from './dto/calculate-price.dto';
 import { CreatePricingRuleDto } from './dto/create-pricing-rule.dto';
 import { UpdatePricingRuleDto } from './dto/update-pricing-rule.dto';
 import { PricingScope, PricingRule } from '@prisma/client';
@@ -31,9 +40,14 @@ export class PricingService {
   ) {}
 
   async calculatePrice(dto: CalculatePriceDto): Promise<DynamicPriceResult> {
-    const scheduledDateTime = this.resolveDateWithTimezone(dto.scheduledDate, dto.timezone);
+    const scheduledDateTime = this.resolveDateWithTimezone(
+      dto.scheduledDate,
+      dto.timezone,
+    );
     if (Number.isNaN(scheduledDateTime.getTime())) {
-      throw new BadRequestException('Invalid scheduledDate. Expecting ISO string.');
+      throw new BadRequestException(
+        'Invalid scheduledDate. Expecting ISO string.',
+      );
     }
 
     const providerService = dto.providerId
@@ -49,7 +63,9 @@ export class PricingService {
       : null;
 
     if (dto.providerId && !providerService) {
-      throw new NotFoundException(`ProviderService for provider ${dto.providerId} and service ${dto.serviceId} not found.`);
+      throw new NotFoundException(
+        `ProviderService for provider ${dto.providerId} and service ${dto.serviceId} not found.`,
+      );
     }
 
     const service = providerService
@@ -64,7 +80,11 @@ export class PricingService {
     let basePriceDecimal: Decimal | null;
     if (providerService) {
       if (providerService.pricingType === 'HOURLY') {
-        basePriceDecimal = (providerService.pricePerHour as Decimal | null) ?? providerService.price ?? service.price ?? null;
+        basePriceDecimal =
+          providerService.pricePerHour ??
+          providerService.price ??
+          service.price ??
+          null;
       } else {
         basePriceDecimal = providerService.price ?? service.price ?? null;
       }
@@ -72,12 +92,18 @@ export class PricingService {
       basePriceDecimal = service.price ?? null;
     }
     if (!basePriceDecimal) {
-      throw new BadRequestException('Base price not configured for this service/provider.');
+      throw new BadRequestException(
+        'Base price not configured for this service/provider.',
+      );
     }
 
     const basePrice = Number(basePriceDecimal.toFixed(2));
     let multiplier = 1;
-    const appliedRules: Array<{ id: string; scope: string; multiplier: number }> = [];
+    const appliedRules: Array<{
+      id: string;
+      scope: string;
+      multiplier: number;
+    }> = [];
 
     const context: PricingContext = {
       providerId: dto.providerId,
@@ -86,7 +112,12 @@ export class PricingService {
     };
 
     const rules = await this.fetchCandidateRules(context, scheduledDateTime);
-    const demandCount = await this.getDemandForContext(rules, providerService?.id, dto, scheduledDateTime);
+    const demandCount = await this.getDemandForContext(
+      rules,
+      providerService?.id,
+      dto,
+      scheduledDateTime,
+    );
 
     for (const rule of rules) {
       if (!this.ruleMatchesContext(rule, context)) {
@@ -95,7 +126,11 @@ export class PricingService {
       if (!this.ruleMatchesDayAndTime(rule, scheduledDateTime)) {
         continue;
       }
-      if (rule.demandThreshold != null && demandCount != null && demandCount < rule.demandThreshold) {
+      if (
+        rule.demandThreshold != null &&
+        demandCount != null &&
+        demandCount < rule.demandThreshold
+      ) {
         continue;
       }
 
@@ -120,7 +155,10 @@ export class PricingService {
 
     const finalPrice = Number((basePrice * multiplier).toFixed(2));
     const reason = appliedRules.length
-      ? 'Rules: ' + appliedRules.map((r) => r.scope + ' x' + r.multiplier.toFixed(2)).join(', ')
+      ? 'Rules: ' +
+        appliedRules
+          .map((r) => r.scope + ' x' + r.multiplier.toFixed(2))
+          .join(', ')
       : 'Base price';
 
     return {
@@ -132,7 +170,10 @@ export class PricingService {
     };
   }
 
-  async createRule(createPricingRuleDto: CreatePricingRuleDto, actorUserId?: string) {
+  async createRule(
+    createPricingRuleDto: CreatePricingRuleDto,
+    actorUserId?: string,
+  ) {
     const { surgeFactor, maxMultiplier, ...rest } = createPricingRuleDto;
     const created = await this.prisma.pricingRule.create({
       data: {
@@ -158,8 +199,14 @@ export class PricingService {
     });
   }
 
-  async updateRule(id: string, updatePricingRuleDto: UpdatePricingRuleDto, actorUserId?: string) {
-    const existingRule = await this.prisma.pricingRule.findUnique({ where: { id } });
+  async updateRule(
+    id: string,
+    updatePricingRuleDto: UpdatePricingRuleDto,
+    actorUserId?: string,
+  ) {
+    const existingRule = await this.prisma.pricingRule.findUnique({
+      where: { id },
+    });
     if (!existingRule) {
       throw new NotFoundException(`Pricing rule with ID ${id} not found.`);
     }
@@ -170,8 +217,10 @@ export class PricingService {
       where: { id },
       data: {
         ...rest,
-        surgeFactor: surgeFactor !== undefined ? new Decimal(surgeFactor) : undefined,
-        maxMultiplier: maxMultiplier !== undefined ? new Decimal(maxMultiplier) : undefined,
+        surgeFactor:
+          surgeFactor !== undefined ? new Decimal(surgeFactor) : undefined,
+        maxMultiplier:
+          maxMultiplier !== undefined ? new Decimal(maxMultiplier) : undefined,
       },
     });
     await this.settings.appendPricingAudit({
@@ -186,7 +235,9 @@ export class PricingService {
   }
 
   async deleteRule(id: string, actorUserId?: string) {
-    const existingRule = await this.prisma.pricingRule.findUnique({ where: { id } });
+    const existingRule = await this.prisma.pricingRule.findUnique({
+      where: { id },
+    });
     if (!existingRule) {
       throw new NotFoundException(`Pricing rule with ID ${id} not found.`);
     }
@@ -203,33 +254,54 @@ export class PricingService {
   }
 
   // Helpers
-  private validateScopePayload(scope: PricingScope | undefined, dto: { cityCode?: string; categoryId?: string; providerId?: string }) {
+  private validateScopePayload(
+    scope: PricingScope | undefined,
+    dto: { cityCode?: string; categoryId?: string; providerId?: string },
+  ) {
     switch (scope) {
       case PricingScope.CITY:
-        if (!dto.cityCode) { throw new BadRequestException('cityCode is required when scope is CITY.'); }
+        if (!dto.cityCode) {
+          throw new BadRequestException(
+            'cityCode is required when scope is CITY.',
+          );
+        }
         break;
       case PricingScope.CATEGORY:
-        if (!dto.categoryId) { throw new BadRequestException('categoryId is required when scope is CATEGORY.'); }
+        if (!dto.categoryId) {
+          throw new BadRequestException(
+            'categoryId is required when scope is CATEGORY.',
+          );
+        }
         break;
       case PricingScope.PROVIDER:
-        if (!dto.providerId) { throw new BadRequestException('providerId is required when scope is PROVIDER.'); }
+        if (!dto.providerId) {
+          throw new BadRequestException(
+            'providerId is required when scope is PROVIDER.',
+          );
+        }
         break;
       default:
         break;
     }
   }
 
-  private async fetchCandidateRules(context: PricingContext, scheduledDateTime: Date): Promise<PricingRule[]> {
-    const orFilters: any[] = [
-      { scope: null },
-      { scope: PricingScope.GLOBAL },
-    ];
+  private async fetchCandidateRules(
+    context: PricingContext,
+    scheduledDateTime: Date,
+  ): Promise<PricingRule[]> {
+    const orFilters: any[] = [{ scope: null }, { scope: PricingScope.GLOBAL }];
 
     if (context.providerId) {
-      orFilters.push({ scope: PricingScope.PROVIDER, providerId: context.providerId });
+      orFilters.push({
+        scope: PricingScope.PROVIDER,
+        providerId: context.providerId,
+      });
     }
     if (context.categoryId) {
-      orFilters.push({ scope: PricingScope.CATEGORY, categoryId: context.categoryId });
+      orFilters.push({
+        scope: PricingScope.CATEGORY,
+        categoryId: context.categoryId,
+      });
     }
     if (context.cityCode) {
       orFilters.push({ scope: PricingScope.CITY, cityCode: context.cityCode });
@@ -253,7 +325,9 @@ export class PricingService {
 
     const results: PricingRule[] = [];
     for (const scope of prioritizedScopes) {
-      const scoped = rawRules.filter((rule) => this.resolveScopeValue(rule) === scope);
+      const scoped = rawRules.filter(
+        (rule) => this.resolveScopeValue(rule) === scope,
+      );
       results.push(...scoped);
     }
     return results;
@@ -299,7 +373,9 @@ export class PricingService {
     }
 
     const scheduledMinutes = scheduled.getHours() * 60 + scheduled.getMinutes();
-    const start = rule.startTime ? this.timeStringToMinutes(rule.startTime) : null;
+    const start = rule.startTime
+      ? this.timeStringToMinutes(rule.startTime)
+      : null;
     const end = rule.endTime ? this.timeStringToMinutes(rule.endTime) : null;
 
     if (start != null && end != null) {
@@ -369,4 +445,3 @@ export class PricingService {
     return demand;
   }
 }
-
