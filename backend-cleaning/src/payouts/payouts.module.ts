@@ -17,7 +17,11 @@ import { ConnectModule } from '../connect/connect.module';
     forwardRef(() => QueuesModule),
     ConnectModule,
   ],
-  controllers: [PayoutsController, PayoutsWebhookController, AdminWithdrawalsController],
+  controllers: [
+    PayoutsController,
+    PayoutsWebhookController,
+    AdminWithdrawalsController,
+  ],
   providers: [PayoutsService],
   exports: [PayoutsService],
 })
