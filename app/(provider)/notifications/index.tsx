@@ -5,7 +5,6 @@ import * as Linking from 'expo-linking';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     Animated,
     FlatList,
     Platform,
@@ -16,6 +15,7 @@ import {
     View,
 } from 'react-native';
 import { useAuth } from '../../../hooks/useAuth';
+import { showOverlay } from '../../../hooks/useOverlayMessage';
 import { useTranslation } from 'react-i18next'; // Importar i18n
 
 // <--- ADICIONADO: Importar serviços e tipagens reais
@@ -160,11 +160,13 @@ export default function ProviderNotificationsScreen() {
       const sortedNotifications = fetchedNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
       setNotifications(sortedNotifications);
-      if (refreshing) Alert.alert(t("common.success"), t("notifications.notifications_updated"));
+      if (refreshing) {
+        showOverlay({ title: t("common.success"), subtitle: t("notifications.notifications_updated"), variant: 'success' });
+      }
 
     } catch (err: any) {
       console.error("Erro ao buscar notificações:", err.response?.data || err.message);
-      Alert.alert(t("common.error"), err.response?.data?.message || t("common.network_error"));
+      showOverlay({ title: t("common.error"), subtitle: err.response?.data?.message || t("common.network_error"), variant: 'error' });
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -195,7 +197,7 @@ export default function ProviderNotificationsScreen() {
         console.log(t("notifications.mark_read_success"), item.id);
       } catch (error) {
         console.error("Erro ao marcar notificação como lida:", error);
-        Alert.alert(t("common.error"), t("notifications.mark_read_error"));
+        showOverlay({ title: t("common.error"), subtitle: t("notifications.mark_read_error"), variant: 'error' });
       }
     }
     const link = (item as any).navigateTo ?? (item as any).targetUrl ?? (item as any).deeplink;
@@ -206,11 +208,11 @@ export default function ProviderNotificationsScreen() {
         } else {
           const can = await Linking.canOpenURL(link);
           if (can) await Linking.openURL(link);
-          else Alert.alert(t('notifications.navigation_error'), t('notifications.navigation_error_message'));
+          else showOverlay({ title: t('notifications.navigation_error'), subtitle: t('notifications.navigation_error_message'), variant: 'warning' });
         }
       } catch (e) {
         console.error(`[ProviderNotificationsScreen] Erro ao navegar para ${link}:`, e);
-        Alert.alert(t('notifications.navigation_error'), t('notifications.navigation_error_message'));
+        showOverlay({ title: t('notifications.navigation_error'), subtitle: t('notifications.navigation_error_message'), variant: 'warning' });
       }
     }
   };
@@ -219,10 +221,10 @@ export default function ProviderNotificationsScreen() {
       try {
           await markAllNotificationsAsRead();
           setNotifications(prev => prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
-          Alert.alert(t("common.success"), t("notifications.mark_all_read_success"));
+          showOverlay({ title: t("common.success"), subtitle: t("notifications.mark_all_read_success"), variant: 'success' });
       } catch (error) {
           console.error("Erro ao marcar todas como lidas:", error);
-          Alert.alert(t("common.error"), t("notifications.mark_all_read_error"));
+          showOverlay({ title: t("common.error"), subtitle: t("notifications.mark_all_read_error"), variant: 'error' });
       }
   };
 
