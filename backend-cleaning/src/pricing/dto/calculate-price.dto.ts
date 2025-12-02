@@ -1,5 +1,13 @@
 // backend-cleaning/src/pricing/dto/calculate-price.dto.ts
-import { IsUUID, IsNumber, IsISO8601, IsOptional, Min, Max, IsString } from 'class-validator';
+import {
+  IsUUID,
+  IsNumber,
+  IsISO8601,
+  IsOptional,
+  Min,
+  Max,
+  IsString,
+} from 'class-validator';
 
 export class CalculatePriceDto {
   @IsUUID()
