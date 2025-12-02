@@ -2,12 +2,21 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ProviderMetricsDto {
-  @ApiProperty({ description: 'Taxa de aceitação de agendamentos', example: 95 })
+  @ApiProperty({
+    description: 'Taxa de aceitação de agendamentos',
+    example: 95,
+  })
   acceptanceRate: number;
 
-  @ApiProperty({ description: 'Tempo médio de resposta em minutos', example: 15 })
+  @ApiProperty({
+    description: 'Tempo médio de resposta em minutos',
+    example: 15,
+  })
   averageResponseTime: number;
 
-  @ApiProperty({ description: 'Total de agendamentos concluídos', example: 120 })
+  @ApiProperty({
+    description: 'Total de agendamentos concluídos',
+    example: 120,
+  })
   totalBookings: number;
 }
