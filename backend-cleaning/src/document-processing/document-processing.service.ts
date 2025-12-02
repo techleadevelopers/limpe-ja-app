@@ -1,5 +1,9 @@
 // src/verification/document-processing.service.ts
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { File } from 'multer';
 import { UploadService } from '../upload/upload.service';
 
@@ -9,15 +13,26 @@ export class DocumentProcessingService {
 
   constructor(private readonly uploadService: UploadService) {}
 
-  async uploadImage(file: File, destinationPath: string, _slug?: string): Promise<string> {
+  async uploadImage(
+    file: File,
+    destinationPath: string,
+    _slug?: string,
+  ): Promise<string> {
     try {
-      const filename = destinationPath?.split('/')?.pop() || file.originalname || 'upload.jpg';
-      const result = await this.uploadService.uploadFile(file.buffer, filename, file.mimetype);
+      const filename =
+        destinationPath?.split('/')?.pop() || file.originalname || 'upload.jpg';
+      const result = await this.uploadService.uploadFile(
+        file.buffer,
+        filename,
+        file.mimetype,
+      );
       if (!result?.url) throw new Error('UploadThing não retornou URL pública');
       this.logger.log(`Upload via UploadThing concluído: ${result.url}`);
       return result.url;
     } catch (error: any) {
-      this.logger.error(`Falha no upload via UploadThing: ${error?.message || error}`);
+      this.logger.error(
+        `Falha no upload via UploadThing: ${error?.message || error}`,
+      );
       throw new InternalServerErrorException('Falha ao enviar arquivo.');
     }
   }
@@ -28,7 +43,10 @@ export class DocumentProcessingService {
     return { extractedText: 'MOCK: Document text', confidence: 0.95 };
   }
 
-  async compareFaces(_selfieFile: File, _documentImageUrl: string): Promise<boolean> {
+  async compareFaces(
+    _selfieFile: File,
+    _documentImageUrl: string,
+  ): Promise<boolean> {
     this.logger.warn('Comparação facial mockada: Google Vision removido.');
     return true;
   }
@@ -39,5 +57,3 @@ export class DocumentProcessingService {
     return true;
   }
 }
-
-
