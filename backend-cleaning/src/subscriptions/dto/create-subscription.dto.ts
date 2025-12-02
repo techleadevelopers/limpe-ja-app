@@ -1,5 +1,12 @@
 // backend-cleaning/src/subscriptions/dto/create-subscription.dto.ts
-import { IsUUID, IsEnum, IsISO8601, IsNumber, IsPositive, Min } from 'class-validator';
+import {
+  IsUUID,
+  IsEnum,
+  IsISO8601,
+  IsNumber,
+  IsPositive,
+  Min,
+} from 'class-validator';
 import { SubscriptionFrequency } from '../entities/subscription.entity'; // Assuming entity defines enum
 
 export class CreateSubscriptionDto {
