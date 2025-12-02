@@ -3,10 +3,16 @@ import { BookingDetailsDto } from '../../bookings/dto/booking-details.dto'; // I
 import { ReviewDto } from '../../reviews/dto/review.dto'; // Importe o ReviewDto que você irá criar/ajustar
 
 export class DashboardDto {
-  @ApiProperty({ description: 'Nome completo do provedor', example: 'Maria da Silva' })
+  @ApiProperty({
+    description: 'Nome completo do provedor',
+    example: 'Maria da Silva',
+  })
   fullName: string;
 
-  @ApiPropertyOptional({ type: () => [BookingDetailsDto], description: 'Agendamentos próximos' })
+  @ApiPropertyOptional({
+    type: () => [BookingDetailsDto],
+    description: 'Agendamentos próximos',
+  })
   upcomingBookings?: BookingDetailsDto[]; // Usa BookingDetailsDto para alinhar com o frontend
 
   @ApiProperty({ description: 'Total de ganhos', example: 1000 })
@@ -15,14 +21,21 @@ export class DashboardDto {
   @ApiProperty({ description: 'Saques pendentes', example: 200 })
   pendingWithdrawals: number;
 
-  @ApiPropertyOptional({ type: () => [ReviewDto], description: 'Lista das avaliações mais recentes do provedor.' })
+  @ApiPropertyOptional({
+    type: () => [ReviewDto],
+    description: 'Lista das avaliações mais recentes do provedor.',
+  })
   reviews?: ReviewDto[]; // Adicione esta propriedade para as avaliações
 
-  @ApiProperty({ description: 'Número de avaliações 5 estrelas recebidas', example: 42 })
+  @ApiProperty({
+    description: 'Número de avaliações 5 estrelas recebidas',
+    example: 42,
+  })
   fiveStarReviewCount: number;
 
-  @ApiProperty({ description: 'Número de agendamentos concluídos no mês atual', example: 15 })
+  @ApiProperty({
+    description: 'Número de agendamentos concluídos no mês atual',
+    example: 15,
+  })
   monthlyBookingsCount: number;
 }
-
-
