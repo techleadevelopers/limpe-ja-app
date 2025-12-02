@@ -617,8 +617,11 @@ model PaymentIntent {
   booking            Booking             @relation(fields: [bookingId], references: [id])
   amountCents        Int
   status             PaymentIntentStatus @default(PENDING)
-  gateway            String
+  gateway            String              @default("PAGSEGURO_ORDER_PIX")
   externalRef        String?
+  externalOrderId    String?
+  externalChargeId   String?
+  externalQrCodeId   String?
   idempotencyKey     String?             @unique  // Garantir uso em API/seed para idempotência
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -1022,4 +1025,5 @@ model WebhookReplay {
   eventId String   @unique
   seenAt  DateTime @default(now())
 }
+
 
