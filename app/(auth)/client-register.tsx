@@ -1036,7 +1036,7 @@ export default function ClientRegisterScreen() {
                                         autoComplete="name"
                                     />
                                 </View>
-                                <AnimatedErrorMessage message={usernameError} isVisible={!!usernameError} centered={false} />
+                                <AnimatedErrorMessage message={usernameError} isVisible={!!usernameError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                 <View style={[styles.inputWrapper, emailError ? styles.inputWrapperError : {}]} onLayout={(e) => setEmailInputY(e.nativeEvent.layout.y)}>
                                     <View style={styles.iconCircle}>
@@ -1056,7 +1056,7 @@ export default function ClientRegisterScreen() {
                                         autoComplete="email"
                                     />
                                 </View>
-                                <AnimatedErrorMessage message={emailError} isVisible={!!emailError} centered={false} />
+                                <AnimatedErrorMessage message={emailError} isVisible={!!emailError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                 <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
@@ -1097,7 +1097,7 @@ export default function ClientRegisterScreen() {
                                         maxLength={15}
                                     />
                                 </View>
-                                <AnimatedErrorMessage message={phoneError} isVisible={!!phoneError} centered={false} />
+                                <AnimatedErrorMessage message={phoneError} isVisible={!!phoneError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                 <View style={[styles.inputWrapper, cpfError ? styles.inputWrapperError : {}]} onLayout={(e) => setCpfInputY(e.nativeEvent.layout.y)}>
                                     <View style={styles.iconCircle}>
@@ -1115,7 +1115,7 @@ export default function ClientRegisterScreen() {
                                         maxLength={14}
                                     />
                                 </View>
-                                <AnimatedErrorMessage message={cpfError} isVisible={!!cpfError} centered={false} />
+                                <AnimatedErrorMessage message={cpfError} isVisible={!!cpfError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                 <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
@@ -1155,7 +1155,7 @@ export default function ClientRegisterScreen() {
                                         maxLength={10}
                                     />
                                 </View>
-                                <AnimatedErrorMessage message={dateOfBirthError} isVisible={!!dateOfBirthError} centered={false} />
+                                <AnimatedErrorMessage message={dateOfBirthError} isVisible={!!dateOfBirthError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                 <View style={[styles.inputWrapper, passwordError ? styles.inputWrapperError : {}]} onLayout={(e) => setPasswordInputY(e.nativeEvent.layout.y)}>
                                     <View style={styles.iconCircle}>
@@ -1176,7 +1176,7 @@ export default function ClientRegisterScreen() {
                                         <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
                                     </TouchableOpacity>
                                 </View>
-                                <AnimatedErrorMessage message={passwordError} isVisible={!!passwordError} centered={false} />
+                                <AnimatedErrorMessage message={passwordError} isVisible={!!passwordError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                 <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
@@ -1273,7 +1273,7 @@ export default function ClientRegisterScreen() {
                                             />
                                             {cepLoading && <ActivityIndicator size="small" color="#00BCD4" style={{ marginLeft: 10 }} />}
                                         </View>
-                                        <AnimatedErrorMessage message={cepInputError} isVisible={!!cepInputError} centered={false} />
+                                        <AnimatedErrorMessage message={cepInputError} isVisible={!!cepInputError} centered={false} containerStyle={styles.inlineErrorLift} />
                                         <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
                                         <View style={styles.navigationButtons}>
                                             <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
@@ -1311,7 +1311,7 @@ export default function ClientRegisterScreen() {
                                                 editable={!cepLoading}
                                             />
                                         </View>
-                                        <AnimatedErrorMessage message={streetError} isVisible={!!streetError} centered={false} />
+                                        <AnimatedErrorMessage message={streetError} isVisible={!!streetError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                         <View style={[styles.inputWrapper, numberError ? styles.inputWrapperError : {}]} onLayout={(e) => setNumberInputY(e.nativeEvent.layout.y)}>
                                             <View style={styles.iconCircle}>
@@ -1328,7 +1328,7 @@ export default function ClientRegisterScreen() {
                                                 keyboardType="numeric"
                                             />
                                         </View>
-                                        <AnimatedErrorMessage message={numberError} isVisible={!!numberError} centered={false} />
+                                        <AnimatedErrorMessage message={numberError} isVisible={!!numberError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                         <View style={[styles.inputWrapper, neighborhoodError ? styles.inputWrapperError : {}]} onLayout={(e) => setNeighborhoodInputY(e.nativeEvent.layout.y)}>
                                             <View style={styles.iconCircle}>
@@ -1346,7 +1346,7 @@ export default function ClientRegisterScreen() {
                                                 editable={!cepLoading}
                                             />
                                         </View>
-                                        <AnimatedErrorMessage message={neighborhoodError} isVisible={!!neighborhoodError} centered={false} />
+                                        <AnimatedErrorMessage message={neighborhoodError} isVisible={!!neighborhoodError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                         <View style={[styles.inputWrapper, cityError ? styles.inputWrapperError : {}]} onLayout={(e) => setCityInputY(e.nativeEvent.layout.y)}>
                                             <View style={styles.iconCircle}>
@@ -1364,7 +1364,7 @@ export default function ClientRegisterScreen() {
                                                 editable={!cepLoading}
                                             />
                                         </View>
-                                        <AnimatedErrorMessage message={cityError} isVisible={!!cityError} centered={false} />
+                                        <AnimatedErrorMessage message={cityError} isVisible={!!cityError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                         <View style={[styles.inputWrapper, stateError ? styles.inputWrapperError : {}]} onLayout={(e) => setStateInputY(e.nativeEvent.layout.y)}>
                                             <View style={styles.iconCircle}>
@@ -1383,7 +1383,7 @@ export default function ClientRegisterScreen() {
                                                 editable={!cepLoading}
                                             />
                                         </View>
-                                        <AnimatedErrorMessage message={stateError} isVisible={!!stateError} centered={false} />
+                                        <AnimatedErrorMessage message={stateError} isVisible={!!stateError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                         <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
                                         <View style={styles.navigationButtons}>
@@ -1421,7 +1421,7 @@ export default function ClientRegisterScreen() {
                                                 editable={!cepLoading}
                                             />
                                         </View>
-                                        <AnimatedErrorMessage message={complementError} isVisible={!!complementError} centered={false} />
+                                        <AnimatedErrorMessage message={complementError} isVisible={!!complementError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                         <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
                                         <View style={styles.navigationButtons}>
@@ -1576,6 +1576,9 @@ const styles = StyleSheet.create({
         color: '#2D3748',
         paddingVertical: 0,
         paddingHorizontal: 0,
+    },
+    inlineErrorLift: {
+        transform: [{ translateY: -7 }], // Aproxima o erro 15% da altura do input (45px)
     },
     eyeIconTouchable: {
         paddingHorizontal: 8,
