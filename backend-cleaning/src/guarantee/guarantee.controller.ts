@@ -1,5 +1,14 @@
 // backend-cleaning/src/guarantee/guarantee.controller.ts
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { GuaranteeService } from './guarantee.service';
 import { SubmitClaimDto } from './dto/submit-claim.dto';
 import { UpdateClaimDto } from './dto/update-claim.dto';
@@ -30,12 +39,24 @@ export class GuaranteeController {
   @Roles(UserRole.CLIENT, UserRole.ADMIN) // Clients can view their own, Admin can view any
   async getClaimDetails(@Param('id') id: string, @Req() req) {
     // Add logic to ensure client can only see their own claim
-    return this.guaranteeService.getClaimDetails(id, req.user.id, req.user.role);
+    return this.guaranteeService.getClaimDetails(
+      id,
+      req.user.id,
+      req.user.role,
+    );
   }
 
   @Patch('claims/:id/status')
   @Roles(UserRole.ADMIN) // Only admins can update claim status
-  async updateClaimStatus(@Param('id') id: string, @Body() updateClaimDto: UpdateClaimDto, @Req() req) {
-    return this.guaranteeService.updateClaimStatus(id, updateClaimDto, req.user.id);
+  async updateClaimStatus(
+    @Param('id') id: string,
+    @Body() updateClaimDto: UpdateClaimDto,
+    @Req() req,
+  ) {
+    return this.guaranteeService.updateClaimStatus(
+      id,
+      updateClaimDto,
+      req.user.id,
+    );
   }
 }
