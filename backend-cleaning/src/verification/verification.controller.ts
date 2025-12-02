@@ -30,13 +30,9 @@ import {
   ApiConsumes,
   ApiBody,
   ApiProperty,
-  ApiPropertyOptional
+  ApiPropertyOptional,
 } from '@nestjs/swagger';
-import {
-  IsString,
-  IsOptional,
-  IsEnum,
-} from 'class-validator';
+import { IsString, IsOptional, IsEnum } from 'class-validator';
 import { Request } from 'express';
 import { SubmitCpfDto } from './dto/submit-cpf.dto';
 import { DocumentPhotoType } from './dto/upload-document.dto';
@@ -47,17 +43,27 @@ import { VerificationStatus } from '../shared/enums/verification-status.enum';
 import { Multer, memoryStorage } from 'multer';
 
 export class UpdateVerificationStatusDto {
-  @ApiProperty({ enum: VerificationStatus, description: 'Novo status de verificação' })
-  @IsEnum(VerificationStatus, { message: 'O status de verificação é inválido.' })
+  @ApiProperty({
+    enum: VerificationStatus,
+    description: 'Novo status de verificação',
+  })
+  @IsEnum(VerificationStatus, {
+    message: 'O status de verificação é inválido.',
+  })
   status: VerificationStatus;
 
-  @ApiPropertyOptional({ description: 'Motivo da rejeição (obrigatório se status for REJECTED)' })
+  @ApiPropertyOptional({
+    description: 'Motivo da rejeição (obrigatório se status for REJECTED)',
+  })
   @IsOptional()
   @IsString({ message: 'O motivo da rejeição deve ser uma string.' })
   reason?: string;
 
   // Compatibilidade: alguns clients enviam rejectionReason
-  @ApiPropertyOptional({ description: 'Alias para o motivo da rejeição (compatibilidade)', required: false })
+  @ApiPropertyOptional({
+    description: 'Alias para o motivo da rejeição (compatibilidade)',
+    required: false,
+  })
   @IsOptional()
   @IsString({ message: 'O motivo da rejeição deve ser uma string.' })
   rejectionReason?: string;
@@ -69,18 +75,27 @@ export class UpdateVerificationStatusDto {
 export class VerificationController {
   private readonly logger = new Logger(VerificationController.name);
 
-  constructor(
-    private readonly verificationService: VerificationService,
-  ) { }
+  constructor(private readonly verificationService: VerificationService) {}
 
   @Get('pending-queue')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Obter a fila de provedores pendentes de verificação (ADMIN apenas)' })
-  @ApiResponse({ status: 200, description: 'Lista de provedores pendentes de verificação.' })
+  @ApiOperation({
+    summary:
+      'Obter a fila de provedores pendentes de verificação (ADMIN apenas)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de provedores pendentes de verificação.',
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 403, description: 'Acesso proibido (requer função de ADMIN).' })
+  @ApiResponse({
+    status: 403,
+    description: 'Acesso proibido (requer função de ADMIN).',
+  })
   async getPendingVerificationQueue(): Promise<ProviderWithCalculatedRating[]> {
-    this.logger.log('[VerificationController] getPendingVerificationQueue: Recebido solicitação para a fila de verificação.');
+    this.logger.log(
+      '[VerificationController] getPendingVerificationQueue: Recebido solicitação para a fila de verificação.',
+    );
     return this.verificationService.getPendingProviders();
   }
 
@@ -101,7 +116,14 @@ export class VerificationController {
     },
   })
   @ApiOperation({ summary: 'Upload da foto do documento (frente ou verso)' })
-  @ApiResponse({ status: 200, description: 'Documento enviado com sucesso.', schema: { type: 'object', properties: { message: { type: 'string' }, url: { type: 'string' } } } })
+  @ApiResponse({
+    status: 200,
+    description: 'Documento enviado com sucesso.',
+    schema: {
+      type: 'object',
+      properties: { message: { type: 'string' }, url: { type: 'string' } },
+    },
+  })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
@@ -112,16 +134,31 @@ export class VerificationController {
     @UploadedFile() file: Multer.File,
   ) {
     const providerId = req.user['providerId'];
-    this.logger.log(`[VerificationController] uploadDocument: Recebido arquivo para providerId: ${providerId}, tipo: ${type}`);
+    this.logger.log(
+      `[VerificationController] uploadDocument: Recebido arquivo para providerId: ${providerId}, tipo: ${type}`,
+    );
     if (!file || !file.originalname || !file.buffer || !file.mimetype) {
-      this.logger.error(`[VerificationController] uploadDocument: Arquivo inválido ou malformado recebido.`);
-      throw new BadRequestException('Nenhum arquivo enviado ou o arquivo é inválido.');
+      this.logger.error(
+        `[VerificationController] uploadDocument: Arquivo inválido ou malformado recebido.`,
+      );
+      throw new BadRequestException(
+        'Nenhum arquivo enviado ou o arquivo é inválido.',
+      );
     }
     if (!Object.values(DocumentPhotoType).includes(type)) {
-      throw new BadRequestException('Tipo de documento inválido. Use FRONT ou BACK.');
+      throw new BadRequestException(
+        'Tipo de documento inválido. Use FRONT ou BACK.',
+      );
     }
-    const uploadedUrl = await this.verificationService.uploadDocumentPhoto(providerId, file, type);
-    return { message: `Documento (${type}) enviado com sucesso e enviado para revisão manual.`, url: uploadedUrl };
+    const uploadedUrl = await this.verificationService.uploadDocumentPhoto(
+      providerId,
+      file,
+      type,
+    );
+    return {
+      message: `Documento (${type}) enviado com sucesso e enviado para revisão manual.`,
+      url: uploadedUrl,
+    };
   }
 
   @Post('upload-selfie')
@@ -141,23 +178,39 @@ export class VerificationController {
     },
   })
   @ApiOperation({ summary: 'Upload da selfie com documento' })
-  @ApiResponse({ status: 200, description: 'Selfie enviada com sucesso.', schema: { type: 'object', properties: { message: { type: 'string' }, url: { type: 'string' } } } })
+  @ApiResponse({
+    status: 200,
+    description: 'Selfie enviada com sucesso.',
+    schema: {
+      type: 'object',
+      properties: { message: { type: 'string' }, url: { type: 'string' } },
+    },
+  })
   @ApiResponse({ status: 400, description: 'Arquivo inválido.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  async uploadSelfie(
-    @Req() req: Request,
-    @UploadedFile() file: Multer.File,
-  ) {
+  async uploadSelfie(@Req() req: Request, @UploadedFile() file: Multer.File) {
     const providerId = req.user['providerId'];
-    this.logger.log(`[VerificationController] uploadSelfie: Recebido arquivo para providerId: ${providerId}`);
+    this.logger.log(
+      `[VerificationController] uploadSelfie: Recebido arquivo para providerId: ${providerId}`,
+    );
     if (!file || !file.originalname || !file.buffer || !file.mimetype) {
-      this.logger.error(`[VerificationController] uploadSelfie: Arquivo inválido ou malformado recebido.`);
-      throw new BadRequestException('Nenhum arquivo enviado ou o arquivo é inválido.');
+      this.logger.error(
+        `[VerificationController] uploadSelfie: Arquivo inválido ou malformado recebido.`,
+      );
+      throw new BadRequestException(
+        'Nenhum arquivo enviado ou o arquivo é inválido.',
+      );
     }
-    const uploadedUrl = await this.verificationService.uploadSelfieWithDocument(providerId, file);
-    return { message: 'Selfie com documento enviada com sucesso.', url: uploadedUrl };
+    const uploadedUrl = await this.verificationService.uploadSelfieWithDocument(
+      providerId,
+      file,
+    );
+    return {
+      message: 'Selfie com documento enviada com sucesso.',
+      url: uploadedUrl,
+    };
   }
 
   @Post('upload-avatar')
@@ -177,27 +230,42 @@ export class VerificationController {
     },
   })
   @ApiOperation({ summary: 'Upload da foto de perfil (avatar)' })
-  @ApiResponse({ status: 200, description: 'Avatar enviado com sucesso.', schema: { type: 'object', properties: { message: { type: 'string' }, url: { type: 'string' } } } })
+  @ApiResponse({
+    status: 200,
+    description: 'Avatar enviado com sucesso.',
+    schema: {
+      type: 'object',
+      properties: { message: { type: 'string' }, url: { type: 'string' } },
+    },
+  })
   @ApiResponse({ status: 400, description: 'Arquivo inválido.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário/Provedor não encontrado.' })
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  async uploadAvatar(
-    @Req() req: Request,
-    @UploadedFile() file: Multer.File,
-  ) {
+  async uploadAvatar(@Req() req: Request, @UploadedFile() file: Multer.File) {
     const providerId = req.user['providerId'];
 
     if (!providerId) {
-      throw new BadRequestException('ID do provedor não encontrado no token. Este endpoint é para provedores.');
+      throw new BadRequestException(
+        'ID do provedor não encontrado no token. Este endpoint é para provedores.',
+      );
     }
 
-    this.logger.log(`[VerificationController] uploadAvatar: Recebido arquivo para providerId: ${providerId}`);
+    this.logger.log(
+      `[VerificationController] uploadAvatar: Recebido arquivo para providerId: ${providerId}`,
+    );
     if (!file || !file.originalname || !file.buffer || !file.mimetype) {
-      this.logger.error(`[VerificationController] uploadAvatar: Arquivo inválido ou malformado recebido.`);
-      throw new BadRequestException('Nenhum arquivo enviado ou o arquivo é inválido.');
+      this.logger.error(
+        `[VerificationController] uploadAvatar: Arquivo inválido ou malformado recebido.`,
+      );
+      throw new BadRequestException(
+        'Nenhum arquivo enviado ou o arquivo é inválido.',
+      );
     }
-    const uploadedUrl = await this.verificationService.uploadAvatar(providerId, file);
+    const uploadedUrl = await this.verificationService.uploadAvatar(
+      providerId,
+      file,
+    );
     return { message: 'Avatar enviado com sucesso.', url: uploadedUrl };
   }
 
@@ -205,10 +273,19 @@ export class VerificationController {
   @HttpCode(HttpStatus.OK)
   @Roles(UserRole.PROVIDER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Avança o status de verificação do provedor (pelo próprio provedor).' })
-  @ApiResponse({ status: 200, description: 'Status de verificação avançado com sucesso.' })
+  @ApiOperation({
+    summary:
+      'Avança o status de verificação do provedor (pelo próprio provedor).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Status de verificação avançado com sucesso.',
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 403, description: 'Acesso proibido (requer função de PROVEDOR).' })
+  @ApiResponse({
+    status: 403,
+    description: 'Acesso proibido (requer função de PROVEDOR).',
+  })
   async advanceVerificationStatus(@Req() req: Request) {
     const providerId = req.user['providerId'];
     await this.verificationService.advanceVerificationStatus(providerId);
@@ -217,29 +294,53 @@ export class VerificationController {
 
   @Patch(':providerId/status')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Atualizar o status de verificação de um provedor (ADMIN apenas)' })
+  @ApiOperation({
+    summary: 'Atualizar o status de verificação de um provedor (ADMIN apenas)',
+  })
   @ApiBody({ type: UpdateVerificationStatusDto })
-  @ApiResponse({ status: 200, description: 'Status de verificação atualizado com sucesso.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Status de verificação atualizado com sucesso.',
+  })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 403, description: 'Acesso proibido (requer função de ADMIN).' })
+  @ApiResponse({
+    status: 403,
+    description: 'Acesso proibido (requer função de ADMIN).',
+  })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   async updateVerificationStatus(
     @Param('providerId') providerId: string,
     @Body() updateDto: UpdateVerificationStatusDto,
   ) {
     const reason = updateDto.reason ?? updateDto.rejectionReason;
-    this.logger.log(`[VerificationController] updateVerificationStatus: Recebido solicitação para ${providerId}, novo status: ${updateDto.status}. Motivo: ${reason || 'N/A'}`);
+    this.logger.log(
+      `[VerificationController] updateVerificationStatus: Recebido solicitação para ${providerId}, novo status: ${updateDto.status}. Motivo: ${reason || 'N/A'}`,
+    );
     if (updateDto.status === VerificationStatus.REJECTED && !reason) {
-      throw new BadRequestException('O motivo da rejeição é obrigatório ao rejeitar um provedor.');
+      throw new BadRequestException(
+        'O motivo da rejeição é obrigatório ao rejeitar um provedor.',
+      );
     }
-    await this.verificationService.updateProviderVerificationStatusManually(providerId, updateDto.status, reason);
-    return { message: `Status de verificação para provedor ${providerId} atualizado para ${updateDto.status}.` };
+    await this.verificationService.updateProviderVerificationStatusManually(
+      providerId,
+      updateDto.status,
+      reason,
+    );
+    return {
+      message: `Status de verificação para provedor ${providerId} atualizado para ${updateDto.status}.`,
+    };
   }
 
   @Post('reject/:providerId')
   @Roles(UserRole.ADMIN)
-  @ApiBody({ schema: { properties: { reason: { type: 'string', description: 'Motivo da rejeição' } } }})
+  @ApiBody({
+    schema: {
+      properties: {
+        reason: { type: 'string', description: 'Motivo da rejeição' },
+      },
+    },
+  })
   @ApiOperation({ summary: 'Rejeitar um provedor e fornecer um motivo' })
   @ApiResponse({ status: 200, description: 'Provedor rejeitado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
@@ -252,7 +353,9 @@ export class VerificationController {
     if (!reason) {
       throw new BadRequestException('O motivo da rejeição é obrigatório.');
     }
-    this.logger.log(`[VerificationController] rejectProvider: Rejeitando provedor ${providerId} com motivo: ${reason}`);
+    this.logger.log(
+      `[VerificationController] rejectProvider: Rejeitando provedor ${providerId} com motivo: ${reason}`,
+    );
     await this.verificationService.rejectProvider(providerId, reason);
     return { message: `Provedor ${providerId} rejeitado com sucesso.` };
   }
@@ -260,39 +363,63 @@ export class VerificationController {
   @Get('status/:providerId')
   @Roles(UserRole.ADMIN, UserRole.PROVIDER)
   @ApiOperation({ summary: 'Obter o status de verificação de um provedor' })
-  @ApiResponse({ status: 200, description: 'Status de verificação do provedor.', schema: {
-    type: 'object',
-    properties: {
-      verificationStatus: { type: 'string', enum: Object.values(VerificationStatus) },
-      isCpfCheckedAndOk: { type: 'boolean' },
-      isDocumentFrontUploaded: { type: 'boolean' },
-      isDocumentBackUploaded: { type: 'boolean' },
-      isSelfieUploaded: { type: 'boolean' },
-      rejectionReason: { type: 'string', nullable: true },
-    }
-  } })
+  @ApiResponse({
+    status: 200,
+    description: 'Status de verificação do provedor.',
+    schema: {
+      type: 'object',
+      properties: {
+        verificationStatus: {
+          type: 'string',
+          enum: Object.values(VerificationStatus),
+        },
+        isCpfCheckedAndOk: { type: 'boolean' },
+        isDocumentFrontUploaded: { type: 'boolean' },
+        isDocumentBackUploaded: { type: 'boolean' },
+        isSelfieUploaded: { type: 'boolean' },
+        rejectionReason: { type: 'string', nullable: true },
+      },
+    },
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
-  async getVerificationStatus(@Req() req: Request, @Param('providerId') paramProviderId: string) {
+  async getVerificationStatus(
+    @Req() req: Request,
+    @Param('providerId') paramProviderId: string,
+  ) {
     const requestingUserId = req.user['userId'];
     const requestingUserRole = req.user['role'];
     let providerIdToFetch = paramProviderId;
     if (requestingUserRole === UserRole.PROVIDER) {
-      const providerByUser = await this.verificationService['providersService'].findByUserId(requestingUserId);
+      const providerByUser =
+        await this.verificationService['providersService'].findByUserId(
+          requestingUserId,
+        );
       if (!providerByUser || providerByUser.id !== paramProviderId) {
-        throw new ForbiddenException('Você não tem permissão para ver o status de verificação deste provedor.');
+        throw new ForbiddenException(
+          'Você não tem permissão para ver o status de verificação deste provedor.',
+        );
       }
       providerIdToFetch = providerByUser.id;
     }
-    const provider = await this.verificationService['providersService'].findOne(providerIdToFetch);
+    const provider =
+      await this.verificationService['providersService'].findOne(
+        providerIdToFetch,
+      );
     if (!provider) {
       throw new NotFoundException('Provedor não encontrado.');
     }
     const isCpfCheckedAndOk = false;
-    const isDocumentFrontUploaded = provider.documentPhotoFrontUrl !== null && provider.documentPhotoFrontUrl !== undefined;
-    const isDocumentBackUploaded = provider.documentPhotoBackUrl !== null && provider.documentPhotoBackUrl !== undefined;
-    const isSelfieUploaded = provider.selfieWithDocumentUrl !== null && provider.selfieWithDocumentUrl !== undefined;
+    const isDocumentFrontUploaded =
+      provider.documentPhotoFrontUrl !== null &&
+      provider.documentPhotoFrontUrl !== undefined;
+    const isDocumentBackUploaded =
+      provider.documentPhotoBackUrl !== null &&
+      provider.documentPhotoBackUrl !== undefined;
+    const isSelfieUploaded =
+      provider.selfieWithDocumentUrl !== null &&
+      provider.selfieWithDocumentUrl !== undefined;
     return {
       verificationStatus: provider.verificationStatus,
       isCpfCheckedAndOk,
