@@ -13,6 +13,8 @@ export class UploadDocumentDto {
   // No entanto, podemos adicionar campos para metadados se necessário.
 
   @IsOptional()
-  @IsEnum(DocumentPhotoType, { message: 'Tipo de documento inválido. Use FRONT ou BACK.' })
+  @IsEnum(DocumentPhotoType, {
+    message: 'Tipo de documento inválido. Use FRONT ou BACK.',
+  })
   type?: DocumentPhotoType; // Exemplo: para especificar se é frente ou verso
 }
