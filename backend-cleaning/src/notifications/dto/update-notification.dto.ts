@@ -4,7 +4,10 @@ import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
 import { CreateNotificationDto } from './create-notification.dto';
 
 export class UpdateNotificationDto extends PartialType(CreateNotificationDto) {
-  @ApiPropertyOptional({ description: 'Indica se a notificação foi lida', example: true })
+  @ApiPropertyOptional({
+    description: 'Indica se a notificação foi lida',
+    example: true,
+  })
   @IsOptional()
   @IsBoolean()
   isRead?: boolean;
