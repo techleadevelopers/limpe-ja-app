@@ -49,7 +49,12 @@ export interface Coupon {
   updatedAt: Date;
   firstBookingOnly?: boolean; // NOVO CAMPO
   issuedToUserId?: string; // NOVO CAMPO: Para quem o cupom foi emitido (se for pessoal)
-  issuedBy?: 'SYSTEM' | 'MISSION' | 'REFERRAL' | 'LOYALTY_REDEEM' | 'RETURN_COUPON'; // NOVO CAMPO: Origem do cupom
+  issuedBy?:
+    | 'SYSTEM'
+    | 'MISSION'
+    | 'REFERRAL'
+    | 'LOYALTY_REDEEM'
+    | 'RETURN_COUPON'; // NOVO CAMPO: Origem do cupom
   maxDiscount?: number; // NOVO CAMPO: Cap de desconto
   description?: string; // Adicionado para consistência com `create-coupon.dto.ts`
 }
@@ -71,7 +76,12 @@ export class CouponEntity implements Coupon {
   updatedAt: Date;
   firstBookingOnly?: boolean;
   issuedToUserId?: string;
-  issuedBy?: 'SYSTEM' | 'MISSION' | 'REFERRAL' | 'LOYALTY_REDEEM' | 'RETURN_COUPON';
+  issuedBy?:
+    | 'SYSTEM'
+    | 'MISSION'
+    | 'REFERRAL'
+    | 'LOYALTY_REDEEM'
+    | 'RETURN_COUPON';
   maxDiscount?: number;
   description?: string;
 
