@@ -32,7 +32,7 @@ class AuthService {
             const response = await api.post('/auth/login', {
                 email: credentials.email,
                 password: credentials.password,
-            });
+            }, { headers: { 'x-silent': '1' } });
             const authData: AuthResponse = response.data;
             await this.saveAuthData(authData);
             if (__DEV__) console.log('[AuthService Frontend] login: Login bem-sucedido.');
