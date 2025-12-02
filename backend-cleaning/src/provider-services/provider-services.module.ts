@@ -4,13 +4,13 @@ import { ProviderServicesService } from './provider-services.service';
 import { ProviderServicesController } from './provider-services.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ProvidersModule } from '../providers/providers.module'; // Necessário para ProvidersService
-import { ServicesModule } from '../services/services.module';   // Necessário para ServicesService
+import { ServicesModule } from '../services/services.module'; // Necessário para ServicesService
 
 @Module({
   imports: [
     PrismaModule,
     ProvidersModule, // Necessário para ProvidersService
-    ServicesModule,  // Necessário para ServicesService
+    ServicesModule, // Necessário para ServicesService
   ],
   controllers: [ProviderServicesController],
   providers: [ProviderServicesService],
