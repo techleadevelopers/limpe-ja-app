@@ -188,9 +188,9 @@ const getGreeting = () => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: Constants.statusBarHeight - 35,
+    paddingVertical: Constants.statusBarHeight - 45,
     left: 0,
-    top: 3,
+    top: -6,
     marginHorizontal: 11,
     paddingHorizontal: 15,
     borderBottomEndRadius: 40,
