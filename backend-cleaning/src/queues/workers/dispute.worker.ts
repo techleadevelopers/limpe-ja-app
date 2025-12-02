@@ -11,7 +11,7 @@ type DisputeJobData = {
   reporterRole: 'CLIENT' | 'PROVIDER' | 'ADMIN';
   reason: DisputeReason;
   description?: string;
-  refundAmount?: number;     // nome que chega no job
+  refundAmount?: number; // nome que chega no job
   attachments?: string[];
 };
 
