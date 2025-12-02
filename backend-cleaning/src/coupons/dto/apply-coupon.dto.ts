@@ -1,5 +1,13 @@
 // backend-cleaning/src/coupons/dto/apply-coupon.dto.ts
-import { IsString, IsNotEmpty, ValidateNested, IsOptional, IsUUID, IsNumber, IsISO8601 } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  ValidateNested,
+  IsOptional,
+  IsUUID,
+  IsNumber,
+  IsISO8601,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
