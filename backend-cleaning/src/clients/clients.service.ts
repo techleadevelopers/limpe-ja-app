@@ -1,5 +1,10 @@
 // src/clients/clients.service.ts
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common'; // Adicionado Logger
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common'; // Adicionado Logger
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateClientProfileDto } from './dto/update-client-profile.dto';
 import { Client, Prisma, User, Address, Booking, Review } from '@prisma/client';
@@ -22,7 +27,6 @@ export type ClientWithIncludes = Client & {
   createdAt: Date;
   updatedAt: Date;
 };
-
 
 @Injectable()
 export class ClientsService {
@@ -51,12 +55,18 @@ export class ClientsService {
     address: Partial<Address>,
     geocoded?: { latitude: number; longitude: number } | null,
   ): { latitude?: number; longitude?: number } {
-    const latitude = address.latitude !== undefined ? address.latitude : geocoded?.latitude;
-    const longitude = address.longitude !== undefined ? address.longitude : geocoded?.longitude;
+    const latitude =
+      address.latitude !== undefined ? address.latitude : geocoded?.latitude;
+    const longitude =
+      address.longitude !== undefined ? address.longitude : geocoded?.longitude;
     return { latitude, longitude };
   }
 
-  private async updateAddressLocationPoint(addressId: string, latitude?: number, longitude?: number) {
+  private async updateAddressLocationPoint(
+    addressId: string,
+    latitude?: number,
+    longitude?: number,
+  ) {
     if (!addressId || latitude === undefined || longitude === undefined) return;
     await this.prisma.$executeRaw`
       UPDATE "Address"
@@ -66,7 +76,9 @@ export class ClientsService {
   }
 
   async findClientById(id: string): Promise<ClientWithIncludes | null> {
-    this.logger.log(`[ClientsService] findClientById: Buscando cliente por ID: ${id}`);
+    this.logger.log(
+      `[ClientsService] findClientById: Buscando cliente por ID: ${id}`,
+    );
     const client = await this.prisma.client.findUnique({
       where: { id },
       include: {
@@ -78,13 +90,17 @@ export class ClientsService {
       },
     });
     if (!client) {
-      this.logger.warn(`[ClientsService] findClientById: Cliente com ID "${id}" não encontrado.`);
+      this.logger.warn(
+        `[ClientsService] findClientById: Cliente com ID "${id}" não encontrado.`,
+      );
     }
     return client as ClientWithIncludes | null;
   }
 
   async findClientByUserId(userId: string): Promise<ClientWithIncludes | null> {
-    this.logger.log(`[ClientsService] findClientByUserId: Buscando cliente por userId: ${userId}`);
+    this.logger.log(
+      `[ClientsService] findClientByUserId: Buscando cliente por userId: ${userId}`,
+    );
     const client = await this.prisma.client.findUnique({
       where: { userId },
       include: {
@@ -96,16 +112,27 @@ export class ClientsService {
       },
     });
     if (!client) {
-      this.logger.warn(`[ClientsService] findClientByUserId: Cliente para userId "${userId}" não encontrado.`);
+      this.logger.warn(
+        `[ClientsService] findClientByUserId: Cliente para userId "${userId}" não encontrado.`,
+      );
     }
     return client as ClientWithIncludes | null;
   }
 
-  async updateClient(clientId: string, updateClientProfileDto: UpdateClientProfileDto): Promise<ClientWithIncludes> {
-    this.logger.log(`[ClientsService] updateClient: Atualizando cliente com ID: ${clientId}`);
-    const client = await this.prisma.client.findUnique({ where: { id: clientId } });
+  async updateClient(
+    clientId: string,
+    updateClientProfileDto: UpdateClientProfileDto,
+  ): Promise<ClientWithIncludes> {
+    this.logger.log(
+      `[ClientsService] updateClient: Atualizando cliente com ID: ${clientId}`,
+    );
+    const client = await this.prisma.client.findUnique({
+      where: { id: clientId },
+    });
     if (!client) {
-      throw new NotFoundException(`Cliente com ID "${clientId}" nALo encontrado.`);
+      throw new NotFoundException(
+        `Cliente com ID "${clientId}" nALo encontrado.`,
+      );
     }
 
     let finalLatitude: number | undefined;
@@ -113,14 +140,20 @@ export class ClientsService {
     let addressUpsert: Prisma.AddressUpsertWithoutClientInput | undefined;
 
     if (updateClientProfileDto.address) {
-      const addressString = this.buildAddressString(updateClientProfileDto.address as Partial<Address>);
+      const addressString = this.buildAddressString(
+        updateClientProfileDto.address as Partial<Address>,
+      );
       const geo = addressString ? await geocodeAddress(addressString) : null;
-      const coords = this.applyGeocodeFallback(updateClientProfileDto.address as Partial<Address>, geo);
+      const coords = this.applyGeocodeFallback(
+        updateClientProfileDto.address as Partial<Address>,
+        geo,
+      );
       finalLatitude = coords.latitude;
       finalLongitude = coords.longitude;
       const addressPayload = { ...updateClientProfileDto.address } as any;
       if (finalLatitude !== undefined) addressPayload.latitude = finalLatitude;
-      if (finalLongitude !== undefined) addressPayload.longitude = finalLongitude;
+      if (finalLongitude !== undefined)
+        addressPayload.longitude = finalLongitude;
       addressUpsert = {
         create: addressPayload,
         update: addressPayload,
@@ -136,28 +169,51 @@ export class ClientsService {
           // noShowCount e cancellationCount sALo atualizados no BookingsService
           address: addressUpsert ? { upsert: addressUpsert } : undefined,
         },
-        include: { user: true, address: true, bookings: true, reviewsMade: true },
+        include: {
+          user: true,
+          address: true,
+          bookings: true,
+          reviewsMade: true,
+        },
       });
-      this.logger.log(`[ClientsService] updateClient: Cliente ${clientId} atualizado com sucesso.`);
+      this.logger.log(
+        `[ClientsService] updateClient: Cliente ${clientId} atualizado com sucesso.`,
+      );
       // Telemetria: client_profile_updated
-      this.logger.log(`[TELEMETRY] client_profile_updated: { clientId: ${clientId} }`);
-      if (updatedClient.address?.id && finalLatitude !== undefined && finalLongitude !== undefined) {
-        await this.updateAddressLocationPoint(updatedClient.address.id, finalLatitude, finalLongitude);
+      this.logger.log(
+        `[TELEMETRY] client_profile_updated: { clientId: ${clientId} }`,
+      );
+      if (
+        updatedClient.address?.id &&
+        finalLatitude !== undefined &&
+        finalLongitude !== undefined
+      ) {
+        await this.updateAddressLocationPoint(
+          updatedClient.address.id,
+          finalLatitude,
+          finalLongitude,
+        );
       }
       return updatedClient as ClientWithIncludes;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
-          throw new NotFoundException(`Cliente com ID "${clientId}" nALo encontrado.`);
+          throw new NotFoundException(
+            `Cliente com ID "${clientId}" nALo encontrado.`,
+          );
         }
       }
-      this.logger.error(`[ClientsService] updateClient: Erro ao atualizar cliente ${clientId}: ${error.message}`);
+      this.logger.error(
+        `[ClientsService] updateClient: Erro ao atualizar cliente ${clientId}: ${error.message}`,
+      );
       throw error;
     }
   }
 
   async getClientDashboardData(clientId: string): Promise<ClientDashboardDto> {
-    this.logger.log(`[ClientsService] getClientDashboardData: Buscando dados de dashboard para cliente ${clientId}.`);
+    this.logger.log(
+      `[ClientsService] getClientDashboardData: Buscando dados de dashboard para cliente ${clientId}.`,
+    );
     const client = await this.prisma.client.findUnique({
       where: { id: clientId },
       include: {
@@ -171,13 +227,20 @@ export class ClientsService {
     });
 
     if (!client) {
-      throw new NotFoundException(`Cliente com ID "${clientId}" não encontrado.`);
+      throw new NotFoundException(
+        `Cliente com ID "${clientId}" não encontrado.`,
+      );
     }
 
-    const pendingBookings = client.bookings.filter(b => b.status === 'PENDING' || b.status === 'CONFIRMED');
-    const completedBookings = client.bookings.filter(b => b.status === 'COMPLETED');
+    const pendingBookings = client.bookings.filter(
+      (b) => b.status === 'PENDING' || b.status === 'CONFIRMED',
+    );
+    const completedBookings = client.bookings.filter(
+      (b) => b.status === 'COMPLETED',
+    );
 
-    const nextBooking = pendingBookings.length > 0 ? pendingBookings[0] : undefined;
+    const nextBooking =
+      pendingBookings.length > 0 ? pendingBookings[0] : undefined;
     const recentBookings = client.bookings.slice(0, 5);
 
     const popularServices = [
@@ -185,23 +248,29 @@ export class ClientsService {
       { name: 'Limpeza Pesada', bookingsCount: 80 },
     ];
 
-    const pendingReviews = client.bookings.filter(b => b.status === 'COMPLETED' && !b.review).map(b => ({
-      id: b.id,
-      bookingId: b.id,
-      clientId: b.clientId,
-      providerId: b.providerId,
-      rating: null,
-      comment: null,
-      createdAt: b.updatedAt,
-    })) as ReviewEntity[];
+    const pendingReviews = client.bookings
+      .filter((b) => b.status === 'COMPLETED' && !b.review)
+      .map((b) => ({
+        id: b.id,
+        bookingId: b.id,
+        clientId: b.clientId,
+        providerId: b.providerId,
+        rating: null,
+        comment: null,
+        createdAt: b.updatedAt,
+      })) as ReviewEntity[];
 
-    this.logger.log(`[ClientsService] getClientDashboardData: Dados de dashboard para cliente ${clientId} gerados.`);
+    this.logger.log(
+      `[ClientsService] getClientDashboardData: Dados de dashboard para cliente ${clientId} gerados.`,
+    );
     return {
       fullName: client.fullName,
       pendingBookingsCount: pendingBookings.length,
       completedBookingsCount: completedBookings.length,
-      nextBooking: nextBooking ? (nextBooking as unknown as BookingEntity) : undefined,
-      recentBookings: recentBookings.map(b => b as unknown as BookingEntity),
+      nextBooking: nextBooking
+        ? (nextBooking as unknown as BookingEntity)
+        : undefined,
+      recentBookings: recentBookings.map((b) => b as unknown as BookingEntity),
       popularServices,
       pendingReviews,
     };
