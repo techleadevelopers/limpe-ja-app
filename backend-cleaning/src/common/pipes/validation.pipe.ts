@@ -1,5 +1,10 @@
 // src/common/pipes/validation.pipe.ts
-import { PipeTransform, Injectable, ArgumentMetadata, BadRequestException } from '@nestjs/common';
+import {
+  PipeTransform,
+  Injectable,
+  ArgumentMetadata,
+  BadRequestException,
+} from '@nestjs/common';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 
@@ -13,7 +18,7 @@ export class CustomValidationPipe implements PipeTransform<any> {
     const errors = await validate(object);
     if (errors.length > 0) {
       // Mapeia os erros para um formato mais legível
-      const formattedErrors = errors.map(error => {
+      const formattedErrors = errors.map((error) => {
         return Object.values(error.constraints).join(', ');
       });
       throw new BadRequestException(formattedErrors);
