@@ -1,10 +1,9 @@
-
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SmartSuggestionDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Tipo da sugestão',
-    enum: ['pricing', 'availability', 'service_improvement', 'marketing']
+    enum: ['pricing', 'availability', 'service_improvement', 'marketing'],
   })
   type: 'pricing' | 'availability' | 'service_improvement' | 'marketing';
 
@@ -14,9 +13,9 @@ export class SmartSuggestionDto {
   @ApiProperty({ description: 'Descrição detalhada da sugestão' })
   description: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Impacto esperado',
-    enum: ['high', 'medium', 'low']
+    enum: ['high', 'medium', 'low'],
   })
   impact: 'high' | 'medium' | 'low';
 
@@ -46,9 +45,9 @@ export class DetailedRatingBreakdownDto {
   @ApiProperty({ description: 'Total de avaliações' })
   totalReviews: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Tendência recente',
-    enum: ['improving', 'declining', 'stable']
+    enum: ['improving', 'declining', 'stable'],
   })
   recentTrend: 'improving' | 'declining' | 'stable';
 
