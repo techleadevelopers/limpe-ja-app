@@ -1,5 +1,12 @@
 // backend-cleaning/src/guarantee/dto/update-claim.dto.ts
-import { IsEnum, IsOptional, IsString, IsNumber, Min, IsPositive } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsNumber,
+  Min,
+  IsPositive,
+} from 'class-validator';
 import { ClaimStatus } from '../entities/guarantee-claim.entity'; // Assuming entity defines enum
 
 export class UpdateClaimDto {
