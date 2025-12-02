@@ -1,11 +1,10 @@
-
 import { IsNotEmpty, IsString, Length, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RequestOtpDto {
-  @ApiProperty({ 
-    description: 'Número de telefone com DDD (apenas números)', 
-    example: '11999999999' 
+  @ApiProperty({
+    description: 'Número de telefone com DDD (apenas números)',
+    example: '11999999999',
   })
   @IsNotEmpty({ message: 'O número de telefone é obrigatório.' })
   @IsString({ message: 'O número de telefone deve ser uma string.' })
@@ -15,9 +14,9 @@ export class RequestOtpDto {
 }
 
 export class VerifyOtpDto {
-  @ApiProperty({ 
-    description: 'Número de telefone com DDD (apenas números)', 
-    example: '11999999999' 
+  @ApiProperty({
+    description: 'Número de telefone com DDD (apenas números)',
+    example: '11999999999',
   })
   @IsNotEmpty({ message: 'O número de telefone é obrigatório.' })
   @IsString({ message: 'O número de telefone deve ser uma string.' })
@@ -25,9 +24,9 @@ export class VerifyOtpDto {
   @Matches(/^[1-9][1-9]\d{9}$/, { message: 'Formato de telefone inválido.' })
   phone: string;
 
-  @ApiProperty({ 
-    description: 'Código OTP de 6 dígitos', 
-    example: '123456' 
+  @ApiProperty({
+    description: 'Código OTP de 6 dígitos',
+    example: '123456',
   })
   @IsNotEmpty({ message: 'O código OTP é obrigatório.' })
   @IsString({ message: 'O código OTP deve ser uma string.' })
