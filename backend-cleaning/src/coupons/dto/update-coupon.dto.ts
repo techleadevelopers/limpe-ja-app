@@ -47,8 +47,27 @@ export class UpdateCouponDto {
   maxUses?: number;
 
   @IsOptional()
-  @IsIn(['GENERAL', 'NEW_CLIENTS', 'SPECIFIC_SERVICE', 'SPECIFIC_PROVIDER', 'NEW_CUSTOMER', 'REFERRAL_REFERRED', 'REFERRAL_REFERRER', 'MISSION_REWARD', 'REPEAT_CUSTOMER']) // <<-- FIXED: Replaced 'ALL' with 'GENERAL' and added new targets
-  target?: 'GENERAL' | 'NEW_CLIENTS' | 'SPECIFIC_SERVICE' | 'SPECIFIC_PROVIDER' | 'NEW_CUSTOMER' | 'REFERRAL_REFERRED' | 'REFERRAL_REFERRER' | 'MISSION_REWARD' | 'REPEAT_CUSTOMER';
+  @IsIn([
+    'GENERAL',
+    'NEW_CLIENTS',
+    'SPECIFIC_SERVICE',
+    'SPECIFIC_PROVIDER',
+    'NEW_CUSTOMER',
+    'REFERRAL_REFERRED',
+    'REFERRAL_REFERRER',
+    'MISSION_REWARD',
+    'REPEAT_CUSTOMER',
+  ]) // <<-- FIXED: Replaced 'ALL' with 'GENERAL' and added new targets
+  target?:
+    | 'GENERAL'
+    | 'NEW_CLIENTS'
+    | 'SPECIFIC_SERVICE'
+    | 'SPECIFIC_PROVIDER'
+    | 'NEW_CUSTOMER'
+    | 'REFERRAL_REFERRED'
+    | 'REFERRAL_REFERRER'
+    | 'MISSION_REWARD'
+    | 'REPEAT_CUSTOMER';
 
   @IsOptional()
   @IsString()
