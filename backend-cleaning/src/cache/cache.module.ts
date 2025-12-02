@@ -7,14 +7,16 @@ import KeyvRedis from '@keyv/redis';
 // para contornar o erro TS2305, que indica que CacheStore não é exportado.
 import { CacheService } from './cache.service';
 
-class RedisCacheStore { 
-  private readonly keyv: KeyvRedis<any>; 
-  private readonly defaultTtl: number; 
+class RedisCacheStore {
+  private readonly keyv: KeyvRedis<any>;
+  private readonly defaultTtl: number;
 
   constructor(redisUrl: string, defaultTtl: number) {
-    this.keyv = new KeyvRedis<any>(redisUrl); 
+    this.keyv = new KeyvRedis<any>(redisUrl);
     this.defaultTtl = defaultTtl;
-    this.keyv.on('error', err => console.error('KeyvRedis connection error:', err));
+    this.keyv.on('error', (err) =>
+      console.error('KeyvRedis connection error:', err),
+    );
   }
 
   // O tipo genérico 'T' foi removido da assinatura do método 'get'
@@ -23,18 +25,22 @@ class RedisCacheStore {
   async get(key: string): Promise<any | undefined> {
     // Criando uma variável intermediária com tipagem explícita
     // para garantir que 'key' seja tratada como 'string' na chamada.
-    const keyAsString: string = key; 
+    const keyAsString: string = key;
     // @ts-ignore
     // Este comentário instrui o TypeScript a ignorar erros de tipagem nesta linha.
     // É um último recurso quando o compilador se comporta de forma inesperada.
-    return this.keyv.get(keyAsString); 
+    return this.keyv.get(keyAsString);
   }
 
-  async set<T>(key: string, value: T, ttl?: number): Promise<void> {
+  async set(key: string, value: any, ttl?: number): Promise<void> {
     // @ts-ignore
     // Aplicando o mesmo workaround para o método set, pois o erro TS2345
     // está ocorrendo de forma similar no parâmetro 'key'.
-    await this.keyv.set(key, value, ttl !== undefined ? ttl * 1000 : this.defaultTtl * 1000);
+    await this.keyv.set(
+      key,
+      value,
+      ttl !== undefined ? ttl * 1000 : this.defaultTtl * 1000,
+    );
   }
 
   async del(key: string): Promise<void> {
@@ -52,13 +58,17 @@ class RedisCacheStore {
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const redisUrl = configService.get<string>('REDIS_URL') || 'redis://localhost:6379';
-        const ttl = parseInt(configService.get<string>('CACHE_TTL_SECONDS') || '3600', 10);
+        const redisUrl =
+          configService.get<string>('REDIS_URL') || 'redis://localhost:6379';
+        const ttl = parseInt(
+          configService.get<string>('CACHE_TTL_SECONDS') || '3600',
+          10,
+        );
 
         const redisStoreInstance = new RedisCacheStore(redisUrl, ttl);
 
         return {
-          store: redisStoreInstance, 
+          store: redisStoreInstance,
           ttl: ttl,
         };
       },
