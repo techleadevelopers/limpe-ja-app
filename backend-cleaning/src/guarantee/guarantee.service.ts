@@ -1,5 +1,10 @@
 // backend-cleaning/src/guarantee/guarantee.service.ts
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitClaimDto } from './dto/submit-claim.dto';
 import { UpdateClaimDto } from './dto/update-claim.dto';
@@ -14,7 +19,8 @@ export class GuaranteeService {
   ) {}
 
   async submitClaim(clientId: string, submitClaimDto: SubmitClaimDto) {
-    const { bookingId, description, attachments, estimatedValue } = submitClaimDto;
+    const { bookingId, description, attachments, estimatedValue } =
+      submitClaimDto;
 
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -26,7 +32,9 @@ export class GuaranteeService {
     }
 
     if (booking.clientId !== clientId) {
-      throw new ForbiddenException('You can only submit claims for your own bookings.');
+      throw new ForbiddenException(
+        'You can only submit claims for your own bookings.',
+      );
     }
 
     const newClaim = await this.prisma.guaranteeClaim.create({
@@ -42,16 +50,20 @@ export class GuaranteeService {
     });
 
     // Notify administrators/support team about the new claim
-    const adminUsers = await this.prisma.user.findMany({ where: { role: 'ADMIN' } });
-    await Promise.all(adminUsers.map(admin =>
-      // CORREÇÃO: Assumindo que NotificationsService.sendPushNotification existe
-      this.notificationsService.sendPushNotification(
-        admin.id,
-        'Nova Solicitação de Garantia',
-        `Uma nova solicitação de garantia foi enviada para o agendamento ${bookingId}.`,
-        { type: 'guarantee_claim', claimId: newClaim.id }
-      )
-    ));
+    const adminUsers = await this.prisma.user.findMany({
+      where: { role: 'ADMIN' },
+    });
+    await Promise.all(
+      adminUsers.map((admin) =>
+        // CORREÇÃO: Assumindo que NotificationsService.sendPushNotification existe
+        this.notificationsService.sendPushNotification(
+          admin.id,
+          'Nova Solicitação de Garantia',
+          `Uma nova solicitação de garantia foi enviada para o agendamento ${bookingId}.`,
+          { type: 'guarantee_claim', claimId: newClaim.id },
+        ),
+      ),
+    );
 
     return newClaim;
   }
@@ -80,14 +92,22 @@ export class GuaranteeService {
 
     // Authorization check
     if (userRole === 'CLIENT' && claim.clientId !== userId) {
-      throw new ForbiddenException('You do not have permission to view this claim.');
+      throw new ForbiddenException(
+        'You do not have permission to view this claim.',
+      );
     }
 
     return claim;
   }
 
-  async updateClaimStatus(id: string, updateClaimDto: UpdateClaimDto, adminId: string) {
-    const existingClaim = await this.prisma.guaranteeClaim.findUnique({ where: { id } });
+  async updateClaimStatus(
+    id: string,
+    updateClaimDto: UpdateClaimDto,
+    adminId: string,
+  ) {
+    const existingClaim = await this.prisma.guaranteeClaim.findUnique({
+      where: { id },
+    });
 
     if (!existingClaim) {
       throw new NotFoundException(`Guarantee claim with ID ${id} not found.`);
@@ -98,8 +118,15 @@ export class GuaranteeService {
       data: {
         status: updateClaimDto.status,
         resolutionNotes: updateClaimDto.resolutionNotes,
-        resolvedValue: updateClaimDto.resolvedValue ? new Decimal(updateClaimDto.resolvedValue) : undefined, // CORREÇÃO: Usar new Decimal
-        resolvedAt: updateClaimDto.status === 'SETTLED' || updateClaimDto.status === 'REJECTED' || updateClaimDto.status === 'APPROVED' ? new Date() : undefined,
+        resolvedValue: updateClaimDto.resolvedValue
+          ? new Decimal(updateClaimDto.resolvedValue)
+          : undefined, // CORREÇÃO: Usar new Decimal
+        resolvedAt:
+          updateClaimDto.status === 'SETTLED' ||
+          updateClaimDto.status === 'REJECTED' ||
+          updateClaimDto.status === 'APPROVED'
+            ? new Date()
+            : undefined,
       },
     });
 
@@ -109,7 +136,7 @@ export class GuaranteeService {
       updatedClaim.clientId,
       'Atualização da Sua Solicitação de Garantia',
       `Sua solicitação de garantia para o agendamento ${updatedClaim.bookingId} foi atualizada para: ${updatedClaim.status}.`,
-      { type: 'guarantee_claim_update', claimId: updatedClaim.id }
+      { type: 'guarantee_claim_update', claimId: updatedClaim.id },
     );
 
     return updatedClaim;
