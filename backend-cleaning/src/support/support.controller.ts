@@ -29,7 +29,9 @@ export class SupportController {
   constructor(private readonly supportService: SupportService) {}
 
   @Get('meta')
-  @ApiOperation({ summary: 'Lista metadados de suporte (categorias e severidades)' })
+  @ApiOperation({
+    summary: 'Lista metadados de suporte (categorias e severidades)',
+  })
   async getMeta() {
     const categories = Object.keys(SupportTicketCategory);
     const severities = ['LOW', 'MEDIUM', 'HIGH'];
@@ -45,7 +47,9 @@ export class SupportController {
   }
 
   @Get('tickets')
-  @ApiOperation({ summary: 'Lista tickets de suporte (meus ou todos para admin)' })
+  @ApiOperation({
+    summary: 'Lista tickets de suporte (meus ou todos para admin)',
+  })
   async getTickets(
     @Request() req,
     @Query('mine') mine: string,
@@ -90,13 +94,20 @@ export class SupportController {
   ) {
     const userId = req.user.userId;
     const userRole = req.user.role;
-    return this.supportService.addMessageToTicket(ticketId, userId, userRole, body);
+    return this.supportService.addMessageToTicket(
+      ticketId,
+      userId,
+      userRole,
+      body,
+    );
   }
 
   @Patch('tickets/:id/status')
   @Roles(UserRole.ADMIN)
   @UseGuards(RolesGuard)
-  @ApiOperation({ summary: 'Atualiza o status de um ticket de suporte (apenas admin)' })
+  @ApiOperation({
+    summary: 'Atualiza o status de um ticket de suporte (apenas admin)',
+  })
   async updateTicketStatus(
     @Param('id') ticketId: string,
     @Body('status') status: string,
@@ -115,4 +126,3 @@ export class SupportController {
     return this.supportService.assignTicket(ticketId, agentId);
   }
 }
-
