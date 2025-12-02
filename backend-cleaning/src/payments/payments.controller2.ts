@@ -14,9 +14,17 @@ import {
   InternalServerErrorException,
   Headers,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
-import { CreatePixChargeDto, PixChargeResponseDto } from './dto/create-pix-charge.dto';
+import {
+  CreatePixChargeDto,
+  PixChargeResponseDto,
+} from './dto/create-pix-charge.dto';
 import { PaymentIntentResponseDto } from './dto/payment-intent-response.dto';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -46,41 +54,81 @@ export class PaymentsController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Cria uma nova cobrança PIX para um serviço ou provedor.',
-    description: 'Permite que um cliente gere uma cobrança PIX para efetuar o pagamento.',
+    description:
+      'Permite que um cliente gere uma cobrança PIX para efetuar o pagamento.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Cobrança PIX criada com sucesso.', type: PixChargeResponseDto })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados inválidos ou provedor não especificado.' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Não autorizado.' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Provedor ou agendamento não encontrado.' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Cobrança PIX criada com sucesso.',
+    type: PixChargeResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Dados inválidos ou provedor não especificado.',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Não autorizado.',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Provedor ou agendamento não encontrado.',
+  })
   async createPixCharge(
     @Req() req: Request,
     @Body() createPixChargeDto: CreatePixChargeDto,
   ): Promise<PixChargeResponseDto> {
     const requestUser = req.user as RequestUserPayload;
     const clientUserId = requestUser.userId;
-    this.logger.log(`[PaymentsController] createPixCharge: userId=${clientUserId} dto=${JSON.stringify(createPixChargeDto)}`);
+    this.logger.log(
+      `[PaymentsController] createPixCharge: userId=${clientUserId} dto=${JSON.stringify(createPixChargeDto)}`,
+    );
     if (!clientUserId) {
-      this.logger.error('[PaymentsController] createPixCharge: userId não encontrado no token.');
-      throw new InternalServerErrorException('ID do usuário não disponível no token de autenticação.');
+      this.logger.error(
+        '[PaymentsController] createPixCharge: userId não encontrado no token.',
+      );
+      throw new InternalServerErrorException(
+        'ID do usuário não disponível no token de autenticação.',
+      );
     }
-    return this.paymentsService.createPixCharge(clientUserId, createPixChargeDto);
+    return this.paymentsService.createPixCharge(
+      clientUserId,
+      createPixChargeDto,
+    );
   }
 
   // Recupera PaymentIntent por booking
   @Get('intent/:bookingId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Recupera o PaymentIntent associado a um agendamento' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'PaymentIntent encontrado com sucesso.', type: PaymentIntentResponseDto })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Usuário não autorizado a visualizar o PaymentIntent.' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'PaymentIntent não encontrado.' })
+  @ApiOperation({
+    summary: 'Recupera o PaymentIntent associado a um agendamento',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'PaymentIntent encontrado com sucesso.',
+    type: PaymentIntentResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Usuário não autorizado a visualizar o PaymentIntent.',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'PaymentIntent não encontrado.',
+  })
   async getPaymentIntent(
     @Req() req: Request,
     @Param('bookingId') bookingId: string,
   ): Promise<PaymentIntentResponseDto> {
     const requestUser = req.user as RequestUserPayload;
-    this.logger.log(`[PaymentsController] getPaymentIntent: userId=${requestUser.userId} bookingId=${bookingId}`);
-    return this.paymentsService.getPaymentIntentForBooking(bookingId, requestUser.userId);
+    this.logger.log(
+      `[PaymentsController] getPaymentIntent: userId=${requestUser.userId} bookingId=${bookingId}`,
+    );
+    return this.paymentsService.getPaymentIntentForBooking(
+      bookingId,
+      requestUser.userId,
+    );
   }
 
   // Solicita saque via PIX (provedor)
@@ -89,12 +137,26 @@ export class PaymentsController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Solicita um saque de valores disponíveis para um provedor via chave PIX.',
+    summary:
+      'Solicita um saque de valores disponíveis para um provedor via chave PIX.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Solicitação de saque recebida com sucesso.', type: MessageResponseDto })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados inválidos (valor, chave PIX).' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Não autorizado.' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Provedor não encontrado.' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Solicitação de saque recebida com sucesso.',
+    type: MessageResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Dados inválidos (valor, chave PIX).',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Não autorizado.',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Provedor não encontrado.',
+  })
   async requestWithdrawal(
     @Req() req: Request,
     @Body() requestWithdrawalDto: RequestWithdrawalDto,
@@ -102,13 +164,26 @@ export class PaymentsController {
   ) {
     const requestUser = req.user as RequestUserPayload;
     const providerId = requestUser.providerId;
-    this.logger.log(`[PaymentsController] requestWithdrawal: providerId=${providerId}`);
-    this.logger.debug(`[PaymentsController] requestWithdrawal: req.user=${JSON.stringify(requestUser)}`);
+    this.logger.log(
+      `[PaymentsController] requestWithdrawal: providerId=${providerId}`,
+    );
+    this.logger.debug(
+      `[PaymentsController] requestWithdrawal: req.user=${JSON.stringify(requestUser)}`,
+    );
     if (!providerId) {
-      this.logger.error('[PaymentsController] requestWithdrawal: providerId não encontrado no token.', requestUser as any);
-      throw new InternalServerErrorException('ID do provedor não disponível no token de autenticação.');
+      this.logger.error(
+        '[PaymentsController] requestWithdrawal: providerId não encontrado no token.',
+        requestUser as any,
+      );
+      throw new InternalServerErrorException(
+        'ID do provedor não disponível no token de autenticação.',
+      );
     }
-    return this.paymentsService.requestWithdrawal(providerId, requestWithdrawalDto, idempotencyKey);
+    return this.paymentsService.requestWithdrawal(
+      providerId,
+      requestWithdrawalDto,
+      idempotencyKey,
+    );
   }
 
   // Webhook de PIX
@@ -118,7 +193,10 @@ export class PaymentsController {
     summary: 'Recebe notificações de webhook de pagamento PIX.',
     description: 'Chamado pelo PSP para notificar status de uma transação PIX.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Webhook recebido e processado.' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Webhook recebido e processado.',
+  })
   async handlePixWebhook(
     @Headers('x-signature') signature: string,
     @Headers('x-event-id') eventId: string,
@@ -126,13 +204,27 @@ export class PaymentsController {
     @Req() req: Request,
   ): Promise<MessageResponseDto> {
     this.logger.log('[PaymentsController] handlePixWebhook: recebido.');
-    this.logger.debug(`[PaymentsController] handlePixWebhook: payload=${JSON.stringify(webhookData)}`);
+    this.logger.debug(
+      `[PaymentsController] handlePixWebhook: payload=${JSON.stringify(webhookData)}`,
+    );
     try {
       const rawBody: Buffer | undefined = (req as any)?.rawBody;
-      return await this.paymentsService.handlePixWebhook(signature, eventId, webhookData, rawBody);
+      return await this.paymentsService.handlePixWebhook(
+        signature,
+        eventId,
+        webhookData,
+        rawBody,
+      );
     } catch (error: any) {
-      this.logger.error('Erro ao processar webhook PIX no controller:', error?.message, error?.stack);
-      return { message: 'Erro interno ao processar webhook PIX, mas o erro foi logado.' };
+      this.logger.error(
+        'Erro ao processar webhook PIX no controller:',
+        error?.message,
+        error?.stack,
+      );
+      return {
+        message:
+          'Erro interno ao processar webhook PIX, mas o erro foi logado.',
+      };
     }
   }
 
@@ -140,14 +232,23 @@ export class PaymentsController {
   @Post('webhook/withdrawal')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Recebe notificações de webhook de saque.' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Webhook de saque recebido e processado.' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Webhook de saque recebido e processado.',
+  })
   async handleWithdrawalWebhook(
     @Headers('x-signature') signature: string,
     @Headers('x-event-id') eventId: string,
     @Body() payload: any,
   ) {
-    this.logger.log('[PaymentsController] handleWithdrawalWebhook: received event from PSP.');
-    return this.paymentsService.handleWithdrawalWebhook(signature, eventId, payload);
+    this.logger.log(
+      '[PaymentsController] handleWithdrawalWebhook: received event from PSP.',
+    );
+    return this.paymentsService.handleWithdrawalWebhook(
+      signature,
+      eventId,
+      payload,
+    );
   }
 
   // ADMIN: Listar transações
@@ -168,7 +269,11 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Inicia reembolso (admin)' })
-  async refund(@Req() req: any, @Param('transactionId') transactionId: string, @Body() body: { amount?: number }) {
+  async refund(
+    @Req() req: any,
+    @Param('transactionId') transactionId: string,
+    @Body() body: { amount?: number },
+  ) {
     const role = req.user?.role;
     if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
     return this.paymentsService.initiateRefund(transactionId, body?.amount);
@@ -190,11 +295,19 @@ export class PaymentsController {
   @Post('webhooks/register')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Registra webhooks de PIX e Payouts no PagBank (admin)' })
-  async registerWebhooks(@Req() req: any, @Body() body: { pixUrl?: string; payoutsUrl?: string }) {
+  @ApiOperation({
+    summary: 'Registra webhooks de PIX e Payouts no PagBank (admin)',
+  })
+  async registerWebhooks(
+    @Req() req: any,
+    @Body() body: { pixUrl?: string; payoutsUrl?: string },
+  ) {
     const role = req.user?.role;
     if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
-    return this.paymentsService.registerAllWebhooks(body?.pixUrl, body?.payoutsUrl);
+    return this.paymentsService.registerAllWebhooks(
+      body?.pixUrl,
+      body?.payoutsUrl,
+    );
   }
 
   // ADMIN: Aprovar saque
@@ -213,7 +326,11 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Rejeita solicitação de saque (admin)' })
-  async rejectWithdrawal(@Req() req: any, @Param('id') id: string, @Body() body: { reason?: string }) {
+  async rejectWithdrawal(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+  ) {
     const role = req.user?.role;
     if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
     return this.paymentsService.rejectWithdrawal(id, body?.reason);
