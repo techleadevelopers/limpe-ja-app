@@ -1,5 +1,14 @@
 // backend-cleaning/src/pricing/dto/create-pricing-rule.dto.ts
-import { IsString, IsOptional, IsInt, Min, Max, IsNumber, IsBoolean, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+  IsNumber,
+  IsBoolean,
+  IsEnum,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 import { PricingScope } from '@prisma/client';
 
@@ -32,12 +41,20 @@ export class CreatePricingRuleDto {
 
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (typeof value === 'string' && value.match(/^([01]\d|2[0-3]):([0-5]\d)$/)) ? value : undefined)
+  @Transform(({ value }) =>
+    typeof value === 'string' && value.match(/^([01]\d|2[0-3]):([0-5]\d)$/)
+      ? value
+      : undefined,
+  )
   startTime?: string;
 
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (typeof value === 'string' && value.match(/^([01]\d|2[0-3]):([0-5]\d)$/)) ? value : undefined)
+  @Transform(({ value }) =>
+    typeof value === 'string' && value.match(/^([01]\d|2[0-3]):([0-5]\d)$/)
+      ? value
+      : undefined,
+  )
   endTime?: string;
 
   @IsOptional()
