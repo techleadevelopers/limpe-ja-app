@@ -39,7 +39,10 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Get('find-or-create/provider/:providerId/client/:clientId')
-  @ApiOperation({ summary: 'Encontra um chat existente ou cria um novo entre um provedor e um cliente' })
+  @ApiOperation({
+    summary:
+      'Encontra um chat existente ou cria um novo entre um provedor e um cliente',
+  })
   @ApiParam({ name: 'providerId', description: 'ID do provedor', type: String })
   @ApiParam({ name: 'clientId', description: 'ID do cliente', type: String })
   @ApiResponse({
@@ -48,7 +51,11 @@ export class ChatController {
     type: ChatDetailsDto,
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 403, description: 'Acesso negado. Apenas o cliente ou o provedor podem iniciar um chat entre si.' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Acesso negado. Apenas o cliente ou o provedor podem iniciar um chat entre si.',
+  })
   @UseGuards(RolesGuard) // Adicionado RolesGuard para validação de papel
   @Roles(UserRole.CLIENT, UserRole.PROVIDER, UserRole.ADMIN) // Permite Cliente, Provedor e Admin
   async findOrCreateChat(
@@ -64,20 +71,25 @@ export class ChatController {
       // Admin pode acessar qualquer chat
     } else if (currentUserRole === UserRole.CLIENT) {
       if (currentUserId !== clientId) {
-        throw new ForbiddenException('Como cliente, você só pode iniciar chats para si mesmo.');
+        throw new ForbiddenException(
+          'Como cliente, você só pode iniciar chats para si mesmo.',
+        );
       }
     } else if (currentUserRole === UserRole.PROVIDER) {
       if (currentUserId !== providerId) {
-        throw new ForbiddenException('Como provedor, você só pode iniciar chats para si mesmo.');
+        throw new ForbiddenException(
+          'Como provedor, você só pode iniciar chats para si mesmo.',
+        );
       }
     } else {
-      throw new ForbiddenException('Você não tem permissão para acessar este chat.');
+      throw new ForbiddenException(
+        'Você não tem permissão para acessar este chat.',
+      );
     }
 
     // O ChatService já contém a lógica de permissão baseada no status do agendamento.
     return this.chatService.findOrCreateChat(clientId, providerId);
   }
-
 
   @Post(':chatId/messages')
   @ApiOperation({ summary: 'Enviar uma nova mensagem em uma conversa' })
@@ -87,9 +99,16 @@ export class ChatController {
     type: Message,
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 403, description: 'Acesso proibido. Não há agendamento confirmado ou o agendamento foi concluído/cancelado.' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Acesso proibido. Não há agendamento confirmado ou o agendamento foi concluído/cancelado.',
+  })
   @ApiResponse({ status: 404, description: 'Conversa não encontrada.' })
-  @ApiResponse({ status: 400, description: 'Remetente ou destinatário inválido.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Remetente ou destinatário inválido.',
+  })
   async sendMessage(
     @Req() req: Request,
     @Param('chatId') chatId: string,
@@ -105,10 +124,16 @@ export class ChatController {
         sendMessageDto.content,
       );
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ForbiddenException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
         throw error; // Re-lança as exceções do serviço diretamente
       }
-      throw new ForbiddenException('Não foi possível enviar a mensagem. Verifique as permissões.'); // Erro genérico
+      throw new ForbiddenException(
+        'Não foi possível enviar a mensagem. Verifique as permissões.',
+      ); // Erro genérico
     }
   }
 
@@ -120,7 +145,11 @@ export class ChatController {
     type: [Message],
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 403, description: 'Acesso proibido. Não há agendamento confirmado ou o agendamento foi concluído/cancelado.' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Acesso proibido. Não há agendamento confirmado ou o agendamento foi concluído/cancelado.',
+  })
   @ApiResponse({ status: 404, description: 'Conversa não encontrada.' })
   async getMessages(
     @Req() req: Request,
@@ -136,10 +165,15 @@ export class ChatController {
       // O ChatService já contém a lógica de permissão
       return await this.chatService.getMessagesByChatId(chatId, offset, limit);
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
         throw error; // Re-lança as exceções do serviço diretamente
       }
-      throw new ForbiddenException('Você não tem acesso a esta conversa ou ela não existe.'); // Erro genérico
+      throw new ForbiddenException(
+        'Você não tem acesso a esta conversa ou ela não existe.',
+      ); // Erro genérico
     }
   }
 
@@ -151,9 +185,8 @@ export class ChatController {
     type: [ConversationItemDto], // <-- USAR O DTO AQUI
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  async getMyConversations(
-    @Req() req: Request,
-  ): Promise<ConversationItem[]> { // O tipo de retorno da função ainda é a interface, pois é o que o serviço retorna
+  async getMyConversations(@Req() req: Request): Promise<ConversationItem[]> {
+    // O tipo de retorno da função ainda é a interface, pois é o que o serviço retorna
     const userId = req.user['userId'];
     return this.chatService.getConversationsForUser(userId);
   }
