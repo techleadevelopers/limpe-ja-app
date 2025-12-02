@@ -1,4 +1,11 @@
-import { Controller, Get, UseGuards, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { AdminDashboardService } from './admin-dashboard.service';
@@ -20,7 +27,12 @@ export class AdminDashboardController {
   }
 
   @Get('revenue-trend')
-  @ApiQuery({ name: 'months', required: false, example: 12, description: 'Quantidade de meses para o histórico (1-24)' })
+  @ApiQuery({
+    name: 'months',
+    required: false,
+    example: 12,
+    description: 'Quantidade de meses para o histï¿½rico (1-24)',
+  })
   async getRevenueTrend(
     @Query('months', new DefaultValuePipe(12), ParseIntPipe) months: number,
   ) {
