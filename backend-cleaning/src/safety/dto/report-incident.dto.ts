@@ -1,5 +1,12 @@
 // backend-cleaning/src/safety/dto/report-incident.dto.ts
-import { IsEnum, IsString, IsOptional, IsUUID, IsArray, IsUrl } from 'class-validator';
+import {
+  IsEnum,
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsArray,
+  IsUrl,
+} from 'class-validator';
 import { IncidentType } from '../entities/incident.entity'; // Assuming entity defines enum
 
 export class ReportIncidentDto {
