@@ -8,7 +8,7 @@ import { AuthModule } from '../auth/auth.module'; // Para JwtAuthGuard e RolesGu
 @Module({
   imports: [
     PrismaModule, // Necessário para interagir com o banco de dados via PrismaService
-    AuthModule,   // Necessário para usar JwtAuthGuard e RolesGuard
+    AuthModule, // Necessário para usar JwtAuthGuard e RolesGuard
   ],
   controllers: [FaqsController],
   providers: [FaqsService],
