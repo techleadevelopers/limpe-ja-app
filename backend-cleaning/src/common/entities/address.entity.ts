@@ -2,7 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator'; // Importe conforme necessário para DTOs, não estritamente para entidades
 
 export class AddressEntity {
-  @ApiProperty({ description: 'ID único do endereço', example: 'uuid-do-endereco' })
+  @ApiProperty({
+    description: 'ID único do endereço',
+    example: 'uuid-do-endereco',
+  })
   id: string;
 
   @ApiProperty({ description: 'CEP', example: '12345-678' })
@@ -26,10 +29,16 @@ export class AddressEntity {
   @ApiProperty({ description: 'Estado (UF)', example: 'SP' })
   state: string;
 
-  @ApiPropertyOptional({ description: 'Latitude do endereço', example: -23.5505 })
+  @ApiPropertyOptional({
+    description: 'Latitude do endereço',
+    example: -23.5505,
+  })
   latitude: number | null;
 
-  @ApiPropertyOptional({ description: 'Longitude do endereço', example: -46.6333 })
+  @ApiPropertyOptional({
+    description: 'Longitude do endereço',
+    example: -46.6333,
+  })
   longitude: number | null;
 
   // As chaves estrangeiras clientId e providerId são internas do Prisma e geralmente não são expostas diretamente
