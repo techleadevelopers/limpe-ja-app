@@ -1,6 +1,22 @@
 // src/coupons/coupons.controller.ts
-import { Controller, Get, Param, Query, UseGuards, Req, Logger, Post, Body, BadRequestException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  UseGuards,
+  Req,
+  Logger,
+  Post,
+  Body,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -20,7 +36,10 @@ export class CouponsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CLIENT) // Apenas clientes devem resolver cupons para agendamentos
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Resolve um cupom e retorna detalhes de elegibilidade e prévia de desconto' })
+  @ApiOperation({
+    summary:
+      'Resolve um cupom e retorna detalhes de elegibilidade e prévia de desconto',
+  })
   @ApiResponse({
     status: 200,
     description: 'Detalhes do cupom e elegibilidade.',
@@ -42,7 +61,9 @@ export class CouponsController {
     @Query('providerId') providerId?: string,
     @Query('scheduledDate') scheduledDate?: string,
   ) {
-    this.logger.log(`[CouponsController] resolveCoupon: Resolvendo cupom ${code} para userId ${req.user.userId}`);
+    this.logger.log(
+      `[CouponsController] resolveCoupon: Resolvendo cupom ${code} para userId ${req.user.userId}`,
+    );
     const bookingData = {
       originalPrice: originalPrice ? Number(originalPrice) : undefined,
       providerServiceId,
@@ -50,17 +71,29 @@ export class CouponsController {
       scheduledDate,
       clientId: req.user.userId, // O clientId é o próprio userId do cliente
     };
-    return this.couponsService.resolveCoupon(code, req.user.userId, bookingData);
+    return this.couponsService.resolveCoupon(
+      code,
+      req.user.userId,
+      bookingData,
+    );
   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Lista os cupons disponíveis para o usuário autenticado' })
-  @ApiResponse({ status: 200, description: 'Lista de cupons do usuário.', type: [CouponEntity] })
+  @ApiOperation({
+    summary: 'Lista os cupons disponíveis para o usuário autenticado',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de cupons do usuário.',
+    type: [CouponEntity],
+  })
   async getMyCoupons(@Req() req) {
-    this.logger.log(`[CouponsController] getMyCoupons: Buscando cupons para userId: ${req.user.userId}`);
+    this.logger.log(
+      `[CouponsController] getMyCoupons: Buscando cupons para userId: ${req.user.userId}`,
+    );
     return this.couponsService.getMyCoupons(req.user.userId);
   }
 
@@ -69,9 +102,23 @@ export class CouponsController {
   @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Aplica um cupom e retorna o desconto calculado' })
-  @ApiResponse({ status: 200, description: 'Resultado da aplicação do cupom.', type: Object })
+  @ApiResponse({
+    status: 200,
+    description: 'Resultado da aplicação do cupom.',
+    type: Object,
+  })
   async applyCoupon(
-    @Body() payload: { code: string; bookingData?: { originalPrice?: number; clientId?: string; providerServiceId?: string; providerId?: string; scheduledDate?: string } },
+    @Body()
+    payload: {
+      code: string;
+      bookingData?: {
+        originalPrice?: number;
+        clientId?: string;
+        providerServiceId?: string;
+        providerId?: string;
+        scheduledDate?: string;
+      };
+    },
     @Req() req,
   ): Promise<CouponApplicationResult> {
     const code = payload?.code;
