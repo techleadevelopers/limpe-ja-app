@@ -22,7 +22,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request } from 'express-serve-static-core';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 
@@ -46,10 +51,17 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obter perfil do usuário logado' })
-  @ApiResponse({ status: 200, description: 'Perfil do usuário.', type: UserProfileDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil do usuário.',
+    type: UserProfileDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
-  @ApiResponse({ status: 500, description: 'Erro interno no servidor (ex: query falhou).' })
+  @ApiResponse({
+    status: 500,
+    description: 'Erro interno no servidor (ex: query falhou).',
+  })
   async getMyProfile(@Req() req: Request): Promise<UserProfileDto> {
     try {
       const requestUserPayload = req.user as RequestUserPayload;
@@ -58,7 +70,9 @@ export class UsersController {
       this.logger.log(
         `[UsersController] getMyProfile: req.user payload: ${JSON.stringify(requestUserPayload)}`,
       );
-      this.logger.log(`[UsersController] getMyProfile: Extrair userId: ${userId}`);
+      this.logger.log(
+        `[UsersController] getMyProfile: Extrair userId: ${userId}`,
+      );
 
       if (!userId) {
         this.logger.error(
@@ -70,12 +84,14 @@ export class UsersController {
         );
       }
 
-      const user = (await this.usersService.findOne(userId)) as UserWithIncludes | null;
+      const user = await this.usersService.findOne(userId);
       if (!user) {
         this.logger.warn(
           `[UsersController] getMyProfile: Usuário ${userId} não encontrado.`,
         );
-        throw new NotFoundException(`Usuário com ID "${userId}" não encontrado.`);
+        throw new NotFoundException(
+          `Usuário com ID "${userId}" não encontrado.`,
+        );
       }
 
       if (!user.client && user.role === UserRole.CLIENT) {
@@ -94,7 +110,9 @@ export class UsersController {
         );
       }
 
-      this.logger.log(`[UsersController] getMyProfile: Perfil pronto para ${userId}.`);
+      this.logger.log(
+        `[UsersController] getMyProfile: Perfil pronto para ${userId}.`,
+      );
       return new UserProfileDto(user);
     } catch (error: any) {
       this.logger.error(
@@ -111,7 +129,11 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Atualizar perfil do usuário logado' })
-  @ApiResponse({ status: 200, description: 'Perfil atualizado.', type: UserProfileDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil atualizado.',
+    type: UserProfileDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   @ApiResponse({ status: 500, description: 'Erro interno.' })
@@ -127,15 +149,14 @@ export class UsersController {
         )}`,
       );
 
-      const updatedUser = (await this.usersService.update(
-        userId,
-        updateUserDto,
-      )) as UserWithIncludes;
+      const updatedUser = await this.usersService.update(userId, updateUserDto);
       if (!updatedUser) {
         this.logger.warn(
           `[UsersController] updateMyProfile: Usuário ${userId} não encontrado para update.`,
         );
-        throw new NotFoundException(`Usuário com ID "${userId}" não encontrado.`);
+        throw new NotFoundException(
+          `Usuário com ID "${userId}" não encontrado.`,
+        );
       }
 
       this.logger.log(
@@ -156,18 +177,22 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Listar todos os usuários (apenas admin)' })
-  @ApiResponse({ status: 200, description: 'Lista de usuários.', type: [UserProfileDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de usuários.',
+    type: [UserProfileDto],
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 500, description: 'Erro interno.' })
   async findAll(): Promise<UserProfileDto[]> {
     try {
       this.logger.log('[UsersController] findAll: Listando usuários (ADMIN).');
-      const users = (await this.usersService.findAllUsers()) as UserWithIncludes[];
+      const users = await this.usersService.findAllUsers();
       this.logger.log(
         `[UsersController] findAll: Mapeando ${users.length} usuários para DTOs.`,
       );
-      return users.map(user => new UserProfileDto(user));
+      return users.map((user) => new UserProfileDto(user));
     } catch (error: any) {
       this.logger.error(`[UsersController] findAll: Erro: ${error.message}`);
       throw error;
@@ -179,7 +204,11 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Solicitar exclusão da própria conta (LGPD)' })
-  @ApiResponse({ status: 202, description: 'Solicitação recebida.', type: MessageResponseDto })
+  @ApiResponse({
+    status: 202,
+    description: 'Solicitação recebida.',
+    type: MessageResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 500, description: 'Erro interno.' })
   @HttpCode(HttpStatus.ACCEPTED)
@@ -205,15 +234,21 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obter perfil por ID (apenas admin)' })
-  @ApiResponse({ status: 200, description: 'Perfil do usuário.', type: UserProfileDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil do usuário.',
+    type: UserProfileDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   @ApiResponse({ status: 500, description: 'Erro interno.' })
   async findOne(@Param('id') id: string): Promise<UserProfileDto> {
     try {
-      this.logger.log(`[UsersController] findOne: Obtendo perfil de ${id} (ADMIN).`);
-      const user = (await this.usersService.findOne(id)) as UserWithIncludes | null;
+      this.logger.log(
+        `[UsersController] findOne: Obtendo perfil de ${id} (ADMIN).`,
+      );
+      const user = await this.usersService.findOne(id);
       if (!user) {
         this.logger.warn(
           `[UsersController] findOne: Usuário ${id} não encontrado.`,
@@ -233,14 +268,20 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Marcar para exclusão por ID (apenas admin)' })
-  @ApiResponse({ status: 200, description: 'Marcado para exclusão.', type: MessageResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Marcado para exclusão.',
+    type: MessageResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   @HttpCode(HttpStatus.OK)
   async remove(@Param('id') id: string): Promise<MessageResponseDto> {
     try {
-      this.logger.log(`[UsersController] remove: Marcando exclusão de ${id} (ADMIN).`);
+      this.logger.log(
+        `[UsersController] remove: Marcando exclusão de ${id} (ADMIN).`,
+      );
       await this.usersService.remove(id);
       this.logger.log(`[UsersController] remove: Sucesso para ${id}.`);
       return { message: `Usuário com ID ${id} foi marcado para exclusão.` };
@@ -254,7 +295,11 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Solicitar exportação de dados (LGPD)' })
-  @ApiResponse({ status: 202, description: 'Solicitação recebida.', type: MessageResponseDto })
+  @ApiResponse({
+    status: 202,
+    description: 'Solicitação recebida.',
+    type: MessageResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 500, description: 'Erro interno.' })
   @HttpCode(HttpStatus.ACCEPTED)
@@ -275,4 +320,3 @@ export class UsersController {
     }
   }
 }
-
