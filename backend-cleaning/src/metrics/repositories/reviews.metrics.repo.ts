@@ -7,7 +7,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class ReviewsMetricsRepository {
   constructor(private prisma: PrismaService) {}
 
-  async getAverageRating(userId: string, from?: string, to?: string): Promise<number> {
+  async getAverageRating(
+    userId: string,
+    from?: string,
+    to?: string,
+  ): Promise<number> {
     const where: any = { customerId: userId };
 
     if (from && to) {
