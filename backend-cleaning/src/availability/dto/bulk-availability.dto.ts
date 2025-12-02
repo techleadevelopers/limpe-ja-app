@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, ArrayMinSize, IsString, IsNotEmpty, IsDateString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  ArrayMinSize,
+  IsString,
+  IsNotEmpty,
+  IsDateString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class TimeRangeDto {
@@ -15,7 +22,10 @@ export class TimeRangeDto {
 }
 
 export class BulkDateRangesDto {
-  @ApiProperty({ example: '2025-11-10', description: 'Data (UTC) no formato YYYY-MM-DD' })
+  @ApiProperty({
+    example: '2025-11-10',
+    description: 'Data (UTC) no formato YYYY-MM-DD',
+  })
   @IsDateString({ strict: true })
   date: string;
 
@@ -35,4 +45,3 @@ export class BulkAvailabilityDto {
   @Type(() => BulkDateRangesDto)
   dates: BulkDateRangesDto[];
 }
-
