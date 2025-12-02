@@ -19,13 +19,7 @@ import { NotificationsModule } from '../notifications/notifications.module'; // 
     UploadModule,
   ],
   controllers: [VerificationController],
-  providers: [
-    VerificationService,
-    DocumentProcessingService,
-  ],
-  exports: [
-    VerificationService,
-    DocumentProcessingService,
-  ],
+  providers: [VerificationService, DocumentProcessingService],
+  exports: [VerificationService, DocumentProcessingService],
 })
 export class VerificationModule {}
