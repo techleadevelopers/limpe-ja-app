@@ -52,7 +52,7 @@ export default function ServiceDetailsStep5Premium({
       </LinearGradient>
 
       <View style={styles.radiusContainer}>
-        <Text style={styles.sectionTitle}>🗺️ Até onde você consegue atender?</Text>
+        <Text style={styles.sectionTitle}> Até onde você consegue atender?</Text>
         <View style={styles.sliderWrapper}>
           <Slider
             minimumValue={5}
@@ -74,7 +74,7 @@ export default function ServiceDetailsStep5Premium({
       </View>
 
       <View style={{ marginTop: 20 }}>
-        <Text style={styles.sectionTitle}>🕓 Quando você pode atender?</Text>
+        <Text style={styles.sectionTitle}> Quando você pode atender?</Text>
         {upcoming.map((d) => {
           const key = d.toISOString().slice(0, 10);
           const s = selectedDays[key] ?? { morning: false, afternoon: false };
