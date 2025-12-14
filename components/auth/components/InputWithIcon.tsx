@@ -70,7 +70,7 @@ const internalStyles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
         borderRadius: 28,
-        height: 34,
+        height: 48, // ALTURA FINAL
         bottom: 55,
         marginBottom: 10,
         shadowColor: 'rgba(100, 100, 150, 0.15)',
@@ -95,13 +95,13 @@ const internalStyles = StyleSheet.create({
         flex: 1,
         fontSize: 15,
         color: '#2D3748',
-        right: 8,
-        height: '70%',
-        paddingVertical: 12,
+        height: 40,        // ← COMO FUNCIONA EM TODOS
+        paddingVertical: 0,
     },
+
     eyeIconTouchable: {
-        paddingHorizontal: 15,
-        height: '70%',
+        paddingHorizontal: 1,
+        height: '100%',
         justifyContent: 'center',
     },
 });
