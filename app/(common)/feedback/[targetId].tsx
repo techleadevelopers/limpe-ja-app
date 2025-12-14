@@ -1,258 +1,250 @@
-// LimpeJaApp/app/(common)/feedback/[targetId].tsx
-import { Ionicons } from '@expo/vector-icons'; // Para as estrelas e outros ícones
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput, // Importar Alert
-    TouchableOpacity,
-    View
+  Animated,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Platform, // Importar Platform para ajustes finos
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { useRoute } from '@react-navigation/native';
 
-// <--- ADICIONADO: Importar o serviço de review e suas tipagens
-import { submitFeedback } from '../../../services/reviewService';
-// Importar SubmitReviewDto (assumindo que você o definiu em types/backend/reviews.ts)
-import { useAuth } from '../../../hooks/useAuth'; // Para obter o ID do usuário que está dando feedback
-import { SubmitReviewDto } from '../../../types/backend/reviews';
-
-// Componente StarRating Aprimorado
-interface StarRatingProps {
-  rating: number;
-  onRate: (rate: number) => void;
-  maxStars?: number;
-  starSize?: number;
-  activeColor?: string;
-  inactiveColor?: string;
+interface Props {
+  route: {
+    params: {
+      providerName: string;
+      providerAvatar?: string;
+    };
+  };
+  navigation: any;
 }
 
-const StarRating: React.FC<StarRatingProps> = ({
-  rating,
-  onRate,
-  maxStars = 5,
-  starSize = 36,
-  activeColor = '#FFC107',
-  inactiveColor = '#CED4DA',
-}) => {
-  return (
-    <View style={styles.starContainer}>
-      {Array.from({ length: maxStars }, (_, i) => i + 1).map((star) => (
-        <TouchableOpacity key={star} onPress={() => onRate(star)} style={styles.starTouchable}>
-          <Ionicons
-            name={rating >= star ? "star" : "star-outline"}
-            size={starSize}
-            color={rating >= star ? activeColor : inactiveColor}
-          />
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-};
-
-
-export default function FeedbackScreen() {
-  const params = useLocalSearchParams<{
-    targetId: string;
-    type?: 'service' | 'provider_profile' | 'app_feedback';
-    serviceName?: string;
-    providerName?: string;
-    // Se você passar o providerId para a tela de feedback, adicione aqui também
-    providerId?: string; 
-  }>();
-  
-  const { targetId, type = 'app_feedback', serviceName, providerName, providerId } = params;
-  const router = useRouter();
-  const { user } = useAuth(); // Obtém o usuário logado
-
-  const [rating, setRating] = useState(0);
+export default function PostBookingReview({ route, navigation }: Props) {
+  // Protege acesso aos params vindo da navegação
+  const navRoute = route ?? (useRoute() as any);
+  const params = navRoute?.params || {};
+  const providerName: string = params.providerName || 'Prestador';
+  const providerAvatar: string | undefined = params.providerAvatar;
+  const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const hasAvatar = !!providerAvatar;
+  const providerInitial = useMemo(
+    () => (providerName ? providerName.charAt(0).toUpperCase() : '?'),
+    [providerName],
+  );
 
-  const handleSubmitFeedback = async () => {
-    // CORREÇÃO: Verificar se user.id existe antes de prosseguir
-    if (!user?.id) {
-        Alert.alert("Erro de Autenticação", "Não foi possível identificar o usuário. Por favor, faça login novamente.");
-        return;
-    }
+  const fade = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.92)).current;
 
-    if (type !== 'app_feedback' && rating === 0) {
-      Alert.alert("Avaliação Incompleta", "Por favor, selecione de 1 a 5 estrelas.");
-      return;
-    }
-    if (comment.trim() === '' && (type === 'service' || type === 'provider_profile')) {
-      Alert.alert("Comentário Vazio", "Por favor, escreva um comentário sobre sua experiência.");
-      return;
-    }
-    if (type === 'app_feedback' && comment.trim() === '') {
-        Alert.alert("Feedback Vazio", "Por favor, escreva sua sugestão ou problema.");
-        return;
-    }
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, friction: 6, useNativeDriver: true }),
+    ]).start();
+  }, [fade, scale]);
 
-    setIsLoading(true);
-    try {
-        const feedbackData: SubmitReviewDto = {
-            targetId: targetId,
-            type: type,
-            rating: rating,
-            comment: comment.trim(),
-            // CORREÇÃO: ADICIONAR O userId AQUI!
-            userId: user.id, // <--- ESTE É O CAMPO QUE FALTAVA!
-            
-            // Campos adicionais que podem ser úteis para o backend
-            serviceName: serviceName,
-            providerName: providerName,
-            providerId: providerId, // Passar o providerId se estiver disponível
-        };
-
-        // <--- CHAMA O SERVIÇO REAL PARA ENVIAR O FEEDBACK
-        await submitFeedback(feedbackData);
-
-        Alert.alert("Feedback Enviado!", "Obrigado pela sua contribuição.");
-        setIsLoading(false); // Garante que o loading para antes de navegar
-        if (router.canGoBack()) {
-            router.back();
-        } else {
-            // Fallback se não puder voltar (ex: se for a primeira tela do stack)
-            if (type === 'app_feedback') router.replace('/(client)/explore'); // Navega para home do cliente
-            else router.replace('/(client)/bookings'); // Ou para a tela de agendamentos se for de serviço/provedor
-        }
-    } catch (error: any) {
-        console.error("[FeedbackScreen] Erro ao enviar feedback:", error.response?.data || error.message);
-        Alert.alert("Erro ao Enviar", error.response?.data?.message || "Não foi possível enviar seu feedback. Tente novamente.");
-    } finally {
-        setIsLoading(false);
-    }
+  const handleSubmit = () => {
+    // TODO: integrar submitReview
+    // navigation.navigate('home');
+    console.log(`Avaliação enviada: ${rating} estrelas, Comentário: ${comment}`);
+    navigation.goBack(); // Usar goBack() simula fechar o modal/overlay
   };
 
-  let screenTitle = "Deixe seu Feedback";
-  let contextInfo = "";
-  let commentPlaceholder = "Descreva sua sugestão, elogio ou problema...";
-
-  if (type === 'service') {
-    screenTitle = `Avaliar Serviço`;
-    contextInfo = `Serviço: ${serviceName || 'Não especificado'}${providerName ? `Prestado por: ${providerName}` : ''}`;
-    commentPlaceholder = "Como foi sua experiência com este serviço?";
-  } else if (type === 'provider_profile') {
-    screenTitle = `Avaliar Profissional`;
-    contextInfo = `Profissional: ${providerName || 'Não especificado'}`;
-    commentPlaceholder = `Como foi sua experiência com ${providerName || 'este profissional'}?`;
-  }
-
   return (
-    <ScrollView style={styles.scrollView} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Stack.Screen options={{ title: screenTitle }} />
+    // 🛑 Fundo: Neutro, Muito Claro e Confortável (Quase branco)
+    <LinearGradient colors={['#F5F5F5', '#FFFFFF']} style={styles.container}>
       
-      <Text style={styles.headerTitle}>{screenTitle}</Text>
-      {contextInfo && <Text style={styles.contextText}>{contextInfo}</Text>}
+      {/* 🛑 REMOVIDO: View style={styles.glow} -> Simplificar e limpar o fundo */}
 
-      {type !== 'app_feedback' && (
-        <View style={styles.section}>
-          <Text style={styles.label}>Sua Avaliação:</Text>
-          <StarRating rating={rating} onRate={setRating} />
+      <Animated.View style={[styles.card, { opacity: fade, transform: [{ scale }] }]}>
+        
+        {/* 🛑 REMOVIDO: Badge superior "Sua Avaliação" -> Design mais clean */}
+
+        <View style={styles.avatarWrap}>
+          {hasAvatar ? (
+            <Image source={{ uri: providerAvatar }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarFallback]}>
+              <Text style={styles.avatarInitial}>{providerInitial}</Text>
+            </View>
+          )}
         </View>
-      )}
 
-      <View style={styles.section}>
-        <Text style={styles.label}>{type === 'app_feedback' ? 'Seu Feedback:' : 'Seu Comentário:'}</Text>
+        {/* 🛑 Títulos: Mais suaves e centralizados */}
+        <Text style={styles.title}>O que achou do serviço?</Text>
+        <Text style={styles.subtitle}>com **{providerName}**</Text>
+
+        <View style={styles.starsContainer}>
+          {[1, 2, 3, 4, 5].map((s) => (
+            <TouchableOpacity key={s} onPress={() => setRating(s)} activeOpacity={0.7}>
+              <Ionicons
+                name={s <= rating ? 'star' : 'star-outline'}
+                size={34} // Estrelas maiores para melhor toque e visual
+                // 🛑 Cor: Primária, mais vibrante e consistente
+                color={s <= rating ? '#FFC300' : '#E0E0E0'} 
+                style={styles.starIcon}
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* 🛑 Helper: Feedback de texto mais direto */}
+        <Text style={styles.helper}>Sua opinião é importante para o **{providerName}**</Text>
+
         <TextInput
-          style={styles.commentInput}
+          placeholder="Deixe um comentário opcional..."
+          placeholderTextColor="#B0B0B0" // Cinza claro e suave
+          multiline
+          style={styles.input}
           value={comment}
           onChangeText={setComment}
-          placeholder={commentPlaceholder}
-          placeholderTextColor="#ADB5BD"
-          multiline
-          numberOfLines={Platform.OS === 'ios' ? 5 : 5}
-          maxLength={500}
+          autoCorrect={false}
+          keyboardAppearance={Platform.OS === 'ios' ? 'light' : 'default'}
         />
-      </View>
 
-      <TouchableOpacity
-        style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
-        onPress={handleSubmitFeedback}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.submitButtonText}>Enviar Feedback</Text>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleSubmit}
+          activeOpacity={0.8}
+        >
+          {/* 🛑 Botão: Gradiente suave, alto contraste */}
+          <LinearGradient
+            colors={['#107FBF', '#0B598F']} // Azul institucional mais forte
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.buttonGradient}
+          >
+            <Text style={styles.buttonText}>Enviar avaliação</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
+  // 🛑 Container: Fundo Super Claro
   container: {
-    flexGrow: 1,
-    padding: 20,
-    paddingBottom: 40,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1C3A5F',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  contextText: {
-    fontSize: 15,
-    color: '#495057',
-    textAlign: 'center',
-    marginBottom: 25,
-    lineHeight: 22,
-  },
-  section: {
-    marginBottom: 25,
-  },
-  label: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#343A40',
-    marginBottom: 12,
-  },
-  starContainer: {
-    flexDirection: 'row',
+    flex: 1,
     justifyContent: 'center',
-    marginBottom: 10,
-  },
-  starTouchable: {
-      padding: 5,
-  },
-  commentInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CED4DA',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#212529',
-    minHeight: 120,
-    textAlignVertical: 'top',
-    marginBottom: 20,
-  },
-  submitButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 15,
-    borderRadius: 8,
     alignItems: 'center',
+    // Não usar paddingHorizontal aqui, o card já se ajusta
+  },
+  // 🛑 Card: Mais Redondo, Menor Padding, Sombra Sutil
+  card: {
+    width: '90%', // Levemente menor
+    padding: 30, // Padding vertical e horizontal balanceado
+    borderRadius: 20, // Mais arredondado
+    backgroundColor: '#FFFFFF', // Branco puro para a Apple Vibe
+    
+    // Sombra: Mais leve e moderna (iOS style)
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 15,
+    elevation: 5,
+    
+    alignItems: 'center',
+    borderWidth: 0, // Remover borda de cor fraca
+  },
+  
+  // 🛑 Avatar: Mais suave e com mais destaque
+  avatarWrap: {
+    marginBottom: 10,
+    marginTop: 0, // Remove o gap superior do badge
+  },
+  avatar: {
+    width: 80, // Levemente menor
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 8,
+    borderWidth: 3, // Borda um pouco mais grossa para destacar
+    borderColor: '#E0E0E0', // Cor de borda neutra (cinza claro)
+  },
+  avatarFallback: {
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
-    minHeight: 50,
+    alignItems: 'center',
   },
-  submitButtonDisabled: {
-    backgroundColor: '#A0CFFF',
+  avatarInitial: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: '#0B598F',
   },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: 'bold',
+  
+  // 🛑 Títulos: Mais clean
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333333',
+    textAlign: 'center',
+    marginTop: 8,
   },
+  subtitle: {
+    fontSize: 15,
+    color: '#888888',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  
+  // Estrelas
+  starsContainer: {
+    flexDirection: 'row',
+    marginBottom: 25,
+    justifyContent: 'center',
+  },
+  starIcon: { 
+    marginHorizontal: 4, 
+    // Garante que o toque seja o único responsável pela cor
+  },
+  
+  // Helper
+  helper: {
+    fontSize: 13,
+    color: '#AAAAAA',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  
+  // 🛑 Input: Mais claro e arredondado
+  input: {
+    width: '100%',
+    minHeight: 120, // Altura maior para conforto
+    borderRadius: 12, // Levemente menos arredondado que o card
+    backgroundColor: '#F7F7F7',
+    borderWidth: 1,
+    borderColor: '#EFEFEF', // Borda super clara
+    padding: 14,
+    fontSize: 15,
+    textAlignVertical: 'top',
+    marginBottom: 25,
+    color: '#333333',
+    // Sombra interna sutil
+    shadowColor: 'transparent', 
+  },
+  
+  // 🛑 Botão: Flat, Foco no Gradiente
+  button: {
+    width: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  buttonGradient: {
+    paddingVertical: 14, // Levemente menor para compactar
+    borderRadius: 12,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600', // Levemente menos negrito (iOS style)
+    textAlign: 'center',
+  },
+  
+  // Badge antigo REMOVIDO
+  // badge: { ... },
+  // badgeText: { ... },
 });
