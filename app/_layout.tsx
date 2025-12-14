@@ -16,6 +16,7 @@ import 'react-native-reanimated';
 import { io } from 'socket.io-client';
 import Constants from 'expo-constants';
 import { AppProvider } from '../contexts/AppContext';
+import PaymentConfirmedOverlay from "../components/global/PaymentConfirmedOverlay";  // 🔵 ADICIONADO
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ProviderRegistrationProvider } from '../contexts/ProviderRegistrationContext';
 import { AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES } from '../constants/routes';
@@ -162,7 +163,7 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
         onPressOut={onPressOut}
         onPress={() => router.push(`/(provider)/active-booking/${booking.id}` as any)}
         accessibilityRole="button"
-        accessibilityLabel={`${cta} serviÃ§o`}
+        accessibilityLabel={`${cta} serviço`}
         style={{ borderRadius: 999 }}
       >
         <LinearGradient
@@ -184,6 +185,7 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>{`Serviço às ${timeLabel}`}</Text>
             <Text style={{ color: '#DCE7FF', marginLeft: 8, fontWeight: '600' }}>{`• ${cta}`}</Text>
+            
           </View>
           <AnimatedLinearGradient
             colors={['rgba(255,255,255,0.0)', 'rgba(255,255,255,0.25)', 'rgba(255,255,255,0.0)']}
@@ -221,7 +223,7 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
   );
 }
 
-// âœ… SOLUÃ‡ÃƒO GLOBAL: Ignora sÃ³ o warning especÃ­fico do LogBox (dev mode apenas; nÃ£o afeta produÃ§Ã£o ou outros erros)
+// ✓ SOLUÇÃO GLOBAL: Ignora só o warning específico do LogBox (dev mode apenas; não afeta produção ou outros erros)
 LogBox.ignoreLogs(['Text strings must be rendered within a <Text>']);
 
 Sentry.init({
@@ -256,7 +258,8 @@ function useNotificationsSocket(authToken?: string | null) {
         if (isPlayingRef.current) return;
         isPlayingRef.current = true;
         try {
-            const { Audio } = await import('expo-av');
+            const ExpoAV = await import('expo-av');
+            const { Audio } = ExpoAV;
             const sound = new Audio.Sound();
             await sound.loadAsync(require('../assets/sounds/new-booking.mp3'));
             let plays = 0;
@@ -341,10 +344,11 @@ function RootLayoutContent() {
     const { isAuthenticated, isLoading: authIsLoading, user, token } = useAuth();
     const router = useRouter();
     const segments = useSegments();
+    const { paymentOverlayVisible } = useAuth();  // 🔵 ADICIONADO
     const pathname = usePathname();
     const { t } = useTranslation();
 
-    // ativa o socket de notificaÃ§Ãµes quando token estÃ¡ disponÃ­vel
+    // ativa o socket de notificações quando token está disponível
     useNotificationsSocket(token);
     // one-time local notifications channel (Android). Harmless on iOS.
     useEffect(() => { if (setupNotificationsOnce) { setupNotificationsOnce(); } }, []);
@@ -372,16 +376,16 @@ function RootLayoutContent() {
 
     useEffect(() => {
         const prepareApp = async () => {
-            // Removido: console.log('[RootLayoutContent | prepareApp] Iniciando processo de preparaÃ§Ã£o do aplicativo.');
+            // Removido: console.log('[RootLayoutContent | prepareApp] Iniciando processo de preparação do aplicativo.');
             try {
                 await Font.loadAsync({
                     'Montserrat-Regular': require('../assets/fonts/Montserrat-Regular.ttf'),
                     'Montserrat-Thin': require('../assets/fonts/Montserrat-Thin.ttf'),
                 });
-                // Removido: console.log('[RootLayoutContent | prepareApp] Fontes essenciais carregadas e inicializaÃ§Ã£o bÃ¡sica concluÃ­da.');
+                // Removido: console.log('[RootLayoutContent | prepareApp] Fontes essenciais carregadas e inicialização básica concluída.');
             } catch (e: any) {
-                // Removido: console.error('[RootLayoutContent | prepareApp] ERRO FATAL durante a inicializaÃ§Ã£o do aplicativo:', e);
-                setInitializationError(e?.message ?? 'Erro desconhecido na inicializaÃ§Ã£o.');
+                // Removido: console.error('[RootLayoutContent | prepareApp] ERRO FATAL durante a inicialização do aplicativo:', e);
+                setInitializationError(e?.message ?? 'Erro desconhecido na inicialização.');
                 try {
                     NotificationUIService.showError(t("common.generic_error"), t("common.error"));
                 } catch (err) {
@@ -432,14 +436,14 @@ function RootLayoutContent() {
     useEffect(() => {
         // Removido: Todo o bloco de console.groupCollapsed e logs verbosos para evitar erro no LogBox.
         // Se precisar debugar, adicione de volta com if (__DEV__) para modo dev apenas.
-        // Exemplo de log mÃ­nimo mantido sÃ³ para erros:
+        // Exemplo de log mínimo mantido só para erros:
         if (initializationError) {
-            console.error(`[RootLayoutContent] Erro de inicializaÃ§Ã£o: ${initializationError}`);
+            console.error(`[RootLayoutContent] Erro de inicialização: ${initializationError}`);
             return;
         }
 
         if (!appReady || authIsLoading || (isAuthenticated && !user?.role && !user?.clientDetails && !user?.providerDetails)) {
-            // Removido: console.warn de saÃ­da antecipada.
+            // Removido: console.warn de saída antecipada.
             return;
         }
 
@@ -467,6 +471,7 @@ function RootLayoutContent() {
 
         const decideAndRedirect = async () => {
             const path = pathname ?? '';
+            const isFeedbackRoute = isPathOrChild('/(common)/feedback', normalizePath(path));
             // Permitir HOME/Explore (e filhas) para guest sem redirecionar de volta para /welcome
             if (!isAuthenticated && (path.includes('/(client)/explore') || path.startsWith('/explore'))) {
                 return;
@@ -513,7 +518,7 @@ function RootLayoutContent() {
                 }
 
                 // Visitante só pode acessar: welcome, rotas de auth e explore
-                if (!isWelcomeRoute && !inAuthGroup && !path.startsWith('/(client)/explore')) {
+                if (!isWelcomeRoute && !inAuthGroup && !path.startsWith('/(client)/explore') && !isFeedbackRoute) {
                     router.replace('/welcome');
                     return;
                 }
@@ -574,12 +579,12 @@ function RootLayoutContent() {
                     }
                 } else if (isPendingInitialReview) {
                     if (cleanedCurrentPath !== authServiceDetailsStep) {
-                        // Removido: console.log de redirecionamento para detalhes do serviÃ§o.
+                        // Removido: console.log de redirecionamento para detalhes do serviço.
                         router.replace(authServiceDetailsStep as any);
                     }
                 } else if (isPendingDocsUpload) {
                     if (cleanedCurrentPath !== providerRegistrationVerifyAccountPath) {
-                        // Removido: console.log de redirecionamento para verificaÃ§Ã£o de docs.
+                        // Removido: console.log de redirecionamento para verificação de docs.
                         router.replace(providerRegistrationVerifyAccountPath as any);
                     }
                 } else {
@@ -594,6 +599,10 @@ function RootLayoutContent() {
             if (user?.role && (user.role === UserRole.ADMIN || user.role === UserRole.CLIENT)) {
                 const targetRoute = normalizePath(CLIENT_ROUTES.EXPLORE);
                 const isCurrentPathInClientGroup = segments[0] === '(client)';
+
+                if (isFeedbackRoute) {
+                    return;
+                }
 
                 if (cleanedCurrentPath !== targetRoute && !isCurrentPathInClientGroup) {
                     // Removido: console.log de redirecionamento para explore.
@@ -626,11 +635,12 @@ function RootLayoutContent() {
         return (
             <View style={{ flex: 1 }}>
                 <Slot />
-                {/* PÃ­lula flutuante global (sem banner no dashboard) */}
+                <PaymentConfirmedOverlay visible={paymentOverlayVisible} />
+                {/* Pílula flutuante global (sem banner no dashboard) */}
                 {user?.role === UserRole.PROVIDER && (
                   <FloatingActiveServicePill enabled={true} />
                 )}
-                {/* ProteÃ§Ãµes simples: sÃ³ renderizar OverlayPortal/Toast se existirem */}
+                {/* Proteções simples: só renderizar OverlayPortal/Toast se existirem */}
                 <OverlayPortal />
                 <Toast config={toastConfig} />
             </View>
@@ -641,6 +651,7 @@ function RootLayoutContent() {
         return (
             <View style={styles.loadingContainer}>
                 <Text style={styles.loadingText}>{t("common.error")}: {(renderErr as any)?.message ?? String(renderErr)}</Text>
+
             </View>
         );
     }
