@@ -131,8 +131,8 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
           <Text style={styles.name} maxFontSizeMultiplier={1.2}>{provider.fullName}</Text>
           {typeof provider.averageRating === 'number' && provider.averageRating > 0 ? (
             <View style={{ marginLeft: 8 }}>{renderStars(provider.averageRating)}</View>
-          ) : (
-            <Text style={styles.noRating} maxFontSizeMultiplier={1.2}>Sem avaliação</Text>
+          ) : ( 
+            <Text style={styles.noRating} maxFontSizeMultiplier={1.2}>NOVO</Text>
           )}
         </View>
         <Text style={styles.service} maxFontSizeMultiplier={1.2}>{specialty}</Text>
@@ -171,7 +171,9 @@ const styles = StyleSheet.create({
   photo: { width: 58, height: 58, borderRadius: 29, marginRight: 10, borderWidth: 2, borderColor: '#E7F0FF' },
   photoPlaceholder: { width: 58, height: 58, borderRadius: 29, marginRight: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
   name: { fontSize: 14, fontWeight: '800', color: '#223243' },
-  noRating: { fontSize: 10, color: '#8CA0B3', marginLeft: 6 },
+  noRating: { fontSize: 10, color: '#fcfdfdff', marginLeft: 6, 
+    backgroundColor: '#3f99f3ff', paddingHorizontal: 6, paddingVertical: 2, 
+    borderRadius: 8, overflow: 'hidden', fontWeight: '700' },
   service: { fontSize: 12, color: '#6A7C90', marginBottom: 4 },
   chip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F4F8', borderRadius: 16, paddingVertical: 4, paddingHorizontal: 10 },
   chipTxt: { fontSize: 10, color: '#5C6B7A', marginLeft: 6, fontWeight: '700' },
