@@ -9,7 +9,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, PaymentIntentStatus } from '@prisma/client';
 import { AddressDetailsDto } from '../../common/dto/address-details.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -62,6 +62,14 @@ export class BookingDetailsDto {
   @IsString()
   @IsEnum(BookingStatus)
   status: BookingStatus;
+
+  @ApiPropertyOptional({
+    description: 'Status do agendamento (PT-BR, amigável ao usuário)',
+    example: 'Confirmado',
+  })
+  @IsOptional()
+  @IsString()
+  statusLabel?: string;
 
   @ApiProperty({ description: 'Preço total do serviço', example: 120.5 })
   @IsNumber()
@@ -245,6 +253,62 @@ export class BookingDetailsDto {
   @IsString()
   scheduledDateTime?: string;
 
+  @ApiPropertyOptional({
+    description: 'Instante agendado combinado (ISO) já em timezone do backend',
+    example: '2025-07-01T09:00:00.000Z',
+  })
+  @IsOptional()
+  @IsString()
+  scheduledStart?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Duração do serviço em minutos',
+    example: 120,
+  })
+  @IsOptional()
+  @IsNumber()
+  durationMinutes?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Horário real de início (se iniciado)',
+    example: '2025-07-01T09:05:00.000Z',
+  })
+  @IsOptional()
+  @IsString()
+  startedAt?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Horário real de conclusão (se finalizado)',
+    example: '2025-07-01T13:05:00.000Z',
+  })
+  @IsOptional()
+  @IsString()
+  completedAt?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Horário estimado de término (calculado)',
+    example: '2025-07-01T13:00:00.000Z',
+  })
+  @IsOptional()
+  @IsString()
+  scheduledEndTime?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Status do pagamento (enum PaymentIntentStatus)',
+    example: PaymentIntentStatus.PAID,
+  })
+  @IsOptional()
+  @IsString()
+  paymentStatus?: PaymentIntentStatus | null;
+
+  @ApiPropertyOptional({
+    description: 'Status do pagamento (PT-BR, amigável ao usuário)',
+    example: 'Pago',
+  })
+  @IsOptional()
+  @IsString()
+  paymentStatusLabel?: string | null;
+
   constructor(data: {
     id: string;
     clientId: string;
@@ -252,6 +316,10 @@ export class BookingDetailsDto {
     providerServiceId: string;
     scheduledDate: Date | string;
     scheduledTime: string;
+    scheduledStart?: Date | string | null;
+    durationMinutes?: number | null;
+    startedAt?: Date | string | null;
+    completedAt?: Date | string | null;
     status: BookingStatus;
     totalPrice: Decimal | number;
     notes?: string | null;
@@ -293,7 +361,29 @@ export class BookingDetailsDto {
       durationMinutes: number;
       description?: string | null;
     };
+    paymentIntent?: {
+      status?: PaymentIntentStatus;
+    } | null;
   }) {
+    const statusLabelMap: Record<string, string> = {
+      PENDING: 'Pendente',
+      CONFIRMED: 'Confirmado',
+      IN_PROGRESS: 'Em andamento',
+      COMPLETED: 'Concluído',
+      CANCELED: 'Cancelado',
+      RESCHEDULED: 'Reagendado',
+      PENDING_DISPUTE: 'Em disputa',
+      REJECTED: 'Recusado',
+      NO_SHOW: 'Não compareceu',
+    };
+    const paymentLabelMap: Record<string, string> = {
+      PENDING: 'Pendente',
+      PAID: 'Pago',
+      EXPIRED: 'Expirado',
+      REFUNDED: 'Reembolsado',
+      CHARGEBACK: 'Chargeback',
+    };
+
     this.id = data.id;
     this.clientId = data.clientId;
     this.providerId = data.providerId;
@@ -304,6 +394,24 @@ export class BookingDetailsDto {
         : data.scheduledDate.split('T')[0];
     this.scheduledTime = data.scheduledTime;
     this.status = data.status;
+    this.statusLabel = statusLabelMap[data.status] || data.status;
+    this.scheduledStart = data.scheduledStart
+      ? data.scheduledStart instanceof Date
+        ? data.scheduledStart.toISOString()
+        : data.scheduledStart
+      : null;
+    this.durationMinutes =
+      data.durationMinutes !== undefined ? data.durationMinutes : null;
+    this.startedAt = data.startedAt
+      ? data.startedAt instanceof Date
+        ? data.startedAt.toISOString()
+        : data.startedAt
+      : null;
+    this.completedAt = data.completedAt
+      ? data.completedAt instanceof Date
+        ? data.completedAt.toISOString()
+        : data.completedAt
+      : null;
 
     this.totalPrice = isDecimal(data.totalPrice)
       ? data.totalPrice.toNumber()
@@ -361,6 +469,13 @@ export class BookingDetailsDto {
         data.providerService.description ?? null;
     }
 
+    // Payment labels (se paymentIntent vier no include)
+    const payStatus = data.paymentIntent?.status;
+    this.paymentStatus = payStatus ?? null;
+    this.paymentStatusLabel = payStatus
+      ? paymentLabelMap[payStatus] || payStatus
+      : null;
+
     // Review mapping
     if (data.review) {
       this.reviewId = data.review.id;
@@ -378,5 +493,18 @@ export class BookingDetailsDto {
     }
 
     this.scheduledDateTime = `${this.scheduledDate}T${this.scheduledTime}:00Z`;
+    // Estimativa de término: usa startedAt se houver, senão scheduledStart/durationMinutes
+    const baseEnd = this.startedAt
+      ? new Date(this.startedAt)
+      : this.scheduledStart
+        ? new Date(this.scheduledStart)
+        : new Date(this.scheduledDateTime);
+    const dur = this.durationMinutes ?? this.serviceDurationMinutes ?? null;
+    if (baseEnd instanceof Date && !Number.isNaN(baseEnd.getTime()) && dur) {
+      const end = new Date(baseEnd.getTime() + dur * 60000);
+      this.scheduledEndTime = end.toISOString();
+    } else {
+      this.scheduledEndTime = null;
+    }
   }
 }
