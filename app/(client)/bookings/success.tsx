@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ScrollView, Animated, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Animated, Platform, TouchableOpacity, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '../../../hooks/useAuth';
 import SuccessHeader from '../../../components/client/booking/success/SuccessHeader';
@@ -280,10 +281,16 @@ export default function BookingSuccessScreen() {
   useEffect(() => {}, [booking, paid, paymentMethod, isLoading, error, shouldPollIntent]);
 
   const handleGoToBookings = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      try { Haptics.selectionAsync(); } catch {}
+    }
     router.replace('/(client)/bookings?highlightNew=true' as any);
   }, [router]);
 
   const handleGoHome = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      try { Haptics.selectionAsync(); } catch {}
+    }
     router.replace('/(client)/explore' as any);
   }, [router]);
 
@@ -462,5 +469,20 @@ const createStyles = (insetsTop: number) =>
     },
     bottomSpacer: {
       height: 32,
+    },
+    devChip: {
+      marginTop: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 999,
+      backgroundColor: '#E7F0FF',
+      borderWidth: 1,
+      borderColor: '#B6CCFF',
+      alignSelf: 'center',
+    },
+    devChipText: {
+      color: HEADER_PRIMARY_COLOR,
+      fontWeight: '700',
+      fontSize: 13,
     },
   });
