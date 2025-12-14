@@ -59,7 +59,7 @@ const loginProviderInclude = {
     },
   },
   bookings: {
-    where: { status: BookingStatus.COMPLETED },
+    where: { status: BookingStatus.FINISHED },
     orderBy: { createdAt: Prisma.SortOrder.desc },
     take: 100,
   },
