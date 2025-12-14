@@ -41,6 +41,8 @@ import {
   getUserProfile,
   searchProvidersWithLocation,
 } from '../../../services/clientService';
+import { getBookingsForUser } from '../../../services/bookingService';
+import { canReviewBooking } from '../../../services/reviewService';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOverlayMessage } from '../../../hooks/useOverlayMessage';
 
@@ -52,9 +54,11 @@ import { Offer } from '../../../types/backend/offers';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
 import { Service, PricingType } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
+import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 
 import { CLIENT_ROUTES } from '../../../constants/routes';
 import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../constants/appStyles';
+import * as Haptics from 'expo-haptics';
 
 // Importar o formatAddress e getNumericPriceValue
 import { formatAddress } from '../../../utils/formatters';
@@ -62,8 +66,8 @@ import { getNumericPriceValue } from '../../../utils/service-helpers';
 
 // Fallback local: garante render do RecomendacaoCard mesmo se a API falhar
 const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
- 
- 
+
+
 ];
 
 const FALLBACK_CATEGORIES: Service[] = [
@@ -210,9 +214,15 @@ export default function ExploreClientScreen() {
   const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
   const [showPersistentCouponPill, setShowPersistentCouponPill] = useState(false);
   const [showReferralSheet, setShowReferralSheet] = useState(false);
+  const [pendingReview, setPendingReview] = useState<{
+    bookingId: string;
+    providerId: string;
+    providerName: string;
+    providerAvatar?: string | null;
+  } | null>(null);
 
   const [activeBottomPromotion, setActiveBottomPromotion] = useState<'coupon' | 'referral' | null>(null);
-  const promotionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const promotionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const referralCode = userProfile?.referralCode || 'LIMPEJA123';
   const rewardReferrer = 'Ganhe R$20 ou +300 pts';
@@ -332,7 +342,7 @@ export default function ExploreClientScreen() {
   const runAndTrack = async <T,>(
     label: string,
     runner: () => Promise<T>,
-    onSuccess: (value: T) => void,
+    onSuccess: (value: T) => Promise<void> | void,
     fallbackMessage: string
   ) => {
     try {
@@ -340,9 +350,19 @@ export default function ExploreClientScreen() {
       if (!isMounted.current) {
         return;
       }
-      onSuccess(result);
+      await onSuccess(result);
       hasSuccessfulData = true;
     } catch (err: any) {
+      // Se falhar, aplica fallbacks locais para não quebrar o modo visitante
+      if (label === 'pending review') {
+        setPendingReview(null);
+      }
+      if (label === 'recommended providers') {
+        setRecommendations(FALLBACK_RECOMMENDATIONS);
+      }
+      if (label === 'nearby providers') {
+        setNearbyProviders(FALLBACK_RECOMMENDATIONS);
+      }
       const message = err?.message || err?.response?.data?.message || t('common.network_error');
       // log removido para performance
       collectedErrors.push(fallbackMessage);
@@ -350,6 +370,43 @@ export default function ExploreClientScreen() {
   };
 
   const tasks: Promise<any>[] = [];
+
+  if (isAuthenticated) {
+    tasks.push(
+      runAndTrack<BookingDetails[]>(
+        'pending review',
+        () => getBookingsForUser(BookingStatus.COMPLETED),
+        async (bookings) => {
+          const candidates = bookings.filter(
+            (b) => !b.isReviewed && !b.reviewId && b.status === BookingStatus.COMPLETED,
+          );
+
+          for (const b of candidates) {
+            try {
+              const eligibility = await canReviewBooking(b.id);
+              if (eligibility?.canReview) {
+                setPendingReview({
+                  bookingId: b.id,
+                  providerId: eligibility.providerId || b.providerId,
+                  providerName: eligibility.providerName || b.providerFullName || 'Prestador',
+                  providerAvatar: eligibility.providerAvatar ?? b.providerAvatarUrl,
+                });
+                return;
+              }
+            } catch {
+              // silencioso: n?o bloqueia a UI se um booking falhar
+            }
+          }
+
+          setPendingReview(null);
+        },
+        'Erro ao verificar avalia??es pendentes',
+      )
+    );
+  } else {
+    setPendingReview(null);
+  }
+
 
   tasks.push(
     runAndTrack<UserProfile>(
@@ -511,6 +568,19 @@ export default function ExploreClientScreen() {
       return () => { cancelled = true; };
     }, [fetchData, loadLocationAndNearby])
   );
+
+  const handleOpenPendingReview = useCallback(() => {
+    if (!pendingReview) return;
+    router.push({
+      pathname: '/(common)/feedback/[targetId]',
+      params: {
+        targetId: pendingReview.bookingId,
+        providerId: pendingReview.providerId,
+        providerName: pendingReview.providerName,
+        providerAvatar: pendingReview.providerAvatar || undefined,
+      },
+    } as any);
+  }, [pendingReview, router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -857,32 +927,80 @@ export default function ExploreClientScreen() {
                   userAddress={addressToDisplay}
                   isVisitor={!isAuthenticated}
                 />
-              {/* Mini-tutorial sempre vis?vel */}
-              <View style={styles.howItWorksTutorialContainer}>
-                <Text style={styles.howItWorksTitle} allowFontScaling={false}>
-                  Como funciona o LimpeJá
-                </Text>
-                <View style={styles.howItWorksSteps}>
-                  <View style={styles.howItWorksStep}>
-                    <Image source={Icons3D.provider} style={styles.howItWorksIcon} />
-                    <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
-                      Escolha o profissional
+
+              {/* NOVO BLOCO CONDICIONAL: Acesso Rápido (Logado) OU Como Funciona (Visitante) */}
+              {isAuthenticated ? (
+                // Usuário LOGADO: Exibe ACESSO RÁPIDO
+                <Animated.View
+                  style={[
+                    styles.categoriesSection, // Reutilize o estilo do Acesso Rápido
+                    {
+                      opacity: categoriesAnim,
+                      transform: [
+                        {
+                          translateY: categoriesAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-12, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}>
+                  <View style={styles.categoryTitleWrapper}>
+                    <Text style={styles.categorySectionTitle} allowFontScaling={false}>
+                      Acesso rápido
                     </Text>
+                    <TouchableOpacity
+                      onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                      style={styles.viewAllButton}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />
+                    </TouchableOpacity>
                   </View>
-                  <View style={styles.howItWorksStep}>
-                    <Image source={Icons3D.calendar} style={styles.howItWorksIcon} />
-                    <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
-                      Agende data e hora
-                    </Text>
-                  </View>
-                  <View style={styles.howItWorksStep}>
-                    <Image source={Icons3D.payments} style={styles.howItWorksIcon} />
-                    <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
-                      Pague via PIX
-                    </Text>
+                  {/* SecaoContainer do Acesso Rápido (usado duas vezes no seu código original) */}
+                  <SecaoContainer<Service>
+                    titulo={t('search.all_categories')}
+                    onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                    data={categoriesToRender}
+                    renderItem={({ item }) => {
+                      if (!item || !item.name) return null;
+                      return (
+                        <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
+                      );
+                    }}
+                    horizontal={true}
+                    noDataText={t('search.no_results')}
+                  />
+                </Animated.View>
+              ) : (
+                
+                <View style={styles.howItWorksTutorialContainer}>
+                  <Text style={styles.howItWorksTitle} allowFontScaling={false}>
+                    Como funciona o LimpeJá
+                  </Text>
+                  <View style={styles.howItWorksSteps}>
+                    <View style={styles.howItWorksStep}>
+                      <Image source={Icons3D.provider} style={styles.howItWorksIcon} />
+                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
+                        Escolha o profissional
+                      </Text>
+                    </View>
+                    <View style={styles.howItWorksStep}>
+                      <Image source={Icons3D.calendar} style={styles.howItWorksIcon} />
+                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
+                        Agende data e hora
+                      </Text>
+                    </View>
+                    <View style={styles.howItWorksStep}>
+                      <Image source={Icons3D.payments} style={styles.howItWorksIcon} />
+                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
+                        Pague via PIX
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
+              )}
+              {/* FIM NOVO BLOCO CONDICIONAL */}
 
               {/* ContentWrapper ÚNICO - TODO o conteúdo aqui */}
               <View style={styles.contentWrapper}>
@@ -921,7 +1039,7 @@ export default function ExploreClientScreen() {
                 {/* Profissionais por Perto ÚNICOS */}
                 <Animated.View
                   style={{
-                    opacity: providersAnim, 
+                    opacity: providersAnim,
                     transform: [
                       {
                         translateY:
@@ -938,7 +1056,7 @@ export default function ExploreClientScreen() {
                     titulo={t('search.nearby_providers')}
                     onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos' as any)}
                     data={prioritizedNearbyProviders}
-                    
+
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
                         // log removido para performance
@@ -990,103 +1108,8 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* Acesso rápido (visitante) abaixo do carrossel */}
-                {!isAuthenticated && (
-                  <Animated.View
-                    style={[
-                      styles.categoriesSection,
-                      {
-                        opacity: categoriesAnim,
-                        transform: [
-                          {
-                            translateY:
-                              Platform.OS === 'android'
-                                ? 0
-                                : categoriesAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [-12, 0],
-                                  }),
-                          },
-                        ],
-                      },
-                    ]}>
-                    <View style={styles.categoryTitleWrapper}>
-                      <Text style={styles.categorySectionTitle} allowFontScaling={false}>
-                        Acesso rápido
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                        style={styles.viewAllButton}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />
-                      </TouchableOpacity>
-                    </View>
-                    <View style={{ marginTop: 10 }}>
-                      <SecaoContainer<Service>
-                        titulo={t('search.all_categories')}
-                        onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                        data={categoriesToRender}
-                        renderItem={({ item }) => {
-                          if (!item || !item.name) return null;
-                          return (
-                            <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
-                          );
-                        }}
-                        horizontal={true}
-                        noDataText={t('search.no_results')}
-                      />
-                    </View>
-                </Animated.View>
-                )}
-
-                {/* Acesso rápido (logado) abaixo do carrossel */}
-                {isAuthenticated && (
-                  <Animated.View
-                    style={[
-                      styles.categoriesSection,
-                      {
-                        opacity: categoriesAnim,
-                        transform: [
-                          {
-                            translateY:
-                              Platform.OS === 'android'
-                                ? 0
-                                : categoriesAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [-12, 0],
-                                  }),
-                          },
-                        ],
-                      },
-                    ]}>
-                    <View style={styles.categoryTitleWrapper}>
-                      <Text style={styles.categorySectionTitle} allowFontScaling={false}>
-                        Acesso rápido
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                        style={styles.viewAllButton}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />
-                      </TouchableOpacity>
-                    </View>
-                    <SecaoContainer<Service>
-                      titulo={t('search.all_categories')}
-                      onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                      data={categoriesToRender}
-                      renderItem={({ item }) => {
-                        if (!item || !item.name) return null;
-                        return (
-                          <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
-                        );
-                      }}
-                      horizontal={true}
-                      noDataText={t('search.no_results')}
-                    />
-                  </Animated.View>
-                )}
-
-                {/* (Acesso Rápido removido para visitantes e autenticados conforme solicitação) */}
+                {/* REMOVER OS DOIS BLOCOS DE ACESSO RÁPIDO DO FINAL DO contentWrapper */}
+                {/* Os blocos de "Acesso rápido" para visitante e logado foram movidos para a lógica condicional acima e removidos daqui. */}
 
                 {/* Spacer para scroll extra (compensa absolutos) */}
                 <View style={{ height: 20 }} />
@@ -1179,6 +1202,41 @@ export default function ExploreClientScreen() {
           onShare={handleShareReferral}
         />
 
+        {/* Nudge de avaliação (somente se elegível via can-review) */}
+        {pendingReview && (
+          <TouchableOpacity
+            activeOpacity={0.92}
+            style={styles.reviewNudge}
+            onPress={handleOpenPendingReview}
+          >
+            <View style={styles.reviewNudgeLeft}>
+              {pendingReview.providerAvatar ? (
+                <Image
+                  source={{ uri: pendingReview.providerAvatar }}
+                  style={styles.reviewNudgeAvatar}
+                />
+              ) : (
+                <View style={[styles.reviewNudgeAvatar, styles.reviewNudgeAvatarFallback]}>
+                  <Text style={styles.reviewNudgeAvatarFallbackText}>
+                    {(pendingReview.providerName || 'P')[0]?.toUpperCase() ?? 'P'}
+                  </Text>
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.reviewNudgeTitle} numberOfLines={1} allowFontScaling={false}>
+                  Avalie sua experiência
+                </Text>
+                <Text style={styles.reviewNudgeSubtitle} numberOfLines={2} allowFontScaling={false}>
+                  Como foi o serviço com {pendingReview.providerName || 'o prestador'}?
+                </Text>
+              </View>
+            </View>
+            <View style={styles.reviewNudgeButton}>
+              <Text style={styles.reviewNudgeButtonText}>Avaliar agora</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Nudges */}
         <SecurityNudge
           delayMs={3500}
@@ -1196,6 +1254,7 @@ export default function ExploreClientScreen() {
           points={100}
           pointerEvents="box-none"
         />
+
 
         <TutorialOverlay
           visible={exploreTutorial.isVisible}
@@ -1372,7 +1431,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     marginTop: 3,
-    marginBottom: 2,
+    marginBottom: -3,
   },
   categorySectionTitle: {
     fontSize: 16.5,
@@ -1446,6 +1505,25 @@ const styles = StyleSheet.create({
     fontSize: 8.4,
     fontWeight: 'bold',
     marginLeft: 3,
+  },
+  devFab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 160,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#DDE3EB',
+    zIndex: 300,
+    elevation: 6,
+    ...AppShadows.small,
+  },
+  devFabText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: AppColors.primaryInteractive,
   },
   couponFab: {
     backgroundColor: 'transparent',
@@ -1575,5 +1653,62 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     color: AppColors.textBody,
+  },
+  reviewNudge: {
+    marginHorizontal: 12,
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: '#0E2A47',
+    borderWidth: 1,
+    borderColor: '#1A3B63',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...AppShadows.small,
+  },
+  reviewNudgeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  reviewNudgeAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#123558',
+    marginRight: 12,
+  },
+  reviewNudgeAvatarFallback: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reviewNudgeAvatarFallbackText: {
+    color: '#EAF2FF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  reviewNudgeTitle: {
+    color: '#EAF2FF',
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  reviewNudgeSubtitle: {
+    color: '#C4D8F5',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  reviewNudgeButton: {
+    backgroundColor: '#2D8CFF',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+  },
+  reviewNudgeButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13,
   },
 });
