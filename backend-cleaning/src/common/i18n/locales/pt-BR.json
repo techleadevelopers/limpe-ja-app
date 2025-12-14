@@ -323,7 +323,7 @@
         "hour": "Por hora",
         "sqm": "Por m²"
       },
-      "from": "A partir de"
+      "from": "(km)"
     },
     "filters": {
       "fastResponse": "Resposta \u003c 15 min",
