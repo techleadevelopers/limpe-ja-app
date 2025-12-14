@@ -3,6 +3,7 @@ import {
   Transaction as PrismaTransaction,
   TransactionType,
   Prisma,
+  TransactionStatus,
 } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PixKeyType } from '@prisma/client'; // Corrigido: importar diretamente do Prisma
@@ -32,7 +33,7 @@ export class TransactionEntity implements PrismaTransaction {
       'Status da transação (e.g., PENDING, PROCESSING, COMPLETED, FAILED)',
     example: 'COMPLETED',
   })
-  status: string;
+  status: TransactionStatus;
 
   @ApiPropertyOptional({
     description: 'Descrição da transação',
