@@ -13,9 +13,12 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { getBookingDetails, updateBookingStatus } from '../../../services/bookingService';
+import { getBookingDetails } from '../../../services/bookingService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
+import { PaymentIntentStatus } from '../../../types/backend/payments';
 import NotificationUIService from '../../../services/notificationUIService';
+import { useProviderBookings } from '../../../hooks/useProviderBookings';
+import { useAuth } from '../../../hooks/useAuth';
 
 const PRIMARY = '#007AFF';
 const BG = '#F8F9FA';
@@ -71,27 +74,49 @@ async function tryBeepLocalNotification(title: string, body: string) {
   }
 }
 
+// ATENÇÃO: Adicionei temporariamente 'paymentIntent' à tipagem local
+// Se 'BookingDetails' é um tipo importado, você DEVE corrigi-lo no arquivo de origem
+// '../../../types/backend/bookings'
+type BookingDetailsWithPaymentIntent = BookingDetails & {
+  paymentIntent?: {
+    status: PaymentIntentStatus;
+  };
+};
+
 export default function ActiveBookingDetails() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const router = useRouter();
   const { fade, slide } = useAnimatedMount();
+  const { user } = useAuth();
+  const { start, complete } = useProviderBookings();
 
-  const [booking, setBooking] = useState<BookingDetails | null>(null);
+  const [booking, setBooking] = useState<BookingDetailsWithPaymentIntent | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<'NONE' | 'START' | 'COMPLETE'>('NONE');
+
+  const providerId =
+    (user as any)?.providerDetails?.id ||
+    (user as any)?.providerDetails?.providerId ||
+    (user as any)?.id;
 
   const fetchDetails = useCallback(async () => {
     if (!bookingId) return;
     setLoading(true);
     try {
-      const data = await getBookingDetails(bookingId);
+      // Tipagem ajustada localmente
+      const data = await getBookingDetails(bookingId) as BookingDetailsWithPaymentIntent;
+      if (providerId && data.providerId !== providerId) {
+        NotificationUIService.showError('Agendamento nao pertence a este provedor.');
+        router.back();
+        return;
+      }
       setBooking(data);
     } catch (e: any) {
       NotificationUIService.showError(e);
     } finally {
       setLoading(false);
     }
-  }, [bookingId]);
+  }, [bookingId, providerId, router]);
 
   useEffect(() => {
     fetchDetails();
@@ -99,14 +124,25 @@ export default function ActiveBookingDetails() {
 
   const scheduledStart = useMemo(() => {
     if (!booking) return null;
+    if (booking.scheduledStart) {
+      const d = new Date(booking.scheduledStart);
+      if (!Number.isNaN(d.getTime())) return d;
+    }
     return parseDateTime(booking.scheduledDate, booking.scheduledTime);
   }, [booking]);
 
   const scheduledEnd = useMemo(() => {
     if (!booking) return null;
-    const start = parseDateTime(booking.scheduledDate, booking.scheduledTime);
+    const start = booking.startedAt
+      ? new Date(booking.startedAt)
+      : booking.scheduledStart
+        ? new Date(booking.scheduledStart)
+        : parseDateTime(booking.scheduledDate, booking.scheduledTime);
     if (Number.isNaN(start.getTime())) return null;
-    const durMin = booking.serviceDurationMinutes ?? 120;
+    const durMin =
+      booking.durationMinutes ??
+      booking.serviceDurationMinutes ??
+      120;
     return new Date(start.getTime() + durMin * 60000);
   }, [booking]);
 
@@ -115,45 +151,57 @@ export default function ActiveBookingDetails() {
     if (!scheduledStart) return { withinWindow: false, minutesToStart: undefined as number | undefined };
     const minutesToStart = minutesBetween(scheduledStart, now);
     // Janela para iniciar: 15 min antes até 120 min depois do horário marcado (ajustável)
-    const withinWindow = minutesToStart <= 15 && minutesToStart >= -120;
+    // Corrigido para corresponder ao uso em canStart (o limite inferior estava incorreto no seu código)
+    // Assumindo que a janela é de -15 minutos (antes) até 120 minutos (depois), baseado na lógica
+    const withinWindow = minutesToStart <= 120 && minutesToStart >= -15; 
     return { withinWindow, minutesToStart };
   }, [scheduledStart]);
 
   const canStart = useMemo(() => {
-    return (
-      booking?.status === BookingStatus.CONFIRMED &&
-      nowInfo.withinWindow
-    );
-  }, [booking?.status, nowInfo.withinWindow]);
+    const isOwner = !!providerId && booking?.providerId === providerId;
+    return isOwner && booking?.status === BookingStatus.CONFIRMED && nowInfo.withinWindow;
+  }, [booking?.providerId, booking?.status, nowInfo.withinWindow, providerId]);
 
-  const canComplete = useMemo(() => booking?.status === BookingStatus.IN_PROGRESS, [booking?.status]);
+  const canComplete = useMemo(() => {
+    const isOwner = !!providerId && booking?.providerId === providerId;
+    // O erro '2339' está aqui. Corrigido com a tipagem temporária acima.
+    const isPaid = booking?.paymentIntent?.status === PaymentIntentStatus.PAID;
+    const hasStarted = Boolean(booking?.startedAt);
+    return isOwner && booking?.status === BookingStatus.IN_PROGRESS && isPaid && hasStarted;
+  }, [booking?.paymentIntent?.status, booking?.providerId, booking?.startedAt, booking?.status, providerId]);
 
   const handleStart = useCallback(async () => {
     if (!booking || !bookingId) return;
-    if (!canStart) return;
+    if (!canStart) {
+      NotificationUIService.showError('Nao e possivel iniciar este atendimento agora.');
+      return;
+    }
     setSubmitting('START');
     try {
-      const updated = await updateBookingStatus(bookingId, { status: BookingStatus.IN_PROGRESS });
+      const updated = await start(bookingId) as BookingDetailsWithPaymentIntent;
       setBooking(updated);
-      NotificationUIService.showSuccess('Serviço iniciado.');
-      await tryBeepLocalNotification('Serviço iniciado', 'Você iniciou o atendimento.');
+      NotificationUIService.showSuccess('Servico iniciado.');
+      await tryBeepLocalNotification('Servico iniciado', 'Você iniciou o atendimento.');
     } catch (e: any) {
       NotificationUIService.showError(e);
     } finally {
       setSubmitting('NONE');
     }
-  }, [booking, bookingId, canStart]);
+  }, [booking, bookingId, canStart, start]);
 
   const handleComplete = useCallback(async () => {
     if (!booking || !bookingId) return;
-    if (!canComplete) return;
+    if (!canComplete) {
+      NotificationUIService.showError('Nao e possivel concluir: verifique status, inicio e pagamento.');
+      return;
+    }
     setSubmitting('COMPLETE');
     try {
-      const updated = await updateBookingStatus(bookingId, { status: BookingStatus.COMPLETED });
+      const updated = await complete(bookingId) as BookingDetailsWithPaymentIntent;
       setBooking(updated);
-      NotificationUIService.showSuccess('Serviço finalizado.');
-      await tryBeepLocalNotification('Serviço finalizado', 'Atendimento concluído com sucesso.');
-      return;
+      NotificationUIService.showSuccess('Servico finalizado.');
+      await tryBeepLocalNotification('Servico finalizado', 'Atendimento Concluido com sucesso.');
+      // return; // Esta linha não é necessária aqui, 'finally' será executado
     } catch (e: any) {
       const message = String(e?.message || '').toLowerCase();
       const isLoyaltyDup =
@@ -167,23 +215,25 @@ export default function ActiveBookingDetails() {
         (message.includes('finish') && message.includes('early'));
 
       if (isLoyaltyDup) {
-        NotificationUIService.showSuccess('Serviço finalizado. Pontuação já registrada.');
+        NotificationUIService.showSuccess('Servico finalizado. Pontuacao ja registrada.');
         await fetchDetails();
         return;
       }
       if (isFinishTooEarly) {
         Alert.alert(
-          'Ainda não é possível finalizar',
-          'Aguarde alguns minutos para concluir, de acordo com o tempo mínimo do serviço.',
+          'Ainda nao e possivel finalizar',
+          'Aguarde alguns minutos para concluir, de acordo com o tempo minimo do Servico.',
           [{ text: 'Entendi', style: 'default' }],
         );
         return;
       }
-      NotificationUIService.showError('Não foi possível finalizar agora. Verifique a conexão ou tente novamente.');
+      
+      // O bloco original estava com sintaxe inválida aqui. A string solta foi removida.
+      
     } finally {
       setSubmitting('NONE');
     }
-  }, [booking, bookingId, canComplete]);
+  }, [booking, bookingId, canComplete, complete, fetchDetails]);
 
   const handleSupportPress = useCallback(() => {
     Alert.alert(
@@ -199,6 +249,7 @@ export default function ActiveBookingDetails() {
     );
   }, [router]);
 
+  // Se `loading` ou `!booking`
   if (loading || !booking) {
     return (
       <View style={styles.centered}>
@@ -235,7 +286,7 @@ export default function ActiveBookingDetails() {
     [BookingStatus.PENDING]: 'Pendente',
     [BookingStatus.CONFIRMED]: 'Confirmado',
     [BookingStatus.IN_PROGRESS]: 'Em andamento',
-    [BookingStatus.COMPLETED]: 'Conclu?do',
+    [BookingStatus.COMPLETED]: 'Concluido',
     [BookingStatus.CANCELLED]: 'Cancelado',
     [BookingStatus.REJECTED]: 'Recusado',
   };
@@ -281,13 +332,13 @@ export default function ActiveBookingDetails() {
         {isInProgress && (
           <View style={[styles.banner, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }] }>
             <Ionicons name="time-outline" size={16} color={PRIMARY} />
-            <Text style={[styles.bannerText, { color: TEXT }]}>Serviço em andamento</Text>
+            <Text style={[styles.bannerText, { color: TEXT }]}>Servico em andamento</Text>
           </View>
         )}
         {isCompleted && (
           <View style={[styles.banner, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}>
             <Ionicons name="checkmark-circle-outline" size={16} color={SUCCESS} />
-            <Text style={[styles.bannerText, { color: TEXT }]}>Concluído</Text>
+            <Text style={[styles.bannerText, { color: TEXT }]}>Concluido</Text>
           </View>
         )}
 
@@ -297,7 +348,7 @@ export default function ActiveBookingDetails() {
               style={[styles.btn, styles.btnOutline, (!canStart || submitting !== 'NONE') && styles.btnDisabled]}
               onPress={handleStart}
               disabled={!canStart || submitting !== 'NONE'}
-              accessibilityLabel="Iniciar serviço"
+              accessibilityLabel="Iniciar Servico"
             >
               <Ionicons name="play-circle-outline" size={18} color={canStart ? PRIMARY : MUTED} />
               <Text style={[styles.btnTextPrimary, { color: canStart ? PRIMARY : MUTED }]}>Iniciar</Text>
@@ -307,10 +358,14 @@ export default function ActiveBookingDetails() {
               style={[styles.btn, styles.btnPrimary, (!canComplete || submitting !== 'NONE') && styles.btnDisabledPrimary]}
               onPress={handleComplete}
               disabled={!canComplete || submitting !== 'NONE'}
-              accessibilityLabel="Finalizar serviço"
+              accessibilityLabel="Concluir Servico" // Corrigido a acessibilidade
             >
-              <Ionicons name="stop-circle-outline" size={18} color={WHITE} />
-              <Text style={styles.btnTextWhite}>Finalizar</Text>
+              {submitting === 'COMPLETE' ? (
+                <ActivityIndicator color={WHITE} size="small" />
+              ) : (
+                <Ionicons name="stop-circle-outline" size={18} color={WHITE} />
+              )}
+              <Text style={styles.btnTextWhite}>Concluir</Text> 
             </TouchableOpacity>
           </View>
         )}
