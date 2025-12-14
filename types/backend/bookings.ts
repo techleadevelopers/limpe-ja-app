@@ -71,6 +71,10 @@ export interface BookingDetails {
   scheduledDate: string;
   scheduledTime: string;
   scheduledEndTime?: string;
+  scheduledStart?: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  durationMinutes?: number | null;
 
   totalPrice: number;
   notes?: string | null;
