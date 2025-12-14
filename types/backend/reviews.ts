@@ -42,3 +42,12 @@ export interface ReviewEntity {
   } | null;
   // Adicione quaisquer outras propriedades que ReviewEntity possa ter
 }
+
+export interface CanReviewResponse {
+  canReview: boolean;
+  reason?: string;
+  bookingId?: string;
+  providerId?: string;
+  providerName?: string;
+  providerAvatar?: string | null;
+}
