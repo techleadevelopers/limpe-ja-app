@@ -44,6 +44,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.2.0",
     "expo": "~54.0.25",
+    "expo-av": "^16.0.7",
     "expo-blur": "~15.0.7",
     "expo-build-properties": "~1.0.9",
     "expo-calendar": "~15.0.7",
