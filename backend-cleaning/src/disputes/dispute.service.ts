@@ -471,7 +471,7 @@ export class DisputeService {
         if (updated.status === DisputeStatus.RESOLVED) {
           await this.bookingsService.updateStatus(
             dispute.bookingId,
-            BookingStatus.COMPLETED,
+            BookingStatus.FINISHED,
             UserRole.ADMIN,
           );
         }
