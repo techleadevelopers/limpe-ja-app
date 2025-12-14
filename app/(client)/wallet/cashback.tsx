@@ -153,7 +153,7 @@ export default function CashbackScreen() {
               />
             </>
           )}
-          <Text style={[styles.listTitle, { color: theme.text, fontSize: fix.font(14) }]}>{t('wallet.recent_points', { defaultValue: 'MovimentaÃ§Ãµes recentes' })}</Text>
+          <Text style={[styles.listTitle, { color: theme.text, fontSize: fix.font(14) }]}>{t('wallet.recent_points', { defaultValue: 'Movimentações recentes' })}</Text>
           <FlatList
             data={((histQuery.data ?? []) as LoyaltyHistoryItem[]).slice(0, 25)}
             keyExtractor={(item) => item.id}
@@ -171,7 +171,7 @@ export default function CashbackScreen() {
             )}
             ListEmptyComponent={(
               <View style={styles.centered}> 
-                <Text style={{ color: theme.textMuted }}>{t('wallet.no_history', { defaultValue: 'Nenhuma movimentaÃ§Ã£o por enquanto.' })}</Text>
+                <Text style={{ color: theme.textMuted }}>{t('wallet.no_history', { defaultValue: 'Nenhuma movimentação por enquanto.' })}</Text>
               </View>
             )}
           />
