@@ -1,4 +1,3 @@
-// src/bookings/bookings.controller.ts
 import {
   Controller,
   Get,
@@ -14,12 +13,12 @@ import {
   BadRequestException,
   HttpCode,
   HttpStatus,
-} from '@nestjs/common'; // CORREÇÃO: Importar BadRequestException, HttpCode, HttpStatus
+} from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingDetailsDto } from './dto/booking-details.dto';
-import { BookingAndPixResponseDto } from './dto/booking-and-pix-response.dto'; // Importe o novo DTO de resposta
+import { BookingAndPixResponseDto } from './dto/booking-and-pix-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -31,16 +30,16 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Request } from 'express';
-import { ReportDisputeDto, DisputeReason } from './dto/report-dispute.dto'; // Importe o novo DTO de disputa
-import { MessageResponseDto } from '../common/dto/message-response.dto'; // Para mensagens de sucesso
-import { I18nService } from '../common/i18n/i18n.service'; // Importar I18nService
+import { ReportDisputeDto } from './dto/report-dispute.dto';
+import { MessageResponseDto } from '../common/dto/message-response.dto';
+import { I18nService } from '../common/i18n/i18n.service';
 
 @ApiTags('bookings')
 @Controller('bookings')
 export class BookingsController {
   constructor(
     private readonly bookingsService: BookingsService,
-    private readonly i18n: I18nService, // Injetar I18nService
+    private readonly i18n: I18nService,
   ) {}
 
   // ADMIN: Listar todos os agendamentos (com filtro opcional de status)
@@ -70,12 +69,12 @@ export class BookingsController {
   }
 
   @Post()
-  @Roles(UserRole.CLIENT) // Apenas clientes podem criar agendamentos
+  @Roles(UserRole.CLIENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Criar um novo agendamento (somente o agendamento)',
-  }) // Atualizado o summary
+  })
   @ApiResponse({
     status: 201,
     description: 'Agendamento criado com sucesso.',
@@ -92,7 +91,6 @@ export class BookingsController {
     @Body() createBookingDto: CreateBookingDto,
   ): Promise<BookingDetailsDto> {
     const userId = req.user['userId'];
-    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const booking = await this.bookingsService.create(
       userId,
       createBookingDto,
@@ -101,7 +99,6 @@ export class BookingsController {
     return new BookingDetailsDto(booking);
   }
 
-  // NOVA ROTA: Criar agendamento e gerar cobrança PIX em uma única chamada
   @Post('schedule-and-pay')
   @Roles(UserRole.CLIENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -112,7 +109,7 @@ export class BookingsController {
   @ApiResponse({
     status: 201,
     description: 'Agendamento criado e cobrança PIX gerada com sucesso.',
-    type: BookingAndPixResponseDto, // Usar o novo DTO de resposta combinado
+    type: BookingAndPixResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
@@ -126,10 +123,9 @@ export class BookingsController {
   })
   async scheduleAndPay(
     @Req() req: Request,
-    @Body() createBookingDto: CreateBookingDto, // O mesmo DTO de entrada do agendamento
+    @Body() createBookingDto: CreateBookingDto,
   ): Promise<BookingAndPixResponseDto> {
     const userId = req.user['userId'];
-    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const { booking, pixCharge } =
       await this.bookingsService.createBookingAndPixCharge(
         userId,
@@ -137,7 +133,6 @@ export class BookingsController {
         req,
       );
 
-    // Retorna o DTO combinado
     return {
       booking: new BookingDetailsDto(booking),
       pixCharge: pixCharge,
@@ -162,7 +157,6 @@ export class BookingsController {
   ): Promise<BookingDetailsDto[]> {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
-    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const bookings = await this.bookingsService.findUserBookings(
       userId,
       userRole,
@@ -190,11 +184,9 @@ export class BookingsController {
   ): Promise<BookingDetailsDto> {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
-    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const booking = await this.bookingsService.findOne(id, req);
 
     if (!booking) {
-      // Usar o I18nService para mensagens de erro
       throw new NotFoundException(
         await this.i18n.translate('booking.notFound', (req as any).locale, {
           id,
@@ -202,13 +194,11 @@ export class BookingsController {
       );
     }
 
-    // Verifica se o usuário tem permissão para ver este agendamento
     const isClientOfBooking = booking.client.userId === userId;
     const isProviderOfBooking = booking.provider.userId === userId;
     const isAdmin = userRole === UserRole.ADMIN;
 
     if (!isClientOfBooking && !isProviderOfBooking && !isAdmin) {
-      // Usar o I18nService para mensagens de erro
       throw new ForbiddenException(
         await this.i18n.translate(
           'booking.forbidden.access',
@@ -221,7 +211,7 @@ export class BookingsController {
   }
 
   @Patch(':id/status')
-  @Roles(UserRole.PROVIDER, UserRole.CLIENT) // Provedor pode CONFIRMAR/COMPLETAR/CANCELAR. Cliente pode CANCELAR.
+  @Roles(UserRole.PROVIDER, UserRole.CLIENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Atualizar o status de um agendamento' })
@@ -241,10 +231,8 @@ export class BookingsController {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
 
-    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const booking = await this.bookingsService.findOne(id, req);
     if (!booking) {
-      // Usar o I18nService para mensagens de erro
       throw new NotFoundException(
         await this.i18n.translate('booking.notFound', (req as any).locale, {
           id,
@@ -252,9 +240,7 @@ export class BookingsController {
       );
     }
 
-    // Lógica de autorização para atualização de status
     if (userRole === UserRole.CLIENT && booking.client.userId !== userId) {
-      // Usar o I18nService para mensagens de erro
       throw new ForbiddenException(
         await this.i18n.translate(
           'booking.forbidden.updateStatus',
@@ -263,7 +249,6 @@ export class BookingsController {
       );
     }
     if (userRole === UserRole.PROVIDER && booking.provider.userId !== userId) {
-      // Usar o I18nService para mensagens de erro
       throw new ForbiddenException(
         await this.i18n.translate(
           'booking.forbidden.updateStatus',
@@ -272,7 +257,6 @@ export class BookingsController {
       );
     }
 
-    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const updatedBooking = await this.bookingsService.updateStatus(
       id,
       updateBookingStatusDto.status,
@@ -282,7 +266,6 @@ export class BookingsController {
     return new BookingDetailsDto(updatedBooking);
   }
 
-  // Rota para cliente cancelar agendamento (exemplo específico do frontend)
   @Patch(':id/cancel')
   @Roles(UserRole.CLIENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -301,11 +284,9 @@ export class BookingsController {
     @Param('id') id: string,
   ): Promise<BookingDetailsDto> {
     const userId = req.user['userId'];
-    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const booking = await this.bookingsService.findOne(id, req);
 
     if (!booking) {
-      // Usar o I18nService para mensagens de erro
       throw new NotFoundException(
         await this.i18n.translate('booking.notFound', (req as any).locale, {
           id,
@@ -313,7 +294,6 @@ export class BookingsController {
       );
     }
     if (booking.client.userId !== userId) {
-      // Usar o I18nService para mensagens de erro
       throw new ForbiddenException(
         await this.i18n.translate(
           'booking.forbidden.updateStatus',
@@ -322,7 +302,6 @@ export class BookingsController {
       );
     }
 
-    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const updatedBooking = await this.bookingsService.updateStatus(
       id,
       BookingStatus.CANCELED,
@@ -332,7 +311,6 @@ export class BookingsController {
     return new BookingDetailsDto(updatedBooking);
   }
 
-  // NOVA ROTA: Verificar se existe agendamento ativo entre cliente e provedor (para habilitar chat)
   @Get('check-active-chat/:clientId/:providerId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -372,7 +350,6 @@ export class BookingsController {
     @Body('reason') reason: string,
   ): Promise<BookingDetailsDto> {
     if (!reason || reason.trim().length === 0) {
-      // Usar o I18nService para mensagens de erro
       throw new BadRequestException(
         await this.i18n.translate(
           'booking.badRequest.issueReasonRequired',
@@ -382,7 +359,6 @@ export class BookingsController {
     }
     const userId = req.user['userId'];
     const userRole = req.user['role'];
-    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const updatedBooking = await this.bookingsService.reportIssue(
       id,
       userId,
@@ -393,9 +369,8 @@ export class BookingsController {
     return new BookingDetailsDto(updatedBooking);
   }
 
-  // NOVO ENDPOINT: Gerenciar Disputas (ADMIN ou provedor/cliente envolvido)
   @Post(':id/dispute')
-  @Roles(UserRole.CLIENT, UserRole.PROVIDER) // Cliente/Provedor reporta, Admin gerencia
+  @Roles(UserRole.CLIENT, UserRole.PROVIDER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Reportar uma disputa para um agendamento' })
@@ -417,7 +392,6 @@ export class BookingsController {
   ): Promise<MessageResponseDto> {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
-    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     await this.bookingsService.reportDispute(
       bookingId,
       userId,
@@ -425,7 +399,6 @@ export class BookingsController {
       reportDisputeDto,
       req,
     );
-    // Usar o I18nService para mensagens de sucesso
     return {
       message: await this.i18n.translate(
         'booking.disputeReportedSuccess',
@@ -435,7 +408,7 @@ export class BookingsController {
   }
 
   @Patch(':id/resolve-dispute')
-  @Roles(UserRole.ADMIN) // Apenas administradores podem resolver disputas
+  @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -455,14 +428,13 @@ export class BookingsController {
   })
   @ApiResponse({ status: 400, description: 'Requisição inválida.' })
   async resolveDispute(
-    @Req() req: Request, // Adicionado req aqui
+    @Req() req: Request,
     @Param('id') bookingId: string,
     @Body('resolution') resolution: string,
     @Body('refundAmount') refundAmount?: number,
     @Body('newStatus') newStatus?: BookingStatus,
   ): Promise<BookingDetailsDto> {
     if (!resolution || resolution.trim().length === 0) {
-      // Usar o I18nService para mensagens de erro
       throw new BadRequestException(
         await this.i18n.translate(
           'booking.badRequest.disputeResolutionRequired',
@@ -470,7 +442,6 @@ export class BookingsController {
         ),
       );
     }
-    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const updatedBooking = await this.bookingsService.resolveDispute(
       bookingId,
       resolution,
@@ -479,5 +450,104 @@ export class BookingsController {
       req,
     );
     return new BookingDetailsDto(updatedBooking);
+  }
+
+  @Post(':id/on-the-way')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Marcar prestador a caminho (CONFIRMED -> ON_THE_WAY)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Status atualizado para a caminho.',
+    type: BookingDetailsDto,
+  })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido.' })
+  @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
+  async onTheWay(@Req() req: Request, @Param('id') id: string) {
+    const userId = req.user['userId'];
+    const booking = await this.bookingsService.onTheWayService(id, userId);
+    return new BookingDetailsDto(booking);
+  }
+
+  @Post(':id/arrived')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Registrar chegada do prestador (ON_THE_WAY -> ARRIVED)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Status atualizado para chegou.',
+    type: BookingDetailsDto,
+  })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido.' })
+  @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
+  async arrive(@Req() req: Request, @Param('id') id: string) {
+    const userId = req.user['userId'];
+    const booking = await this.bookingsService.arriveAtLocation(id, userId);
+    return new BookingDetailsDto(booking);
+  }
+
+  @Post(':id/start')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Iniciar o serviço (prestador)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Serviço iniciado com sucesso.',
+    type: BookingDetailsDto,
+  })
+  async start(@Req() req: Request, @Param('id') id: string) {
+    const userId = req.user['userId'];
+    const booking = await this.bookingsService.startService(id, userId);
+    return new BookingDetailsDto(booking);
+  }
+
+  @Post(':id/complete')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Concluir o serviço (prestador)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Serviço concluído com sucesso.',
+    type: BookingDetailsDto,
+  })
+  async complete(@Req() req: Request, @Param('id') id: string) {
+    const userId = req.user['userId'];
+    const booking = await this.bookingsService.completeService(id, userId);
+    return new BookingDetailsDto(booking);
+  }
+
+  @Post('auto-complete-overdue')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Auto-completar bookings STARTED cujo horário final já passou e estão pagos',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Agendamentos auto-completados.',
+  })
+  async autoCompleteOverdue() {
+    return this.bookingsService.autoCompleteOverdueBookings();
+  }
+
+  @Get(':id/can-review')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verifica se o cliente pode avaliar este booking' })
+  @ApiResponse({
+    status: 200,
+    description: 'Retorna se pode avaliar e detalhes do prestador.',
+  })
+  async canReview(@Req() req: Request, @Param('id') id: string) {
+    const userId = req.user['userId'];
+    return this.bookingsService.canReview(id, userId);
   }
 }
