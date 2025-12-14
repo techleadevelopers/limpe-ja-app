@@ -59,11 +59,11 @@ export const bookingTransitions: Transition[] = [
   },
   {
     from: BookingStatus.STARTED,
-    to: BookingStatus.COMPLETED,
+    to: BookingStatus.FINISHED,
     event: BookingEvent.COMPLETE,
   },
   {
-    from: BookingStatus.COMPLETED,
+    from: BookingStatus.FINISHED,
     to: BookingStatus.PAID,
     event: BookingEvent.PAY,
   },
@@ -73,7 +73,7 @@ export const bookingTransitions: Transition[] = [
     event: BookingEvent.REVIEW,
   },
   {
-    from: [BookingStatus.COMPLETED, BookingStatus.PAID],
+    from: [BookingStatus.FINISHED, BookingStatus.PAID],
     to: BookingStatus.DISPUTED,
     event: BookingEvent.OPEN_DISPUTE,
   },
