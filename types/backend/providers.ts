@@ -86,6 +86,8 @@ export interface ProviderDisplayInfo {
     isVerified: boolean;
   };
   metrics?: ProviderMetrics; // NOVO: Adicionado métricas ao ProviderDisplayInfo
+  termsAcceptedAt?: string | null;
+  termsVersion?: string | null;
   // NOVOS CAMPOS ADICIONADOS PARA RESOLVER ERROS DE TIPAGEM NOS COMPONENTES E RELATÓRIO
   acceptanceRate?: number; // Adicionado para PrestadorCard e RecomendacaoCard (métricas mini)
   averageResponseTime?: number; // Adicionado para PrestadorCard e RecomendacaoCard (métricas mini, componentes usam este nome)
