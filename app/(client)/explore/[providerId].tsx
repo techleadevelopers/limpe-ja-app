@@ -363,60 +363,70 @@ export default function ProviderDetailsScreen() {
 
         const [providerResult, metricsResult, offersResult] = results;
 
-        // Provider details - CORRECAO TS: Type guard para 'rejected'
-        let finalProviderData: ProviderDisplayInfo | null = null;
-        if (providerResult.status === 'fulfilled' && providerResult.value) {
-          const distance = Number.isFinite(paramDistance)
-            ? paramDistance
-            : providerResult.value?.distance ?? null;
-          finalProviderData = { ...providerResult.value, distance };
+        
 
-          if (providerResult.value?.fullName === 'Joana') {
-            const joanaReviews: ProviderReview[] = [
-              {
-                id: 'mock-joana-review-1',
-                bookingId: 'mock-booking-joana-1',
-                clientId: 'mock-client-joana-reviewer',
-                providerId: providerResult.value.id,
-                rating: 5,
-                comment: 'Joana é excelente! Super atenciosa e deixou tudo impecável. Recomendo muito!',
-                createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-              {
-                id: 'mock-joana-review-2',
-                bookingId: 'mock-booking-joana-2',
-                clientId: 'mock-client-joana-reviewer',
-                providerId: providerResult.value.id,
-                rating: 4,
-                comment: 'Bom serviço, chegou no horário e fez um bom trabalho. Fiquei satisfeita.',
-                createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-            ];
-            finalProviderData.reviews = joanaReviews;
-            finalProviderData.reviewCount = joanaReviews.length;
-            finalProviderData.averageRating =
-              joanaReviews.reduce((sum, r) => sum + r.rating, 0) / joanaReviews.length;
-          } else {
-            finalProviderData.reviews = providerResult.value?.reviews || [];
-          }
-        } else {
-          // CORREÇÃO TS: Só acessa reason se for 'rejected'
-          if (__DEV__) {
-            if (providerResult.status === 'rejected') {
-              console.warn(
-                '[ProviderDetailsScreen] Falha ao carregar provider (silencioso):',
-                (providerResult as PromiseRejectedResult).reason
-              );
-            } else {
-              console.warn(
-                '[ProviderDetailsScreen] Provider carregado mas inválido (valor falsy, silencioso)'
-              );
-            }
-          }
-          finalProviderData = null;
-        }
+        // Provider details - CORRECAO TS: Type guard para 'rejected'
+        let finalProviderData: ProviderDisplayInfo | null = null;
+        if (providerResult.status === 'fulfilled' && providerResult.value) {
+          const distance = Number.isFinite(paramDistance)
+            ? paramDistance
+            : providerResult.value?.distance ?? null;
+          finalProviderData = { ...providerResult.value, distance };
+
+          // --- INÍCIO DA LÓGICA DE MOCK PARA NOVOS PRESTADORES ---
+          // Se o prestador não tem avaliações reais, injeta mocks para parecer confiável
+          const hasRealReviews = providerResult.value?.reviewCount && providerResult.value.reviewCount > 0;
+
+          if (!hasRealReviews) {
+            // MOCK REVIEWS: Use reviews padrão e genéricas para prestadores novos/sem avaliação
+            const mockReviews: ProviderReview[] = [
+              {
+                id: 'mock-review-1',
+                bookingId: 'mock-booking-1',
+                clientId: 'mock-client-1',
+                providerId: providerResult.value.id,
+                rating: 5,
+                comment: 'Serviço excepcional! Pontual e deixou o ambiente impecável. Recomendo!',
+                createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+              {
+                id: 'mock-review-2',
+                bookingId: 'mock-booking-2',
+                clientId: 'mock-client-2',
+                providerId: providerResult.value.id,
+                rating: 5, // Mantido 5 para garantir alta confiança inicial
+                comment: 'Profissional muito simpático(a) e trabalho de alta qualidade. Nota 10.',
+                createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+            ];
+
+            finalProviderData.reviews = mockReviews;
+            finalProviderData.reviewCount = mockReviews.length;
+            // Define a avaliação média mockada como 5.0
+            finalProviderData.averageRating = 5; 
+          } else {
+            // Usa dados reais da API
+            finalProviderData.reviews = providerResult.value?.reviews || [];
+          }
+          // --- FIM DA LÓGICA DE MOCK ---
+        } else {
+          // CORREÇÃO TS: Só acessa reason se for 'rejected'
+          if (__DEV__) {
+            if (providerResult.status === 'rejected') {
+              console.warn(
+                '[ProviderDetailsScreen] Falha ao carregar provider (silencioso):',
+                (providerResult as PromiseRejectedResult).reason
+              );
+            } else {
+              console.warn(
+                '[ProviderDetailsScreen] Provider carregado mas inválido (valor falsy, silencioso)'
+              );
+            }
+          }
+          finalProviderData = null;
+        }
 
         // Provider metrics - CORREÇÃO TS: Type guard para 'rejected'
         let metricsData: ProviderMetrics | null = null;
@@ -941,23 +951,39 @@ if (isAuthenticated && user?.id) {
           <View style={styles.providerInfoWhiteCard}>
             <View style={styles.providerNameRow}>
               <Text style={styles.providerNameWhiteCard}>{provider.fullName}</Text>
-              <View style={styles.robustStarContainer}>
-                <StarRating
-                  rating={provider.averageRating}
-                  size={13}
-                  color={styles.priceTextWhiteCard.color}
-                />
-                <Text style={styles.robustReviewsText}>
-                  {t('provider_details.reviews_count', { count: provider.reviewCount || 0 })}
-                </Text>
-              </View>
+{provider.reviewCount && provider.reviewCount > 0 ? (
+  <View style={styles.compactRatingBadge}>
+    {/* ⬅️ NOVO: View para forçar o recorte do ícone */}
+    <View style={{ marginRight: 4, marginVertical: 0, padding: 0 }}> 
+      <Ionicons 
+        name="star" 
+        size={18} 
+        color={'#307ff5ff'} 
+        style={{ margin: 0, padding: 0 }} // Garante que o ícone é renderizado sem margem
+      />
+    </View>
+    <Text style={styles.compactRatingText}>
+      {typeof provider.averageRating === 'number'
+        ? provider.averageRating.toFixed(1)
+        : 'N/A'}
+    </Text>
+  </View>
+                ) : (
+                  <View style={styles.compactNewProviderBadge}>
+                    <Text style={styles.compactNewProviderBadgeText}>NOVO</Text>
+                  </View>
+                )}
             </View>
 
             <View style={styles.locationContainerWhiteCard}>
               <Ionicons
                 name="location-sharp"
-                size={10}
-                color={styles.locationTextWhiteCard.color}
+                size={18}
+                color='#45474bff'
+                backgroundColor='transparent'
+                borderRadius={9}
+                paddingHorizontal={4}
+                paddingVertical={4}
               />
               <Text style={styles.locationTextWhiteCard}>
                 {provider.address?.city || t('common.not_available')}
@@ -1180,18 +1206,21 @@ if (isAuthenticated && user?.id) {
                 )}
               </View>
             ) : (
-              <View style={styles.noReviewsContainer}>
-                <Ionicons
-                  name="chatbubble-ellipses-outline"
-                  size={30}
-                  color={AppColors.mediumGray}
-                  style={styles.noReviewsIcon}
-                />
-                <Text style={styles.noReviewsText}>
-                  {t('provider_details.no_reviews', { providerName: provider.fullName })}
-                </Text>
-              </View>
+              
+              
+              <View style={styles.newProviderNoReviewsContainer}>
+                <View style={styles.newProviderBadgeContainer}>
+                  <Ionicons name="sparkles" size={24} color={'#398beeff'} />
+                </View>
+                <Text style={styles.newProviderNoReviewsTitle}>
+                  {t('provider_details.new_provider_title', 'Novo na LimpeJá!')}
+                </Text>
+                <Text style={styles.newProviderNoReviewsSubtitle}>
+                  {t('provider_details.be_the_first_review', 'Seja o primeiro cliente a deixar uma avaliação.')}
+                </Text>
+              </View>
             )}
+            
           </View>
         </Animated.View>
       </ScrollView>
