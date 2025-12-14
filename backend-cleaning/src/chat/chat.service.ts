@@ -179,7 +179,7 @@ export class ChatService {
           clientId: bookingClientId,
           providerId: bookingProviderId,
           OR: [
-            { status: BookingStatus.COMPLETED },
+            { status: BookingStatus.FINISHED },
             { status: BookingStatus.CANCELED },
           ],
         },
@@ -307,7 +307,7 @@ export class ChatService {
           clientId: bookingClientId,
           providerId: bookingProviderId,
           OR: [
-            { status: BookingStatus.COMPLETED },
+            { status: BookingStatus.FINISHED },
             { status: BookingStatus.CANCELED },
           ],
         },
