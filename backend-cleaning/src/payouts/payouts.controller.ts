@@ -5,7 +5,8 @@ import {
   Headers,
   Post,
   Req,
-  UseGuards,
+  UseGuards, // Usado para proteger rotas específicas
+  HttpCode, // Adicionado para webhook (retorna 200)
 } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -24,11 +25,12 @@ interface RequestUserPayload {
 }
 
 @Controller('payouts')
-@UseGuards(JwtAuthGuard, RolesGuard)
+// 🚨 UseGuards REMOVIDO daqui para permitir o webhook público
 export class PayoutsController {
   constructor(private readonly payoutsService: PayoutsService) {}
 
   @Get('balance')
+  @UseGuards(JwtAuthGuard, RolesGuard) // ⬅️ AGORA PROTEGIDO INDIVIDUALMENTE
   @Roles(UserRole.PROVIDER)
   async getBalance(@Req() req: Request) {
     const user = req.user as RequestUserPayload;
@@ -36,6 +38,7 @@ export class PayoutsController {
   }
 
   @Post('withdrawals')
+  @UseGuards(JwtAuthGuard, RolesGuard) // ⬅️ AGORA PROTEGIDO INDIVIDUALMENTE
   @Roles(UserRole.PROVIDER)
   async createWithdrawal(
     @Req() req: Request,
@@ -47,6 +50,22 @@ export class PayoutsController {
       user.userId,
       dto,
       idempotencyKey,
+    );
+  }
+
+  // ⚠️ ENDPOINT PÚBLICO - NÃO TEM @UseGuards
+  @Post('webhook/gateway')
+  @HttpCode(200)
+  async handleGatewayWebhook(
+    @Headers('x-signature') signature: string,
+    @Headers('x-event-id') eventId: string,
+    @Body() payload: any,
+  ) {
+    // A delegação da segurança (ou a falta dela) é feita no Service.
+    return this.payoutsService.handleGatewayWebhook(
+      signature,
+      eventId,
+      payload,
     );
   }
 }
