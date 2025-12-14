@@ -9,6 +9,11 @@ import userService from '../services/userService';
 import axios from 'axios';
 import type { AxiosRequestConfig } from 'axios';
 
+// 🔥 IMPORTAÇÃO DO SOCKET.IO
+import io from "socket.io-client";
+const socket = io("https://limpeja-backend-production-edfa.up.railway.app");
+
+
 // utils de log sem recursão
 const safeString = (v: any) => {
   try {
@@ -19,13 +24,13 @@ const safeString = (v: any) => {
   }
 };
 
-  const debugLog = (..._args: unknown[]) => {};
-  const debugWarn = (...args: unknown[]) => {
-    if (__DEV__) console.warn('[Auth]', ...args.map(safeString));
-  };
-  const debugError = (...args: unknown[]) => {
-    if (__DEV__) console.error('[Auth]', ...args.map(safeString));
-  };
+const debugLog = (..._args: unknown[]) => {};
+const debugWarn = (...args: unknown[]) => {
+  if (__DEV__) console.warn('[Auth]', ...args.map(safeString));
+};
+const debugError = (...args: unknown[]) => {
+  if (__DEV__) console.error('[Auth]', ...args.map(safeString));
+};
 
 interface AuthDataFromStorage {
   token: string | null;
@@ -44,6 +49,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   role: UserRole | null;
   token: string | null;
+
+  // AUTH
   login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   register: (userData: any, userType: 'client' | 'provider') => Promise<void>;
@@ -54,6 +61,9 @@ interface AuthContextType {
   setIsRegistrationInProgress: (inProgress: boolean) => void;
   setAuthData: (authData: AuthResponse) => Promise<void>;
   updateUser: (updatedUser?: Partial<UserProfile>) => Promise<void>;
+
+  // 🔥 NOVO: overlay global do PIX confirmado
+  paymentOverlayVisible: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -68,6 +78,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [role, setRole] = useState<UserRole | null>(null);
   const [isRegistrationInProgress, setIsRegistrationInProgress] = useState(false);
   const isAuthenticated = !!user && !!user.token;
+
+  // 🔥 NOVO: controle do overlay
+  const [paymentOverlayVisible, setPaymentOverlayVisible] = useState(false);
+
+  // ----------------------------------------------------------------------------
+  // 🔥 WEBSOCKET LISTENER — PAGAMENTO PIX CONFIRMADO
+  // ----------------------------------------------------------------------------
+  useEffect(() => {
+    console.log("🔌 Conectando ao WebSocket para pagamentos...");
+
+    socket.on("pixPaymentConfirmed", (data) => {
+      console.log("🔥 PAGAMENTO CONFIRMADO - SOCKET.IO", data);
+      setPaymentOverlayVisible(true);
+
+      setTimeout(() => setPaymentOverlayVisible(false), 3500);
+    });
+
+    return () => {
+      socket.off("pixPaymentConfirmed");
+    };
+  }, []);
+
+  // ----------------------------------------------------------------------------
 
   const logout = useCallback(async () => {
     try {
@@ -90,14 +123,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const silentHeader = headers['x-silent'] ?? headers['X-Silent'];
       const isSilent = silentHeader === '1' || silentHeader === 1 || silentHeader === true;
       const isMetaSilent = (originalRequest as any).meta?.silent === true;
+      const urlStr = String(originalRequest.url ?? '');
+      const isAuthCritical = /\/users\/me/.test(urlStr) || /\/auth\/me/.test(urlStr) || /\/auth\/refresh/.test(urlStr);
 
-      // Chamadas marcadas como silenciosas NÃO derrubam a sessão
-      if (isSilent || isMetaSilent) {
-        debugLog('[AuthContext | handleUnauthorized] 401 silencioso; mantendo sessão.');
-        return;
-      }
+      if (isSilent || isMetaSilent) return;
 
-      // Backend não expõe /auth/refresh; trate 401 não silencioso como sessão inválida
+      if (!isAuthCritical) throw new Error('Unauthorized');
+
       await logout();
       throw new Error('Unauthorized');
     },
@@ -147,7 +179,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
-      // registra token de push de forma não bloqueante
       registerDevicePushToken().catch(() => {});
     } catch (error) {
       debugError('[AuthContext | login] Erro de login:', error);
@@ -183,20 +214,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signUpClient = async (data: RegisterClientDto) => {
     try {
       setIsLoading(true);
-      debugLog('[AuthContext | signUpClient] Iniciando registro de cliente com dados:', {
-        ...data,
-        password: '***',
-      });
       await authService.registerClient(data);
-      debugLog('[AuthContext | signUpClient] Registro de cliente bem-sucedido. Fazendo login...');
       await login({ email: data.email, password: data.password });
-      debugLog('[AuthContext | signUpClient] Login após registro concluído.');
     } catch (error: any) {
-      debugError('[AuthContext | signUpClient] Erro no cadastro de cliente:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
+      debugError('[AuthContext | signUpClient] Erro no cadastro de cliente:', error);
       throw new Error(`Falha no registro: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -207,92 +228,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       setIsRegistrationInProgress(true);
-      debugLog('[AuthContext | signUpProvider] Iniciando registro de provedor com dados:', {
-        ...data,
-        password: '***',
-      });
       await authService.registerProvider(data);
-      debugLog('[AuthContext | signUpProvider] Registro de provedor bem-sucedido. Fazendo login...');
       await login({ email: data.email, password: data.password });
-      debugLog('[AuthContext | signUpProvider] Login após registro concluído.');
     } catch (error: any) {
-      debugError('[AuthContext | signUpProvider] Erro no cadastro de provedor:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        fullError: error,
-      });
       setIsRegistrationInProgress(false);
-      const status = error.response?.status;
-      const backendMessage: string | undefined = error.response?.data?.message || error.message;
-      const rawMessage = (backendMessage || '').toLowerCase();
-
-      if (status === 409) {
-        throw new Error('Dados já cadastrados (e-mail, CPF ou telefone). Verifique e tente novamente.');
-      }
-      if (status === 400) {
-        throw new Error('Dados inválidos. Revise CPF, data de nascimento, senha e endereço.');
-      }
-      if (rawMessage.includes('binary data format') || rawMessage.includes('geography') || rawMessage.includes('location')) {
-        throw new Error('Não foi possível salvar o endereço. Verifique CEP, número e cidade e tente novamente.');
-      }
-      if (status >= 500) {
-        throw new Error('Erro no servidor. Tente novamente em instantes.');
-      }
-      throw new Error(`Falha no registro: ${backendMessage || 'Tente novamente.'}`);
+      throw new Error('Falha no registro.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const refreshUser = async () => {
-    debugLog('[AuthContext | refreshUser] Recarregando dados do usuário do backend...');
     try {
       setIsLoading(true);
       const currentToken = user?.token || (await authService.loadAuthData()).token;
       if (!currentToken) {
-        debugWarn(
-          '[AuthContext | refreshUser] Nenhum token encontrado para refreshUser. Realizando logout.',
-        );
         await logout();
         return;
       }
 
       const latestUserProfile: UserProfile = await userService.getMe();
-
       const authenticatedUser: AuthenticatedUserProfile = {
         ...latestUserProfile,
         token: currentToken,
       };
       setUser(authenticatedUser);
       setRole(latestUserProfile.role as UserRole);
-      debugLog('[AuthContext | refreshUser] Dados do usuário atualizados com sucesso do backend.');
-      // garante registro de token de push quando app reabre
       registerDevicePushToken().catch(() => {});
     } catch (error: any) {
-      debugError('[AuthContext | refreshUser] Erro ao recarregar dados do usuário do backend:', error);
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        if (status === 401) {
-          debugLog('[AuthContext | refreshUser] Token inválido/expirado, realizando logout.');
-          await logout();
-        } else if (status === 404) {
-          debugWarn(
-            '[AuthContext | refreshUser] /users/me retornou 404. Mantendo sessão atual e seguindo.',
-          );
-          // Não lança; mantém o usuário atual e segue o fluxo
-        } else if (status === 403 || status === 400 || status === 409) {
-          debugWarn(
-            `[AuthContext | refreshUser] Falha esperada (status ${status}) ao atualizar perfil. Mantendo sessão atual.`,
-          );
-          // Fluxos de aprovação/validação podem retornar 4xx; não derruba a sessão
-        } else {
-          debugError(
-            '[AuthContext | refreshUser] Falha ao atualizar perfil. Mantendo sessão atual.',
-          );
-        }
-      } else {
-        debugError('[AuthContext | refreshUser] Erro inesperado no refreshUser. Mantendo sessão.');
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        await logout();
       }
     } finally {
       setIsLoading(false);
@@ -320,14 +285,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             id: user.id,
             role: user.role,
           });
-          debugLog(
-            '[AuthContext | updateUser] Perfil do usuário atualizado no contexto e no armazenamento.',
-          );
         } else {
           await refreshUser();
         }
-      } else {
-        debugWarn('[AuthContext | updateUser] Tentativa de atualizar usuário não logado.');
       }
     },
     [user, refreshUser],
@@ -342,7 +302,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
-      // registra token de push de forma não bloqueante
       registerDevicePushToken().catch(() => {});
     } catch (error) {
       debugError('[AuthContext | setAuthData] Erro ao definir dados de autenticação:', error);
@@ -368,6 +327,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsRegistrationInProgress,
     setAuthData,
     updateUser,
+
+    // 🔥 NOVO
+    paymentOverlayVisible,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
