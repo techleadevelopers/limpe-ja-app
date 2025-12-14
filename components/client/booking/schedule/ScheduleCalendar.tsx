@@ -373,19 +373,19 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
           accessibilityHint="Selecione uma data para agendamento"
           dayComponent={({ date, state, marking, onPress }) => {
             const dateStr = (date as any)?.dateString as string;
-            const selectedStr = safeISO(selectedDate ?? new Date()).split('T')[0];
-            const isSelected = dateStr === selectedStr;
+     
+            const isSelected = (marking as any)?.selected === true;
             const isDisabled = (marking as any)?.disabled || state === 'disabled';
 
             const popAnim = React.useRef(new Animated.Value(isSelected ? 1 : 0)).current;
-            React.useEffect(() => {
-              Animated.timing(popAnim, {
-                toValue: isSelected ? 1 : 0,
-                duration: 180,
-                easing: easeOut,
-                useNativeDriver: true,
-              }).start();
-            }, [isSelected]);
+            React.useEffect(() => {
+              Animated.timing(popAnim, {
+                toValue: isSelected ? 1 : 0,
+                duration: 180,
+                easing: easeOut,
+                useNativeDriver: true,
+              }).start();
+            }, [isSelected]);
 
             const scale = popAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
             const opacity = popAnim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] });
@@ -411,14 +411,14 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
                 >
                   {isSelected ? (
                     <LinearGradient
-                      colors={[ 'rgba(90,160,236,0.18)', 'rgba(90,160,236,0.35)' ]}
+                      colors={[ 'rgba(92, 168, 248, 1)', 'rgba(62, 149, 241, 1)' ]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
-                      style={StyleSheet.absoluteFillObject}
+                      style={StyleSheet.absoluteFillObject} borderRadius={90} paddingHorizontal={-10} paddingVertical={-10}
                     />
                   ) : null}
                   <Text style={{
-                    color: isDisabled ? Colors.textMuted : isSelected ? '#1f2d3d' : Colors.text,
+                    color: isDisabled ? Colors.textMuted : isSelected ? '#ffffffff' : Colors.text,
                     fontWeight: isSelected ? '700' : '600',
                   }}>
                     {(date as any).day}
