@@ -62,11 +62,8 @@ export class ReviewsController {
     @Req() req: Request,
     @Body() submitReviewDto: SubmitReviewDto,
   ): Promise<ReviewEntity> {
-    const clientId = req.user['clientId']; // Assumindo que o clientId está no payload do JWT do cliente
-    const review = await this.reviewsService.submitReview(
-      clientId,
-      submitReviewDto,
-    );
+    const userId = req.user['userId']; // usa userId do JWT
+    const review = await this.reviewsService.submitReview(userId, submitReviewDto);
     return new ReviewEntity(review);
   }
 
