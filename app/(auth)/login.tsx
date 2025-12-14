@@ -211,6 +211,7 @@ const bubblesStyles = StyleSheet.create({
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -405,6 +406,7 @@ export default function LoginScreen() {
                             autoCapitalize="none"
                             textContentType="emailAddress"
                             autoComplete="email"
+                            secureTextEntry={false}
                             wrapperStyle={styles.loginInput}
                         />
 
@@ -416,7 +418,11 @@ export default function LoginScreen() {
                                 setPassword(text);
                                 if (errorMessage) setErrorMessage(null);
                             }}
-                            secureTextEntry={true}
+                            secureTextEntry={!showPassword}
+                            showEyeIcon
+                            onPressEye={() => setShowPassword(v => !v)}
+                            textContentType="password"
+                            autoComplete="password"
                             wrapperStyle={styles.loginInput}
                         />
                         
@@ -535,14 +541,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         marginRight: 10,
     },
-    input: {
-        flex: 1,
-        fontSize: 15,
-        color: '#2D3748',
-        right: 8,
-        height: '70%',
-        paddingVertical: 0,
-    },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: '#2D3748',
+    paddingVertical: 0,
+    height: 44,  // <- altura fixa funcionando em TODOS devices
+},
     eyeIconTouchable: {
         paddingHorizontal: 15,
         height: '100%',
