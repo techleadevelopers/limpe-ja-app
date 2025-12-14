@@ -64,15 +64,28 @@ export class EarningsService {
             BookingStatus.PENDING,
             BookingStatus.CONFIRMED,
             BookingStatus.RESCHEDULED,
-            BookingStatus.IN_PROGRESS,
+            BookingStatus.STARTED,
           ],
         },
-        paymentIntent: { status: PaymentIntentStatus.PAID },
+        paymentIntent: {
+          status: {
+            in: [PaymentIntentStatus.PAID],
+          },
+        },
       },
-      select: { totalPrice: true },
+      select: { totalPrice: true, paymentIntent: { select: { status: true } } },
     });
     const preApprovedEarnings = paidUpcoming.reduce(
-      (sum, b) => sum + Number(b.totalPrice ?? 0),
+      (sum, b) => {
+        const st = (b as any).paymentIntent?.status;
+        if (
+          st === PaymentIntentStatus.REFUNDED ||
+          st === PaymentIntentStatus.CHARGEBACK
+        ) {
+          return sum;
+        }
+        return sum + Number(b.totalPrice ?? 0);
+      },
       0,
     );
 
