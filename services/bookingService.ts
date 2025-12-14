@@ -99,6 +99,36 @@ export async function updateBookingStatus(bookingId: string, data: UpdateBooking
     }
 }
 
+export async function startBooking(bookingId: string): Promise<BookingDetails> {
+    try {
+        const response: AxiosResponse<BookingDetails> = await api.post<BookingDetails>(`/bookings/${bookingId}/start`);
+        return mapBookingStatusIn(response.data);
+    } catch (error: any) {
+        if (__DEV__) {
+            console.warn(`Erro ao iniciar agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
+        }
+        if (axios.isAxiosError(error) && error.response) {
+            throw new Error(error.response.data.message || `Erro ao iniciar agendamento ${bookingId}.`);
+        }
+        throw new Error(`Erro de rede ou servidor ao iniciar agendamento ${bookingId}.`);
+    }
+}
+
+export async function completeBooking(bookingId: string): Promise<BookingDetails> {
+    try {
+        const response: AxiosResponse<BookingDetails> = await api.post<BookingDetails>(`/bookings/${bookingId}/complete`);
+        return mapBookingStatusIn(response.data);
+    } catch (error: any) {
+        if (__DEV__) {
+            console.warn(`Erro ao concluir agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
+        }
+        if (axios.isAxiosError(error) && error.response) {
+            throw new Error(error.response.data.message || `Erro ao concluir agendamento ${bookingId}.`);
+        }
+        throw new Error(`Erro de rede ou servidor ao concluir agendamento ${bookingId}.`);
+    }
+}
+
 /**
  * @function cancelBooking
  * Cancela um agendamento específico.
