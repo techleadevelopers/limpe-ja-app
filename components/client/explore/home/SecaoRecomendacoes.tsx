@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
       // PREMIUM: Estilo de título refinado
       color: 'rgba(44, 62, 80, 0.85)',
       letterSpacing: 0.5,
-      marginTop:30,
+      marginTop: 22,
   },
   viewAllButton: {
     flexDirection: 'row',
