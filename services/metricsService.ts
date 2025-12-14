@@ -3,7 +3,7 @@ import axios from 'axios';
 import { MetricsSummary, MetricsTimeseriesDataPoint, MetricsFunnel, ClientMetrics } from '../types/backend/metrics';
 import { api } from './api';
 import { createLocalConsole } from './logging';
-const console = createLocalConsole(); // Importa a instÃ¢ncia centralizada do Axios
+const console = createLocalConsole(); // Importa a instância centralizada do Axios
 import Constants from 'expo-constants'; // Importar Constants para API_BASE_URL consistente
 import { getBookingsForUser } from './bookingService';
 import { BookingDetails, BookingStatus } from '../types/backend/bookings';
@@ -12,13 +12,13 @@ import { getMyMissions } from './missionService';
 import type { MissionItem } from './missionService';
 import { getMyCoupons, MyCouponListItem } from './couponService';
 
-// A API_BASE_URL deve ser carregada de Constants para consistÃªncia em produÃ§Ã£o
+// A API_BASE_URL deve ser carregada de Constants para consistência em produção e desenvolvimento
 const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
 
-// ValidaÃ§Ã£o para garantir que API_BASE_URL estÃ¡ definida
+// Validação para garantir que API_BASE_URL está definida
 if (!API_BASE_URL) {
-  console.error('[metricsService] Erro crÃ­tico: backendApiUrl nÃ£o estÃ¡ definido!');
-  // Em um ambiente de produÃ§Ã£o, vocÃª pode querer lanÃ§ar um erro ou ter um fallback mais robusto
+    console.error('[metricsService] Erro crítico: backendApiUrl não está  definido!');
+    // Em um ambiente de produção, você pode querer lançar um erro ou ter um fallback mais robusto
 }
 
 
@@ -29,12 +29,12 @@ export const metricsService = {
      */
     async getMetricsSummary(): Promise<MetricsSummary> {
         try {
-            // Usa a instÃ¢ncia 'api' centralizada para todas as requisiÃ§Ãµes
+            // Usa a instância 'api' centralizada para todas as requisições
             const response = await api.get(`/v1/metrics/me/summary`);
             return response.data;
         } catch (error) {
             console.error('Error fetching metrics summary:', error);
-            // Em um ambiente de produÃ§Ã£o "premium", nÃ£o devemos retornar dados mockados em caso de erro.
+            // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
             // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
             throw error;
         }
@@ -47,14 +47,14 @@ export const metricsService = {
      */
     async getMetricsTimeseries(period: 'day' | 'week' | 'month' | 'year'): Promise<MetricsTimeseriesDataPoint[]> {
         try {
-            // Usa a instÃ¢ncia 'api' centralizada para todas as requisiÃ§Ãµes
+            // Usa a instância 'api' centralizada para todas as requisições
             const response = await api.get(`/v1/metrics/me/timeseries`, {
                 params: { period },
             });
             return response.data;
         } catch (error) {
             console.error('Error fetching metrics timeseries:', error);
-            // Em um ambiente de produÃ§Ã£o "premium", nÃ£o devemos retornar dados mockados em caso de erro.
+            // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
             // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
             throw error;
         }
@@ -66,12 +66,12 @@ export const metricsService = {
      */
     async getMetricsFunnel(): Promise<MetricsFunnel> {
         try {
-            // Usa a instÃ¢ncia 'api' centralizada para todas as requisiÃ§Ãµes
+            // Usa a instância 'api' centralizada para todas as requisições
             const response = await api.get(`/v1/metrics/me/funnel`);
             return response.data;
         } catch (error) {
             console.error('Error fetching metrics funnel:', error);
-            // Em um ambiente de produÃ§Ã£o "premium", nÃ£o devemos retornar dados mockados em caso de erro.
+            // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
             // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
             throw error;
         }
