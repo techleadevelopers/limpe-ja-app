@@ -118,12 +118,96 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
   },
   // --- FIM DOS NOVOS ESTILOS PARA O CABEÇALHO ---
+// providerStyles.ts (Adicione no final do seu arquivo de estilos)
 
+// --- ESTILOS PARA O SELO 'NOVO' NO TOPO (COMPACTO) ---
+compactNewProviderBadge: {
+    backgroundColor: '#398beeff', // Azul vibrante
+    paddingHorizontal: 15,
+    paddingVertical: 10, // Mais estreito
+    borderRadius: 16,
+    left: -10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8, // Afasta do nome do prestador
+    borderTopStartRadius: 15, 
+    borderBottomStartRadius: 15,
+    borderTopEndRadius: 15,
+    borderBottomEndRadius: 15,
+
+},
+compactNewProviderBadgeText: {
+    color: '#ffffff', // Texto branco
+    fontSize: 12,
+    fontWeight: '800', // Bem destacado
+    letterSpacing: 0.5,
+},
+
+// --- ESTILOS PARA O DISPLAY NORMAL DO RATING NO TOPO ---
+// Estes são baseados na sua estrutura, use-os se não existirem
+compactRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent', // Fundo amarelo para o rating
+ paddingHorizontal: 12, 
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginLeft: 8,
+    left: -130,
+    top: 1,
+    
+    // ⬅️ AJUSTE CRÍTICO: Remova qualquer largura fixa ou mínima
+    width: -30,         // Garante que a largura se ajuste ao conteúdo
+    minWidth: 0,           // Remove qualquer restrição de largura mínima
+},
+compactRatingText: {
+    color: '#307ff5ff',
+    fontSize: 15,
+    fontWeight: '800',
+    marginLeft: 0,
+    top: 1,
+},
+
+// --- ESTILOS PARA A SEÇÃO DETALHADA (QUANDO ZERADA) ---
+newProviderNoReviewsContainer: {
+    paddingVertical: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: AppColors.backgroundLight, // Fundo clean e discreto
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0e7ff', // Borda sutilmente azulada
+    marginTop: 15,
+    marginHorizontal: 20,
+},
+newProviderBadgeContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#e0e7ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+},
+newProviderNoReviewsTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: AppColors.textBody,
+    marginTop: 8,
+},
+newProviderNoReviewsSubtitle: {
+    fontSize: 14,
+    color: AppColors.mediumGray,
+    marginTop: 4,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+},
   // Informações do provedor (Paddings mantidos)
   providerInfoWhiteCard: {
     paddingHorizontal: 25,
     marginBottom: 10,
     marginTop: -10,
+    left: 0,
   },
   providerNameRow: {
     flexDirection: 'row',
@@ -131,6 +215,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 5,
     marginTop: 10,
+    left: 10,
   },
   providerNameWhiteCard: {
     fontSize: 23,
@@ -147,7 +232,7 @@ export const styles = StyleSheet.create({
     
   },
   locationTextWhiteCard: {
-    fontSize: 14.5,
+    fontSize: 16.5,
     color: AppColors.textAuxiliary, // Usando AppColors
     marginLeft: 5,
   },
@@ -156,7 +241,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: AppColors.primaryInteractive, // Usando AppColors
     marginBottom: -2,
-    left: 5,
+    
   },
 
   // StarRating
@@ -263,14 +348,15 @@ priceDropText: {
      marginTop: 25,
   },
   descriptionText: {
-    fontSize: 13,
-    lineHeight: 23,
+    fontSize: 15,
+    lineHeight: 18,
     color: AppColors.textAuxiliary, // Usando AppColors
     textAlign: 'left',
     marginBottom: 15,
     // --- INJETADO: Estilos para a descrição do provedor ---
     paddingHorizontal: 10, // Adicionado padding horizontal de 10px
     fontFamily: 'Montserrat-Regular', // Definido a fonte Montserrat-Regular
+    fontWeight: '400', // Peso da fonte normal
     // --- FIM DA INJEÇÃO ---
   },
   noReviewsText: {
@@ -513,6 +599,8 @@ priceDropText: {
   alignSelf: 'flex-start',
   marginTop: 4,
   marginBottom: 6,
+  left: 10,
+  bottom: 10,
 },
 
 priceWrapper: {
@@ -736,7 +824,7 @@ priceBackground: {
     color: AppColors.textBody, // Usando AppColors
     marginRight: 0,
     marginTop: -4,
-    bottom: 20,
+    bottom: 0,
   },
   averageRatingText: {
     fontSize: 15,
