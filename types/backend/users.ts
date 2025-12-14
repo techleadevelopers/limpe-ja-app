@@ -28,6 +28,9 @@ export interface UserProfile {
   // com o código que espera encontrar o endereço na raiz do objeto.
   address?: BookingAddress | null;
 
+  termsAcceptedAt?: string | null;
+  termsVersion?: string | null;
+
   // Propriedades específicas ou calculadas
   walletBalance?: number;
   ordersCount?: number;
