@@ -1,34 +1,50 @@
+﻿// LimpeJaApp/app/(provider)/dashboard.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Image, // Manter se necess�rio para listas que n�o sejam SCROLLVIEW
-    Platform,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Image,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Easing, // CORREÇÃO: Import explícito para Easing
+  AccessibilityInfo, // CORREÇÃO: Import explícito para AccessibilityInfo
 } from 'react-native';
+import * as Haptics from 'expo-haptics'; // CORREÇÃO: Import separado e correto para Haptics
 import { useAuth } from '../../hooks/useAuth';
-
-// Importa��es dos servi�os
+import { PROVIDER_ROUTES } from '../../constants/routes'; // Importar PROVIDER_ROUTES
+// Import NotificationUIService
+import NotificationUIService from '../../services/notificationUIService'; // Added
+// Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
-import { getMyProviderDashboard } from '../../services/providerService';
-
-// Importa��es das tipagens centralizadas
+import { getMyProviderDashboard } from '../../services/dashboardService';
+import { getMyProviderEarnings } from '../../services/providerService';
+// Importações das tipagens centralizadas
 import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
-import { ProviderDashboard, ProviderReview } from '../../types/backend/providers'; // Importe ProviderReview aqui tamb�m, se ProviderDashboard o usa
+import { ProviderReview } from '../../types/backend/providers';
+// CORREÇÃO: Usar a interface ProviderDashboard do arquivo de provedores,
+// que é mais completa e usada na lógica do componente.
+// import { ProviderDashboard } from '../../types/backend/dashboard';
+import { ProviderDashboard } from '../../types/backend/providers'; // Usar a interface correta
+// Importações dos novos componentes
+import AdvancedReviewsSection from '../../components/provider/dashboard/AdvancedReviewsSection';
+import SmartInsightsSection from '../../components/provider/dashboard/SmartInsightsSection';
+import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
+// CORREÇÃO: Adicionar import para SafeAreaInsets (para alinhamento do header no iOS)
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Hook para anima��o de toque (reutiliz�vel)
+// Hook para animação de toque (reutilizável, refinado com haptics)
 const useAnimatedTouch = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const onPressIn = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Haptic sutil premium iOS
     Animated.spring(scaleAnim, {
       toValue: 0.95,
       useNativeDriver: true,
@@ -46,7 +62,25 @@ const useAnimatedTouch = () => {
   return { scaleAnim, onPressIn, onPressOut };
 };
 
-// Cores para o tema (ajustadas e expandidas)
+// Hook para reduced motion (premium accessibility iOS)
+const useReducedMotion = () => {
+  const [isReducedMotionEnabled, setIsReducedMotionEnabled] = useState(false);
+  useEffect(() => {
+    const updateReducedMotion = async () => {
+      const enabled = await AccessibilityInfo.isReduceMotionEnabled();
+      setIsReducedMotionEnabled(enabled);
+    };
+    updateReducedMotion();
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setIsReducedMotionEnabled
+    );
+    return () => subscription.remove();
+  }, []);
+  return isReducedMotionEnabled;
+};
+
+// Cores para o tema (ajustadas e expandidas para iOS clean)
 const WHITE = '#FFFFFF';
 const BACKGROUND_ALT = '#F8F9FD';
 const TEXT_DARK = '#1A2538';
@@ -54,59 +88,114 @@ const TEXT_MEDIUM = '#4A5568';
 const TEXT_MUTED = '#7A8599';
 const ICON_PRIMARY = '#007AFF';
 const SUCCESS_GREEN = '#28a745';
-const DANGER_RED = '#dc3545';
+const DANGER_RED = '#f1ebebff';
 const WARNING_YELLOW = '#FFC107';
 const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
 const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
 const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
-const PRIMARY_LIGHT = '#EBF5FF'; // Um azul claro para fundos de bot�es/links
+const PRIMARY_LIGHT = '#EBF5FF';
 
-// --- Componentes Reutiliz�veis (Move para arquivos separados se o projeto crescer) ---
+// Spacing e Radii tokens (consistentes e clean) - CORREÇÃO: Adicionado 'md' ao Radii
+const Spacing = {
+  xs: 6,
+  sm: 10,
+  md: 15,
+  lg: 20,
+  xl: 28,
+};
+const Radii = {
+  xl: 20,
+  pill: 25,
+  md: 12, // CORREÇÃO: Adicionado 'md' para resolver TS2339 em borderRadius: Radii.md
+  sm: 10,
+};
 
-// Componente: DashboardHeader (para sauda��o e avatar)
+// Easing suave para animações iOS
+const easeOut = (value: any) => Easing.out(Easing.ease)(value);
+
+// --- Componentes Reutilizáveis ---
+// Componente: DashboardHeader (refinado com haptics e reduced motion) - CORREÇÃO: Adicionado useSafeAreaInsets para alinhamento iOS
 const DashboardHeader: React.FC<{
   providerName: string | undefined;
   avatarUrl: string | undefined | null;
   onProfilePress: () => void;
-}> = ({ providerName, avatarUrl, onProfilePress }) => (
-  <View style={headerStyles.headerContainer}>
-    <View style={headerStyles.greetingContainer}>
-      <Text style={headerStyles.greetingText}>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
-      <Text style={headerStyles.currentDateText}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
-    </View>
-    <TouchableOpacity onPress={onProfilePress} style={headerStyles.avatarButton}>
-      {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={headerStyles.avatar} />
-      ) : (
-        <View style={headerStyles.avatarPlaceholder}>
-          <Ionicons name="person" size={24} color={WHITE} />
-        </View>
-      )}
-    </TouchableOpacity>
-  </View>
-);
-
+  isReducedMotionEnabled: boolean; // Passado para animações
+}> = ({ providerName, avatarUrl, onProfilePress, isReducedMotionEnabled }) => {
+  const insets = useSafeAreaInsets(); // CORREÇÃO: Hook para calcular insets (top = status bar no iOS)
+  const { scaleAnim, onPressIn, onPressOut } = useAnimatedTouch();
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const duration = isReducedMotionEnabled ? 0 : 400;
+    Animated.timing(headerAnim, { toValue: 1, duration, easing: easeOut, useNativeDriver: true }).start();
+  }, [isReducedMotionEnabled]);
+  // CORREÇÃO: Cálculo dinâmico do paddingTop: iOS usa insets.top + padding base (ex: 47px + 20px = 67px)
+  // Android mantém padding fixo (20px, sem insets)
+  const paddingTopValue = Platform.OS === 'ios'
+    ? insets.top + 20 // insets.top cobre status bar/notch; 20px é padding base confortável
+    : 20; // Padding fixo para Android (ajuste se quiser mais/menos)
+  const androidPaddingTopValue = insets.top + 20;
+  return (
+    <Animated.View style={[
+      headerStyles.headerContainer,
+      {
+        opacity: headerAnim,
+        transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+        paddingTop: paddingTopValue // Aplicar o valor dinâmico aqui
+      },
+      Platform.OS === 'android' && { paddingTop: androidPaddingTopValue },
+    ]}>
+      <View style={headerStyles.greetingContainer}>
+        <Text style={headerStyles.greetingText}>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
+        <Text style={headerStyles.currentDateText}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+      </View>
+      <TouchableOpacity
+        onPress={() => {
+          onProfilePress();
+        }}
+        style={[headerStyles.avatarButton, { transform: [{ scale: scaleAnim }] }]}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        accessibilityRole="button"
+        accessibilityLabel="Ir para o perfil"
+        accessibilityHint="Toque para editar seu perfil."
+      >
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={headerStyles.avatar} defaultSource={require('../../assets/images/default-avatar.png')} />
+        ) : (
+          <View style={headerStyles.avatarPlaceholder}>
+            <Ionicons name="person" size={24} color={WHITE} accessibilityHidden={true} />
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 const headerStyles = StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 20,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.lg,
     backgroundColor: WHITE,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
+    borderBottomLeftRadius: Radii.xl,
+    borderBottomRightRadius: Radii.xl,
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 6 },
+      ios: {
+        shadowColor: SHADOW_COLOR_SECTION,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1, // Suavizado para iOS clean
+        shadowRadius: 6
+      },
       android: { elevation: 8 },
     }),
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
   greetingContainer: {
     flex: 1,
   },
   greetingText: {
-    fontSize: 24,
+    fontSize: 18.8,
     fontWeight: 'bold',
     color: TEXT_DARK,
   },
@@ -116,14 +205,14 @@ const headerStyles = StyleSheet.create({
   currentDateText: {
     fontSize: 14,
     color: TEXT_MUTED,
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
   avatarButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 40.5,
+    height: 40.5,
+    borderRadius: 23.75,
     overflow: 'hidden',
-    marginLeft: 15,
+    marginLeft: Spacing.sm,
   },
   avatar: {
     width: '100%',
@@ -132,31 +221,32 @@ const headerStyles = StyleSheet.create({
   avatarPlaceholder: {
     width: '100%',
     height: '100%',
-    borderRadius: 25,
+    borderRadius: 23.75,
     backgroundColor: ICON_PRIMARY,
     justifyContent: 'center',
     alignItems: 'center',
   },
 });
 
-// Componente: FinancialSummaryCard (resumo de ganhos)
+// Componente: FinancialSummaryCard (refinado com haptics e reduced motion)
 const FinancialSummaryCard: React.FC<{
   totalEarnings: number | undefined;
   pendingWithdrawals: number | undefined;
   onViewEarnings: () => void;
-}> = ({ totalEarnings, pendingWithdrawals, onViewEarnings }) => {
+  animation: Animated.Value;
+  isReducedMotionEnabled: boolean;
+}> = ({ totalEarnings, pendingWithdrawals, onViewEarnings, animation, isReducedMotionEnabled }) => {
   const { scaleAnim, onPressIn, onPressOut } = useAnimatedTouch();
-
   const formattedTotalEarnings = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalEarnings || 0);
   const formattedPendingWithdrawals = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pendingWithdrawals || 0);
-
   return (
-    <LinearGradient
-      colors={['rgba(74,144,226,0.88)', '#2A72E7']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={summaryStyles.summaryCard}
-    >
+    <Animated.View style={[
+      summaryStyles.summaryCard,
+      {
+        opacity: animation,
+        transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+      }
+    ]}>
       <Text style={summaryStyles.cardTitle}>Seus Ganhos</Text>
       <View style={summaryStyles.metricsGrid}>
         <View style={summaryStyles.metricItem}>
@@ -170,152 +260,433 @@ const FinancialSummaryCard: React.FC<{
       </View>
       <TouchableOpacity
         style={[summaryStyles.viewEarningsButton, { transform: [{ scale: scaleAnim }] }]}
-        onPress={onViewEarnings}
+        onPress={() => {
+          console.log("[DashboardScreen] Botão 'Gerenciar Ganhos' pressionado. Tentando navegar para ganhos.");
+          onViewEarnings();
+        }}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
+        accessibilityRole="button"
         accessibilityLabel="Ver todos os meus ganhos"
+        accessibilityHint="Navegue para a tela de ganhos para mais detalhes."
       >
-        <Ionicons name="wallet-outline" size={20} color={WHITE} style={summaryStyles.buttonIcon} />
+        <Ionicons name="wallet-outline" size={18} color={WHITE} style={summaryStyles.buttonIcon} accessibilityHidden={true} />
         <Text style={summaryStyles.viewEarningsButtonText}>Gerenciar Ganhos</Text>
-        <Ionicons name="chevron-forward-outline" size={20} color={WHITE} />
+        <Ionicons name="chevron-forward-outline" size={18} color={WHITE} accessibilityHidden={true} />
       </TouchableOpacity>
-    </LinearGradient>
+    </Animated.View>
   );
 };
-
 const summaryStyles = StyleSheet.create({
   summaryCard: {
-    borderRadius: 18,
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    marginBottom: 24,
+    backgroundColor: ICON_PRIMARY,
+    borderRadius: Radii.xl,
+    padding: 18, // ~10% menor
+    marginBottom: 18,
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.1, shadowRadius: 20 },
-      android: { elevation: 12 },
+      ios: {
+        shadowColor: SHADOW_COLOR_SECTION,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1, // Suavizado para iOS
+        shadowRadius: 10
+      },
+      android: { elevation: 10 },
     }),
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: WHITE,
-    marginBottom: 15,
+    marginBottom: 14,
+    textAlign: 'center', // Clean centralizado
   },
   metricsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 24,
+    marginBottom: 18,
   },
   metricItem: {
     alignItems: 'center',
   },
   metricLabel: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: 5,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)', // Suavizado para legibilidade
+    marginBottom: 6,
+    textAlign: 'center',
   },
   metricValuePrimary: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: WHITE,
+    textAlign: 'center',
   },
   metricValueWarning: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: WARNING_YELLOW,
+    textAlign: 'center',
   },
   viewEarningsButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 25,
-    paddingVertical: 12,
+    borderRadius: Radii.pill,
+    paddingVertical: 9,
   },
   viewEarningsButtonText: {
     color: WHITE,
     fontSize: 16,
     fontWeight: '600',
-    marginHorizontal: 10,
+    marginHorizontal: 8,
   },
   buttonIcon: {
-    marginRight: 5,
+    marginRight: Spacing.xs,
   },
 });
 
-// Componente: QuickActionsSection (bot�es de a��o r�pida)
+// Componente: QuickActionsSection (refinado com grid clean, haptics e reduced motion)
 const QuickActionsSection: React.FC<{
   onViewAllServicesPress: () => void;
   onViewAllMessagesPress: () => void;
   onManageAvailability: () => void;
-}> = ({ onViewAllServicesPress, onViewAllMessagesPress, onManageAvailability }) => {
-  const { scaleAnim: s1, onPressIn: p1, onPressOut: o1 } = useAnimatedTouch();
-  const { scaleAnim: s2, onPressIn: p2, onPressOut: o2 } = useAnimatedTouch();
-  const { scaleAnim: s3, onPressIn: p3, onPressOut: o3 } = useAnimatedTouch();
-
+  onOpenRequests: () => void;
+  onOpenUpcoming: () => void;
+  onOpenCompleted: () => void;
+  onOpenNotifications: () => void;
+  onOpenReviews: () => void;
+  onOpenEarnings: () => void;
+  onQuickWithdraw: () => void;
+  animation: Animated.Value;
+  isReducedMotionEnabled: boolean;
+}> = ({
+  onViewAllServicesPress,
+  onViewAllMessagesPress,
+  onManageAvailability,
+  onOpenRequests,
+  onOpenUpcoming,
+  onOpenCompleted,
+  onOpenNotifications,
+  onOpenReviews,
+  onOpenEarnings,
+  onQuickWithdraw,
+  animation,
+  isReducedMotionEnabled,
+}) => {
+  const router = useRouter();
+  // Garantir que o wrapper condicional compile mesmo sem prop
+  const showShortcuts = true;
+  // Cria instâncias de animação para cada item (até 9)
+  const mk = () => useAnimatedTouch();
+  const a1 = mk(), a2 = mk(), a3 = mk(), a4 = mk(), a5 = mk(), a6 = mk(), a7 = mk(), a8 = mk(), a9 = mk();
+  const Item = ({
+    icon,
+    label,
+    anim,
+    onPress,
+  }: { icon: keyof typeof Ionicons.glyphMap; label: string; anim: ReturnType<typeof useAnimatedTouch>; onPress: () => void }) => (
+    <TouchableOpacity
+      style={[quickActionStyles.gridItem, { transform: [{ scale: anim.scaleAnim }] }]}
+      onPress={onPress}
+      onPressIn={anim.onPressIn}
+      onPressOut={anim.onPressOut}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}. Toque para abrir.`}
+      accessibilityHint={`Navegue para a seção de ${label.toLowerCase()}.`}
+    >
+      <Ionicons name={icon} size={27} color={ICON_PRIMARY} accessibilityHidden={true} />
+      <Text style={quickActionStyles.gridItemText} numberOfLines={1}>{label}</Text>
+    </TouchableOpacity>
+  );
   return (
-    <View style={quickActionStyles.sectionContainer}>
-      <Text style={quickActionStyles.sectionTitle}>Atalhos do Dia</Text>
-      <View style={quickActionStyles.grid}>
-        <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s1 }] }]}
-          onPress={onManageAvailability} onPressIn={p1} onPressOut={o1}>
-          <Ionicons name="calendar-outline" size={28} color={ICON_PRIMARY} style={{ textShadowColor: 'rgba(255,255,255,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }} />
-          <Text style={quickActionStyles.gridItemText}>Minha Agenda</Text>
+    <Animated.View style={[
+      quickActionStyles.sectionContainer,
+      {
+        opacity: animation,
+        transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+      }
+    ]}>
+      {showShortcuts && (<>
+        <Text style={quickActionStyles.sectionTitle}>Atalhos do Dia</Text>
+        <View style={quickActionStyles.grid}>
+          <Item icon="calendar-outline" label="Minha Agenda" anim={a1} onPress={onManageAvailability} />
+          <Item icon="file-tray-outline" label="Solicitações" anim={a2} onPress={onOpenRequests} />
+          <Item icon="calendar-outline" label="Próximos" anim={a3} onPress={onOpenUpcoming} />
+          <Item icon="checkmark-done-outline" label="Concluídos" anim={a4} onPress={onOpenCompleted} />
+          <Item icon="briefcase-outline" label="Meus Serviços" anim={a5} onPress={onViewAllServicesPress} />
+          <Item icon="chatbubbles-outline" label="Mensagens" anim={a6} onPress={onViewAllMessagesPress} />
+          <Item icon="notifications-outline" label="Notificações" anim={a7} onPress={onOpenNotifications} />
+          {/* BOTÃO CORRETO PARA REVIEWS */}
+          <Item icon="analytics-outline" label="Avaliações" anim={a8} onPress={onOpenReviews} />
+          <Item icon="wallet-outline" label="Ganhos" anim={a9} onPress={onOpenEarnings} />
+        </View>
+      </>)}
+      {/* Bloco refinado para horários rápidos (substituindo os chips antigos) */}
+      <Text style={[quickActionStyles.sectionTitle, { fontSize: 18, marginTop: Spacing.lg, marginBottom: Spacing.md }]}>Edite seus horários</Text>
+      <View style={quickActionStyles.quickChipsRow}>
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => {
+            Haptics.selectionAsync();
+            router.push('/(provider)/schedule/manage-availability?preset=today-morning' as any);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Definir turno de hoje"
+          accessibilityHint="Escolha entre manhã, tarde ou dia todo para definir sua disponibilidade."
+        >
+          <Ionicons name="briefcase-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Definir turno de hoje</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Manhã, tarde ou dia todo</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=today-morning' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
         </TouchableOpacity>
-        <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s2 }] }]}
-          onPress={onViewAllServicesPress} onPressIn={p2} onPressOut={o2}>
-          <Ionicons name="briefcase-outline" size={28} color={ICON_PRIMARY} style={{ textShadowColor: 'rgba(255,255,255,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }} />
-          <Text style={quickActionStyles.gridItemText}>Meus Serviços</Text>
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => {
+            Haptics.selectionAsync();
+            router.push('/(provider)/schedule/manage-availability?preset=tomorrow-afternoon' as any);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Agendar amanhã"
+          accessibilityHint="Marque o próximo dia disponível."
+        >
+          <Ionicons name="calendar-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Agendar amanhã</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Escolha seus horários</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=tomorrow-afternoon' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
         </TouchableOpacity>
-        <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s3 }] }]}
-          onPress={onViewAllMessagesPress} onPressIn={p3} onPressOut={o3}>
-          <Ionicons name="chatbubbles-outline" size={28} color={ICON_PRIMARY} style={{ textShadowColor: 'rgba(255,255,255,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }} />
-          <Text style={quickActionStyles.gridItemText}>Mensagens</Text>
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => {
+            Haptics.selectionAsync();
+            router.push('/(provider)/schedule/manage-availability?preset=block-today' as any);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Folga hoje"
+          accessibilityHint="Tire um dia de descanso."
+        >
+          <Ionicons name="bed-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Folga hoje</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Tire um dia de descanso</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=block-today' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
         </TouchableOpacity>
-        {/* Adicione mais a��es r�pidas conforme necess�rio, ex: "Meu Perfil", "Ajuda" */}
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => {
+            Haptics.selectionAsync();
+            router.push('/(provider)/schedule/manage-availability?preset=repeat-week' as any);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Copiar semana padrão"
+          accessibilityHint="Replique os horários da última semana."
+        >
+          <Ionicons name="repeat-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Copiar semana padrão</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Replique os horários da última semana</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=repeat-week' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
+        </TouchableOpacity>
       </View>
-    </View>
+      {/* Seção Financeiro com Saque Rápido */}
+      <TouchableOpacity
+        style={quickActionStyles.withdrawCta}
+        onPress={onQuickWithdraw}
+        onPressIn={a9.onPressIn}
+        onPressOut={a9.onPressOut}
+        accessibilityRole="button"
+        accessibilityLabel="Saque Rápido"
+        accessibilityHint="Solicite um saque rápido dos ganhos disponíveis."
+      >
+        <Animated.View style={{ transform: [{ scale: a9.scaleAnim }], flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="cash-outline" size={20} color={WHITE} accessibilityHidden={true} />
+          <Text style={quickActionStyles.withdrawCtaText}>Saque Rápido</Text>
+          <Ionicons name="chevron-forward-outline" size={18} color={WHITE} accessibilityHidden={true} />
+        </Animated.View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
+// Seção isolada: apenas "Atalhos do Dia"
+const ShortcutsGrid: React.FC<{
+  onViewAllServicesPress: () => void;
+  onViewAllMessagesPress: () => void;
+  onManageAvailability: () => void;
+  onOpenRequests: () => void;
+  onOpenUpcoming: () => void;
+  onOpenCompleted: () => void;
+  onOpenNotifications: () => void;
+  onOpenReviews: () => void;
+  onOpenEarnings: () => void;
+  animation: Animated.Value;
+  isReducedMotionEnabled: boolean;
+}> = ({
+  onViewAllServicesPress,
+  onViewAllMessagesPress,
+  onManageAvailability,
+  onOpenRequests,
+  onOpenUpcoming,
+  onOpenCompleted,
+  onOpenNotifications,
+  onOpenReviews,
+  onOpenEarnings,
+  animation,
+}) => {
+  const mk = () => useAnimatedTouch();
+  const a1 = mk(), a2 = mk(), a3 = mk(), a4 = mk(), a5 = mk(), a6 = mk(), a7 = mk(), a8 = mk(), a9 = mk();
+  const Item = ({ icon, label, anim, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; anim: ReturnType<typeof useAnimatedTouch>; onPress: () => void }) => (
+    <TouchableOpacity
+      style={[quickActionStyles.gridItem, { transform: [{ scale: anim.scaleAnim }] }]}
+      onPress={onPress}
+      onPressIn={anim.onPressIn}
+      onPressOut={anim.onPressOut}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}. Toque para abrir.`}
+      accessibilityHint={`Navegue para a seção de ${label.toLowerCase()}.`}
+    >
+      <Ionicons name={icon} size={27} color={ICON_PRIMARY} accessibilityHidden={true} />
+      <Text style={[quickActionStyles.gridItemText, { display: 'flex' }]} numberOfLines={1}>{label}</Text>
+    </TouchableOpacity>
+  );
+  return (
+    <Animated.View style={[
+      quickActionStyles.sectionContainer,
+      {
+        opacity: animation,
+        transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+      }
+    ]}>
+      <Text style={[quickActionStyles.sectionTitle, { display: 'flex' }]}>Atalhos do Dia</Text>
+      <View style={[quickActionStyles.grid, { display: 'flex' }]}>
+        <Item icon="calendar-outline" label="Minha Agenda" anim={a1} onPress={onManageAvailability} />
+        <Item icon="file-tray-outline" label="Solicitações" anim={a2} onPress={onOpenRequests} />
+        <Item icon="calendar-outline" label="Próximos" anim={a3} onPress={onOpenUpcoming} />
+        <Item icon="checkmark-done-outline" label="Concluídos" anim={a4} onPress={onOpenCompleted} />
+        <Item icon="briefcase-outline" label="Meus Serviços" anim={a5} onPress={onViewAllServicesPress} />
+        <Item icon="chatbubbles-outline" label="Mensagens" anim={a6} onPress={onViewAllMessagesPress} />
+        <Item icon="notifications-outline" label="Notificações" anim={a7} onPress={onOpenNotifications} />
+        <Item icon="analytics-outline" label="Avaliações" anim={a8} onPress={onOpenReviews} />
+        <Item icon="wallet-outline" label="Ganhos" anim={a9} onPress={onOpenEarnings} />
+      </View>
+    </Animated.View>
+  );
+};
 const quickActionStyles = StyleSheet.create({
   sectionContainer: {
     backgroundColor: WHITE,
-    borderRadius: 18,
-    padding: 20, // Manter ou ajustar este padding se o espa�o lateral geral da caixa � o que te incomoda
-    marginBottom: 24,
+    borderRadius: Radii.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 6 },
+      ios: {
+        shadowColor: SHADOW_COLOR_SECTION,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
       android: { elevation: 8 },
     }),
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: TEXT_DARK,
-    marginBottom: 15,
+    marginBottom: Spacing.md,
     textAlign: 'center',
   },
-  grid: { // Este � o container dos seus bot�es
+  grid: {
     flexDirection: 'row',
-    flexWrap: 'wrap', // Manter wrap para caso haja mais de 3, eles quebrem a linha
-    justifyContent: 'space-around', // ou 'space-between', 'center'
-    width: '100%', // Isso significa 100% do 'sectionContainer' (que tem padding de 20)
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    width: '100%',
   },
-  gridItem: {
-    // ATEN��O AQUI: Para 3 itens por linha, voc� PRECISA de uma largura menor.
-    // 30% x 3 = 90%. Sobram 10% para gaps.
-    width: '28.5%', // <--- MUDAN�A ESSENCIAL AQUI para 3 itens por linha!
-    aspectRatio: 1, // Para manter quadrado
-    backgroundColor: BACKGROUND_ALT,
-    borderRadius: 12,
-    justifyContent: 'center',
+  quickChipsRow: {
+    flexDirection: 'column',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  quickChipBlock: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15, // Espa�amento vertical entre as linhas
-    padding: 10,
-    borderWidth: 0.3,
+    backgroundColor: WHITE,
+    borderRadius: Radii.md,
+    padding: Spacing.sm,
+    paddingRight: Spacing.lg, // espaço para o botão +
+    borderWidth: 1,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3 },
+      ios: {
+        shadowColor: SHADOW_COLOR_CARD,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  quickChipTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: TEXT_DARK,
+    marginLeft: Spacing.sm,
+  },
+  quickChipSubtitle: {
+    fontSize: 12,
+    color: TEXT_MUTED,
+    marginLeft: Spacing.sm,
+  },
+  gridItem: {
+    width: '30%',
+    aspectRatio: 1,
+    backgroundColor: BACKGROUND_ALT,
+    borderRadius: Radii.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    padding: Spacing.sm,
+    borderWidth: 1,
+    borderColor: BORDER_SUBTLE,
+    ...Platform.select({
+      ios: {
+        shadowColor: SHADOW_COLOR_CARD,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
       android: { elevation: 2 },
     }),
   },
@@ -323,116 +694,141 @@ const quickActionStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: TEXT_DARK,
-    marginTop: 8,
+    marginTop: Spacing.xs,
     textAlign: 'center',
+  },
+  withdrawCta: {
+    marginTop: 20,
+    backgroundColor: ICON_PRIMARY,
+    borderRadius: Radii.pill,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  withdrawCtaText: {
+    color: WHITE,
+    fontWeight: '700',
+    marginHorizontal: Spacing.sm,
+    fontSize: 15,
+  },
+  plusButton: {
+    marginLeft: 'auto',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: ICON_PRIMARY,
+    backgroundColor: WHITE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
-
-// Componente de Item de Solicita��o (RequestItem) - SEM ALTERA��ES NESTE TRECHO
+// Componente de Item de Solicitação (RequestItem - refinado com haptics e clean spacing)
 const RequestItem: React.FC<{
   item: BookingDetails;
   onAccept?: (id: string) => void;
   onReject?: (id: string) => void;
   onDetails: (id: string) => void;
   onChat?: (clientId: string, clientName: string) => void;
-  entryAnim: Animated.ValueXY;
-}> = ({ item, onAccept, onReject, onDetails, onChat, entryAnim }) => {
+  entryAnim: Animated.Value;
+  isReducedMotionEnabled: boolean;
+  isUpdating?: boolean;
+}> = ({ item, onAccept, onReject, onDetails, onChat, entryAnim, isReducedMotionEnabled, isUpdating }) => {
   const acceptTouchAnimation = useAnimatedTouch();
   const rejectTouchAnimation = useAnimatedTouch();
   const detailsTouchAnimation = useAnimatedTouch();
   const chatTouchAnimation = useAnimatedTouch();
-
   const clientId: string | undefined = item.clientId;
   const clientName: string = item.clientFullName || 'Cliente';
-
+  // CORREÇÃO: Usar item.scheduledDate e item.scheduledTime
+  const combinedDateTimeString = `${item.scheduledDate}T${item.scheduledTime}:00`;
+  const scheduledDate = new Date(combinedDateTimeString).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+  const scheduledTime = new Date(combinedDateTimeString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return (
     <Animated.View style={[
       styles.requestItem,
       {
-        opacity: entryAnim.x,
-        transform: [{ translateY: entryAnim.y }],
+        opacity: entryAnim,
+        transform: [{ translateY: entryAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
       },
     ]}>
       <View style={styles.requestItemPendingIndicator} />
       <View style={styles.requestItemHeader}>
-        <View style={styles.clientAvatarPlaceholder}>
-          <Ionicons name="person-outline" size={20} color={TEXT_MEDIUM} />
-        </View>
         <Text style={styles.requestServiceName} numberOfLines={1}>{item.serviceName}</Text>
+        <Image
+          source={require('../../assets/images/icon.png')}
+          style={[styles.serviceLogo, { display: 'none' }]}
+          resizeMode="contain"
+        />
+        {item.totalPrice != null && !isNaN(Number(item.totalPrice)) && (
+          <Text style={styles.priceCornerText}>+ R$ {Number(item.totalPrice).toFixed(2).replace('.', ',')}</Text>
+        )}
+        {/* Aceitar removido do canto; passa a ser botão na barra inferior */}
+      </View>
+      <Text style={styles.requestClientName}>Cliente: {clientName}</Text>
+      {false && item.totalPrice != null && !isNaN(Number(item.totalPrice)) && (
+        <View style={styles.priceCornerRow}>
+          <Text style={[styles.requestPrice, styles.priceHighlight, { color: ICON_PRIMARY }]}>+ R$ {Number(item.totalPrice).toFixed(2).replace('.', ',')}</Text>
+        </View>
+      )}
+      <View style={styles.requestInfoRow}>
+        <Ionicons name="calendar-outline" size={15} color={TEXT_MUTED} style={styles.infoIcon} accessibilityHidden={true} />
+        <Text style={styles.requestInfoText}>
+          {scheduledDate}, {scheduledTime}
+        </Text>
+      </View>
+      {false && (<View style={styles.requestInfoRow}>
+        <Text style={[styles.requestInfoText, { marginRight: Spacing.xs }]}>Endereço de Serviço:</Text>
+        <Text style={styles.requestInfoText} numberOfLines={1}>{item.address?.street}, {item.address?.number}</Text>
+      </View>)}
+      <View style={styles.requestActionsRow}>
         <TouchableOpacity
-          style={styles.acceptButtonCorner}
-          onPress={() => onAccept && onAccept(item.id)}
+          style={[styles.actionButtonBase, styles.rejectButton, isUpdating && { opacity: 0.6 }]}
+          disabled={!!isUpdating}
+          onPress={() => {
+            if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onReject && onReject(item.id);
+          }}
+          onPressIn={rejectTouchAnimation.onPressIn}
+          onPressOut={rejectTouchAnimation.onPressOut}
+          accessibilityRole="button"
+          accessibilityLabel={`Recusar solicitação de ${item.serviceName}`}
+          accessibilityHint="Rejeite o agendamento."
+        >
+          <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: rejectTouchAnimation.scaleAnim }] }]}>
+            {isUpdating ? (
+              <ActivityIndicator size={14} color={ICON_PRIMARY} />
+            ) : (
+              <>
+                <Ionicons name="close" size={16} color={ICON_PRIMARY} accessibilityHidden={true} />
+                <Text style={styles.actionButtonTextPrimary}>Rejeitar</Text>
+              </>
+            )}
+          </Animated.View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButtonBase, styles.acceptButton, isUpdating && { opacity: 0.6 }]}
+          disabled={!!isUpdating}
+          onPress={() => {
+            if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            onAccept && onAccept(item.id);
+          }}
           onPressIn={acceptTouchAnimation.onPressIn}
           onPressOut={acceptTouchAnimation.onPressOut}
           accessibilityRole="button"
           accessibilityLabel={`Aceitar solicitação de ${item.serviceName}`}
+          accessibilityHint="Confirme para aceitar o agendamento."
         >
-          <Animated.View style={{ transform: [{ scale: acceptTouchAnimation.scaleAnim }] }}>
-            <Ionicons name="checkmark-circle" size={32} color={SUCCESS_GREEN} />
-          </Animated.View>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.requestClientName}>Solicitado por: {clientName}</Text>
-
-      {item.totalPrice !== undefined && (
-        <Text style={styles.requestPrice}>
-            Valor: R$ {item.totalPrice.toFixed(2).replace('.', ',')}
-        </Text>
-      )}
-
-      <View style={styles.requestInfoRow}>
-        <Ionicons name="calendar-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} />
-        <Text style={styles.requestInfoText}>
-          {new Date(item.scheduledDate).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
-        </Text>
-        <Ionicons name="time-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} />
-        <Text style={styles.requestInfoText}>
-          {item.scheduledTime}
-        </Text>
-      </View>
-      <View style={styles.requestInfoRow}>
-        <Ionicons name="location-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} />
-        <Text style={styles.requestInfoText} numberOfLines={1}>{item.address?.street}, {item.address?.number}</Text>
-      </View>
-
-      <View style={styles.requestActionsRow}>
-        {onChat && clientId && (
-          <TouchableOpacity
-            style={[styles.actionButtonBase, styles.chatButton]}
-            onPress={() => onChat(clientId, clientName)}
-            onPressIn={chatTouchAnimation.onPressIn}
-            onPressOut={chatTouchAnimation.onPressOut}
-            accessibilityLabel={`Conversar com ${clientName}`}
-          >
-            <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: chatTouchAnimation.scaleAnim }] }]}>
-              <Ionicons name="chatbubble-ellipses-outline" size={20} color={ICON_PRIMARY} />
-            </Animated.View>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[styles.actionButtonBase, styles.rejectButton]}
-          onPress={() => onReject && onReject(item.id)}
-          onPressIn={rejectTouchAnimation.onPressIn}
-          onPressOut={rejectTouchAnimation.onPressOut}
-          accessibilityLabel={`Recusar solicitação de ${item.serviceName}`}
-        >
-          <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: rejectTouchAnimation.scaleAnim }] }]}>
-            <Ionicons name="close-circle-outline" size={20} color={WHITE} />
-            <Text style={styles.actionButtonTextWhite}>Recusar</Text>
-          </Animated.View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButtonBase, styles.detailsButton]}
-          onPress={() => onDetails(item.id)}
-          onPressIn={detailsTouchAnimation.onPressIn}
-          onPressOut={detailsTouchAnimation.onPressOut}
-          accessibilityLabel={`Ver detalhes da solicitação de ${item.serviceName}`}
-        >
-          <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: detailsTouchAnimation.scaleAnim }] }]}>
-            <Ionicons name="eye-outline" size={20} color={ICON_PRIMARY} />
-            <Text style={styles.actionButtonTextPrimary}>Detalhes</Text>
+          <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: acceptTouchAnimation.scaleAnim }] }]}>
+            {isUpdating ? (
+              <ActivityIndicator size={14} color={WHITE} />
+            ) : (
+              <>
+                <Ionicons name="checkmark" size={16} color={WHITE} accessibilityHidden={true} />
+                <Text style={styles.actionButtonTextWhite}>Aceitar</Text>
+              </>
+            )}
           </Animated.View>
         </TouchableOpacity>
       </View>
@@ -440,208 +836,274 @@ const RequestItem: React.FC<{
   );
 };
 
-// Componente de Item de Servi�o Confirmado (ConfirmedServiceItem)
+// Componente de Item de Serviço Confirmado (refinado com haptics)
 const ConfirmedServiceItem: React.FC<{
   item: BookingDetails;
   onPress: (id: string) => void;
-  entryAnim: Animated.ValueXY;
-}> = ({ item, onPress, entryAnim }) => {
+  entryAnim: Animated.Value;
+  isReducedMotionEnabled: boolean;
+}> = ({ item, onPress, entryAnim, isReducedMotionEnabled }) => {
   const touchAnimation = useAnimatedTouch();
-
+  // CORREÇÃO: Usar item.scheduledDate e item.scheduledTime
+  const combinedDateTimeString = `${item.scheduledDate}T${item.scheduledTime}:00`;
+  const scheduledDate = new Date(combinedDateTimeString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  const scheduledTime = new Date(combinedDateTimeString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return (
-    <Animated.View style={{ opacity: entryAnim.x, transform: [{ translateY: entryAnim.y }] }}>
+    <Animated.View style={{
+      opacity: entryAnim,
+      transform: [{ translateY: entryAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+    }}>
       <TouchableOpacity
         style={styles.serviceItem}
-        onPress={() => onPress(item.id)}
+        onPress={() => {
+          if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onPress(item.id);
+        }}
         onPressIn={touchAnimation.onPressIn}
         onPressOut={touchAnimation.onPressOut}
         accessibilityRole="button"
         accessibilityLabel={`Ver detalhes do serviço ${item.serviceName} com ${item.clientFullName}`}
+        accessibilityHint="Toque para ver detalhes do serviço confirmado."
       >
         <Animated.View style={[styles.serviceItemContent, { transform: [{ scale: touchAnimation.scaleAnim }] }]}>
           <View style={styles.serviceItemIconWrapper}>
-            <MaterialCommunityIcons name="calendar-check-outline" size={28} color={ICON_PRIMARY} />
+            <MaterialCommunityIcons name="calendar-check-outline" size={28} color={ICON_PRIMARY} accessibilityHidden={true} />
           </View>
           <View style={styles.serviceItemDetails}>
             <Text style={styles.serviceItemText} numberOfLines={1}>
-              <Text style={{ fontWeight: 'bold' }}>{item.serviceName}</Text>
+              <Text style={{ fontWeight: 'bold' }}>{item.serviceName || 'Serviço Desconhecido'}</Text>
               {item.clientFullName ? ` com ${item.clientFullName}` : ''}
             </Text>
             <Text style={styles.serviceItemTime}>
-              {new Date(item.scheduledDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}, {item.scheduledTime}
+              {scheduledDate}, {scheduledTime}
             </Text>
           </View>
-          <Ionicons name="chevron-forward-outline" size={24} color={TEXT_MUTED} />
+          <Ionicons name="chevron-forward-outline" size={24} color={TEXT_MUTED} accessibilityHidden={true} />
         </Animated.View>
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
-// Componente principal do Dashboard do Provedor
+// Componente principal do Dashboard do Provedor (refinado com reduced motion global e haptics)
 export default function ProviderDashboardScreen() {
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
-
+  const { user, isLoading: authLoading, logout } = useAuth(); // Corrigido: usando logout em vez de signOut
   const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<BookingDetails[]>([]);
   const [upcomingServices, setUpcomingServices] = useState<BookingDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const contentAnim = useRef(new Animated.Value(0)).current;
-
+  const [updatingIds, setUpdatingIds] = useState<Record<string, boolean>>({});
+  // Animated Values (otimizados para reduced motion)
+  const financialSummaryAnim = useRef(new Animated.Value(0)).current;
+  const quickActionsAnim = useRef(new Animated.Value(0)).current;
+  const newRequestsAnim = useRef(new Animated.Value(0)).current;
+  const upcomingServicesAnim = useRef(new Animated.Value(0)).current;
+  const reviewsSectionAnim = useRef(new Animated.Value(0)).current;
+  const logoutButtonAnim = useRef(new Animated.Value(0)).current;
+  // Adicionado ref para verificar se o componente está montado
+  const isMounted = useRef(true);
+  // Ref para armazenar a animação composta do stagger
+  const staggerAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const isReducedMotionEnabled = useReducedMotion(); // Global reduced motion
   const fetchData = useCallback(async () => {
     console.log("[DashboardScreen] fetchData: Iniciando busca de dados.");
-    setIsLoading(true);
-    setError(null);
+    if (isMounted.current) {
+      setIsLoading(true);
+      setError(null);
+    }
     if (!user?.id) {
-        console.warn("[DashboardScreen] fetchData: user.id não disponível. Abortando busca.");
+      console.warn("[DashboardScreen] fetchData: user.id não disponível. Abortando busca.");
+      if (isMounted.current) {
         setError("ID do provedor não disponível para buscar dados.");
         setIsLoading(false);
         setIsRefreshing(false);
-        return;
+      }
+      return;
     }
     console.log(`[DashboardScreen] fetchData: Buscando dashboard para userId: ${user.id}`);
-
     try {
+      // CORRIGIDO: Chamar a função correta do serviço de dashboard
       const dashboard = await getMyProviderDashboard();
+      if (!isMounted.current) return; // Verificar se o componente ainda está montado
       console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard);
-      // Log para verificar se 'reviews' está chegando
       console.log("[DashboardScreen] REVIEWS NA DASHBOARD (AGORA COM 'reviews'):", dashboard.reviews);
-
       setDashboardData(dashboard);
-
-      // CORRE��O: Mudar PENDING_PROVIDER_CONFIRMATION para PENDING
+      // Buscar listas reais como no (provider)/index.tsx
       const pendingBookings = await getBookingsForUser(BookingStatus.PENDING);
-      console.log("[DashboardScreen] fetchData: Agendamentos pendentes recebidos.", pendingBookings);
       const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
-      console.log("[DashboardScreen] fetchData: Agendamentos confirmados recebidos.", confirmedBookings);
-
-      setUpcomingServices([...pendingBookings, ...confirmedBookings].sort((a,b) => {
-        const dateA = new Date(a.scheduledDate + 'T' + a.scheduledTime);
-        const dateB = new Date(b.scheduledDate + 'T' + b.scheduledTime);
-        if (isNaN(dateA.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${a.id}: ${a.scheduledDate}T${a.scheduledTime}`);
-        if (isNaN(dateB.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${b.id}: ${b.scheduledDate}T${b.scheduledTime}`);
-
-        return dateA.getTime() - dateB.getTime();
-      }));
-
-      Animated.timing(contentAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-
+      const toTs = (b: BookingDetails) => new Date(`${b.scheduledDate}T${b.scheduledTime}:00`).getTime();
+      setPendingRequests([...pendingBookings].sort((a, b) => toTs(a) - toTs(b)));
+      setUpcomingServices([...confirmedBookings].sort((a, b) => toTs(a) - toTs(b)));
+      // Animate sections in stagger (respeitando reduced motion)
+      const animationDuration = isReducedMotionEnabled ? 0 : 300;
+      const staggerDelay = isReducedMotionEnabled ? 0 : 100;
+      const animationSequence = Animated.stagger(staggerDelay, [
+        Animated.timing(financialSummaryAnim, { toValue: 1, duration: animationDuration, useNativeDriver: true }),
+        Animated.timing(quickActionsAnim, { toValue: 1, duration: animationDuration, useNativeDriver: true }),
+        Animated.timing(newRequestsAnim, { toValue: 1, duration: animationDuration, useNativeDriver: true }),
+        Animated.timing(upcomingServicesAnim, { toValue: 1, duration: animationDuration, useNativeDriver: true }),
+        Animated.timing(reviewsSectionAnim, { toValue: 1, duration: animationDuration, useNativeDriver: true }),
+        Animated.timing(logoutButtonAnim, { toValue: 1, duration: animationDuration, useNativeDriver: true }),
+      ]);
+      staggerAnimationRef.current = animationSequence;
+      animationSequence.start();
     } catch (err: any) {
       console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
-      setError(err.response?.data?.message || "Não foi possível carregar os dados do dashboard.");
+      if (isMounted.current) {
+        NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar os dados do dashboard.", "Erro");
+      }
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
       console.log("[DashboardScreen] fetchData: Finalizado. isLoading:", false, "isRefreshing:", false);
     }
-  }, [user, contentAnim]);
-
+  }, [user, financialSummaryAnim, quickActionsAnim, newRequestsAnim, upcomingServicesAnim, reviewsSectionAnim, logoutButtonAnim, isReducedMotionEnabled]);
   useEffect(() => {
+    isMounted.current = true; // Componente montado
     console.log("[DashboardScreen] useEffect: authLoading:", authLoading, "user.id:", user?.id);
     if (!authLoading && user?.id) {
       fetchData();
     } else if (!authLoading && !user?.id) {
+      if (isMounted.current) {
         setIsLoading(false);
         setError("Provedor não autenticado ou perfil não encontrado.");
-        console.warn("[DashboardScreen] useEffect: Usuário não autenticado ou ID não encontrado após authLoading.");
+      }
+      console.warn("[DashboardScreen] useEffect: Usuário não autenticado ou ID não encontrado após authLoading.");
     }
+    return () => {
+      isMounted.current = false; // Componente desmontado
+      // Parar a animação composta do stagger se ela estiver em andamento
+      if (staggerAnimationRef.current) {
+        staggerAnimationRef.current.stop();
+      }
+    };
   }, [authLoading, user, fetchData]);
-
+  // ===== Header data normalization (avatar + name) injected from provider/index.tsx logic =====
+  const sanitizeUrl = (v: any) => (typeof v === 'string' && v.trim().length > 0 ? v.trim() : undefined);
+  const headerAvatarUrl =
+    sanitizeUrl((dashboardData as any)?.avatarUrl) ||
+    sanitizeUrl((dashboardData as any)?.profileImageUrl) ||
+    sanitizeUrl((dashboardData as any)?.profilePhotoUrl) ||
+    sanitizeUrl((dashboardData as any)?.user?.avatarUrl) ||
+    sanitizeUrl((dashboardData as any)?.user?.profile?.avatarUrl) ||
+    sanitizeUrl((dashboardData as any)?.provider?.avatarUrl) ||
+    sanitizeUrl((dashboardData as any)?.userProfile?.avatarUrl) ||
+    sanitizeUrl((dashboardData as any)?.userProfile?.providerDetails?.avatarUrl) ||
+    sanitizeUrl(user?.avatarUrl) ||
+    sanitizeUrl((user as any)?.userProfile?.avatarUrl) ||
+    sanitizeUrl((user as any)?.providerDetails?.avatarUrl) ||
+    sanitizeUrl((user as any)?.profileImageUrl) ||
+    sanitizeUrl((user as any)?.profilePhotoUrl) ||
+    sanitizeUrl((user as any)?.avatar) ||
+    undefined;
+  const headerProviderName = (dashboardData as any)?.fullName
+    || (dashboardData as any)?.userProfile?.fullName
+    || user?.fullName
+    || undefined; // Removidas as dependências individuais das Animated.Value, pois a animação composta é controlada por staggerAnimationRef
   const onRefresh = useCallback(() => {
     console.log("[DashboardScreen] onRefresh: Iniciando refresh.");
+    if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsRefreshing(true);
     fetchData();
-  }, [fetchData]);
-
+  }, [fetchData, isReducedMotionEnabled]);
   const handleServicePress = (id: string) => {
     console.log(`[DashboardScreen] handleServicePress: Navegando para detalhes do serviço ${id}.`);
-    router.push(`/(provider)/services/${id}` as any);
+    router.push(PROVIDER_ROUTES.SERVICE_DETAILS(id) as any);
   };
-
   const handleViewAllServicesPress = () => {
     console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviços.");
-    router.push('/(provider)/services' as any);
+    router.push(PROVIDER_ROUTES.SERVICES_LIST as any);
   };
-
   const handleViewAllMessagesPress = () => {
     console.log("[DashboardScreen] handleViewAllMessagesPress: Navegando para a lista de mensagens.");
-    router.push('/(provider)/messages' as any);
+    router.push(PROVIDER_ROUTES.MESSAGES_LIST as any);
   };
-
+  // Handlers de navegação para Ações Rápidas novas
+  const goRequests = () => router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=requests') as any);
+  const goUpcoming = () => router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=upcoming') as any);
+  const goCompleted = () => router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=completed') as any);
+  const goNotifications = () => router.push('/(provider)/notifications' as any);
+  const goReviews = () => router.push(PROVIDER_ROUTES.REVIEWS as any); // CORRIGIDO: Usar a constante da rota
+  const goEarnings = () => router.push(PROVIDER_ROUTES.EARNINGS as any);
+  const goWithdraw = () => router.push(PROVIDER_ROUTES.WITHDRAW as any); // CORREÇÃO: Usar a constante da rota
   const handleAcceptRequest = async (bookingId: string) => {
     console.log(`[DashboardScreen] handleAcceptRequest: Tentando aceitar agendamento ${bookingId}.`);
     Alert.alert(
-      "Aceitar Solicitação",
+      'Aceitar Solicitação',
       `Tem certeza que deseja aceitar o agendamento ${bookingId}?`,
       [
-        { text: "Cancelar", style: "cancel", onPress: () => console.log("[DashboardScreen] Aceitar cancelado.") },
+        { text: 'Cancelar', style: 'cancel', onPress: () => console.log('[DashboardScreen] Aceitar cancelado.') },
         {
-          text: "Aceitar",
+          text: 'Aceitar',
           onPress: async () => {
-            setIsLoading(true);
+            if (isMounted.current) {
+              setUpdatingIds(prev => ({ ...prev, [bookingId]: true }));
+            }
             try {
               await updateBookingStatus(bookingId, { status: BookingStatus.CONFIRMED });
-              showOverlay({ title: 'Sucesso', subtitle: 'Agendamento aceito com sucesso!', variant: 'success' });
-              console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
-              fetchData();
+              if (isMounted.current) {
+                NotificationUIService.showSuccess('Agendamento aceito com sucesso!', 'Sucesso');
+                console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
+                fetchData();
+              }
             } catch (error: any) {
-              console.error("[DashboardScreen] Erro ao aceitar agendamento:", error.response?.data || error.message, error);
-              showOverlay({ title: 'Erro', subtitle: error.response?.data?.message || 'N?o foi poss?vel aceitar o agendamento.', variant: 'error' });
+              console.error('[DashboardScreen] Erro ao aceitar agendamento:', error.response?.data || error.message, error);
+              if (isMounted.current) {
+                NotificationUIService.showError(
+                  error.response?.data?.message || 'Não foi possível aceitar o agendamento.',
+                  'Erro'
+                );
+              }
             } finally {
-              setIsLoading(false);
+              if (isMounted.current) {
+                setUpdatingIds(prev => { const clone = { ...prev }; delete clone[bookingId]; return clone; });
+              }
             }
           },
         },
       ]
     );
   };
-
   const handleRejectRequest = async (bookingId: string) => {
     console.log(`[DashboardScreen] handleRejectRequest: Tentando rejeitar agendamento ${bookingId}.`);
-    const reasons = [
-      "Falta de condução até o endereço",
-      "Problema de saúde",
-      "Imprevisto pessoal",
-      "Área insegura/fora da rota",
-      "Outro motivo",
-    ];
     Alert.alert(
-      "Rejeitar Solicitação",
-      "Selecione o motivo (ajuda a manter sua reputação):",
+      'Rejeitar Solicitação',
+      `Tem certeza que deseja rejeitar o agendamento ${bookingId}?`,
       [
-        { text: "Cancelar", style: "cancel", onPress: () => console.log("[DashboardScreen] Rejeitar cancelado.") },
-        ...reasons.map((reason) => ({
-          text: reason,
-          onPress: () => {
-            Alert.alert(
-              "Confirmar rejeição",
-              "Tem certeza? Cancelamentos repetidos podem afetar sua reputação.",
-              [
-                { text: "Voltar", style: "cancel" },
-                {
-                  text: "Confirmar",
-                  onPress: async () => {
-                    setIsLoading(true);
-                    try {
-                      await updateBookingStatus(bookingId, { status: BookingStatus.REJECTED });
-                      showOverlay({ title: 'Pedido cancelado', subtitle: 'O cliente ser? avisado. Evite novos cancelamentos de ?ltima hora.', variant: 'warning' });
-                      console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado. Motivo: ${reason}`);
-                      fetchData();
-                    } catch (error: any) {
-                      console.error("[DashboardScreen] Erro ao rejeitar agendamento:", error.response?.data || error.message, error);
-                      showOverlay({ title: 'Erro', subtitle: error.response?.data?.message || 'N?o foi poss?vel rejeitar o agendamento.', variant: 'error' });
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  },
-                },
-              ]
-            );
+        { text: 'Cancelar', style: 'cancel', onPress: () => console.log('[DashboardScreen] Rejeitar cancelado.') },
+        {
+          text: 'Rejeitar',
+          onPress: async () => {
+            if (isMounted.current) {
+              setUpdatingIds(prev => ({ ...prev, [bookingId]: true }));
+            }
+            try {
+              await updateBookingStatus(bookingId, { status: BookingStatus.REJECTED });
+              if (isMounted.current) {
+                NotificationUIService.showSuccess('Agendamento rejeitado com sucesso!', 'Sucesso');
+                console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
+                fetchData();
+              }
+            } catch (error: any) {
+              console.error('[DashboardScreen] Erro ao rejeitar agendamento:', error.response?.data || error.message, error);
+              if (isMounted.current) {
+                NotificationUIService.showError(
+                  error.response?.data?.message || 'Não foi possível rejeitar o agendamento.',
+                  'Erro'
+                );
+              }
+            } finally {
+              if (isMounted.current) {
+                setUpdatingIds(prev => { const clone = { ...prev }; delete clone[bookingId]; return clone; });
+              }
+            }
           },
-        })),
+        },
       ]
     );
   };
@@ -649,282 +1111,313 @@ export default function ProviderDashboardScreen() {
     console.log(`[DashboardScreen] handleChatWithClient: Iniciando chat com cliente ${clientName} (${clientId}).`);
     router.push({ pathname: '/(provider)/messages/[chatId]', params: { chatId: clientId, recipientName: clientName } } as any);
   };
-
+  const handleLogout = async () => {
+    console.log("[Dashboard] Botão de Logout clicado: Iniciando logout direto.");
+    if (!isReducedMotionEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); // CORREÇÃO: Usar notificationAsync e NotificationFeedbackType.Warning
+    try {
+      await logout();
+      console.log("[Dashboard] logout() concluído. O _layout.tsx deve redirecionar.");
+      AccessibilityInfo.announceForAccessibility('Logout realizado com sucesso. Redirecionando para tela inicial.');
+    } catch (error) {
+      console.error("[Dashboard] Erro ao fazer logout:", error);
+      NotificationUIService.showError("Não foi possível sair da conta. Tente novamente ou verifique sua conexão.", "Erro ao Sair");
+    }
+  };
   const renderEmptyState = (message: string, iconName: keyof typeof Ionicons.glyphMap = "sad-outline") => (
     <View style={styles.emptyStateContainer}>
-      <Ionicons name={iconName} size={48} color={TEXT_MUTED} />
+      <Ionicons name={iconName} size={48} color={TEXT_MUTED} accessibilityHidden={true} />
       <Text style={styles.emptyText}>{message}</Text>
     </View>
   );
-
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <Stack.Screen options={{ title: "Carregando", headerTransparent: true, headerTintColor: '#333' }} />
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Carregando dashboard...</Text>
+        <ActivityIndicator size="large" color={ICON_PRIMARY} accessibilityLabel="Carregando dashboard" />
+        <Text style={styles.loadingText}>Carregando dashboard…</Text>
       </View>
     );
   }
-
   if (error) {
     return (
       <View style={styles.errorContainer}>
         <Stack.Screen options={{ title: "Erro", headerTransparent: false, headerStyle: { backgroundColor: '#FFFFFF' }, headerTintColor: '#333' }} />
-        <Ionicons name="alert-circle-outline" size={48} color="red" />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity onPress={fetchData} style={styles.retryButton}>
+        <Ionicons name="alert-circle-outline" size={48} color={DANGER_RED} accessibilityHidden={true} />
+        <Text style={styles.errorText} accessibilityLiveRegion="polite">{error}</Text>
+        <TouchableOpacity
+          onPress={() => {
+            if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            fetchData();
+          }}
+          style={styles.retryButton}
+          accessibilityRole="button"
+          accessibilityLabel="Tentar Novamente"
+          accessibilityHint="Toque para recarregar os dados do dashboard."
+        >
           <Text style={styles.retryButtonText}>Tentar Novamente</Text>
         </TouchableOpacity>
       </View>
     );
   }
-
-  // Avatar do cabeçalho: normaliza e busca na melhor fonte disponível
-  const sanitizeUrl = (v: any) => (typeof v === 'string' && v.trim().length > 0 ? v.trim() : undefined);
-  const headerAvatarUrl =
-    sanitizeUrl((dashboardData as any)?.avatarUrl)
-    || sanitizeUrl((dashboardData as any)?.profileImageUrl)
-    || sanitizeUrl((dashboardData as any)?.profilePhotoUrl)
-    || sanitizeUrl((dashboardData as any)?.user?.avatarUrl)
-    || sanitizeUrl((dashboardData as any)?.user?.profile?.avatarUrl)
-    || sanitizeUrl((dashboardData as any)?.provider?.avatarUrl)
-    || sanitizeUrl((dashboardData as any)?.userProfile?.avatarUrl)
-    || sanitizeUrl((dashboardData as any)?.userProfile?.providerDetails?.avatarUrl)
-    || sanitizeUrl(user?.avatarUrl)
-    || sanitizeUrl((user as any)?.userProfile?.avatarUrl)
-    || sanitizeUrl((user as any)?.providerDetails?.avatarUrl)
-    || sanitizeUrl((user as any)?.profileImageUrl)
-    || sanitizeUrl((user as any)?.profilePhotoUrl)
-    || sanitizeUrl((user as any)?.avatar)
-    || undefined;
-
-  const headerProviderName = (dashboardData as any)?.fullName
-    || (dashboardData as any)?.userProfile?.fullName
-    || user?.fullName
-    || undefined;
-
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
-        refreshControl={ <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#007AFF" /> }
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={ICON_PRIMARY}
+            accessibilityLabel="Atualizar dashboard"
+          />
+        }
+        keyboardShouldPersistTaps="handled" // Premium UX para iOS
       >
-        {/* NOVO: Dashboard Header com nome do provedor e avatar */}
         <DashboardHeader
-          providerName={headerProviderName}
+          providerName={headerProviderName || dashboardData?.fullName}
           avatarUrl={headerAvatarUrl}
           onProfilePress={() => router.push('/(provider)/profile' as any)}
+          isReducedMotionEnabled={isReducedMotionEnabled}
         />
-
-        {/* NOVO: Financial Summary Card */}
         <FinancialSummaryCard
           totalEarnings={dashboardData?.totalEarnings}
           pendingWithdrawals={dashboardData?.pendingWithdrawals}
-          onViewEarnings={() => router.push('/(provider)/earnings' as any)}
+          onViewEarnings={() => router.push(PROVIDER_ROUTES.EARNINGS as any)}
+          animation={financialSummaryAnim}
+          isReducedMotionEnabled={isReducedMotionEnabled}
         />
-
-        {/* NOVO: Quick Actions Section */}
-        <QuickActionsSection
+        {/* Atalhos do Dia (grid) */}
+        <ShortcutsGrid
           onViewAllServicesPress={handleViewAllServicesPress}
           onViewAllMessagesPress={handleViewAllMessagesPress}
-          onManageAvailability={() => router.push('/(provider)/availability' as any)} // Assumindo uma rota de disponibilidade
+          onManageAvailability={() => router.push('/(provider)/schedule/manage-availability' as any)}
+          onOpenRequests={goRequests}
+          onOpenUpcoming={goUpcoming}
+          onOpenCompleted={goCompleted}
+          onOpenNotifications={goNotifications}
+          onOpenReviews={goReviews}
+          onOpenEarnings={goEarnings}
+          animation={quickActionsAnim}
+          isReducedMotionEnabled={isReducedMotionEnabled}
         />
-
-        {/* Sessão de Novas Solicitações */}
-        {upcomingServices.filter(s => s.status === BookingStatus.PENDING).length > 0 && ( /* Correção de PENDING_PROVIDER_CONFIRMATION para PENDING */
-          <View style={styles.subsectionWrapper}>
-            <View style={styles.subsectionHeader}>
-              <Text style={styles.subsectionTitle}>
-                  <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações ({upcomingServices.filter(s => s.status === BookingStatus.PENDING).length}) /* Correção */
-              </Text>
-            </View>
-            {upcomingServices.filter(s => s.status === BookingStatus.PENDING).map((item, index) => ( /* Correção */
+        {/** QuickActionsSection movido para abaixo das seções de solicitações */}
+        <Animated.View style={[
+          styles.subsectionWrapper,
+          {
+            opacity: newRequestsAnim,
+            transform: [{ translateY: newRequestsAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+          }
+        ]}>
+          <View style={styles.subsectionHeader}>
+            <Text style={styles.subsectionTitle}>
+              <Ionicons name="hourglass-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}Novas Solicitações
+            </Text>
+            {pendingRequests.length > 2 && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/(provider)/schedule' as any);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Ver todas as solicitações"
+                accessibilityHint="Navegue para ver todas as novas solicitações."
+              >
+                <Text style={styles.viewAllText}>Ver Todas</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {pendingRequests.length > 0 ? (
+            pendingRequests.slice(0, 2).map((item, index) => (
               <RequestItem
                 key={item.id}
                 item={item}
                 onAccept={handleAcceptRequest}
                 onReject={handleRejectRequest}
-                onDetails={handleServicePress}
+                onDetails={() => router.push(`/(provider)/active-booking/${item.id}` as any)}
                 onChat={handleChatWithClient}
-                entryAnim={new Animated.ValueXY({x:1,y:0})}
+                entryAnim={new Animated.Value(1)} // Each item gets its own animation value
+                isReducedMotionEnabled={isReducedMotionEnabled}
+                isUpdating={!!updatingIds[item.id]}
               />
-            ))}
-          </View>
-        )}
-        {/* Estado vazio para Novas Solicitações, se não houver */}
-        {upcomingServices.filter(s => s.status === BookingStatus.PENDING).length === 0 && ( /* Correção */
-            <View style={styles.subsectionWrapper}>
-                <View style={styles.subsectionHeader}>
-                    <Text style={styles.subsectionTitle}>
-                        <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações (0)
-                    </Text>
-                </View>
-                {renderEmptyState("Nenhuma nova solicitação no momento.", "notifications-off-outline")}
-            </View>
-        )}
-
-
-        {/* Próximos Serviços Confirmados */}
-        <View style={styles.subsectionWrapper}>
+            ))
+          ) : (
+            renderEmptyState("Nenhuma nova solicitação de agendamento.", "checkmark-done-circle-outline")
+          )}
+        </Animated.View>
+        <EditHoursSection animation={quickActionsAnim} onQuickWithdraw={goWithdraw} isReducedMotionEnabled={isReducedMotionEnabled} />
+        <Animated.View style={[
+          styles.subsectionWrapper,
+          {
+            opacity: upcomingServicesAnim,
+            transform: [{ translateY: upcomingServicesAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+          }
+        ]}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
-              <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} /> Próximos Serviços
-              </Text>
-            {upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).length > 2 && (
-              <TouchableOpacity onPress={handleViewAllServicesPress} accessibilityRole="button" accessibilityLabel="Ver todos os próximos serviços">
-                <Text style={styles.viewAllText}>Ver Todos</Text>
+              <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}Próximos Serviços
+            </Text>
+            {upcomingServices.length > 2 && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/(provider)/schedule' as any);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Ver todos os próximos serviços"
+                accessibilityHint="Navegue para ver todos os serviços confirmados."
+              >
+                <Text style={styles.viewAllText}>Ver Todas</Text>
               </TouchableOpacity>
             )}
           </View>
-          {upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).length > 0 ? (
-            upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).slice(0, 2).map((item, index) => (
+          {upcomingServices.length > 0 ? (
+            upcomingServices.slice(0, 2).map((item, index) => (
               <ConfirmedServiceItem
                 key={item.id}
                 item={item}
-                onPress={handleServicePress}
-                entryAnim={new Animated.ValueXY({x:1,y:0})}
+                onPress={() => router.push(`/(provider)/active-booking/${item.id}` as any)}
+                entryAnim={new Animated.Value(1)} // Each item gets its own animation value
+                isReducedMotionEnabled={isReducedMotionEnabled}
               />
             ))
           ) : (
             renderEmptyState("Nenhum serviço confirmado agendado.", "calendar-clear-outline")
           )}
-        </View>
-
-        {/* Sessão de Reviews Recentes */}
-        {dashboardData?.reviews && dashboardData.reviews.length > 0 ? ( /* Correção: 'reviews' em vez de 'recentReviews' */
-            <View style={styles.subsectionWrapper}>
-                <View style={styles.subsectionHeader}>
-                    <Text style={styles.subsectionTitle}>
-                        <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
-                    </Text>
-                    <TouchableOpacity onPress={() => router.push('/(provider)/reviews' as any)} accessibilityRole="button" accessibilityLabel="Ver todas as avaliações">
-                        <Text style={styles.viewAllText}>Ver Todas</Text>
-                    </TouchableOpacity>
+        </Animated.View>
+        <Animated.View style={[
+          {
+            opacity: reviewsSectionAnim,
+            transform: [{ translateY: reviewsSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+          }
+        ]}>
+          <View style={{ backgroundColor: WHITE, borderRadius: Radii.md, padding: Spacing.md, ...Platform.select({ ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 }, android: { elevation: 4 } }) }}>
+            <Text style={{ fontSize: 18, fontWeight: '600', color: TEXT_DARK, marginBottom: Spacing.md }}>Meus Serviços</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                onPress={() => router.push('/(provider)/profile/edit-services' as any)}
+                onPressIn={() => !isReducedMotionEnabled && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+                style={{ flex: 1, marginRight: Spacing.sm, backgroundColor: PRIMARY_LIGHT, borderRadius: Radii.pill, paddingVertical: Spacing.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: ICON_PRIMARY }}
+                accessibilityRole="button"
+                accessibilityLabel="Criar Serviço"
+                accessibilityHint="Toque para cadastrar um novo serviço"
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="add-circle-outline" size={20} color={ICON_PRIMARY} />
+                  <Text style={{ color: ICON_PRIMARY, fontWeight: '700', marginLeft: 8 }}>Criar Serviço</Text>
                 </View>
-                {/* O slice(0, 2) pode ser opcional aqui se o backend já limita a 2 */}
-                {dashboardData.reviews.slice(0, 2).map((review: ProviderReview, index: number) => ( /* Correção de 'any' para ProviderReview e number */
-                    <View key={review.id} style={styles.reviewItem}>
-                        <Text style={styles.reviewText}>"{review.comment || 'Sem comentário.'}"</Text>
-                        {/* INÍCIO DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
-                        <View style={styles.reviewRatingStarsAndName}> {/* <--- ESTILO ADICIONADO */}
-                            <View style={styles.reviewStarsContainer}> {/* <--- ESTILO ADICIONADO */}
-                                {Array.from({ length: review.rating }).map((_, i) => (
-                                    <Ionicons key={i} name="star" size={16} color={ICON_PRIMARY} />
-                                ))}
-                            </View>
-                            <Text style={styles.reviewClientName}>
-                                {review.client?.fullName || 'Cliente Desconhecido'} {/* Acessa o fullName do client */}
-                            </Text>
-                        </View>
-                        {/* FIM DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
-                    </View>
-                ))}
-            </View>
-        ) : ( // Parte do 'else' do ternário
-            <View style={styles.subsectionWrapper}>
-                <View style={styles.subsectionHeader}>
-                    <Text style={styles.subsectionTitle}>
-                        <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
-                    </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/(provider)/profile/edit-services' as any)}
+                onPressIn={() => !isReducedMotionEnabled && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+                style={{ flex: 1, marginLeft: Spacing.sm, backgroundColor: WHITE, borderRadius: Radii.pill, paddingVertical: Spacing.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: BORDER_SUBTLE }}
+                accessibilityRole="button"
+                accessibilityLabel="Editar Serviços"
+                accessibilityHint="Toque para editar seus serviços"
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="options-outline" size={20} color={TEXT_DARK} />
+                  <Text style={{ color: TEXT_DARK, fontWeight: '700', marginLeft: 8 }}>Editar Serviços</Text>
                 </View>
-                {renderEmptyState("Nenhuma avaliação recente. Conclua mais serviços!", "star-half-outline")}
+              </TouchableOpacity>
             </View>
-        )}
-
+          </View>
+        </Animated.View>
+        <Animated.View style={[
+          {
+            opacity: logoutButtonAnim,
+            transform: [{ translateY: logoutButtonAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+          }
+        ]}>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            accessibilityRole="button"
+            accessibilityLabel="Sair da Conta"
+            accessibilityHint="Toque para fazer logout da aplicação."
+          >
+            <Ionicons name="log-out-outline" size={24} color={WHITE} accessibilityHidden={true} />
+            <Text style={styles.logoutButtonText}>Sair da Conta</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </ScrollView>
+      <ProviderNudgeContainer /> {/* Added ProviderNudgeContainer */}
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: BACKGROUND_ALT,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F2F5',
+    backgroundColor: BACKGROUND_ALT,
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: Spacing.sm,
     fontSize: 16,
-    color: '#6C757D',
+    color: TEXT_MUTED,
+    textAlign: 'center',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F2F5',
-    padding: 20,
+    backgroundColor: BACKGROUND_ALT,
+    padding: Spacing.lg,
   },
   errorText: {
     fontSize: 16,
-    color: 'red',
+    color: DANGER_RED,
     textAlign: 'center',
-    marginTop: 10,
+    marginTop: Spacing.sm,
   },
   retryButton: {
-    marginTop: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: ICON_PRIMARY,
+    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    ...Platform.select({
+      ios: {
+        shadowColor: SHADOW_COLOR_CARD,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4
+      },
+      android: { elevation: 3 },
+    }),
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: WHITE,
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
   },
   scrollViewContent: {
-    padding: 15,
-    paddingTop: 0, // Ajuste para o novo cabeçalho flutuante
-    paddingBottom: 40,
-  },
-  sectionContainer: {
-    backgroundColor: WHITE,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 24,
-    ...Platform.select({
-      ios: {
-        shadowColor: SHADOW_COLOR_SECTION,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 12,
-      },
-    }),
-  },
-  sectionHeaderWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    justifyContent: 'center',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: TEXT_DARK,
-    textAlign: 'center',
-    marginLeft: 8,
+    padding: Spacing.md,
+    paddingTop: 0,
+    paddingBottom: Spacing.xl,
   },
   subsectionWrapper: {
-    marginBottom: 25,
-    backgroundColor: WHITE, // Fundo para a subseção para melhor visual
-    borderRadius: 12,
-    padding: 15,
+    marginBottom: Spacing.lg,
+    backgroundColor: WHITE,
+    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    padding: Spacing.md,
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 },
+      ios: {
+        shadowColor: SHADOW_COLOR_CARD,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08, // Suavizado para iOS clean
+        shadowRadius: 5
+      },
       android: { elevation: 4 },
     }),
   },
@@ -932,7 +1425,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   subsectionTitle: {
     fontSize: 18,
@@ -948,96 +1441,132 @@ const styles = StyleSheet.create({
   },
   emptyStateContainer: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: Spacing.lg,
     backgroundColor: BACKGROUND_ALT,
-    borderRadius: 12,
-    marginTop: 10, // Adicionado espaçamento
+    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    marginTop: Spacing.sm,
   },
   emptyText: {
     textAlign: 'center',
     color: TEXT_MUTED,
     fontSize: 15,
-    marginTop: 8,
+    marginTop: Spacing.sm,
   },
   requestItem: {
     backgroundColor: WHITE,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 0.3,
+    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
     borderColor: BORDER_SUBTLE,
     position: 'relative',
     overflow: 'hidden',
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 5 },
+      ios: {
+        shadowColor: SHADOW_COLOR_CARD,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5
+      },
       android: { elevation: 4 },
     }),
   },
   requestItemPendingIndicator: {
+    // removido o risco lateral
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
-    width: 6,
-    backgroundColor: WARNING_YELLOW,
-    borderTopLeftRadius: 12,
-    borderBottomLeftRadius: 12,
+    width: 0,
+    backgroundColor: 'transparent',
+    borderTopLeftRadius: Radii.md,
+    borderBottomLeftRadius: Radii.md,
+    display: 'none',
   },
   requestItemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   clientAvatarPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E9ECEF',
+    width: 20, // ~10% menor
+    height: 20, // ~10% menor
+    borderRadius: 16,
+    backgroundColor: `${ICON_PRIMARY}1A`,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: Spacing.sm,
+    borderWidth: 1,
+    borderColor: BORDER_SUBTLE,
   },
   requestServiceName: {
-    fontSize: 17,
+    fontSize: 15, // ~10% menor
     fontWeight: '700',
     color: TEXT_DARK,
     flex: 1,
+    paddingRight: 23 + Spacing.sm, // reserva espaço para logo absoluta
+  },
+  serviceLogo: {
+    width: 53,
+    height: 53,
+    position: 'absolute',
+    right: Spacing.sm,
+    top: 56,
+    zIndex: 1,
+    pointerEvents: 'none',
   },
   requestClientName: {
-    fontSize: 14,
+    fontSize: 13,
     color: TEXT_MEDIUM,
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
   },
-    requestPrice: {
-    fontSize: 15,
+  requestPrice: {
+    fontSize: 14,
     fontWeight: '600',
-    color: SUCCESS_GREEN,
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
+  },
+  priceCornerText: {
+    position: 'absolute',
+    right: Spacing.sm,
+    top: 6,
+    color: ICON_PRIMARY,
+    fontWeight: '700',
+    fontSize: 15.4, // +10%
+  },
+  // Preço destacado no canto (Novas Solicitações)
+  priceCornerRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
+  priceHighlight: {
+    fontSize: 15.4, // +10% sobre 14
   },
   requestInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: Spacing.xs,
   },
   infoIcon: {
-    marginRight: 6,
+    marginRight: Spacing.xs,
   },
   requestInfoText: {
     fontSize: 14,
     color: TEXT_MUTED,
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
   requestActionsRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 15,
-    gap: 10,
+    justifyContent: 'flex-end', // Recusar ao lado do Aceitar, alinhados à direita
+    marginTop: Spacing.sm,
+    gap: Spacing.sm,
   },
   actionButtonBase: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    minWidth: 60,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radii.pill, // CORREÇÃO: Usar Radii.pill (já definido)
+    minWidth: 90,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1049,49 +1578,59 @@ const styles = StyleSheet.create({
     backgroundColor: WHITE,
     borderWidth: 1.5,
     borderColor: ICON_PRIMARY,
-    paddingHorizontal: 12,
+    paddingHorizontal: Spacing.sm,
   },
   rejectButton: {
     backgroundColor: DANGER_RED,
+    // ~5% menor que o padrão
+    minWidth: 85,
+    paddingHorizontal: 9,
+    paddingVertical: Spacing.xs,
   },
   detailsButton: {
-    backgroundColor: BACKGROUND_ALT,
+    backgroundColor: WHITE, // Outline azul como no Próximos Serviços
     borderWidth: 1.5,
     borderColor: ICON_PRIMARY,
+    paddingHorizontal: Spacing.sm,
   },
   actionButtonTextWhite: {
     color: WHITE,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    marginLeft: 6,
+    marginLeft: Spacing.xs,
   },
   actionButtonTextPrimary: {
     color: ICON_PRIMARY,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    marginLeft: 6,
+    marginLeft: Spacing.xs,
   },
   acceptButtonCorner: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    zIndex: 1,
-    padding: 4,
+    display: 'none',
+  },
+  acceptButton: {
+    backgroundColor: ICON_PRIMARY,
+    paddingHorizontal: Spacing.sm,
   },
   serviceItem: {
     backgroundColor: WHITE,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    borderWidth: 0.3,
+    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
+      ios: {
+        shadowColor: SHADOW_COLOR_CARD,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4
+      },
       android: { elevation: 3 },
     }),
   },
-  serviceItemContent:{
+  serviceItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -1102,7 +1641,7 @@ const styles = StyleSheet.create({
     backgroundColor: `${ICON_PRIMARY}1A`,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: Spacing.sm,
   },
   serviceItemDetails: {
     flex: 1,
@@ -1111,7 +1650,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: TEXT_DARK,
     fontWeight: '500',
-    marginBottom: 3,
+    marginBottom: Spacing.xs,
   },
   serviceItemTime: {
     fontSize: 13,
@@ -1119,14 +1658,19 @@ const styles = StyleSheet.create({
   },
   messageLinkCard: {
     backgroundColor: WHITE,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginTop: 15,
-    borderWidth: 0.3,
+    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    borderWidth: 1,
     borderColor: BORDER_SUBTLE,
-      ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
+    ...Platform.select({
+      ios: {
+        shadowColor: SHADOW_COLOR_CARD,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4
+      },
       android: { elevation: 3 },
     }),
   },
@@ -1140,19 +1684,19 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     flex: 1,
-    marginLeft: 12,
+    marginLeft: Spacing.sm,
   },
   unreadBadge: {
     backgroundColor: DANGER_RED,
     borderRadius: 10,
-    paddingHorizontal: 6,
+    paddingHorizontal: Spacing.xs,
     paddingVertical: 2,
     minWidth: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 'auto',
-    marginRight: 10,
+    marginRight: Spacing.sm,
   },
   unreadBadgeText: {
     color: WHITE,
@@ -1161,58 +1705,211 @@ const styles = StyleSheet.create({
   },
   reviewItem: {
     backgroundColor: BACKGROUND_ALT,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 0.3,
+    borderRadius: Radii.sm,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
     borderColor: BORDER_SUBTLE,
   },
   reviewText: {
     fontSize: 15,
     fontStyle: 'italic',
     color: TEXT_MEDIUM,
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
   },
-  reviewRating: { // <--- ESTILO ORIGINAL - AGORA SERÁ USADO reviewRatingStarsAndName
+  reviewRating: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end', // Este estava alinhando as estrelas e o nome à direita
+    justifyContent: 'flex-end',
   },
-  // NOVOS ESTILOS: Adicionados para reposicionar as estrelas
-  reviewRatingStarsAndName: { // <--- ESTILO ADICIONADO AQUI
+  reviewRatingStarsAndName: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
   },
-  reviewStarsContainer: { // <--- ESTILO ADICIONADO AQUI
+  reviewStarsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   reviewClientName: {
     fontSize: 13,
     color: TEXT_MUTED,
-    // Não precisa de marginLeft aqui se justify-content: 'space-between'
   },
   earningsLinkCard: {
-      backgroundColor: WHITE,
-      borderRadius: 12,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      marginTop: 20,
-      borderWidth: 0.3,
-      borderColor: BORDER_SUBTLE,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+    backgroundColor: WHITE,
+    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginTop: Spacing.lg,
+    borderWidth: 1,
+    borderColor: BORDER_SUBTLE,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...Platform.select({
+      ios: {
+        shadowColor: SHADOW_COLOR_CARD,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4
+      },
+      android: { elevation: 3 },
+    }),
   },
   earningsLinkText: {
-      color: SUCCESS_GREEN,
-      fontSize: 17,
-      fontWeight: '600',
-      flex: 1,
-      marginLeft: 12,
+    color: SUCCESS_GREEN,
+    fontSize: 17,
+    fontWeight: '600',
+    flex: 1,
+    marginLeft: Spacing.sm,
+  },
+  // CORREÇÃO: Adicionados os estilos para o botão de logout (refinado com haptic)
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: DANGER_RED,
+    borderRadius: Radii.pill, // CORREÇÃO: Usar Radii.pill (já definido)
+    paddingVertical: Spacing.sm,
+    marginTop: Spacing.lg,
+    marginHorizontal: Spacing.md,
+    ...Platform.select({
+      ios: {
+        shadowColor: SHADOW_COLOR_CARD,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  logoutButtonText: {
+    color: WHITE,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: Spacing.sm,
   },
 });
 
-
+// Seção isolada: apenas a parte "Edite seus horários" + Financeiro
+const EditHoursSection: React.FC<{
+  onQuickWithdraw: () => void;
+  animation: Animated.Value;
+  isReducedMotionEnabled: boolean;
+}> = ({ onQuickWithdraw, animation, isReducedMotionEnabled }) => {
+  const router = useRouter();
+  const a9 = useAnimatedTouch();
+  return (
+    <Animated.View style={[
+      quickActionStyles.sectionContainer,
+      {
+        opacity: animation,
+        transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+      }
+    ]}>
+      <Text style={[quickActionStyles.sectionTitle, { fontSize: 18, marginTop: Spacing.lg, marginBottom: Spacing.md }]}>Edite seus horários</Text>
+      <View style={quickActionStyles.quickChipsRow}>
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=today-morning' as any); }}
+          accessibilityRole="button"
+          accessibilityLabel="Definir turno de hoje"
+          accessibilityHint="Escolha entre manhã, tarde ou dia todo para definir sua disponibilidade."
+        >
+          <Ionicons name="briefcase-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Definir turno de hoje</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Manhã, tarde ou dia todo</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=today-morning' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=tomorrow-afternoon' as any); }}
+          accessibilityRole="button"
+          accessibilityLabel="Agendar amanhã"
+          accessibilityHint="Marque o próximo dia disponível."
+        >
+          <Ionicons name="calendar-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Agendar amanhã</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Escolha seus horários</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=tomorrow-afternoon' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=block-today' as any); }}
+          accessibilityRole="button"
+          accessibilityLabel="Folga hoje"
+          accessibilityHint="Tire um dia de descanso."
+        >
+          <Ionicons name="bed-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Folga hoje</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Tire um dia de descanso</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=block-today' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={quickActionStyles.quickChipBlock}
+          onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=repeat-week' as any); }}
+          accessibilityRole="button"
+          accessibilityLabel="Copiar semana padrão"
+          accessibilityHint="Replique os horários da última semana."
+        >
+          <Ionicons name="repeat-outline" size={20} color={ICON_PRIMARY} />
+          <View>
+            <Text style={quickActionStyles.quickChipTitle}>Copiar semana padrão</Text>
+            <Text style={quickActionStyles.quickChipSubtitle}>Replique os horários da última semana</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); router.push('/(provider)/schedule/manage-availability?preset=repeat-week' as any); }}
+            style={quickActionStyles.plusButton}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar"
+          >
+            <Ionicons name="add" size={16} color={ICON_PRIMARY} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity
+        style={quickActionStyles.withdrawCta}
+        onPress={onQuickWithdraw}
+        onPressIn={a9.onPressIn}
+        onPressOut={a9.onPressOut}
+        accessibilityRole="button"
+        accessibilityLabel="Saque Rápido"
+        accessibilityHint="Solicite um saque rápido dos ganhos disponíveis."
+      >
+        <Animated.View style={{ transform: [{ scale: a9.scaleAnim }], flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="cash-outline" size={20} color={WHITE} accessibilityHidden={true} />
+          <Text style={quickActionStyles.withdrawCtaText}>Saque Rápido</Text>
+          <Ionicons name="chevron-forward-outline" size={18} color={WHITE} accessibilityHidden={true} />
+        </Animated.View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
