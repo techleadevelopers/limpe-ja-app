@@ -25,7 +25,7 @@
       "per_room_short": "/quarto",
       "at": "às",
       "continue": "Continuar",
-      "hourly_price": "Por Hora",
+      "hourly_price": "(Hora)",
       "per_sqm_price": "Por m²",
       "fixed_price_label": "Preço Fixo",
       "locale": "pt-BR",
@@ -326,7 +326,7 @@
         "hour": "Por hora",
         "sqm": "Por m²"
       },
-      "from": "A partir"
+      "from": "(Por hora)"
     },
     "filters": {
       "fastResponse": "Resposta \u003c 15 min",
