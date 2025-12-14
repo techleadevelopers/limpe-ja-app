@@ -734,3 +734,17 @@ export async function uploadMyAvatar(fileUri: string): Promise<{ url: string }> 
   }
 }
 
+
+// Registra aceite de termos do provedor
+export async function acceptProviderTerms(termsVersion: string): Promise<{ termsAcceptedAt: string; termsVersion: string }> {
+  try {
+    const response: AxiosResponse<{ termsAcceptedAt: string; termsVersion: string }> = await api.post(`/providers/me/accept-terms`, { termsVersion });
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao registrar aceite de termos do provedor:', error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Erro ao registrar aceite de termos.');
+    }
+    throw new Error('Erro de rede ou servidor ao registrar aceite de termos.');
+  }
+}
