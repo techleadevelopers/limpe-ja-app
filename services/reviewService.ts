@@ -4,7 +4,11 @@ import { api } from './api';
 
 // Importa as tipagens de review (DTOs e Entity)
 import { MessageResponseDto } from '../types/backend/auth';
-import { ReviewEntity, SubmitReviewDto } from '../types/backend/reviews'; // Certifique-se de que estes tipos estão corretos
+import {
+  CanReviewResponse,
+  ReviewEntity,
+  SubmitReviewDto,
+} from '../types/backend/reviews'; // Certifique-se de que estes tipos estão corretos
 
 interface ReviewAnalytics {
   averageRating: number;
@@ -46,6 +50,22 @@ export const submitFeedback = async (data: SubmitReviewDto): Promise<ReviewEntit
       throw new Error(error.response.data.message || 'Não foi possível enviar seu feedback.');
     }
     throw new Error('Erro de rede ou servidor ao enviar feedback.');
+  }
+};
+
+/**
+ * Verifica se o cliente pode avaliar um booking (regra completa do backend).
+ * GET /reviews/can-review/:bookingId
+ */
+export const canReviewBooking = async (bookingId: string): Promise<CanReviewResponse> => {
+  try {
+    const response: AxiosResponse<CanReviewResponse> = await api.get(`/reviews/can-review/${bookingId}`);
+    return response.data;
+  } catch (error: any) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Erro ao verificar elegibilidade de avaliação.');
+    }
+    throw new Error('Erro de rede ao verificar elegibilidade de avaliação.');
   }
 };
 
