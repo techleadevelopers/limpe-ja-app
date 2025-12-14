@@ -31,6 +31,10 @@ export class BookingEntity implements PrismaBooking {
   completedAt: Date | null;
   startedByUserId: string | null;
   completedByUserId: string | null;
+  
+  // ✅ CORREÇÃO: ADICIONADO os novos campos de fluxo (onTheWayAt, arrivedAt)
+  onTheWayAt: Date | null;
+  arrivedAt: Date | null; 
 
   // CORREÇÃO AQUI: Propriedade addressId deve ser string | null
   addressId: string | null; // O tipo é string | null, conforme definido no schema.prisma (String?)
@@ -59,6 +63,9 @@ export class BookingEntity implements PrismaBooking {
   provider?: Provider;
   providerService?: ProviderService;
   review?: Review | null;
+  durationMinutes: number;
+  scheduledStart: Date | null;
+  isReviewed: boolean;
 
   // Construtor para facilitar a criação de instâncias (opcional, mas útil)
   constructor(partial: Partial<BookingEntity>) {
@@ -120,6 +127,15 @@ export class BookingEntity implements PrismaBooking {
     this.completedAt = partial.completedAt
       ? new Date(partial.completedAt as any)
       : null;
+      
+    // ✅ CORREÇÃO: Inicializar os novos campos de fluxo
+    this.onTheWayAt = partial.onTheWayAt
+      ? new Date(partial.onTheWayAt as any)
+      : null;
+    this.arrivedAt = partial.arrivedAt
+      ? new Date(partial.arrivedAt as any)
+      : null;
+
     this.startedByUserId =
       partial.startedByUserId === undefined
         ? null
@@ -128,5 +144,15 @@ export class BookingEntity implements PrismaBooking {
       partial.completedByUserId === undefined
         ? null
         : (partial.completedByUserId as any);
+
+    this.durationMinutes =
+      partial.durationMinutes !== undefined && partial.durationMinutes !== null
+        ? (partial.durationMinutes as any)
+        : 0;
+    this.scheduledStart = partial.scheduledStart
+      ? new Date(partial.scheduledStart as any)
+      : null;
+    this.isReviewed =
+      partial.isReviewed !== undefined ? partial.isReviewed : false;
   }
 }
