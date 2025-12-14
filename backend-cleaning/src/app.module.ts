@@ -24,6 +24,7 @@ import { FaqsModule } from './faqs/faqs.module';
 import { CacheModule } from './cache/cache.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { SafetyModule } from './safety/safety.module';
 import { CouponsModule } from './coupons/coupons.module';
@@ -71,6 +72,9 @@ import { QueuesModule } from './queues/queues.module';
 
     // mantém o módulo customizado
     CustomConfigModule,
+
+    // Scheduler global (necessário para @Cron)
+    ScheduleModule.forRoot(),
 
     ThrottlerModule.forRootAsync({
       imports: [CustomConfigModule],
