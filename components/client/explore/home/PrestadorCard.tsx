@@ -4,7 +4,7 @@ import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpaci
 import AnimatedReanimated, { Keyframe as ReKeyframe } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient'; // Adicionado para o efeito de fade na lateral
 import { useTranslation } from 'react-i18next';
-
+import { AppShadows } from '../../../../constants/appStyles'; // Ajuste o caminho conforme necessário
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 import { useProviderMetrics } from '../../../../hooks/useProviderMetrics';
 import { Icons3D } from '../../../../constants/icons3d';
@@ -21,12 +21,16 @@ interface PrestadorCardProps {
 
 const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
-    const pulseScaleAnim = useRef(new Animated.Value(1)).current; // Novo Animated.Value só para o pulso do anel
+    
+    // NOVO: Animated.Value que controla a animação de pulso/glow (0 -> 1 -> 0)
+    const pulseAnim = useRef(new Animated.Value(0)).current; 
+    
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
     const { t } = useTranslation();
     const providerMetrics = useProviderMetrics(item.id);
 
+    // Animação de entrada (fade e slide)
     useEffect(() => {
         Animated.parallel([
             Animated.timing(fadeAnim, {
@@ -44,27 +48,44 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         ]).start();
     }, [fadeAnim, slideAnim]);
 
-    // Animação de pulso contínuo (só no anel, sem interferir no scale do card) - Ajustado para pulso mais sutil e menor (1.1 ao invés de 1.15)
+    // Animação de pulso contínuo (do anel/glow)
+    // 1. Usa a lógica fornecida para criar o loop 0 -> 1 -> 0
     useEffect(() => {
         const pulse = Animated.loop(
             Animated.sequence([
-                Animated.timing(pulseScaleAnim, {
-                    toValue: 1.1,
-                    duration: 1500,
-                    easing: Easing.out(Easing.ease),
+                // Anima de 0 para 1 em 1500ms
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 1500, // Duração de crescimento do pulso
+                    easing: Easing.inOut(Easing.ease),
                     useNativeDriver: true,
                 }),
-                Animated.timing(pulseScaleAnim, {
-                    toValue: 1,
-                    duration: 1500,
-                    easing: Easing.in(Easing.ease),
+                // Anima de 1 de volta para 0 em 1500ms
+                Animated.timing(pulseAnim, {
+                    toValue: 0,
+                    duration: 1500, // Duração de encolhimento do pulso
+                    easing: Easing.inOut(Easing.ease),
                     useNativeDriver: true,
                 }),
             ])
         );
         pulse.start();
         return () => pulse.stop();
-    }, [pulseScaleAnim]);
+    }, [pulseAnim]);
+
+    // 2. Interpolação para a opacidade do glow
+    // Opacidade máxima de 0.5 no meio do ciclo.
+    const glowOpacity = pulseAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0, 0.5, 0], 
+    });
+
+    // 3. Interpolação para a escala do glow
+    // O anel cresce de 1 (tamanho normal) para 1.2 (120% do tamanho).
+    const glowScale = pulseAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1, 1.2],
+    });
 
     const onPressInCard = () => {
         Animated.spring(scaleAnim, {
@@ -151,8 +172,16 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                     style={styles.gradientOverlay}
                 >
                     <View style={styles.imageWrapper}>
-                        {/* Efeito de pulso premium (agora dentro do imageWrapper, partindo da borda da imagem) */}
-                        <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseScaleAnim }] }]} />
+                        {/* APLICANDO O EFEITO DE PULSO AQUI: usando a opacidade e escala interpoladas */}
+                        <Animated.View 
+                            style={[
+                                styles.pulseRing, 
+                                { 
+                                    opacity: glowOpacity, 
+                                    transform: [{ scale: glowScale }] 
+                                }
+                            ]} 
+                        />
                         <Image source={avatarSource} style={styles.cardImage} />
                     </View>
                 </LinearGradient>
@@ -166,33 +195,37 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
 const styles = StyleSheet.create({
     animatedCardContainer: {
         marginRight: 13,
-        left: 2,
+        left: 8,
         top: 0,
-        
         marginBottom: 8,
         marginTop: 12,
         borderRadius: 42,
         overflow: 'visible',
-   
-        borderColor: '#9cb6df53',
-        borderBottomColor: '#9cb6df53',
+    
+        // --- POLIMENTO APLICADO: SOMBRAS E BORDAS ---
+        ...AppShadows.card, // Aplicando a Sombra Confortável
+        
+        // Removendo bordas complexas e redundantes para o look clean
+        borderWidth: 0, 
+        borderColor: 'transparent',
+        borderBottomColor: 'transparent',
+        
         borderTopStartRadius: 42,
         borderBottomStartRadius: 42,
         borderTopEndRadius: 42,
         borderBottomEndRadius: 42,
     },
     cardContainer: {
-        width: 76, // Reduzido para caber apenas a imagem (80 + padding mínimo)
-        height: 76, // Quadrado para fundo redondo
-        // Removido backgroundColor - agora gerenciado pelo LinearGradient
-        borderRadius: 42, // Full round (metade da width/height)
-        padding: 2, // Padding mínimo ao redor da imagem
+        width: 76,
+        height: 76,
+        borderRadius: 42,
+        padding: 2,
         position: 'relative',
         marginTop: -4,
         marginBottom: -5,
         justifyContent: 'center',
         alignItems: 'center',
-        overflow: 'visible', // Garantir que o pulso e badges cresçam para fora sem corte
+        overflow: 'visible',
     },
     // NOVO ESTILO: Micro-Pill de Distância (Sutil e Compacto, flutuando no topo direito)
     distancePillSmall: {
@@ -235,15 +268,15 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     imageWrapper: {
-        width: 62,                // reduzido (antes 65)
-        height: 62,
-        borderRadius: 34,
+        width: 70,                // reduzido (antes 65)
+        height: 70,
+        borderRadius: 38,
         overflow: 'visible',
-        backgroundColor: '#f8fbff', // tom neutro limpo de fundo
+        backgroundColor: '#f1f2f1', // tom neutro limpo de fundo
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 0.8,
-        borderColor: 'rgba(230,240,255,0.9)',
+        borderColor: '#f1f2f1',
         position: 'relative',
         zIndex: 1,
     },
@@ -252,51 +285,50 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         right: 0,
-        bottom: 0,
-        borderRadius: 34, // mesmo arredondamento do imageWrapper/cardImage
-        backgroundColor: 'transparent', // Fundo transparente para só mostrar a borda
-        borderWidth: 0.8, // Ligeiramente mais grosso para visibilidade no pulso
-        borderColor: '#5dcdeca1', // MESMA COR da borda da imagem, para harmonia perfeita
-        shadowColor: '#5dbfecff', // Ajustado para matching com a cor da borda (glow verde-azulado translúcido)
-        shadowOpacity: 0.4, // Aumentado para glow mais visível no pulso
-        shadowRadius: 12, // Raio maior para efeito de expansão suave
+        bottom: 0, // Removido `bottom: 1` para cobrir o wrapper exatamente
+        borderRadius: 35, // ⬅️ ATUALIZADO (Mesmo que o imageWrapper)
+        backgroundColor: 'transparent',
+        borderWidth: 1.5, // ⬅️ MELHORIA: Ligeiramente mais grosso (1.5) para mais presença no pulso
+        borderColor: '#b9cfe9bd',
+        shadowColor: '#356feeff',
+        shadowOpacity: 0.5, // ⬅️ MELHORIA: Aumentado para glow mais visível
+        shadowRadius: 15, // ⬅️ MELHORIA: Aumentado para expansão mais suave
         shadowOffset: { width: 0, height: 0 },
-        elevation: 4, // Elevação Android para profundidade
-        zIndex: 0, // Fica POR TRÁS da imagem (zIndex 2), iniciando coberto e expandindo para fora
+        elevation: 5, // Aumentado para Android
+        zIndex: 0,
     },
     // ESTILO ATUALIZADO: Badge de Verificação - Posicionado fora do gradient para visibilidade total, no canto inferior direito da imagem para UI premium limpa (evita conflito com distance pill no topo)
     verifiedBadgeOutside: { 
         position: 'absolute',
-        bottom: 118, // Posicionado no inferior direito da imagem (espaçamento premium: 8px da borda)
-        right: 8, // Alinhado perfeitamente com a borda direita do card/imagem
-        zIndex: 20, // zIndex ainda mais alto para sobrepor tudo (incluindo gradient e pulse)
-        backgroundColor: 'rgba(255, 255, 255, 0.95)', // Fundo branco semi-translúcido para premium clean UI
-        borderRadius: 12, // Bordas mais arredondadas para look moderno e premium
-        padding: 3, // Padding ligeiramente maior para espaçamento interno clean
-        elevation: 6, // Sombra mais pronunciada no Android para profundidade
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15, // Sombra sutil mas visível para elevação premium
-        shadowRadius: 4,
-        // Borda sutil premium em todas as bordas do badge
-        borderWidth: 0.5,
-        borderColor: 'rgba(93, 162, 236, 0.3)', // Borda azul translúcida para harmonizar com o tema
-      
+        bottom: 118,
+        right: 8,
+        zIndex: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: 12,
+        padding: 3,
+
+        // --- POLIMENTO APLICADO: SOMBRAS E BORDAS ---
+        ...AppShadows.small, // Sombra padrão limpa para elevação sutil
+        
+        // Limpando as propriedades de sombra e borda antigas
+        elevation: 4, // Ajustado para ser sutil, mas visível
+        shadowColor: 'transparent', 
+        shadowOffset: { width: 0, height: 1 }, 
+        shadowOpacity: 0.1, 
+        shadowRadius: 3,
+        borderWidth: 0, // Borda removida para look mais limpo
+        borderColor: 'transparent',
     },
     cardImage: {
         width: '100%',
         height: '100%',
         resizeMode: 'cover',
         marginBottom: 2,
-        borderRadius: 34, // Ajustado para matching exato com imageWrapper (antes 40, agora 34 para clean)
-        borderWidth: 1.5, // Simula o anel interno
-        borderColor: '#2dc4c475', // Cor solicitada na borda da imagem
-        zIndex: 2, // Acima do pulso para não interferir (pulso fica por trás)
+        borderRadius: 34,
+        borderWidth: 1.5,
+        borderColor: '#b9cfe9bd',
+        zIndex: 2,
     },
 });
 
 export default PrestadorCard;
-
-
-
-
