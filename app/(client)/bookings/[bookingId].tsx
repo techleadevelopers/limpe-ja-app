@@ -1,9 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -77,6 +77,19 @@ function getStatusVisual(status: BookingStatus): StatusVisual {
   }
 }
 
+const getStatusMessage = (status: BookingStatus): string | null => {
+  switch (status) {
+    case BookingStatus.CONFIRMED:
+      return 'Profissional confirmado. Acompanhe pelo chat.';
+    case BookingStatus.IN_PROGRESS:
+      return 'Profissional a caminho ou em serviço.';
+    case BookingStatus.COMPLETED:
+      return 'Serviço concluído — avalie agora.';
+    default:
+      return null;
+  }
+};
+
 const isCancellableStatus = (s: BookingStatus) =>
   s === BookingStatus.CONFIRMED || s === BookingStatus.PENDING || s === BookingStatus.PENDING_PROVIDER_CONFIRMATION;
 const isCompletedStatus = (s: BookingStatus) => s === BookingStatus.COMPLETED;
@@ -108,39 +121,48 @@ function HeaderBar({ router, insets }: { router: any; insets: any }) {
 
 function ProviderCard({ booking, provider }: { booking: BookingDetails; provider: any }) {
   const status = getStatusVisual(booking.status);
+  const statusMessage = getStatusMessage(booking.status);
   const avatarUrl = provider?.avatarUrl || booking.providerAvatarUrl;
   const providerName = provider?.fullName || booking.providerFullName;
 
   return (
-    <View style={styles.providerCard}>
-      <View style={styles.providerLeft}>
-        {avatarUrl ? (
-          <Image
-            source={{ uri: avatarUrl }}
-            style={styles.avatar}
-            resizeMode="cover"
-          />
-        ) : (
-          <Ionicons name="person-circle-outline" size={54} color="#94A3B8" style={styles.iconAdjust} />
-        )}
+    <>
+      <View style={styles.providerCard}>
+        <View style={styles.providerLeft}>
+          {avatarUrl ? (
+            <Image
+              source={{ uri: avatarUrl }}
+              style={styles.avatar}
+              resizeMode="cover"
+            />
+          ) : (
+            <Ionicons name="person-circle-outline" size={54} color="#94A3B8" style={styles.iconAdjust} />
+          )}
 
-        <View>
-          <Text style={styles.serviceName} numberOfLines={1}>
-            {sanitizeText(booking.serviceName)}
-          </Text>
-          <Text style={styles.providerName} numberOfLines={1}>
-            Com {sanitizeText(providerName)}
+          <View>
+            <Text style={styles.serviceName} numberOfLines={1}>
+              {sanitizeText(booking.serviceName)}
+            </Text>
+            <Text style={styles.providerName} numberOfLines={1}>
+              Com {sanitizeText(providerName)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
+          <Ionicons name={status.icon} size={14} color={status.color} style={styles.iconAdjust} />
+          <Text style={[styles.statusText, { color: status.color }]} numberOfLines={1}>
+            {status.label}
           </Text>
         </View>
       </View>
-
-      <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
-        <Ionicons name={status.icon} size={14} color={status.color} style={styles.iconAdjust} />
-        <Text style={[styles.statusText, { color: status.color }]} numberOfLines={1}>
-          {status.label}
-        </Text>
-      </View>
-    </View>
+      {statusMessage && (
+        <View style={[styles.statusBanner, { backgroundColor: status.bg, borderColor: status.color }]}>
+          <Ionicons name="information-circle-outline" size={16} color={status.color} style={styles.iconAdjust} />
+          <Text style={[styles.statusBannerText, { color: status.color }]}>{statusMessage}</Text>
+        </View>
+      )}
+    </>
   );
 }
 
@@ -322,19 +344,28 @@ function ReviewSheet({
   booking: BookingDetails;
   router: any;
 }) {
+  useEffect(() => {
+    if (visible && Platform.OS === 'ios') {
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+    }
+  }, [visible]);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.reviewOverlay}>
         <View style={styles.reviewSheet}>
-          <Text style={styles.reviewTitle}>Avaliar serviço</Text>
+          <Text style={styles.reviewTitle}>Como foi sua limpeza?</Text>
           <Text style={styles.reviewSubtitle}>
-            Conte como foi sua experiência. Sua opinião ajuda outros clientes e prestadores.
+            Avalie sua experiência para mantermos o padrão premium do LimpeJá.
           </Text>
 
           <View style={styles.reviewButtonsRow}>
             <TouchableOpacity
               style={styles.reviewPrimaryBtn}
               onPress={() => {
+                if (Platform.OS === 'ios') {
+                  try { Haptics.selectionAsync(); } catch {}
+                }
                 onClose();
                 router.push({
                   pathname: '/(common)/feedback/[targetId]',
@@ -351,7 +382,15 @@ function ReviewSheet({
               <Text style={styles.reviewPrimaryText}>Avaliar agora</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.reviewSecondaryBtn} onPress={onClose}>
+            <TouchableOpacity
+              style={styles.reviewSecondaryBtn}
+              onPress={() => {
+                if (Platform.OS === 'ios') {
+                  try { Haptics.selectionAsync(); } catch {}
+                }
+                onClose();
+              }}
+            >
               <Text style={styles.reviewSecondaryText}>Depois</Text>
             </TouchableOpacity>
           </View>
@@ -376,6 +415,7 @@ export default function BookingDetailsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showReviewSheet, setShowReviewSheet] = useState(false);
+  const lastStatusRef = useRef<BookingStatus | null>(null);
 
   const { services: providerServices } = useProviderServices(booking?.providerId);
   const bookingActionsTutorial = useTutorial('booking_details_actions');
@@ -415,6 +455,22 @@ export default function BookingDetailsScreen() {
   useEffect(() => {
     loadBooking();
   }, [loadBooking]);
+
+  useEffect(() => {
+    const status = booking?.status;
+    if (!status) return;
+    const relevant = [
+      BookingStatus.CONFIRMED,
+      BookingStatus.IN_PROGRESS,
+      BookingStatus.COMPLETED,
+    ];
+    if (lastStatusRef.current !== status && relevant.includes(status)) {
+      if (Platform.OS === 'ios') {
+        try { Haptics.selectionAsync(); } catch {}
+      }
+    }
+    lastStatusRef.current = status;
+  }, [booking?.status]);
 
   // Tutorial contextual: explica rapidamente as ações da tela
   useEffect(() => {
@@ -568,7 +624,7 @@ export default function BookingDetailsScreen() {
         title="Ações do seu agendamento"
         subtitle={
           `Use o chat para falar com ${sanitizeText((booking?.providerFullName || '').split(' ')[0] || 'o profissional')}.\n\n` +
-          'Se precisar, você pode cancelar pelo botão "Cancelar agendamento".'
+          'Se precisar, Você pode cancelar pelo botão "Cancelar agendamento".'
         }
         iconName="chatbubble-ellipses-outline"
         onConfirm={bookingActionsTutorial.markSeen}
@@ -706,6 +762,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
   },
+  statusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+    gap: 6,
+  },
+  statusBannerText: {
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
 
   // DetailsCard
   detailsCard: {
@@ -825,7 +896,7 @@ const styles = StyleSheet.create({
 });
 
 // =============================================================================
-// ESTILOS PREMIUM PARA AÇÕES (Renomeado para 'premium' para uso exclusivo do ActionsCard)
+// ESTILOS PREMIUM PARA AÃƒâ€¡Ãƒâ€¢ES (Renomeado para 'premium' para uso exclusivo do ActionsCard)
 // =============================================================================
 
 const premium = StyleSheet.create({
@@ -898,3 +969,4 @@ const premium = StyleSheet.create({
     marginLeft: 10,
   },
 });
+
