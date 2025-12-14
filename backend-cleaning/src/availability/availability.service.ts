@@ -27,6 +27,12 @@ const assertFullHour = (label: string, time: string) => {
 export class AvailabilityService {
   constructor(private prisma: PrismaService) {}
 
+  // Converte HH:mm para minutos desde 00:00
+  private toMinutes(time: string): number {
+    const [h, m] = time.split(':').map((n) => parseInt(n, 10) || 0);
+    return h * 60 + m;
+  }
+
   async getAvailability(
     providerId: string,
     query: GetAvailabilityDto,
@@ -104,8 +110,9 @@ export class AvailabilityService {
         status: {
           in: [
             BookingStatus.CONFIRMED,
-            BookingStatus.COMPLETED,
-            BookingStatus.IN_PROGRESS,
+            BookingStatus.FINISHED,
+            BookingStatus.STARTED,
+            BookingStatus.PENDING, // incluir pendentes (aguardando pagamento)
           ], // Include IN_PROGRESS
         },
       },
@@ -137,6 +144,9 @@ export class AvailabilityService {
     }
 
     const updatedRecords: Availability[] = [];
+    const now = new Date();
+    const minutesNow = now.getHours() * 60 + now.getMinutes();
+    const todayDow = now.getDay();
 
     for (const dto of updateAvailabilityDtos) {
       const { id, dayOfWeek, startTime, endTime, isAvailable } = dto;
@@ -146,6 +156,67 @@ export class AvailabilityService {
       }
       if (endTime) {
         assertFullHour('endTime', endTime);
+      }
+      const startMin = this.toMinutes(startTime);
+      const endMin = this.toMinutes(endTime);
+      if (startMin >= endMin) {
+        throw new BadRequestException(
+          `Intervalo inválido: ${startTime} deve ser menor que ${endTime}.`,
+        );
+      }
+      // Bloqueia edição de slots que já passaram no dia atual
+      if (dayOfWeek === todayDow && endMin <= minutesNow) {
+        throw new BadRequestException('Não é permitido alterar slot já passado.');
+      }
+
+      // Verifica conflito com bookings futuros (PENDING/CONFIRMED/IN_PROGRESS/COMPLETED)
+      const nowStartDay = new Date();
+      nowStartDay.setHours(0, 0, 0, 0);
+      const overlappingBooking = await this.prisma.booking.findFirst({
+        where: {
+          providerId,
+          status: {
+            in: [
+              BookingStatus.PENDING,
+              BookingStatus.CONFIRMED,
+              BookingStatus.STARTED,
+              BookingStatus.FINISHED,
+            ],
+          },
+          scheduledDate: { gte: nowStartDay },
+        },
+        select: {
+          scheduledDate: true,
+          scheduledTime: true,
+        },
+      });
+      if (overlappingBooking) {
+        const dow = new Date(overlappingBooking.scheduledDate).getDay();
+        const bookMin = this.toMinutes(overlappingBooking.scheduledTime);
+        if (dow === dayOfWeek && bookMin < endMin && bookMin >= startMin) {
+          throw new ConflictException(
+            'Conflito com agendamento existente neste horário.',
+          );
+        }
+      }
+
+      // Verifica overlap com outros slots do mesmo dia
+      const otherSlots = await this.prisma.availability.findMany({
+        where: {
+          providerId,
+          dayOfWeek,
+          id: id ? { not: id } : undefined,
+        },
+      });
+      const overlapsSlot = otherSlots.some((slot) => {
+        const s = this.toMinutes(slot.startTime);
+        const e = this.toMinutes(slot.endTime);
+        return startMin < e && endMin > s;
+      });
+      if (overlapsSlot) {
+        throw new ConflictException(
+          `Conflito com outro slot de disponibilidade no mesmo dia.`,
+        );
       }
 
       if (id) {
@@ -219,6 +290,18 @@ export class AvailabilityService {
 
     assertFullHour('startTime', startTime);
     assertFullHour('endTime', endTime);
+    const startMin = this.toMinutes(startTime);
+    const endMin = this.toMinutes(endTime);
+    if (startMin >= endMin) {
+      throw new BadRequestException(
+        `Intervalo inválido: ${startTime} deve ser menor que ${endTime}.`,
+      );
+    }
+    const now = new Date();
+    const minutesNow = now.getHours() * 60 + now.getMinutes();
+    if (dayOfWeek === now.getDay() && endMin <= minutesNow) {
+      throw new BadRequestException('Não é permitido criar slot já passado.');
+    }
 
     const existingSlot = await this.prisma.availability.findFirst({
       where: { providerId, dayOfWeek, startTime, endTime },
@@ -228,6 +311,37 @@ export class AvailabilityService {
       throw new ConflictException(
         `Um slot de disponibilidade para ${dayOfWeek} das ${startTime} às ${endTime} já existe para este provedor.`,
       );
+    }
+
+    // Conflito com bookings futuros
+    const nowStart = new Date();
+    nowStart.setHours(0, 0, 0, 0);
+    const overlappingBooking = await this.prisma.booking.findFirst({
+      where: {
+        providerId,
+        status: {
+          in: [
+            BookingStatus.PENDING,
+            BookingStatus.CONFIRMED,
+            BookingStatus.STARTED,
+            BookingStatus.FINISHED,
+          ],
+        },
+        scheduledDate: { gte: nowStart },
+      },
+      select: {
+        scheduledDate: true,
+        scheduledTime: true,
+      },
+    });
+    if (overlappingBooking) {
+      const dow = new Date(overlappingBooking.scheduledDate).getDay();
+      const bookMin = this.toMinutes(overlappingBooking.scheduledTime);
+      if (dow === dayOfWeek && bookMin < endMin && bookMin >= startMin) {
+        throw new ConflictException(
+          'Conflito com agendamento existente neste horário.',
+        );
+      }
     }
 
     return this.prisma.availability.create({
