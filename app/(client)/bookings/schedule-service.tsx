@@ -509,6 +509,24 @@ export default function ScheduleServiceScreen() {
         slotCount: selectedSlots.length,
     });
 
+    const totalHours = useMemo(() => {
+        if (selectedProviderService?.pricingType === PricingType.HOURLY) {
+            return selectedSlots.length;
+        }
+        return null;
+    }, [selectedProviderService?.pricingType, selectedSlots.length]);
+
+    const hourlyBasePrice = useMemo(() => {
+        return selectedProviderService?.price ?? (paramServicePrice ? Number(paramServicePrice) : 0);
+    }, [selectedProviderService?.price, paramServicePrice]);
+
+    const hourlyTotalPrice = useMemo(() => {
+        if (selectedProviderService?.pricingType === PricingType.HOURLY && totalHours && totalHours > 0) {
+            return hourlyBasePrice * totalHours;
+        }
+        return null;
+    }, [selectedProviderService?.pricingType, hourlyBasePrice, totalHours]);
+
     const priceChangeAnim = useRef(new Animated.Value(0)).current;
     const lastFinalPriceRef = useRef<number>(finalCalculatedPrice);
 
@@ -541,7 +559,8 @@ export default function ScheduleServiceScreen() {
         if (selectedProviderService.pricingType === PricingType.HOURLY && selectedSlots.length > 0) {
             const hours = selectedSlots.length;
             const hoursLabel = hours === 1 ? 'hora selecionada' : 'horas selecionadas';
-            return `${hours} ${hoursLabel} · Total estimado: ${formatBRL(finalCalculatedPrice)}`;
+            const price = finalCalculatedPrice > 0 ? finalCalculatedPrice : (hourlyTotalPrice ?? finalCalculatedPrice);
+            return `${hours} ${hoursLabel} · Total estimado: ${formatBRL(price)}`;
         }
 
         if (
@@ -553,7 +572,7 @@ export default function ScheduleServiceScreen() {
         }
 
         return null;
-    }, [selectedProviderService, selectedSlots.length, squareMeters, finalCalculatedPrice]);
+    }, [selectedProviderService, selectedSlots.length, squareMeters, finalCalculatedPrice, hourlyTotalPrice]);
 
     const prefetchAvailability = useCallback(async (provId: string | undefined, baseDate: Date) => {
         if (!provId) return;
@@ -861,8 +880,8 @@ export default function ScheduleServiceScreen() {
         const selectedSlot = displaySlotsInfo.find(slot => slot.time === time);
         if (!selectedSlot?.isAvailable) {
             NotificationUIService.showInfo(
-                t('schedule_service.unavailable_time_slot_message', { defaultValue: 'Horário não disponível.' }),
-                t('schedule_service.unavailable_time_slot', { defaultValue: 'Horário Indisponível' })
+                t('schedule_service.unavailable_time_slot_message', { defaultValue: 'Horario nao disponivel.' }),
+                t('schedule_service.unavailable_time_slot', { defaultValue: 'Horario Indisponivel' })
             );
             return;
         }
@@ -887,25 +906,63 @@ export default function ScheduleServiceScreen() {
             return h * 60 + m;
         };
 
+        const sortSlots = (slots: string[]) => [...slots].sort((a, b) => toMinutes(a) - toMinutes(b));
+
+        const normalizeContiguousSlots = (slots: string[]) => {
+            if (!slots || slots.length === 0) return [] as string[];
+            const sorted = sortSlots(slots);
+            const contiguous: string[] = [sorted[0]];
+            for (let i = 1; i < sorted.length; i++) {
+                const prev = toMinutes(contiguous[contiguous.length - 1]);
+                const curr = toMinutes(sorted[i]);
+                if (curr - prev === 60) {
+                    contiguous.push(sorted[i]);
+                } else {
+                    break; // mantem apenas o bloco contiguo (evita buracos)
+                }
+            }
+            return contiguous;
+        };
+
         if (selectedProviderService?.pricingType === PricingType.HOURLY) {
             setSelectedSlots(prev => {
                 const current = prev ?? [];
-                let next: string[];
+                let next: string[] = [];
 
-                if (current.includes(time)) {
-                    next = current.filter(t => t !== time);
+                const alreadySelected = current.includes(time);
+
+                if (alreadySelected) {
+                    next = normalizeContiguousSlots(current.filter(t => t !== time));
+                } else if (current.length === 0) {
+                    next = [time];
                 } else {
-                    next = [...current, time];
+                    const sorted = sortSlots(current);
+                    const first = sorted[0];
+                    const last = sorted[sorted.length - 1];
+
+                    const m = toMinutes(time);
+                    const firstM = toMinutes(first);
+                    const lastM = toMinutes(last);
+
+                    // Expande so nas pontas (contiguo); se clicar no meio ou distante, inicia nova selecao.
+                    if (m === lastM + 60) {
+                        next = [...sorted, time];
+                    } else if (m === firstM - 60) {
+                        next = [time, ...sorted];
+                    } else {
+                        next = [time];
+                    }
+
+                    next = normalizeContiguousSlots(next);
                 }
 
                 if (next.length === 0) {
                     setSelectedTime(null);
                     setDurationInMinutes(null);
-                    return [];
+                    return [] as string[];
                 }
 
-                next = next.sort((a, b) => toMinutes(a) - toMinutes(b));
-
+                next = sortSlots(next);
                 setSelectedTime(next[0]);
                 setDurationInMinutes(next.length * 60);
 
@@ -913,14 +970,14 @@ export default function ScheduleServiceScreen() {
             });
         } else if (selectedProviderService) {
             setSelectedSlots(prev => {
-                // Nenhuma seleção anterior: começa aqui
+                // Nenhuma selecao anterior: comeca aqui
                 if (!prev || prev.length === 0) {
                     setSelectedTime(time);
                     setDurationInMinutes(60);
                     return [time];
                 }
 
-                // Se já estava selecionado, desmarca
+                // Se ja estava selecionado, desmarca
                 if (prev.includes(time)) {
                     const next = prev.filter(t => t !== time).sort();
                     if (next.length === 0) {
@@ -943,15 +1000,15 @@ export default function ScheduleServiceScreen() {
 
                 let next: string[];
 
-                // Expande seleção para frente (ex: 09:00 -> 10:00)
-                if (m === lastM + 60) {
+                // Expande selecao para frente (ex: 09:00 -> 10:00)
+                if (m == lastM + 60) {
                     next = [...sorted, time];
                 }
-                // Expande seleção para trás (ex: 10:00 -> 09:00)
-                else if (m === firstM - 60) {
+                // Expande selecao para tras (ex: 10:00 -> 09:00)
+                else if (m == firstM - 60) {
                     next = [time, ...sorted];
                 }
-                // Qualquer outra combinação: começa nova faixa a partir deste horário
+                // Qualquer outra combinacao: comeca nova faixa a partir deste horario
                 else {
                     next = [time];
                 }
@@ -962,11 +1019,12 @@ export default function ScheduleServiceScreen() {
                 return next;
             });
         } else {
-            // FIXED / BY_SIZE: mantém seleção simples
+            // FIXED / BY_SIZE: mantem selecao simples
             setSelectedSlots([]);
             setSelectedTime(time);
         }
     }, [displaySlotsInfo, selectionAnim, t, selectedProviderService]);
+
 
     const showCancellationPolicy = useCallback(() => {
         setCancellationOverlayVisible(true);
@@ -1589,14 +1647,30 @@ export default function ScheduleServiceScreen() {
         return baseDisabled;
     }, [selectedSlots, address, selectedProviderService, durationInMinutes, squareMeters, isBooking]);
 
+    const selectedHoursLabel = useMemo(() => {
+        if (selectedProviderService?.pricingType === PricingType.HOURLY && totalHours && totalHours > 0) {
+            return `${totalHours} ${totalHours === 1 ? 'hora' : 'horas'}`;
+        }
+        return null;
+    }, [selectedProviderService?.pricingType, totalHours]);
 
     const confirmButtonText = useMemo(() => {
+        const isHourly = selectedProviderService?.pricingType === PricingType.HOURLY;
+        const hasHours = isHourly && totalHours && totalHours > 0;
+        const priceForDisplay = hasHours
+            ? (finalCalculatedPrice > 0 ? finalCalculatedPrice : (hourlyTotalPrice ?? finalCalculatedPrice))
+            : finalCalculatedPrice;
+
+        if (hasHours && priceForDisplay > 0) {
+            const hoursLabel = selectedHoursLabel ?? `${totalHours} ${totalHours === 1 ? 'hora' : 'horas'}`;
+            return `Agendar ${hoursLabel} • ${formatBRL(priceForDisplay)}`;
+        }
         if (finalCalculatedPrice > 0) {
             return formatBRL(finalCalculatedPrice);
-        } else {
-            return t('schedule_service.select_date_time_address', { defaultValue: 'Selecione Data, Hora e Endereço' });
         }
-    }, [finalCalculatedPrice, t]);
+        return t('schedule_service.select_date_time_address', { defaultValue: 'Selecione Data, Hora e Endereco' });
+    }, [selectedProviderService?.pricingType, totalHours, hourlyTotalPrice, finalCalculatedPrice, selectedHoursLabel, t]);
+
 
     if (isLoading) {
         return (
@@ -1712,7 +1786,7 @@ export default function ScheduleServiceScreen() {
                             >
                                 <View style={styles.timeSlotsHelperContainer}>
                                     <Text style={styles.timeSlotsHelperText}>
-                                        Selecione os horários que deseja (cada horário = 1h de serviço).
+                                         (cada horário = 1h de serviço).
                                     </Text>
                                     <Text style={styles.timeSlotsHelperSubText}>
                                         Você pode escolher mais de um horário para aumentar a duração.
@@ -1825,11 +1899,19 @@ export default function ScheduleServiceScreen() {
                             <Text style={styles.nextStepButtonText}>
                                 {(() => {
                                     const isHourly = selectedProviderService?.pricingType === PricingType.HOURLY;
+                                    const hours = totalHours ?? 0;
                                     const basePrice = selectedProviderService?.price ?? (paramServicePrice ? Number(paramServicePrice) : 0);
-                                    const displayPrice = finalCalculatedPrice > 0 ? finalCalculatedPrice : basePrice;
+                                    const priceForDisplay = isHourly && hours > 0
+                                        ? (finalCalculatedPrice > 0 ? finalCalculatedPrice : (hourlyTotalPrice ?? basePrice * hours))
+                                        : (finalCalculatedPrice > 0 ? finalCalculatedPrice : basePrice);
 
-                                    if (displayPrice > 0) {
-                                        return `Agendar \u2022 ${formatBRL(displayPrice)}${isHourly ? '/h' : ''}`;
+                                    if (isHourly && hours > 0) {
+                                        const hoursLabel = hours === 1 ? 'hora' : 'horas';
+                                        return `Agendar ${hours} ${hoursLabel} \u2022 ${formatBRL(priceForDisplay)}`;
+                                    }
+
+                                    if (priceForDisplay > 0) {
+                                        return `Agendar \u2022 ${formatBRL(priceForDisplay)}${isHourly ? '/h' : ''}`;
                                     }
                                     return 'Agendar';
                                 })()}
@@ -2181,6 +2263,8 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 20,
         color: '#6B7280',
+        fontWeight: '500',
+    
     },
     timeSlotsHelperSubText: {
         fontSize: 14,
@@ -2361,23 +2445,17 @@ const styles = StyleSheet.create({
         marginHorizontal: 24,
         marginTop: 6,
         marginBottom: 2,
-        borderTopStartRadius: 44,
-        borderBottomStartRadius: 44,
-        borderTopEndRadius: 44,
-        borderBottomEndRadius: 44,
+        borderRadius: 44, // Simplifiquei as 4 bordas para apenas 'borderRadius'
         overflow: 'hidden',
-        ...AppShadows.medium,
+        ...AppShadows.medium, // Use uma sombra padrão limpa
+        // REMOVA os estilos complexos de borda e sombra redundante:
         borderRightWidth: 0,
-        borderRightColor: '#45484b56',
-        borderBottomColor: '#45484b56',
-        borderBottomWidth: 0.1,
-        borderLeftColor: '#45484b56',
-        borderLeftWidth: 1,
-        shadowColor: '#45484b56',
-        shadowOffset: { width: -1, height: 1 },
-        shadowOpacity: 3.55,
-        shadowRadius: 35,
-        elevation: 6,
+        borderRightColor: 'transparent',
+        borderBottomColor: 'transparent',
+        borderBottomWidth: 0,
+        borderLeftColor: 'transparent',
+        borderLeftWidth: 0,
+        shadowColor: AppColors.black, // O AppShadows.medium já cuida disso, mas se precisar de mais, use AppShadows.card
     },
     nextStepButtonDisabled: {
         backgroundColor: AppColors.primaryInteractive + '50',
