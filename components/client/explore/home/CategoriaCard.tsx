@@ -39,7 +39,7 @@ const ANDROID_NEON_SHADOW = Platform.OS === 'android'
       elevation: 0, // não deixa Android criar halo preto
     }
   : {};
-const BORDER_WIDTH = 1.3;
+const BORDER_WIDTH = 0.3;
 
 const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
   const router = useRouter();
@@ -255,12 +255,13 @@ const styles = StyleSheet.create({
     width:  48,
     height: 45 + 25,
     marginRight: 11,
-    right: 22,
+    right: 9,
     marginLeft: 4,
     borderRadius: 45,
-    marginBottom: 4,
+    marginBottom: -14,
     marginTop: 14,
     alignItems: 'center',
+    
   },
   touchableSurface: {
     width: '100%',
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
   categoriaTexto: {
     fontSize: 10,
     color: '#788fa7ff',
-    fontWeight: '500',
+    fontWeight: '300',
     textAlign: 'center',
     marginTop: 7,
     marginBottom: 20,
