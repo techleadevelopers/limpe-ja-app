@@ -1,4 +1,3 @@
-// src/payments/payments.controller2.ts
 import {
   Controller,
   Get,
@@ -13,22 +12,28 @@ import {
   Logger,
   InternalServerErrorException,
   Headers,
+  Res,
+  Header,
 } from '@nestjs/common';
+
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+
 import { PaymentsService } from './payments.service';
+
 import {
   CreatePixChargeDto,
   PixChargeResponseDto,
 } from './dto/create-pix-charge.dto';
+
 import { PaymentIntentResponseDto } from './dto/payment-intent-response.dto';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { UserRole } from '@prisma/client';
 
@@ -47,32 +52,17 @@ export class PaymentsController {
 
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  // Cria uma cobrança PIX
+  // ===========================================================================
+  // Create PIX Charge
+  // ===========================================================================
   @Post('pix-charge')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Cria uma nova cobrança PIX para um serviço ou provedor.',
-    description:
-      'Permite que um cliente gere uma cobrança PIX para efetuar o pagamento.',
-  })
+  @ApiOperation({ summary: 'Cria uma nova cobrança PIX.' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Cobrança PIX criada com sucesso.',
     type: PixChargeResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Dados inválidos ou provedor não especificado.',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Não autorizado.',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Provedor ou agendamento não encontrado.',
   })
   async createPixCharge(
     @Req() req: Request,
@@ -80,82 +70,53 @@ export class PaymentsController {
   ): Promise<PixChargeResponseDto> {
     const requestUser = req.user as RequestUserPayload;
     const clientUserId = requestUser.userId;
-    this.logger.log(
-      `[PaymentsController] createPixCharge: userId=${clientUserId} dto=${JSON.stringify(createPixChargeDto)}`,
-    );
+
     if (!clientUserId) {
-      this.logger.error(
-        '[PaymentsController] createPixCharge: userId não encontrado no token.',
-      );
       throw new InternalServerErrorException(
-        'ID do usuário não disponível no token de autenticação.',
+        'ID do usuário não disponível no token.',
       );
     }
+
     return this.paymentsService.createPixCharge(
       clientUserId,
       createPixChargeDto,
     );
   }
 
-  // Recupera PaymentIntent por booking
+  // ===========================================================================
+  // Get PaymentIntent
+  // ===========================================================================
   @Get('intent/:bookingId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Recupera o PaymentIntent associado a um agendamento',
-  })
+  @ApiOperation({ summary: 'Recupera o PaymentIntent de um agendamento.' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'PaymentIntent encontrado com sucesso.',
     type: PaymentIntentResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: 'Usuário não autorizado a visualizar o PaymentIntent.',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'PaymentIntent não encontrado.',
   })
   async getPaymentIntent(
     @Req() req: Request,
     @Param('bookingId') bookingId: string,
   ): Promise<PaymentIntentResponseDto> {
     const requestUser = req.user as RequestUserPayload;
-    this.logger.log(
-      `[PaymentsController] getPaymentIntent: userId=${requestUser.userId} bookingId=${bookingId}`,
-    );
+
     return this.paymentsService.getPaymentIntentForBooking(
       bookingId,
       requestUser.userId,
     );
   }
 
-  // Solicita saque via PIX (provedor)
+  // ===========================================================================
+  // Withdrawal
+  // ===========================================================================
   @Post('withdrawal')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary:
-      'Solicita um saque de valores disponíveis para um provedor via chave PIX.',
-  })
+  @ApiOperation({ summary: 'Solicita saque via chave PIX.' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Solicitação de saque recebida com sucesso.',
     type: MessageResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Dados inválidos (valor, chave PIX).',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Não autorizado.',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Provedor não encontrado.',
   })
   async requestWithdrawal(
     @Req() req: Request,
@@ -164,21 +125,13 @@ export class PaymentsController {
   ) {
     const requestUser = req.user as RequestUserPayload;
     const providerId = requestUser.providerId;
-    this.logger.log(
-      `[PaymentsController] requestWithdrawal: providerId=${providerId}`,
-    );
-    this.logger.debug(
-      `[PaymentsController] requestWithdrawal: req.user=${JSON.stringify(requestUser)}`,
-    );
+
     if (!providerId) {
-      this.logger.error(
-        '[PaymentsController] requestWithdrawal: providerId não encontrado no token.',
-        requestUser as any,
-      );
       throw new InternalServerErrorException(
-        'ID do provedor não disponível no token de autenticação.',
+        'ID do provedor não disponível no token.',
       );
     }
+
     return this.paymentsService.requestWithdrawal(
       providerId,
       requestWithdrawalDto,
@@ -186,64 +139,71 @@ export class PaymentsController {
     );
   }
 
-  // Webhook de PIX
-  @Post('webhook/pix')
+  // ===========================================================================
+  // Webhook pagamentos
+  // ===========================================================================
+  @Post('webhook')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Recebe notificações de webhook de pagamento PIX.',
-    description: 'Chamado pelo PSP para notificar status de uma transação PIX.',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Webhook recebido e processado.',
-  })
-  async handlePixWebhook(
+  @ApiOperation({ summary: 'Webhook de pagamentos (orders/charges).' })
+  async handlePaymentWebhook(
     @Headers('x-signature') signature: string,
-    @Headers('x-event-id') eventId: string,
-    @Body() webhookData: any,
-    @Req() req: Request,
-  ): Promise<MessageResponseDto> {
-    this.logger.log('[PaymentsController] handlePixWebhook: recebido.');
-    this.logger.debug(
-      `[PaymentsController] handlePixWebhook: payload=${JSON.stringify(webhookData)}`,
-    );
-    try {
-      const rawBody: Buffer | undefined = (req as any)?.rawBody;
-      return await this.paymentsService.handlePixWebhook(
-        signature,
-        eventId,
-        webhookData,
-        rawBody,
-      );
-    } catch (error: any) {
-      this.logger.error(
-        'Erro ao processar webhook PIX no controller:',
-        error?.message,
-        error?.stack,
-      );
-      return {
-        message:
-          'Erro interno ao processar webhook PIX, mas o erro foi logado.',
-      };
-    }
+    @Body() payload: any,
+  ) {
+    return this.paymentsService.handlePaymentWebhook(signature, payload);
   }
 
-  // Webhook de saque/withdrawal
+  // ===========================================================================
+  // Webhook PIX PagBank — RAW (URLENCODED)
+  // ===========================================================================
+@Post('webhook/pix')
+@Header('Content-Type', 'application/json')
+@HttpCode(HttpStatus.OK)
+public async handlePixWebhook(
+  @Req() req: Request,
+  @Res() res: Response,
+) {
+  const rawBody: string =
+    (req as any).rawBody?.toString?.() ??
+    (req as any).bodyRaw?.toString?.() ??
+    '';
+
+  let parsed: any;
+try {
+  // Se vier Buffer → converte pra string antes
+  const text = Buffer.isBuffer(rawBody)
+    ? rawBody.toString('utf8')
+    : rawBody;
+    
+  // 1 → tenta JSON normalmente
+  parsed = JSON.parse(text);
+  console.log('[Webhook PIX] JSON parseado com sucesso');
+  console.log('>>> WEBHOOK PARSED:', parsed);
+} catch {
+  console.log('[Webhook PIX] JSON inválido → usando string bruta');
+
+  // 2 → tenta transformar form-data URL-encoded para objeto
+  parsed = Object.fromEntries(new URLSearchParams(rawBody?.toString() ?? ""));
+}
+  const result = await this.paymentsService.handlePixWebhook(
+    rawBody,
+    parsed
+  );
+
+  return res.status(200).json(result);
+}
+  // ===========================================================================
+  // Webhook Withdrawal
+  // ===========================================================================
   @Post('webhook/withdrawal')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Recebe notificações de webhook de saque.' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Webhook de saque recebido e processado.',
+  @ApiOperation({
+    summary: 'Webhook de notificações de saque.',
   })
   async handleWithdrawalWebhook(
     @Headers('x-signature') signature: string,
     @Headers('x-event-id') eventId: string,
     @Body() payload: any,
   ) {
-    this.logger.log(
-      '[PaymentsController] handleWithdrawalWebhook: received event from PSP.',
-    );
     return this.paymentsService.handleWithdrawalWebhook(
       signature,
       eventId,
@@ -251,88 +211,137 @@ export class PaymentsController {
     );
   }
 
-  // ADMIN: Listar transações
+  // ===========================================================================
+  // Admin — Listar transações
+  // ===========================================================================
   @Get('transactions')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Lista transações (admin)' })
   async listTransactions(@Req() req: any) {
-    const role = req.user?.role;
-    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
-    const type = req.query?.type as string | undefined;
-    const status = req.query?.status as string | undefined;
-    return this.paymentsService.listTransactions(type, status);
+    if (req.user?.role !== 'ADMIN')
+      throw new InternalServerErrorException('Admin only');
+
+    return this.paymentsService.listTransactions(
+      req.query?.type,
+      req.query?.status,
+    );
   }
 
-  // ADMIN: Iniciar reembolso
+  // ===========================================================================
+  // Admin — Refund
+  // ===========================================================================
   @Post(':transactionId/refund')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Inicia reembolso (admin)' })
   async refund(
     @Req() req: any,
     @Param('transactionId') transactionId: string,
     @Body() body: { amount?: number },
   ) {
-    const role = req.user?.role;
-    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
-    return this.paymentsService.initiateRefund(transactionId, body?.amount);
+    if (req.user?.role !== 'ADMIN')
+      throw new InternalServerErrorException('Admin only');
+
+    return this.paymentsService.initiateRefund(
+      transactionId,
+      body?.amount,
+    );
   }
 
-  // ADMIN: Listar solicitações de saque
+  // ===========================================================================
+  // Admin — List Withdrawals
+  // ===========================================================================
   @Get('withdrawals')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Lista solicitações de saque (admin)' })
   async listWithdrawals(@Req() req: any) {
-    const role = req.user?.role;
-    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
-    const status = req.query?.status as string | undefined;
-    return this.paymentsService.listWithdrawals(status);
+    if (req.user?.role !== 'ADMIN')
+      throw new InternalServerErrorException('Admin only');
+
+    return this.paymentsService.listWithdrawals(req.query?.status);
   }
 
-  // ADMIN: Registrar webhooks (PIX e Payouts)
+  // ===========================================================================
+  // Admin — Register Webhooks PagBank
+  // ===========================================================================
   @Post('webhooks/register')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Registra webhooks de PIX e Payouts no PagBank (admin)',
-  })
   async registerWebhooks(
     @Req() req: any,
     @Body() body: { pixUrl?: string; payoutsUrl?: string },
   ) {
-    const role = req.user?.role;
-    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
+    if (req.user?.role !== 'ADMIN')
+      throw new InternalServerErrorException('Admin only');
+
     return this.paymentsService.registerAllWebhooks(
       body?.pixUrl,
       body?.payoutsUrl,
     );
   }
 
-  // ADMIN: Aprovar saque
+  // ===========================================================================
+  // Admin — Aprovar/Rejeitar Saque
+  // ===========================================================================
   @Patch('withdrawals/:id/approve')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Aprova solicitação de saque (admin)' })
   async approveWithdrawal(@Req() req: any, @Param('id') id: string) {
-    const role = req.user?.role;
-    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
+    if (req.user?.role !== 'ADMIN')
+      throw new InternalServerErrorException('Admin only');
+
     return this.paymentsService.approveWithdrawal(id);
   }
 
-  // ADMIN: Rejeitar saque
   @Patch('withdrawals/:id/reject')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Rejeita solicitação de saque (admin)' })
   async rejectWithdrawal(
     @Req() req: any,
     @Param('id') id: string,
     @Body() body: { reason?: string },
   ) {
-    const role = req.user?.role;
-    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
+    if (req.user?.role !== 'ADMIN')
+      throw new InternalServerErrorException('Admin only');
+
     return this.paymentsService.rejectWithdrawal(id, body?.reason);
+  }
+
+  // ===========================================================================
+  // Test Orders
+  // ===========================================================================
+  @Post('test-orders')
+  @HttpCode(HttpStatus.OK)
+  async testOrdersDirect() {
+    const payload = {
+      reference_id: 'test-orders-1',
+      customer: {
+        name: 'Rodrigo Silva',
+        email: 'rods@gmail.com',
+        tax_id: '39450038813',
+      },
+      items: [{ name: 'Teste Orders', quantity: 1, unit_amount: 500 }],
+      qr_codes: [
+        {
+          amount: { value: 500 },
+          expiration_date: new Date(Date.now() + 300000).toISOString(),
+          instructions: 'Teste Orders',
+        },
+      ],
+    };
+
+    const resp = await fetch('https://api.pagseguro.com/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.PAGSEGURO_API_TOKEN}`,
+        'idempotency-key': 'test-orders-1',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    return {
+      status: resp.status,
+      response: await resp.text(),
+    };
   }
 }
