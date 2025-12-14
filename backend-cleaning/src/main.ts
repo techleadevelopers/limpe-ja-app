@@ -26,6 +26,7 @@ async function bootstrap() {
   const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
   const isProd = nodeEnv === 'production';
 
+  // ===== SENTRY =====
   if (sentryDsn) {
     Sentry.init({
       dsn: sentryDsn,
@@ -37,36 +38,68 @@ async function bootstrap() {
     console.log('[Sentry] Inicializado com sucesso.');
   } else {
     console.warn(
-      '[Sentry] SENTRY_DSN não configurado. O monitoramento de erros e performance do Sentry está desativado.',
+      '[Sentry] SENTRY_DSN não configurado. Sentry desativado.'
     );
   }
 
-  // Captura o rawBody para validação de webhooks (ex.: HMAC)
-  app.use(
-    json({
-      limit: '10mb',
-      // Anexa o buffer original na requisição
-      verify: (req: any, _res, buf: Buffer) => {
-        try {
-          req.rawBody = Buffer.from(buf);
-        } catch {
-          // ignora
-        }
-      },
-    }),
-  );
-  app.use(urlencoded({ extended: true, limit: '10mb' }));
+  // =======================================================
+  //        WEBHOOK PIX - RAW BODY (SEM SEGURANÇA)
+  // =======================================================
+  app.use((req: any, res, next) => {
+    if (req.originalUrl.includes('/payments/webhook/pix')) {
+      req.setEncoding('utf8');
+      let data = '';
 
+      req.on('data', chunk => {
+        data += chunk;
+      });
+
+      req.on('end', () => {
+        req.rawBody = data;
+
+        try {
+          req.body = JSON.parse(data);
+          console.log('[Webhook PIX] JSON parseado com sucesso');
+        } catch (err) {
+          req.body = data;
+          console.error('[Webhook PIX] JSON inválido → usando string bruta');
+        }
+
+        return next();
+      });
+
+    } else {
+      return next();
+    }
+  });
+
+  // Evitar que o JSON parser sobrescreva o webhook PIX
+  app.use((req: any, res, next) => {
+    if (req.originalUrl.includes('/payments/webhook/pix')) {
+      return next();
+    }
+    return json({ limit: '10mb' })(req, res, next);
+  });
+
+  app.use((req: any, res, next) => {
+    if (req.originalUrl.includes('/payments/webhook/pix')) {
+      return next();
+    }
+    return urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+  });
+
+  // =======================================================
+  //                        CORS
+  // =======================================================
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:8081',
     'https://limpeja-backend-production-edfa.up.railway.app',
   ];
 
-  // CORS sem logs de origem para evitar flood em produção
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -76,18 +109,18 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // =======================================================
+  //                  VALIDATION PIPE GLOBAL
+  // =======================================================
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-      // Configura as mensagens de erro de validação para serem localizadas
-      exceptionFactory: (errors) => {
-        const messages = errors.map((error) => {
-          // Assume que a primeira mensagem de erro de cada validação é a mais relevante
+      transformOptions: { enableImplicitConversion: true },
+
+      exceptionFactory: errors => {
+        const messages = errors.map(error => {
           const constraintMessage = Object.values(error.constraints ?? {})[0];
           return constraintMessage;
         });
@@ -96,47 +129,58 @@ async function bootstrap() {
     }),
   );
 
-  // Usa o novo filtro de exceções globalmente
+  // =======================================================
+  //                EXCEPTION FILTER GLOBAL
+  // =======================================================
   app.useGlobalFilters(new AllExceptionsFilter(i18nService));
 
+  // =======================================================
+  //                    FIREBASE ADMIN
+  // =======================================================
   try {
     admin.initializeApp();
-    console.log(
-      '[Firebase Admin] SDK inicializado automaticamente no ambiente Cloud Run ou GCP.',
-    );
+    console.log('[Firebase Admin] Inicializado automaticamente.');
   } catch (error: any) {
     console.error(
-      `[Firebase Admin] Erro na inicialização automática do SDK: ${error.message}`,
+      `[Firebase Admin] Erro: ${error.message}`
     );
+
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       try {
         const serviceAccountPath = path.resolve(
           process.cwd(),
           process.env.GOOGLE_APPLICATION_CREDENTIALS,
         );
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+
         const serviceAccount = require(serviceAccountPath);
+
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
         });
+
         console.log(
-          '[Firebase Admin] SDK inicializado via GOOGLE_APPLICATION_CREDENTIALS.',
+          '[Firebase Admin] Inicializado via GOOGLE_APPLICATION_CREDENTIALS.'
         );
+
       } catch (innerError: any) {
         console.error(
-          `[Firebase Admin] Erro ao carregar credenciais de GOOGLE_APPLICATION_CREDENTIALS: ${innerError.message}`,
+          `[Firebase Admin] Falha no carregamento manual: ${innerError.message}`
         );
+
         throw new Error(
-          'Firebase Admin SDK failed to initialize via GOOGLE_APPLICATION_CREDENTIALS.',
+          'Firebase Admin SDK failed to initialize via GOOGLE_APPLICATION_CREDENTIALS.'
         );
       }
     } else {
       console.warn(
-        '[Firebase Admin] Firebase Admin SDK não foi inicializado. Funções que dependem dele (como notificações push) podem falhar.',
+        '[Firebase Admin] SDK NÃO INICIALIZADO — notificações podem falhar.'
       );
     }
   }
 
+  // =======================================================
+  //                       SWAGGER
+  // =======================================================
   const swaggerConfig = new DocumentBuilder()
     .setTitle('LimpeJá API')
     .setDescription('Documentação da API do marketplace de serviços LimpeJá')
@@ -153,16 +197,22 @@ async function bootstrap() {
       'access-token',
     )
     .build();
+
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api', app, document);
 
-  // Ajusta níveis de log do NestJS para produção vs desenvolvimento
+  // =======================================================
+  //                    LOGGING MODE
+  // =======================================================
   if (isProd) {
     app.useLogger(['error', 'warn', 'log']);
   } else {
     app.useLogger(['error', 'warn', 'log', 'debug', 'verbose']);
   }
 
+  // =======================================================
+  //                     START SERVER
+  // =======================================================
   const port = configService.get<number>('PORT') || 3000;
 
   console.time('AppListening');
