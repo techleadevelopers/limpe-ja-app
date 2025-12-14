@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Adicione AppShadows aqui!
 import AnimatedReanimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -345,11 +346,35 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     (mainPriceIsExplicitlyHourly && numericMainPrice !== null && minHourlyPrice < numericMainPrice)
   );
 
-  // Rating: badge no topo da foto e ocultar rating na base quando presente
-  const ratingCount = typeof item.reviewCount === 'number'
+  // Ref para armazenar o número aleatório de avaliações, estável por prestador
+  const stableRandomReviewCountRef = useRef<number | null>(null);
+
+  // --- INÍCIO DA MODIFICAÇÃO PARA O NÚMERO DE AVALIAÇÕES ---
+  // Calcula o número real de avaliações
+  const actualReviewCount = typeof item.reviewCount === 'number'
     ? item.reviewCount
     : (Array.isArray(item.reviews) ? item.reviews.length : 0);
-  const hasRating = true; // exibe sempre o badge; mostra 0 quando não houver avaliações
+
+  let displayedReviewCount: number;
+
+  if (actualReviewCount === 0) {
+    // Se não há avaliações reais e ainda não geramos um número aleatório para este item, gere um.
+    if (stableRandomReviewCountRef.current === null) {
+      stableRandomReviewCountRef.current = Math.floor(Math.random() * (25 - 5 + 1)) + 5;
+    }
+    displayedReviewCount = stableRandomReviewCountRef.current;
+  } else {
+    // Se há avaliações reais, use-as e limpe o ref para o caso de o item mudar ou reviewCount voltar a ser 0.
+    stableRandomReviewCountRef.current = null; // Limpa o ref
+    displayedReviewCount = actualReviewCount;
+  }
+
+  // A flag `hasRating` controla a visibilidade do badge de avaliações.
+  // A solicitação é para mudar o *valor* quando ele for 0, não para esconder o badge.
+  // Então, mantemos `hasRating` como true para garantir que o badge esteja sempre presente,
+  // conforme já estava no código original.
+  const hasRating = true;
+  // --- FIM DA MODIFICAÇÃO ---
 
   const categoriesToDisplay: string[] = [];
   // NOVO: Extração robusta de categorias a partir de todos os serviços do provider
@@ -369,7 +394,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
       // Detectores por substring (cobrem variações usuais)
       if (/(comercial|empres|corporativ|industrial)/.test(n)) set.add('Comercial');
-      if (/(escritorio|escritorio)/.test(n) || /escritor/.test(n)) set.add('Escritório');
+      if (/(escritorio|escritor)/.test(n) || /escritor/.test(n)) set.add('Escritório');
       if (/(residencial|domest|casa|lar)/.test(n)) set.add('Residencial');
       if (/obra/.test(n)) set.add('Obra');
       if (/vidro|vidrac/.test(n)) set.add('Vidro');
@@ -379,6 +404,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     });
     return Array.from(set);
   };
+
+  
 
   // Ordem de prioridade dos ícones: Residencial, Comercial, Pós-Obra ("Obra")
   const priorityOrder = [
@@ -501,13 +528,13 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
       <View style={[styles.metricTextContainer, { flexDirection: 'column', alignItems: 'center' }]}>
         {hasAcceptanceRate && (
           <View style={styles.metricRow}>
-            <Ionicons name="checkmark-done" size={S(10.5)} color="#5da2ecff" style={styles.metricPercentIcon} />
+            <Ionicons name="checkmark-done" size={S(0)} color="#5da2ecff" style={styles.metricPercentIcon} />
             <Text style={styles.metricValue} allowFontScaling={false}>{Math.round(acceptanceRateValue ?? 0)}%</Text>
           </View>
         )}
         {hasResponseTime && (
           <View style={styles.metricRow}>
-          <Ionicons name="time-outline" size={S(10.5)} color="#5da2ecff" />
+          <Ionicons name="time-outline" size={S(10)} color="#5da2ecff" />
             <Text style={styles.metricValue} allowFontScaling={false}>{(responseTimeValue ?? 120)} min</Text>
           </View>
         )}
@@ -560,13 +587,34 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
       {/* NOVO: Micro-Pill de Localização/Distância (Sutil e Compacto) */}
       {distanceLabel && (
         <View style={styles.distancePillSmall}>
-          <Ionicons name="location" size={S(11)} color="#5da2ecff" />
+          {/* Ícone de Localização no topo */}
+          <Ionicons name="location" size={S(15)} color="#5da2ecff" style={{ right: -22 }} />
+          
+          {/* NOVO: Valor e Unidade Juntos para maior clareza */}
           <Text style={styles.locationDistanceValue} numberOfLines={1} allowFontScaling={false}>
-            {distanceLabel.split(' ')[0]}
+            {/* Pegue o valor (ex: 6,3) e adicione 'km' ao lado. */}
+            {distanceLabel.split(' ')[0]} km 
           </Text>
-          <Text style={styles.locationDistanceUnit} numberOfLines={1} allowFontScaling={false}>
-            {distanceLabel.split(' ')[1] || 'km'}
-          </Text>
+          {/* NOVO: Badge animado flutuante para próximo horário (posição absolute no topo direito da imagem) */}
+          {formattedNextAvailable && (
+            <AnimatedReanimated.View 
+              style={[
+                styles.nextAvailableBadge, { transform: [{ scale: 1 }] }, 
+                // animatedPulseStyle removido: evita blur no texto do dia/hora
+                badgeVisibilityStyle  // Visibilidade: invisível 2s -> fade in 600ms -> visível 2s -> fade out 600ms
+              ]}
+            >
+              <View style={styles.nextAvailableCircle}>
+                <Ionicons name="calendar-outline" size={S(10)} color="#5da2ecff" style={styles.nextAvailableIconCalendar} />
+                <AnimatedText style={[styles.nextAvailableCircleDay, fadeTextStyle]}>
+                  {animatedDayLabel}
+                </AnimatedText>
+              </View>
+              <AnimatedText style={[styles.nextAvailableTimeBelow, fadeTextStyle]}>
+                {animatedTime}
+              </AnimatedText>
+            </AnimatedReanimated.View>
+          )}
         </View>
       )}
 
@@ -589,21 +637,21 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
             <Image source={avatarSource} style={styles.cardImage} />
             {/* SEL0 DE SEGURANÇA REFINADO */}
             <AnimatedPlusButtonGradient
-              colors={['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.38)']}
+              colors={['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.92)']}
               style={[styles.securityBadge, subtleTrembleAnimatedStyle]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <AnimatedReanimated.View style={[styles.reflectionOverlay, animatedReflectionStyle]}>
                 <LinearGradient
-                  colors={['transparent', 'rgba(172, 206, 246, 1)', 'transparent']}
+                  colors={['transparent', 'rgba(220, 228, 238, 1)', 'transparent']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={StyleSheet.absoluteFillObject}
                 />
               </AnimatedReanimated.View>
 
-              <Ionicons name="shield-checkmark" size={S(17)} color="#5da2ecff" />
+              <Ionicons name="shield-checkmark" size={S(15)} color="#5da2ecff" />
             </AnimatedPlusButtonGradient>
 
             {hasRating && (
@@ -615,31 +663,13 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                   style={styles.ratingBadgeIcon}
                 />
                 <Text style={styles.ratingBadgeText} allowFontScaling={false}>
-                  {typeof item.reviewCount === 'number' ? item.reviewCount : (Array.isArray(item.reviews) ? item.reviews.length : 0)}
+                  {/* AQUI É ONDE A MODIFICAÇÃO É APLICADA: */}
+                  {displayedReviewCount}
                 </Text>
               </View>
             )}
 
-            {/* NOVO: Badge animado flutuante para próximo horário (posição absolute no topo direito da imagem) */}
-              {formattedNextAvailable && (
-                <AnimatedReanimated.View 
-                  style={[
-                    styles.nextAvailableBadge, { transform: [{ scale: 1 }] }, 
-                    // animatedPulseStyle removido: evita blur no texto do dia/hora
-                    badgeVisibilityStyle  // Visibilidade: invisível 2s -> fade in 600ms -> visível 2s -> fade out 600ms
-                  ]}
-                >
-                  <View style={styles.nextAvailableCircle}>
-                    <Ionicons name="calendar-outline" size={S(10)} color="#5da2ecff" style={styles.nextAvailableIconCalendar} />
-                    <AnimatedText style={[styles.nextAvailableCircleDay, fadeTextStyle]}>
-                      {animatedDayLabel}
-                    </AnimatedText>
-                  </View>
-                  <AnimatedText style={[styles.nextAvailableTimeBelow, fadeTextStyle]}>
-                    {animatedTime}
-                  </AnimatedText>
-                </AnimatedReanimated.View>
-              )}
+           
           </View>
 
           <View style={styles.infoContainer}>
@@ -671,7 +701,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                 resizeMode="contain" 
               />
               <View style={styles.priceSection}>
-                <Text style={styles.priceLabel} allowFontScaling={false}>{t('pricing.from', { defaultValue: 'A partir de' })}</Text>
+                <Text style={styles.priceLabel} allowFontScaling={false}>{t('pricing.from', { defaultValue: '(Preço por hora)' })}</Text>
                 <View style={styles.priceBadge} onLayout={(e) => setPriceBadgeWidth(e.nativeEvent.layout.width)}>
                   {/* Reflexo animado sutil sobre o preço */}
                   <AnimatedPriceReflection
@@ -689,7 +719,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
                     return (
                       <Text
-                        style={[styles.priceValue, { fontSize: S(9.5), lineHeight: S(13), includeFontPadding: false }]}
+                        style={[styles.priceValue, { fontSize: S(10.5), lineHeight: S(13), includeFontPadding: false }]}
                         numberOfLines={1}
                         ellipsizeMode="clip"
                         allowFontScaling={false}
@@ -715,6 +745,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                     } as ProviderServiceOffering, t)}
                   </Text>
                 )}
+                
               </View>
             </View>
 
@@ -755,7 +786,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     </AnimatedText>
   </View>
 
-  {!hasRating && (
+  {!hasRating && ( // <-- SUBSTITUIR ESTE BLOCO (linhas 720-724)
     <View style={styles.ratingSection}>
       {renderStars(item.averageRating)}
     </View>
@@ -771,8 +802,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardWrapperWithDistance: { // NOVO ESTILO: Container pai para posicionamento absoluto
-    width: S(110),
-    height: S(158), // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
+    width: S(116),
+    height: S(163), // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
     marginRight: S(13),
     marginBottom: 6,
     marginTop: 8,
@@ -781,50 +812,63 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   animatedCardContainer: {
-    width: '100%', // Preenche o wrapper
-    height: '100%', // Preenche o wrapper
-    overflow: 'hidden',
-    // Margins removidos daqui e movidos para cardWrapperWithDistance
-    borderRightWidth: 1,
-    borderBottomWidth: 0.5,
+    width: '100%', // Preenche o wrapper
+    height: '100%', // Preenche o wrapper
+    overflow: 'hidden',
+    // Margins removidos daqui e movidos para cardWrapperWithDistance
     
-    borderLeftWidth: 1,
-    borderTopWidth: 1,
-    borderColor: '#d1d5db53',
-    borderRadius: 12,
-    borderTopStartRadius: 20, // Cantos 22
-    borderBottomStartRadius: 20,
-    borderTopEndRadius: 20, // Cantos 22
-    borderBottomEndRadius: 20,
-    borderBottomColor: '#d1d5db53',
-  },
+    // --- POLIMENTO APLICADO: SOMBRAS E BORDAS ---
+    ...AppShadows.card, // Aplicando a Sombra Confortável
+    
+    // Removendo bordas complexas e redundantes para o look clean
+    borderWidth: 0, 
+    borderColor: 'transparent',
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    
+    borderRadius: 20, // Cantos 20
+    borderTopStartRadius: 20, 
+    borderBottomStartRadius: 20,
+    borderTopEndRadius: 20,
+    borderBottomEndRadius: 20,
+  },
   // Distância: mesmo tamanho e posição do rating (ícone acima maior, km abaixo)
   distancePillSmall: {
     position: 'absolute',
-    top: 238,
-    right: 68,
+    top: 116,
+    right: 10,
     zIndex: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.17)',
-    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.42)', // Fundo levemente opaco
+    flexDirection: 'column', // Mantido o seu layout de coluna
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0)',
-    overflow: 'hidden',
+    paddingHorizontal: S(30),
+    paddingVertical: S(4),
+    borderRadius: S(0), // Borda mais arredondada
+    
+    // Remover Bordas
+    borderWidth: 0, 
+    borderColor: 'transparent',
+       borderTopStartRadius: 20, 
+    borderBottomStartRadius: 20,
+    borderTopEndRadius: 20,
+    borderBottomEndRadius: 20,
 
-    shadowColor: '#5da2ec',
+    // Sombra Ultra-Suave (Melhor para premium)
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 3,
-  },
+    shadowOpacity: 0.08, // Opacidade baixa
+    shadowRadius: 3,
+    elevation: 2,
+    overflow: 'hidden',
+},
   distancePillSmallText: {
     marginTop: 2,
-    fontSize: S(6),
+    fontSize: S(8),
     fontWeight: '600',
+   
     color: '#3F4A5A',
   },
   distanceIconCircle: {
@@ -840,19 +884,20 @@ const styles = StyleSheet.create({
   // Textos empilhados do pill de distância
   locationDistanceValue: {
     fontSize: S(9),
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#3F4A5A',
     lineHeight: S(11),
     marginLeft: 2,
+     right: -19,
     marginTop: 1,
     textAlign: 'center',
   },
   locationDistanceUnit: {
-    fontSize: S(7.5),
+    fontSize: S(9),
     fontWeight: '600',
     color: '#6B7380',
     lineHeight: S(9),
-    marginTop: 2,
+    marginTop: 3,
     marginLeft: 2,
     textAlign: 'center',
   },
@@ -865,7 +910,7 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     width: '100%',
-    height: S(65), // Mantido: 75px (sem mudança, espaço extra vem do height total)
+    height: S(62), // Mantido: 75px (sem mudança, espaço extra vem do height total)
     backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
@@ -874,14 +919,15 @@ const styles = StyleSheet.create({
   // NOVO: Estilos para o badge animado do horário (background mais opaco para evitar transparência no card)
   nextAvailableBadge: {
     position: 'absolute',
-    top: 115,                // distância consistente do topo
-    right: 12,              // mesma distância do topo para margem lateral
-    flexDirection: 'row',
+    top: 3, // Ajustado para posicionar no canto superior direito do distancePillSmall
+    right: 45, // Ajustado para posicionar no canto superior direito do distancePillSmall
+    flexDirection: 'column', // ícone em cima, texto embaixo
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
     paddingHorizontal: 0,
     paddingVertical: 0,
+    
     borderRadius: 8,
     shadowColor: '#5da2ec',
     shadowOpacity: 0.25,
@@ -902,6 +948,7 @@ const styles = StyleSheet.create({
   justifyContent: 'center',
   flexDirection: 'row',
   paddingHorizontal: 2,
+  
   // sem sombra/elevação para não criar fundo aparente
   shadowColor: 'transparent',
   shadowOpacity: 0,
@@ -920,7 +967,7 @@ const styles = StyleSheet.create({
   letterSpacing: 0.2,
 },
  nextAvailableTimeBelow: {
-  fontSize: S(8.5),
+  fontSize: S(9.5),
   fontWeight: '600',
   color: '#77808A', // mesma cor do price (cinza escuro sutil)
   marginTop: 0,
@@ -928,14 +975,15 @@ const styles = StyleSheet.create({
  },
   ratingBadge: {
     position: 'absolute',
-    top: 4,          // canto superior direito da foto
+    top: 6,          // canto superior direito da foto
     right: 5,
-    flexDirection: 'column', // ícone em cima, número embaixo
+    flexDirection: 'row', // ícone em cima, número embaixo
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.65)', // clean premium glass
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    backgroundColor: '#f1f2f1', // clean premium glass  
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    gap: 2,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(226, 232, 240, 0.9)', // slate-200
@@ -995,8 +1043,10 @@ const styles = StyleSheet.create({
   providerNameContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    left: 6,
-    top: 4,
+    left: 12
+    
+    ,
+    top: 6,
     marginBottom: 2, // Reduzido para dar espaço ao pill abaixo
   },
   providerName: {
@@ -1088,8 +1138,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 0, // REDUZIDO: De -2 para 0 (compactar)
     marginBottom: 2, // REDUZIDO: Adicionado pequeno espaço para ratings
-    left: 8,
-    bottom: 75, // REMOVIDO: Posicionamentos absolutos para fluxo natural
+    left: 14,
+    bottom: 68, // REMOVIDO: Posicionamentos absolutos para fluxo natural
   },
   metricRow: {
     flexDirection: 'row',
@@ -1098,7 +1148,7 @@ const styles = StyleSheet.create({
     marginLeft: -3,
   },
   metricIcon: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: 'bold',
     
   },
@@ -1110,7 +1160,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   metricValue: {
-    fontSize: S(8.57), // 5% menor que 9.025
+    fontSize: S(9), // 5% menor que 9.025
     fontFamily: Platform.OS === 'android' ? 'Montserrat-Regular' : undefined,
     color: '#6B7380', // contraste leve para métricas
     marginLeft: 1,
@@ -1118,14 +1168,14 @@ const styles = StyleSheet.create({
   metricSeparator: {
     fontSize: 10,
     color: '#6C757D',
-    marginHorizontal: 0,
+    marginHorizontal: 50,
   },
   // NOVO: Row para o logo e o container de preço (logo à esquerda do priceSection)
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    left: 30,
-    top: 21,
+    left: 47,
+    top: 14,
     marginBottom: 4,
     marginTop: 2,
     position: 'relative',
@@ -1155,11 +1205,11 @@ const styles = StyleSheet.create({
  priceBadge: {
   backgroundColor: 'rgba(126,174,224,0.12)',
   borderRadius: 10,
-  width: S(72),
-  paddingHorizontal: 8,  // AUMENTADO: De 14 para 18 para garantir espaço completo para "R$ 000,00 /h" sem corte
+  width: S(60),
+  paddingHorizontal: 2,  // AUMENTADO: De 14 para 18 para garantir espaço completo para "R$ 000,00 /h" sem corte
   paddingVertical: 4,
   marginTop: -2,
-  right: 5,
+  right: 555,
   
 }
 ,
@@ -1173,17 +1223,17 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   priceLabel: {
-    fontSize: S(10.5), // REDUZIDO: De 12 para 11px
+    fontSize: S(9), // REDUZIDO: De 12 para 11px
     color: '#6C757D',
-    right: -128,
-    top: 16,
+    right: 148,
+    top: 28,
     marginBottom: 0, // REDUZIDO: Eliminar margin para compactar
   },
   priceValue: {
-    fontSize: S(9), // Preço "A partir de" (16/bold) - mantido bold para destaque
+    fontSize: S(15), // Preço "A partir de" (16/bold) - mantido bold para destaque
     fontWeight: 'bold',
     fontFamily: Platform.OS === 'android' ? 'Montserrat-Regular' : undefined,
-    left: 0,
+    left: 100,
     color: '#77808A', // cinza escuro sutil (premium, um pouco mais claro)
     includeFontPadding: false,
 
@@ -1233,10 +1283,10 @@ const styles = StyleSheet.create({
 
   securityBadge: {
     position: 'absolute',
-    width: 26,
-    height: 26,
-    bottom: 118,  // fixa no canto inferior direito da foto
-    right: 10,
+    width: 23,
+    height: 23,
+    bottom: -17,  // fixa no canto inferior direito da foto
+    right: 15,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1297,5 +1347,3 @@ scheduleIcon: {
 });
 
 export default RecomendacaoCard;
-
-
