@@ -12,7 +12,7 @@ const addDays = (date: Date, days: number): Date => {
   return result;
 };
 
-// Helper para upsert de endereços com lat/lon
+// Helper para upsert de endere�os com lat/lon
 async function upsertAddress(addressData: {
   cep: string;
   street: string;
@@ -119,7 +119,7 @@ async function generateBulkReviews(providerUser: any, clientUser: any, residenti
         providerServiceId: providerService.id,
         scheduledDate: pastDate,
         scheduledTime: ['09:00', '10:00', '14:00', '16:00'][Math.floor(Math.random() * 4)],
-        status: BookingStatus.COMPLETED,
+        status: BookingStatus.FINISHED,
         totalPrice: new Prisma.Decimal((150 + Math.floor(Math.random() * 100)).toFixed(2)), // Variação de preço
         addressId: address.id,
         notes: `Avaliação em massa ${i} para ${providerUser.fullName}.`,
@@ -131,7 +131,7 @@ async function generateBulkReviews(providerUser: any, clientUser: any, residenti
         providerServiceId: providerService.id,
         scheduledDate: pastDate,
         scheduledTime: ['09:00', '10:00', '14:00', '16:00'][Math.floor(Math.random() * 4)],
-        status: BookingStatus.COMPLETED,
+        status: BookingStatus.FINISHED,
         totalPrice: new Prisma.Decimal((150 + Math.floor(Math.random() * 100)).toFixed(2)),
         notes: `Avaliação em massa ${i} para ${providerUser.fullName}.`,
         addressId: address.id,
@@ -332,7 +332,7 @@ export async function main() {
           verificationStatus: VerificationStatus.APPROVED,
           acceptanceRate: 94,
           averageResponseTime: 25, // Em minutos, conforme schema.prisma
-          bio: 'Provedora experiente e dedicada a um serviço de qualidade.',
+          bio: 'Provedora experiente e dedicada a um servi�o de qualidade.',
           pixKey: 'carolina.pix@email.com',
           pixKeyMasked: 'caro****@email.com',
           address: { connect: { id: providerAddress.id } },
@@ -463,7 +463,7 @@ export async function main() {
           verificationStatus: VerificationStatus.APPROVED,
           acceptanceRate: 94,
           averageResponseTime: 25,
-          bio: 'Especialista em limpeza profunda e organização de ambientes.',
+          bio: 'Especialista em limpeza profunda e organiza��o de ambientes.',
           pixKey: 'joana.pix@email.com',
           pixKeyMasked: 'joan****@email.com',
           address: { connect: { id: providerAddress3.id } },
@@ -562,7 +562,7 @@ export async function main() {
   });
   console.log(`Usuário Cliente 'Cliente Joana Reviewer' (${clientUserJoanaReviewer.email}) criado/atualizado.`);
 
-  // Adicional: Clientes reviewers para outros provedores (para geração de bulk reviews)
+  // Adicional: Clientes reviewers para outros provedores (para gera��o de bulk reviews)
   const clientCarolineReviewerAddress = await upsertAddress({
     cep: '01001003',
     street: 'Rua Caroline Reviewer',
@@ -592,14 +592,14 @@ export async function main() {
     },
     include: { client: true },
   });
-  console.log(`Usuário Cliente 'Cliente Caroline Reviewer' criado/atualizado.`);
+  console.log(`Usu�rio Cliente 'Cliente Caroline Reviewer' criado/atualizado.`);
 
   const clientMariaReviewerAddress = await upsertAddress({
     cep: '01001004',
     street: 'Rua Maria Reviewer',
     number: '70',
     neighborhood: 'Centro',
-    city: 'São Paulo',
+    city: 'S�o Paulo',
     state: 'SP',
     latitude: -23.542,
     longitude: -46.622,
@@ -623,14 +623,14 @@ export async function main() {
     },
     include: { client: true },
   });
-  console.log(`Usuário Cliente 'Cliente Maria Reviewer' criado/atualizado.`);
+  console.log(`Usu�rio Cliente 'Cliente Maria Reviewer' criado/atualizado.`);
 
   const clientAnaReviewerAddress = await upsertAddress({
     cep: '01001005',
     street: 'Rua Ana Reviewer',
     number: '80',
     neighborhood: 'Centro',
-    city: 'São Paulo',
+    city: 'S�o Paulo',
     state: 'SP',
     latitude: -23.543,
     longitude: -46.623,
@@ -654,11 +654,11 @@ export async function main() {
     },
     include: { client: true },
   });
-  console.log(`Usuário Cliente 'Cliente Ana Reviewer' criado/atualizado.`);
+  console.log(`Usu�rio Cliente 'Cliente Ana Reviewer' criado/atualizado.`);
 
   // -----------------------------------------------------------------------------
   // 2) REFERRAL CODE (para o indicador)
-  console.log('Criando/Atualizando código de indicação...');
+ console.log('Criando/Atualizando código de indicação...');
 
   const referralCode = await prisma.referral.upsert({
     where: { referredUserId: referredUser.id },
@@ -747,843 +747,844 @@ export async function main() {
       durationMinutes: 180,
     },
   });
-  console.log(
-    `Oferta de serviço para ${providerUser.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
-  );
+console.log( // <-- CORRIGIDO
+    `Oferta de serviço para ${providerUser.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
+  );
+  
 
-  // Caroline Silva (HOURLY: Comercial)
-  const commercialService = createdServices['Comercial'];
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser.provider.id,
-        serviceId: commercialService.id,
-        pricingType: PricingType.HOURLY,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(commercialService.price), // 'price' é obrigatório conforme regra de negócio, usando o preço base do serviço
-      pricePerHour: new Prisma.Decimal(55.0),
-      pricePerSquareMeter: null, // Não aplicável para HOURLY
-      pricePerRoom: null, // Não aplicável para HOURLY
-      pricingType: PricingType.HOURLY,
-      description: 'Limpeza comercial por hora',
-      durationMinutes: 60, // Exemplo de duração para uma hora
-    },
-    create: {
-      providerId: providerUser.provider.id,
-      serviceId: commercialService.id,
-      pricingType: PricingType.HOURLY,
-      price: new Prisma.Decimal(commercialService.price), // 'price' é obrigatório conforme regra de negócio, usando o preço base do serviço
-      pricePerHour: new Prisma.Decimal(55.0),
-      description: 'Limpeza comercial por hora',
-      durationMinutes: 60,
-    },
-  });
-  console.log(
-    `Oferta de serviço para ${providerUser.fullName} (${commercialService.name} - HOURLY) criada/atualizada.`,
-  );
+  // Caroline Silva (HOURLY: Comercial)
+  const commercialService = createdServices['Comercial'];
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser.provider.id,
+        serviceId: commercialService.id,
+        pricingType: PricingType.HOURLY,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(commercialService.price), // 'price' é obrigatório conforme regra de negócio, usando o preço base do serviço
+      pricePerHour: new Prisma.Decimal(55.0),
+      pricePerSquareMeter: null, // Não aplicável para HOURLY
+      pricePerRoom: null, // Não aplicável para HOURLY
+      pricingType: PricingType.HOURLY,
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60, // Exemplo de duração para uma hora
+    },
+    create: {
+      providerId: providerUser.provider.id,
+      serviceId: commercialService.id,
+      pricingType: PricingType.HOURLY,
+      price: new Prisma.Decimal(commercialService.price), // 'price' é obrigatório conforme regra de negócio, usando o preço base do serviço
+      pricePerHour: new Prisma.Decimal(55.0),
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser.fullName} (${commercialService.name} - HOURLY) criada/atualizada.`,
+  );
 
-  // Maria (FIXED_PRICE: Residencial)
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser2.provider.id,
-        serviceId: residentialCleaningService.id,
-        pricingType: PricingType.FIXED_PRICE,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(170.0),
-      pricePerHour: null,
-      pricePerSquareMeter: null,
-      pricePerRoom: null,
-      pricingType: PricingType.FIXED_PRICE,
-      description: 'Limpeza residencial padrão',
-      durationMinutes: 160,
-    },
-    create: {
-      providerId: providerUser2.provider.id,
-      serviceId: residentialCleaningService.id,
-      pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(170.0), // 'price' é obrigatório conforme regra de negócio
-      description: 'Limpeza residencial padrão',
-      durationMinutes: 160,
-    },
-  });
-  console.log(
-    `Oferta de serviço para ${providerUser2.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
-  );
+  // Maria (FIXED_PRICE: Residencial)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser2.provider.id,
+        serviceId: residentialCleaningService.id,
+        pricingType: PricingType.FIXED_PRICE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(170.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza residencial padrão',
+      durationMinutes: 160,
+    },
+    create: {
+      providerId: providerUser2.provider.id,
+      serviceId: residentialCleaningService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(170.0), // 'price' é obrigatório conforme regra de negócio
+      description: 'Limpeza residencial padrão',
+      durationMinutes: 160,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser2.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
+  );
 
-  // Maria (BY_SIZE: Limpeza por M²)
-  const cleaningBySqMeterService = createdServices['Limpeza por M²'];
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser2.provider.id,
-        serviceId: cleaningBySqMeterService.id,
-        pricingType: PricingType.BY_SIZE,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
-      pricePerHour: null, // Não aplicável para BY_SIZE
-      pricePerSquareMeter: new Prisma.Decimal(6.5),
-      pricePerRoom: null, // Não aplicável para BY_SIZE
-      pricingType: PricingType.BY_SIZE,
-      description: 'Limpeza detalhada por metro quadrado',
-      durationMinutes: null, // Duração pode não ser fixa para BY_SIZE
-    },
-    create: {
-      providerId: providerUser2.provider.id,
-      serviceId: cleaningBySqMeterService.id,
-      pricingType: PricingType.BY_SIZE,
-      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
-      pricePerSquareMeter: new Prisma.Decimal(6.5),
-      description: 'Limpeza detalhada por metro quadrado',
-      durationMinutes: null,
-    },
-  });
-  console.log(
-    `Oferta de serviço para ${providerUser2.fullName} (${cleaningBySqMeterService.name} - BY_SIZE) criada/atualizada.`,
-  );
+  // Maria (BY_SIZE: Limpeza por M²)
+  const cleaningBySqMeterService = createdServices['Limpeza por M²'];
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser2.provider.id,
+        serviceId: cleaningBySqMeterService.id,
+        pricingType: PricingType.BY_SIZE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
+      pricePerHour: null, // Não aplicável para BY_SIZE
+      pricePerSquareMeter: new Prisma.Decimal(6.5),
+      pricePerRoom: null, // Não aplicável para BY_SIZE
+      pricingType: PricingType.BY_SIZE,
+      description: 'Limpeza detalhada por metro quadrado',
+      durationMinutes: null, // Duração pode não ser fixa para BY_SIZE
+    },
+    create: {
+      providerId: providerUser2.provider.id,
+      serviceId: cleaningBySqMeterService.id,
+      pricingType: PricingType.BY_SIZE,
+      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
+      pricePerSquareMeter: new Prisma.Decimal(6.5),
+      description: 'Limpeza detalhada por metro quadrado',
+      durationMinutes: null,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser2.fullName} (${cleaningBySqMeterService.name} - BY_SIZE) criada/atualizada.`,
+  );
 
-  // Joana (FIXED_PRICE: Residencial)
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser3.provider.id,
-        serviceId: residentialCleaningService.id,
-        pricingType: PricingType.FIXED_PRICE,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(190.0),
-      pricePerHour: null,
-      pricePerSquareMeter: null,
-      pricePerRoom: null,
-      pricingType: PricingType.FIXED_PRICE,
-      description: 'Limpeza residencial premium',
-      durationMinutes: 200,
-    },
-    create: {
-      providerId: providerUser3.provider.id,
-      serviceId: residentialCleaningService.id,
-      pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(190.0), // 'price' é obrigatório conforme regra de negócio
-      description: 'Limpeza residencial premium',
-      durationMinutes: 200,
-    },
-  });
-  console.log(
-    `Oferta de serviço para ${providerUser3.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
-  );
+  // Joana (FIXED_PRICE: Residencial)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser3.provider.id,
+        serviceId: residentialCleaningService.id,
+        pricingType: PricingType.FIXED_PRICE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(190.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza residencial premium',
+      durationMinutes: 200,
+    },
+    create: {
+      providerId: providerUser3.provider.id,
+      serviceId: residentialCleaningService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(190.0), // 'price' é obrigatório conforme regra de negócio
+      description: 'Limpeza residencial premium',
+      durationMinutes: 200,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser3.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
+  );
 
-  // Joana (BY_SIZE: Limpeza por Cômodo)
-  const cleaningByRoomService = createdServices['Limpeza por Cômodo'];
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser3.provider.id,
-        serviceId: cleaningByRoomService.id,
-        pricingType: PricingType.BY_SIZE,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
-      pricePerHour: null, // Não aplicável para BY_SIZE
-      pricePerSquareMeter: null, // Não aplicável para BY_SIZE
-      pricePerRoom: new Prisma.Decimal(90.0),
-      pricingType: PricingType.BY_SIZE,
-      description: 'Limpeza por cômodo, ideal para áreas específicas',
-      durationMinutes: null, // Duração pode não ser fixa para BY_SIZE
-    },
-    create: {
-      providerId: providerUser3.provider.id,
-      serviceId: cleaningByRoomService.id,
-      pricingType: PricingType.BY_SIZE,
-      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
-      pricePerRoom: new Prisma.Decimal(90.0),
-      description: 'Limpeza por cômodo, ideal para áreas específicas',
-      durationMinutes: null,
-    },
-  });
-  console.log(
-    `Oferta de serviço para ${providerUser3.fullName} (${cleaningByRoomService.name} - BY_SIZE) criada/atualizada.`,
-  );
+  // Joana (BY_SIZE: Limpeza por Cômodo)
+  const cleaningByRoomService = createdServices['Limpeza por Cômodo'];
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser3.provider.id,
+        serviceId: cleaningByRoomService.id,
+        pricingType: PricingType.BY_SIZE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
+      pricePerHour: null, // Não aplicável para BY_SIZE
+      pricePerSquareMeter: null, // Não aplicável para BY_SIZE
+      pricePerRoom: new Prisma.Decimal(90.0),
+      pricingType: PricingType.BY_SIZE,
+      description: 'Limpeza por cômodo, ideal para áreas específicas',
+      durationMinutes: null, // Duração pode não ser fixa para BY_SIZE
+    },
+    create: {
+      providerId: providerUser3.provider.id,
+      serviceId: cleaningByRoomService.id,
+      pricingType: PricingType.BY_SIZE,
+      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
+      pricePerRoom: new Prisma.Decimal(90.0),
+      description: 'Limpeza por cômodo, ideal para áreas específicas',
+      durationMinutes: null,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser3.fullName} (${cleaningByRoomService.name} - BY_SIZE) criada/atualizada.`,
+  );
 
-  // Ana (FIXED_PRICE: Residencial)
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser4.provider.id,
-        serviceId: residentialCleaningService.id,
-        pricingType: PricingType.FIXED_PRICE,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(165.0),
-      pricePerHour: null,
-      pricePerSquareMeter: null,
-      pricePerRoom: null,
-      pricingType: PricingType.FIXED_PRICE,
-      description: 'Limpeza residencial básica',
-      durationMinutes: 150,
-    },
-    create: {
-      providerId: providerUser4.provider.id,
-      serviceId: residentialCleaningService.id,
-      pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(165.0), // 'price' é obrigatório conforme regra de negócio
-      description: 'Limpeza residencial básica',
-      durationMinutes: 150,
-    },
-  });
-  console.log(
-    `Oferta de serviço para ${providerUser4.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
-  );
+  // Ana (FIXED_PRICE: Residencial)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser4.provider.id,
+        serviceId: residentialCleaningService.id,
+        pricingType: PricingType.FIXED_PRICE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(165.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza residencial básica',
+      durationMinutes: 150,
+    },
+    create: {
+      providerId: providerUser4.provider.id,
+      serviceId: residentialCleaningService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(165.0), // 'price' é obrigatório conforme regra de negócio
+      description: 'Limpeza residencial básica',
+      durationMinutes: 150,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser4.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
+  );
 
-  // Garantir que TODAS as prestadoras atendam: Residencial, Comercial e Pós-Obra
-  // Sem alterar as ofertas já existentes (apenas upsert dos que faltarem)
-  const postConstructionService = createdServices['Pós-Obra'];
+  // Garantir que TODAS as prestadoras atendam: Residencial, Comercial e Pós-Obra
+  // Sem alterar as ofertas já existentes (apenas upsert dos que faltarem)
+  const postConstructionService = createdServices['Pós-Obra'];
 
-  // Caroline: adicionar Pós-Obra (FIXED_PRICE)
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser.provider.id,
-        serviceId: postConstructionService.id,
-        pricingType: PricingType.FIXED_PRICE,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(300.0),
-      pricePerHour: null,
-      pricePerSquareMeter: null,
-      pricePerRoom: null,
-      pricingType: PricingType.FIXED_PRICE,
-      description: 'Limpeza pós-obra detalhada',
-      durationMinutes: 240,
-    },
-    create: {
-      providerId: providerUser.provider.id,
-      serviceId: postConstructionService.id,
-      pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(300.0),
-      description: 'Limpeza pós-obra detalhada',
-      durationMinutes: 240,
-    },
-  });
-  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser.fullName} criada/atualizada.`);
+  // Caroline: adicionar Pós-Obra (FIXED_PRICE)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser.provider.id,
+        serviceId: postConstructionService.id,
+        pricingType: PricingType.FIXED_PRICE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(300.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+    create: {
+      providerId: providerUser.provider.id,
+      serviceId: postConstructionService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(300.0),
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+  });
+  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser.fullName} criada/atualizada.`);
 
-  // Maria: garantir Comercial (HOURLY) e Pós-Obra (FIXED_PRICE)
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser2.provider.id,
-        serviceId: commercialService.id,
-        pricingType: PricingType.HOURLY,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(commercialService.price),
-      pricePerHour: new Prisma.Decimal(55.0),
-      pricePerSquareMeter: null,
-      pricePerRoom: null,
-      pricingType: PricingType.HOURLY,
-      description: 'Limpeza comercial por hora',
-      durationMinutes: 60,
-    },
-    create: {
-      providerId: providerUser2.provider.id,
-      serviceId: commercialService.id,
-      pricingType: PricingType.HOURLY,
-      price: new Prisma.Decimal(commercialService.price),
-      pricePerHour: new Prisma.Decimal(55.0),
-      description: 'Limpeza comercial por hora',
-      durationMinutes: 60,
-    },
-  });
-  console.log(`Oferta de serviço Comercial (HOURLY) para ${providerUser2.fullName} criada/atualizada.`);
+  // Maria: garantir Comercial (HOURLY) e Pós-Obra (FIXED_PRICE)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser2.provider.id,
+        serviceId: commercialService.id,
+        pricingType: PricingType.HOURLY,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.HOURLY,
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+    create: {
+      providerId: providerUser2.provider.id,
+      serviceId: commercialService.id,
+      pricingType: PricingType.HOURLY,
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+  });
+  console.log(`Oferta de serviço Comercial (HOURLY) para ${providerUser2.fullName} criada/atualizada.`);
 
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser2.provider.id,
-        serviceId: postConstructionService.id,
-        pricingType: PricingType.FIXED_PRICE,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(300.0),
-      pricePerHour: null,
-      pricePerSquareMeter: null,
-      pricePerRoom: null,
-      pricingType: PricingType.FIXED_PRICE,
-      description: 'Limpeza pós-obra detalhada',
-      durationMinutes: 240,
-    },
-    create: {
-      providerId: providerUser2.provider.id,
-      serviceId: postConstructionService.id,
-      pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(300.0),
-      description: 'Limpeza pós-obra detalhada',
-      durationMinutes: 240,
-    },
-  });
-  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser2.fullName} criada/atualizada.`);
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser2.provider.id,
+        serviceId: postConstructionService.id,
+        pricingType: PricingType.FIXED_PRICE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(300.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+    create: {
+      providerId: providerUser2.provider.id,
+      serviceId: postConstructionService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(300.0),
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+  });
+  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser2.fullName} criada/atualizada.`);
 
-  // Joana: garantir Comercial (HOURLY) e Pós-Obra (FIXED_PRICE)
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser3.provider.id,
-        serviceId: commercialService.id,
-        pricingType: PricingType.HOURLY,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(commercialService.price),
-      pricePerHour: new Prisma.Decimal(55.0),
-      pricePerSquareMeter: null,
-      pricePerRoom: null,
-      pricingType: PricingType.HOURLY,
-      description: 'Limpeza comercial por hora',
-      durationMinutes: 60,
-    },
-    create: {
-      providerId: providerUser3.provider.id,
-      serviceId: commercialService.id,
-      pricingType: PricingType.HOURLY,
-      price: new Prisma.Decimal(commercialService.price),
-      pricePerHour: new Prisma.Decimal(55.0),
-      description: 'Limpeza comercial por hora',
-      durationMinutes: 60,
-    },
-  });
-  console.log(`Oferta de serviço Comercial (HOURLY) para ${providerUser3.fullName} criada/atualizada.`);
+  // Joana: garantir Comercial (HOURLY) e Pós-Obra (FIXED_PRICE)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser3.provider.id,
+        serviceId: commercialService.id,
+        pricingType: PricingType.HOURLY,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.HOURLY,
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+    create: {
+      providerId: providerUser3.provider.id,
+      serviceId: commercialService.id,
+      pricingType: PricingType.HOURLY,
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+  });
+  console.log(`Oferta de serviço Comercial (HOURLY) para ${providerUser3.fullName} criada/atualizada.`);
 
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser3.provider.id,
-        serviceId: postConstructionService.id,
-        pricingType: PricingType.FIXED_PRICE,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(300.0),
-      pricePerHour: null,
-      pricePerSquareMeter: null,
-      pricePerRoom: null,
-      pricingType: PricingType.FIXED_PRICE,
-      description: 'Limpeza pós-obra detalhada',
-      durationMinutes: 240,
-    },
-    create: {
-      providerId: providerUser3.provider.id,
-      serviceId: postConstructionService.id,
-      pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(300.0),
-      description: 'Limpeza pós-obra detalhada',
-      durationMinutes: 240,
-    },
-  });
-  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser3.fullName} criada/atualizada.`);
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser3.provider.id,
+        serviceId: postConstructionService.id,
+        pricingType: PricingType.FIXED_PRICE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(300.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+    create: {
+      providerId: providerUser3.provider.id,
+      serviceId: postConstructionService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(300.0),
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+  });
+  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser3.fullName} criada/atualizada.`);
 
-  // Ana: garantir Comercial (HOURLY) e Pós-Obra (FIXED_PRICE)
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser4.provider.id,
-        serviceId: commercialService.id,
-        pricingType: PricingType.HOURLY,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(commercialService.price),
-      pricePerHour: new Prisma.Decimal(55.0),
-      pricePerSquareMeter: null,
-      pricePerRoom: null,
-      pricingType: PricingType.HOURLY,
-      description: 'Limpeza comercial por hora',
-      durationMinutes: 60,
-    },
-    create: {
-      providerId: providerUser4.provider.id,
-      serviceId: commercialService.id,
-      pricingType: PricingType.HOURLY,
-      price: new Prisma.Decimal(commercialService.price),
-      pricePerHour: new Prisma.Decimal(55.0),
-      description: 'Limpeza comercial por hora',
-      durationMinutes: 60,
-    },
-  });
-  console.log(`Oferta de serviço Comercial (HOURLY) para ${providerUser4.fullName} criada/atualizada.`);
+  // Ana: garantir Comercial (HOURLY) e Pós-Obra (FIXED_PRICE)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser4.provider.id,
+        serviceId: commercialService.id,
+        pricingType: PricingType.HOURLY,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.HOURLY,
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+    create: {
+      providerId: providerUser4.provider.id,
+      serviceId: commercialService.id,
+      pricingType: PricingType.HOURLY,
+      price: new Prisma.Decimal(commercialService.price),
+      pricePerHour: new Prisma.Decimal(55.0),
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+  });
+  console.log(`Oferta de serviço Comercial (HOURLY) para ${providerUser4.fullName} criada/atualizada.`);
 
-  await prisma.providerService.upsert({
-    where: {
-      providerId_serviceId_pricingType: {
-        providerId: providerUser4.provider.id,
-        serviceId: postConstructionService.id,
-        pricingType: PricingType.FIXED_PRICE,
-      },
-    },
-    update: {
-      price: new Prisma.Decimal(300.0),
-      pricePerHour: null,
-      pricePerSquareMeter: null,
-      pricePerRoom: null,
-      pricingType: PricingType.FIXED_PRICE,
-      description: 'Limpeza pós-obra detalhada',
-      durationMinutes: 240,
-    },
-    create: {
-      providerId: providerUser4.provider.id,
-      serviceId: postConstructionService.id,
-      pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(300.0),
-      description: 'Limpeza pós-obra detalhada',
-      durationMinutes: 240,
-    },
-  });
-  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser4.fullName} criada/atualizada.`);
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser4.provider.id,
+        serviceId: postConstructionService.id,
+        pricingType: PricingType.FIXED_PRICE,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(300.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+    create: {
+      providerId: providerUser4.provider.id,
+      serviceId: postConstructionService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(300.0),
+      description: 'Limpeza pós-obra detalhada',
+      durationMinutes: 240,
+    },
+  });
+  console.log(`Oferta de serviço Pós-Obra (FIXED_PRICE) para ${providerUser4.fullName} criada/atualizada.`);
 
-  // Disponibilidade semanal do provedor existente (exemplo: seg/qua/sex 09:00-12:00)
-  console.log('Criando/Atualizando disponibilidade do provedor...');
-  const weekdays = [1, 3, 5]; // 1 = Segunda, 3 = Quarta, 5 = Sexta
-  for (const wd of weekdays) {
-    const existingAvailability = await prisma.availability.findFirst({
-      where: {
-        providerId: providerUser.provider.id,
-        dayOfWeek: wd,
-      },
-    });
+  // Disponibilidade semanal do provedor existente (exemplo: seg/qua/sex 09:00-12:00)
+  console.log('Criando/Atualizando disponibilidade do provedor...');
+  const weekdays = [1, 3, 5]; // 1 = Segunda, 3 = Quarta, 5 = Sexta
+  for (const wd of weekdays) {
+    const existingAvailability = await prisma.availability.findFirst({
+      where: {
+        providerId: providerUser.provider.id,
+        dayOfWeek: wd,
+      },
+    });
 
-    if (existingAvailability) {
-      await prisma.availability.update({
-        where: { id: existingAvailability.id },
-        data: {
-          startTime: '09:00',
-          endTime: '18:00', // MODIFICAÇÃO: Estendendo o horário disponível para Carolina (de 12:00 para 18:00)
-          isAvailable: true,
-        },
-      });
-    } else {
-      await prisma.availability.create({
-        data: {
-          providerId: providerUser.provider.id,
-          dayOfWeek: wd,
-          startTime: '09:00',
-          endTime: '18:00', // MODIFICAÇÃO: Estendendo o horário disponível para Carolina (de 12:00 para 18:00)
-          isAvailable: true,
-        },
-      });
-    }
-  }
-  console.log(`Disponibilidade para ${providerUser.fullName} criada/atualizada.`);
+    if (existingAvailability) {
+      await prisma.availability.update({
+        where: { id: existingAvailability.id },
+        data: {
+          startTime: '09:00',
+          endTime: '18:00', // MODIFICAÇÃO: Estendendo o horário disponível para Carolina (de 12:00 para 18:00)
+          isAvailable: true,
+        },
+      });
+    } else {
+      await prisma.availability.create({
+        data: {
+          providerId: providerUser.provider.id,
+          dayOfWeek: wd,
+          startTime: '09:00',
+          endTime: '18:00', // MODIFICAÇÃO: Estendendo o horário disponível para Carolina (de 12:00 para 18:00)
+          isAvailable: true,
+        },
+      });
+    }
+  }
+  console.log(`Disponibilidade para ${providerUser.fullName} criada/atualizada.`);
 
-  // Adicionando mais dias para Carolina
-  const additionalWeekdaysForCaroline = [2, 4, 6, 7]; // Terça, Quinta, Sábado, Domingo
-  for (const wd of additionalWeekdaysForCaroline) {
-    const existingAvailability = await prisma.availability.findFirst({
-      where: {
-        providerId: providerUser.provider.id,
-        dayOfWeek: wd,
-      },
-    });
+  // Adicionando mais dias para Carolina
+  const additionalWeekdaysForCaroline = [2, 4, 6, 7]; // Terça, Quinta, Sábado, Domingo
+  for (const wd of additionalWeekdaysForCaroline) {
+    const existingAvailability = await prisma.availability.findFirst({
+      where: {
+        providerId: providerUser.provider.id,
+        dayOfWeek: wd,
+      },
+    });
 
-    if (existingAvailability) {
-      await prisma.availability.update({
-        where: { id: existingAvailability.id },
-        data: {
-          startTime: '09:00',
-          endTime: '18:00', // Horário estendido
-          isAvailable: true,
-        },
-      });
-    } else {
-      await prisma.availability.create({
-        data: {
-          providerId: providerUser.provider.id,
-          dayOfWeek: wd,
-          startTime: '09:00',
-          endTime: '18:00', // Horário estendido
-          isAvailable: true,
-        },
-      });
-    }
-  }
-  console.log(`Disponibilidade adicional para ${providerUser.fullName} (mais dias) criada/atualizada.`);
+    if (existingAvailability) {
+      await prisma.availability.update({
+        where: { id: existingAvailability.id },
+        data: {
+          startTime: '09:00',
+          endTime: '18:00', // Horário estendido
+          isAvailable: true,
+        },
+      });
+    } else {
+      await prisma.availability.create({
+        data: {
+          providerId: providerUser.provider.id,
+          dayOfWeek: wd,
+          startTime: '09:00',
+          endTime: '18:00', // Horário estendido
+          isAvailable: true,
+        },
+      });
+    }
+  }
+  console.log(`Disponibilidade adicional para ${providerUser.fullName} (mais dias) criada/atualizada.`);
 
-  // Disponibilidade para NEW PROVIDER 1: Maria
-  const weekdays2 = [2, 4]; // 2 = Terça, 4 = Quinta
-  for (const wd of weekdays2) {
-    const existingAvailability = await prisma.availability.findFirst({
-      where: {
-        providerId: providerUser2.provider.id,
-        dayOfWeek: wd,
-      },
-    });
+  // Disponibilidade para NEW PROVIDER 1: Maria
+  const weekdays2 = [2, 4]; // 2 = Terça, 4 = Quinta
+  for (const wd of weekdays2) {
+    const existingAvailability = await prisma.availability.findFirst({
+      where: {
+        providerId: providerUser2.provider.id,
+        dayOfWeek: wd,
+      },
+    });
 
-    if (existingAvailability) {
-      await prisma.availability.update({
-        where: { id: existingAvailability.id },
-        data: {
-          startTime: '08:00',
-          endTime: '17:00',
-          isAvailable: true,
-        },
-      });
-    } else {
-      await prisma.availability.create({
-        data: {
-          providerId: providerUser2.provider.id,
-          dayOfWeek: wd,
-          startTime: '08:00',
-          endTime: '17:00',
-          isAvailable: true,
-        },
-      });
-    }
-  }
-  console.log(`Disponibilidade para ${providerUser2.fullName} criada/atualizada.`);
+    if (existingAvailability) {
+      await prisma.availability.update({
+        where: { id: existingAvailability.id },
+        data: {
+          startTime: '08:00',
+          endTime: '17:00',
+          isAvailable: true,
+        },
+      });
+    } else {
+      await prisma.availability.create({
+        data: {
+          providerId: providerUser2.provider.id,
+          dayOfWeek: wd,
+          startTime: '08:00',
+          endTime: '17:00',
+          isAvailable: true,
+        },
+      });
+    }
+  }
+  console.log(`Disponibilidade para ${providerUser2.fullName} criada/atualizada.`);
 
-  // Disponibilidade para NEW PROVIDER 2: Joana
-  const weekdays3 = [1, 2, 3, 4, 5]; // Segunda a Sexta
-  for (const wd of weekdays3) {
-    const existingAvailability = await prisma.availability.findFirst({
-      where: {
-        providerId: providerUser3.provider.id,
-        dayOfWeek: wd,
-      },
-    });
+  // Disponibilidade para NEW PROVIDER 2: Joana
+  const weekdays3 = [1, 2, 3, 4, 5]; // Segunda a Sexta
+  for (const wd of weekdays3) {
+    const existingAvailability = await prisma.availability.findFirst({
+      where: {
+        providerId: providerUser3.provider.id,
+        dayOfWeek: wd,
+      },
+    });
 
-    if (existingAvailability) {
-      await prisma.availability.update({
-        where: { id: existingAvailability.id },
-        data: {
-          startTime: '09:00',
-          endTime: '20:00', // MODIFICAÇÃO: Estendendo o horário disponível para Joana (de 18:00 para 20:00)
-          isAvailable: true,
-        },
-      });
-    } else {
-      await prisma.availability.create({
-        data: {
-          providerId: providerUser3.provider.id,
-          dayOfWeek: wd,
-          startTime: '09:00',
-          endTime: '20:00', // MODIFICAÇÃO: Estendendo o horário disponível para Joana (de 18:00 para 20:00)
-          isAvailable: true,
-        },
-      });
-    }
-  }
-  console.log(`Disponibilidade para ${providerUser3.fullName} criada/atualizada.`);
+    if (existingAvailability) {
+      await prisma.availability.update({
+        where: { id: existingAvailability.id },
+        data: {
+          startTime: '09:00',
+          endTime: '20:00', // MODIFICAÇÃO: Estendendo o horário disponível para Joana (de 18:00 para 20:00)
+          isAvailable: true,
+        },
+      });
+    } else {
+      await prisma.availability.create({
+        data: {
+          providerId: providerUser3.provider.id,
+          dayOfWeek: wd,
+          startTime: '09:00',
+          endTime: '20:00', // MODIFICAÇÃO: Estendendo o horário disponível para Joana (de 18:00 para 20:00)
+          isAvailable: true,
+        },
+      });
+    }
+  }
+  console.log(`Disponibilidade para ${providerUser3.fullName} criada/atualizada.`);
 
-  // Adicionando mais dias para Joana
-  const additionalWeekdaysForJoana = [6, 7]; // Sábado e Domingo
-  for (const wd of additionalWeekdaysForJoana) {
-    const existingAvailability = await prisma.availability.findFirst({
-      where: {
-        providerId: providerUser3.provider.id,
-        dayOfWeek: wd,
-      },
-    });
+  // Adicionando mais dias para Joana
+  const additionalWeekdaysForJoana = [6, 7]; // Sábado e Domingo
+  for (const wd of additionalWeekdaysForJoana) {
+    const existingAvailability = await prisma.availability.findFirst({
+      where: {
+        providerId: providerUser3.provider.id,
+        dayOfWeek: wd,
+      },
+    });
 
-    if (existingAvailability) {
-      await prisma.availability.update({
-        where: { id: existingAvailability.id },
-        data: {
-          startTime: '09:00',
-          endTime: '20:00', // Horário estendido
-          isAvailable: true,
-        },
-      });
-    } else {
-      await prisma.availability.create({
-        data: {
-          providerId: providerUser3.provider.id,
-          dayOfWeek: wd,
-          startTime: '09:00',
-          endTime: '20:00', // Horário estendido
-          isAvailable: true,
-        },
-      });
-    }
-  }
-  console.log(`Disponibilidade adicional para ${providerUser3.fullName} (mais dias) criada/atualizada.`);
+    if (existingAvailability) {
+      await prisma.availability.update({
+        where: { id: existingAvailability.id },
+        data: {
+          startTime: '09:00',
+          endTime: '20:00', // Horário estendido
+          isAvailable: true,
+        },
+      });
+    } else {
+      await prisma.availability.create({
+        data: {
+          providerId: providerUser3.provider.id,
+          dayOfWeek: wd,
+          startTime: '09:00',
+          endTime: '20:00', // Horário estendido
+          isAvailable: true,
+        },
+      });
+    }
+  }
+  console.log(`Disponibilidade adicional para ${providerUser3.fullName} (mais dias) criada/atualizada.`);
 
-  // Disponibilidade para NEW PROVIDER 3: Ana
-  const weekdays4 = [6, 7]; // Sábado e Domingo
-  for (const wd of weekdays4) {
-    const existingAvailability = await prisma.availability.findFirst({
-      where: {
-        providerId: providerUser4.provider.id,
-        dayOfWeek: wd,
-      },
-    });
+  // Disponibilidade para NEW PROVIDER 3: Ana
+  const weekdays4 = [6, 7]; // Sábado e Domingo
+  for (const wd of weekdays4) {
+    const existingAvailability = await prisma.availability.findFirst({
+      where: {
+        providerId: providerUser4.provider.id,
+        dayOfWeek: wd,
+      },
+    });
 
-    if (existingAvailability) {
-      await prisma.availability.update({
-        where: { id: existingAvailability.id },
-        data: {
-          startTime: '09:00',
-          endTime: '13:00',
-          isAvailable: true,
-        },
-      });
-    } else {
-      await prisma.availability.create({
-        data: {
-          providerId: providerUser4.provider.id,
-          dayOfWeek: wd,
-          startTime: '09:00',
-          endTime: '13:00',
-          isAvailable: true,
-        },
-      });
-    }
-  }
-  console.log(`Disponibilidade para ${providerUser4.fullName} criada/atualizada.`);
+    if (existingAvailability) {
+      await prisma.availability.update({
+        where: { id: existingAvailability.id },
+        data: {
+          startTime: '09:00',
+          endTime: '13:00',
+          isAvailable: true,
+        },
+      });
+    } else {
+      await prisma.availability.create({
+        data: {
+          providerId: providerUser4.provider.id,
+          dayOfWeek: wd,
+          startTime: '09:00',
+          endTime: '13:00',
+          isAvailable: true,
+        },
+      });
+    }
+  }
+  console.log(`Disponibilidade para ${providerUser4.fullName} criada/atualizada.`);
 
-  // -----------------------------------------------------------------------------
-  // 4) CUPONS
-  console.log('Criando/Atualizando cupons...');
+  // -----------------------------------------------------------------------------
+  // 4) CUPONS
+  console.log('Criando/Atualizando cupons...');
 
-  const in14Days = addDays(now, 14);
-  const in21Days = addDays(now, 21);
-  const in30Days = addDays(now, 30);
+  const in14Days = addDays(now, 14);
+  const in21Days = addDays(now, 21);
+  const in30Days = addDays(now, 30);
 
-  const WELCOME20 = await prisma.coupon.upsert({
-    where: { code: 'WELCOME20' },
-    update: {
-      target: CouponTarget.NEW_CLIENTS,
-      valueType: CouponType.FIXED,
-      value: new Prisma.Decimal(20.00),
-      maxDiscount: new Prisma.Decimal(20.00),
-      firstBookingOnly: true,
-      status: CouponStatus.ACTIVE,
-      validUntil: in14Days,
-    },
-    create: {
-      code: 'WELCOME20',
-      description: 'Cupom de boas-vindas para novos clientes',
-      target: CouponTarget.NEW_CLIENTS,
-      valueType: CouponType.FIXED,
-      value: new Prisma.Decimal(20.00),
-      maxDiscount: new Prisma.Decimal(20.00),
-      firstBookingOnly: true,
-      status: CouponStatus.ACTIVE,
-      validFrom: now,
-      validUntil: in14Days,
-    },
-  });
-  console.log(`Cupom 'WELCOME20' criado/atualizado.`);
+  const WELCOME20 = await prisma.coupon.upsert({
+    where: { code: 'WELCOME20' },
+    update: {
+      target: CouponTarget.NEW_CLIENTS,
+      valueType: CouponType.FIXED,
+      value: new Prisma.Decimal(20.00),
+      maxDiscount: new Prisma.Decimal(20.00),
+      firstBookingOnly: true,
+      status: CouponStatus.ACTIVE,
+      validUntil: in14Days,
+    },
+    create: {
+      code: 'WELCOME20',
+      description: 'Cupom de boas-vindas para novos clientes',
+      target: CouponTarget.NEW_CLIENTS,
+      valueType: CouponType.FIXED,
+      value: new Prisma.Decimal(20.00),
+      maxDiscount: new Prisma.Decimal(20.00),
+      firstBookingOnly: true,
+      status: CouponStatus.ACTIVE,
+      validFrom: now,
+      validUntil: in14Days,
+    },
+  });
+  console.log(`Cupom 'WELCOME20' criado/atualizado.`);
 
-  const RETORNO15 = await prisma.coupon.upsert({
-    where: { code: 'RETORNO15' },
-    update: {
-      target: CouponTarget.REPEAT_CUSTOMER,
-      valueType: CouponType.PERCENT,
-      value: new Prisma.Decimal(15),
-      maxDiscount: new Prisma.Decimal(40.00),
-      status: CouponStatus.ACTIVE,
-      validUntil: in30Days,
-    },
-    create: {
-      code: 'RETORNO15',
-      description: '15% de desconto para sua próxima reserva',
-      target: CouponTarget.REPEAT_CUSTOMER,
-      valueType: CouponType.PERCENT,
-      value: new Prisma.Decimal(15),
-      maxDiscount: new Prisma.Decimal(40.00),
-      status: CouponStatus.ACTIVE,
-      validFrom: now,
-      validUntil: in30Days,
-    },
-  });
-  console.log(`Cupom 'RETORNO15' criado/atualizado.`);
+  const RETORNO15 = await prisma.coupon.upsert({
+    where: { code: 'RETORNO15' },
+    update: {
+      target: CouponTarget.REPEAT_CUSTOMER,
+      valueType: CouponType.PERCENT,
+      value: new Prisma.Decimal(15),
+      maxDiscount: new Prisma.Decimal(40.00),
+      status: CouponStatus.ACTIVE,
+      validUntil: in30Days,
+    },
+    create: {
+      code: 'RETORNO15',
+      description: '15% de desconto para sua próxima reserva',
+      target: CouponTarget.REPEAT_CUSTOMER,
+      valueType: CouponType.PERCENT,
+      value: new Prisma.Decimal(15),
+      maxDiscount: new Prisma.Decimal(40.00),
+      status: CouponStatus.ACTIVE,
+      validFrom: now,
+      validUntil: in30Days,
+    },
+  });
+  console.log(`Cupom 'RETORNO15' criado/atualizado.`);
 
-  const INDICADO20 = await prisma.coupon.upsert({
-    where: { code: 'INDICADO20' },
-    update: {
-      target: CouponTarget.REFERRAL_REFERRED,
-      valueType: CouponType.FIXED,
-      value: new Prisma.Decimal(20.00),
-      maxDiscount: new Prisma.Decimal(20.00),
-      status: CouponStatus.ACTIVE,
-      issuedToUserId: referredUser.id,
-      validUntil: in14Days,
-    },
-    create: {
-      code: 'INDICADO20',
-      description: 'Cupom para cliente indicado',
-      target: CouponTarget.REFERRAL_REFERRED,
-      valueType: CouponType.FIXED,
-      value: new Prisma.Decimal(20.00),
-      maxDiscount: new Prisma.Decimal(20.00),
-      status: CouponStatus.ACTIVE,
-      issuedToUserId: referredUser.id,
-      validFrom: now,
-      validUntil: in14Days,
-    },
-  });
-  console.log(`Cupom 'INDICADO20' (para ${referredUser.fullName}) criado/atualizado.`);
+  const INDICADO20 = await prisma.coupon.upsert({
+    where: { code: 'INDICADO20' },
+    update: {
+      target: CouponTarget.REFERRAL_REFERRED,
+      valueType: CouponType.FIXED,
+      value: new Prisma.Decimal(20.00),
+      maxDiscount: new Prisma.Decimal(20.00),
+      status: CouponStatus.ACTIVE,
+      issuedToUserId: referredUser.id,
+      validUntil: in14Days,
+    },
+    create: {
+      code: 'INDICADO20',
+      description: 'Cupom para cliente indicado',
+      target: CouponTarget.REFERRAL_REFERRED,
+      valueType: CouponType.FIXED,
+      value: new Prisma.Decimal(20.00),
+      maxDiscount: new Prisma.Decimal(20.00),
+      status: CouponStatus.ACTIVE,
+      issuedToUserId: referredUser.id,
+      validFrom: now,
+      validUntil: in14Days,
+    },
+  });
+  console.log(`Cupom 'INDICADO20' (para ${referredUser.fullName}) criado/atualizado.`);
 
-  const MISSAO10 = await prisma.coupon.upsert({
-    where: { code: 'MISSAO10' },
-    update: {
-      target: CouponTarget.MISSION_REWARD,
-      valueType: CouponType.FIXED,
-      value: new Prisma.Decimal(10.00),
-      maxDiscount: new Prisma.Decimal(10.00),
-      status: CouponStatus.ACTIVE,
-      validUntil: in21Days,
-    },
-    create: {
-      code: 'MISSAO10',
-      description: 'Recompensa por completar missão',
-      target: CouponTarget.MISSION_REWARD,
-      valueType: CouponType.FIXED,
-      value: new Prisma.Decimal(10.00),
-      maxDiscount: new Prisma.Decimal(10.00),
-      status: CouponStatus.ACTIVE,
-      validFrom: now,
-      validUntil: in21Days,
-    },
-  });
-  console.log(`Cupom 'MISSAO10' criado/atualizado.`);
+  const MISSAO10 = await prisma.coupon.upsert({
+    where: { code: 'MISSAO10' },
+    update: {
+      target: CouponTarget.MISSION_REWARD,
+      valueType: CouponType.FIXED,
+      value: new Prisma.Decimal(10.00),
+      maxDiscount: new Prisma.Decimal(10.00),
+      status: CouponStatus.ACTIVE,
+      validUntil: in21Days,
+    },
+    create: {
+      code: 'MISSAO10',
+      description: 'Recompensa por completar missão',
+      target: CouponTarget.MISSION_REWARD,
+      valueType: CouponType.FIXED,
+      value: new Prisma.Decimal(10.00),
+      maxDiscount: new Prisma.Decimal(10.00),
+      status: CouponStatus.ACTIVE,
+      validFrom: now,
+      validUntil: in21Days,
+    },
+  });
+  console.log(`Cupom 'MISSAO10' criado/atualizado.`);
 
-  // -----------------------------------------------------------------------------
-  // 5) MISSÕES
-  console.log('Criando/Atualizando missões...');
+  // -----------------------------------------------------------------------------
+  // 5) MISSÕES
+  console.log('Criando/Atualizando missões...');
 
-  const missionClient3Bookings = await prisma.mission.upsert({
-    where: { code: 'CLIENT_3_BOOKINGS_MONTH' },
-    update: {
-      title: 'Faça 3 reservas este mês',
-      audience: MissionAudience.CLIENT,
-      kind: MissionKind.COUNT_EVENT,
-      targetValue: 3,
-      timeWindowDays: 30,
-      rewardType: RewardType.COUPON,
-      couponTemplateId: MISSAO10.id,
-      isActive: true,
-      updatedAt: now,
-    },
-    create: {
-      code: 'CLIENT_3_BOOKINGS_MONTH',
-      title: 'Faça 3 reservas este mês',
-      description: 'Complete 3 agendamentos de serviço em 30 dias para ganhar um cupom de R$10.',
-      audience: MissionAudience.CLIENT,
-      kind: MissionKind.COUNT_EVENT,
-      eventName: 'booking_completed',
-      targetValue: 3,
-      timeWindowDays: 30,
-      rewardType: RewardType.COUPON,
-      rewardValue: 1000, // Valor em centavos para referência
-      couponTemplateId: MISSAO10.id,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    },
-  });
-  console.log(`Missão 'CLIENT_3_BOOKINGS_MONTH' criada/atualizada.`);
+  const missionClient3Bookings = await prisma.mission.upsert({
+    where: { code: 'CLIENT_3_BOOKINGS_MONTH' },
+    update: {
+      title: 'Faça 3 reservas este mês',
+      audience: MissionAudience.CLIENT,
+      kind: MissionKind.COUNT_EVENT,
+      targetValue: 3,
+      timeWindowDays: 30,
+      rewardType: RewardType.COUPON,
+      couponTemplateId: MISSAO10.id,
+      isActive: true,
+      updatedAt: now,
+    },
+    create: {
+      code: 'CLIENT_3_BOOKINGS_MONTH',
+      title: 'Faça 3 reservas este mês',
+      description: 'Complete 3 agendamentos de serviço em 30 dias para ganhar um cupom de R$10.',
+      audience: MissionAudience.CLIENT,
+      kind: MissionKind.COUNT_EVENT,
+      eventName: 'booking_completed',
+      targetValue: 3,
+      timeWindowDays: 30,
+      rewardType: RewardType.COUPON,
+      rewardValue: 1000, // Valor em centavos para referência
+      couponTemplateId: MISSAO10.id,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  console.log(`Missão 'CLIENT_3_BOOKINGS_MONTH' criada/atualizada.`);
 
-  const missionReview48h = await prisma.mission.upsert({
-    where: { code: 'CLIENT_REVIEW_48H' },
-    update: {
-      title: 'Avalie seu serviço em até 48h',
-      audience: MissionAudience.CLIENT,
-      kind: MissionKind.WITHIN_WINDOW,
-      timeWindowDays: 2,
-      rewardType: RewardType.POINTS,
-      rewardValue: 200,
-      isActive: true,
-      updatedAt: now,
-    },
-    create: {
-      code: 'CLIENT_REVIEW_48H',
-      title: 'Avalie seu serviço em até 48h',
-      description: 'Deixe uma avaliação para seu serviço em até 48 horas e ganhe 200 pontos de fidelidade.',
-      audience: MissionAudience.CLIENT,
-      kind: MissionKind.WITHIN_WINDOW,
-      eventName: 'review_submitted',
-      targetValue: 1, // 1 avaliação
-      timeWindowDays: 2,
-      rewardType: RewardType.POINTS,
-      rewardValue: 200,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    },
-  });
-  console.log(`Missão 'CLIENT_REVIEW_48H' criada/atualizada.`);
+  const missionReview48h = await prisma.mission.upsert({
+    where: { code: 'CLIENT_REVIEW_48H' },
+    update: {
+      title: 'Avalie seu serviço em até 48h',
+      audience: MissionAudience.CLIENT,
+      kind: MissionKind.WITHIN_WINDOW,
+      timeWindowDays: 2,
+      rewardType: RewardType.POINTS,
+      rewardValue: 200,
+      isActive: true,
+      updatedAt: now,
+    },
+    create: {
+      code: 'CLIENT_REVIEW_48H',
+      title: 'Avalie seu serviço em até 48h',
+      description: 'Deixe uma avaliação para seu serviço em até 48 horas e ganhe 200 pontos de fidelidade.',
+      audience: MissionAudience.CLIENT,
+      kind: MissionKind.WITHIN_WINDOW,
+      eventName: 'review_submitted',
+      targetValue: 1, // 1 avaliação
+      timeWindowDays: 2,
+      rewardType: RewardType.POINTS,
+      rewardValue: 200,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  console.log(`Missão 'CLIENT_REVIEW_48H' criada/atualizada.`);
 
-  const missionProviderAccept5 = await prisma.mission.upsert({
-    where: { code: 'PROVIDER_ACCEPT_5_WEEK' },
-    update: {
-      title: 'Aceite 5 solicitações na semana',
-      audience: MissionAudience.PROVIDER,
-      kind: MissionKind.COUNT_EVENT,
-      targetValue: 5,
-      timeWindowDays: 7,
-      rewardType: RewardType.POINTS,
-      rewardValue: 300,
-      isActive: true,
-      updatedAt: now,
-    },
-    create: {
-      code: 'PROVIDER_ACCEPT_5_WEEK',
-      title: 'Aceite 5 solicitações na semana',
-      description: 'Aceite 5 agendamentos em uma semana e ganhe 300 pontos de fidelidade.',
-      audience: MissionAudience.PROVIDER,
-      kind: MissionKind.COUNT_EVENT,
-      eventName: 'booking_accepted',
-      targetValue: 5,
-      timeWindowDays: 7,
-      rewardType: RewardType.POINTS,
-      rewardValue: 300,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    },
-  });
-  console.log(`Missão 'PROVIDER_ACCEPT_5_WEEK' criada/atualizada.`);
+  const missionProviderAccept5 = await prisma.mission.upsert({
+    where: { code: 'PROVIDER_ACCEPT_5_WEEK' },
+    update: {
+      title: 'Aceite 5 solicitações na semana',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      targetValue: 5,
+      timeWindowDays: 7,
+      rewardType: RewardType.POINTS,
+      rewardValue: 300,
+      isActive: true,
+      updatedAt: now,
+    },
+    create: {
+      code: 'PROVIDER_ACCEPT_5_WEEK',
+      title: 'Aceite 5 solicitações na semana',
+      description: 'Aceite 5 agendamentos em uma semana e ganhe 300 pontos de fidelidade.',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      eventName: 'booking_accepted',
+      targetValue: 5,
+      timeWindowDays: 7,
+      rewardType: RewardType.POINTS,
+      rewardValue: 300,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  console.log(`Missão 'PROVIDER_ACCEPT_5_WEEK' criada/atualizada.`);
 
-  // Provider: 10 concluídos no mês
-  const missionProvider10Completed = await prisma.mission.upsert({
-    where: { code: 'PROVIDER_10_COMPLETED_MONTH' },
-    update: {
-      title: 'Conclua 10 serviços no mês',
-      audience: MissionAudience.PROVIDER,
-      kind: MissionKind.COUNT_EVENT,
-      targetValue: 10,
-      timeWindowDays: 30,
-      rewardType: RewardType.POINTS,
-      rewardValue: 500,
-      isActive: true,
-      updatedAt: now,
-    },
-    create: {
-      code: 'PROVIDER_10_COMPLETED_MONTH',
-      title: 'Conclua 10 serviços no mês',
-      description: 'Complete 10 atendimentos concluídos em 30 dias para ganhar pontos de fidelidade.',
-      audience: MissionAudience.PROVIDER,
-      kind: MissionKind.COUNT_EVENT,
-      eventName: 'provider.booking.completed',
-      targetValue: 10,
-      timeWindowDays: 30,
-      rewardType: RewardType.POINTS,
-      rewardValue: 500,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    },
-  });
+  // Provider: 10 concluídos no mês
+  const missionProvider10Completed = await prisma.mission.upsert({
+    where: { code: 'PROVIDER_10_COMPLETED_MONTH' },
+    update: {
+      title: 'Conclua 10 serviços no mês',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      targetValue: 10,
+      timeWindowDays: 30,
+      rewardType: RewardType.POINTS,
+      rewardValue: 500,
+      isActive: true,
+      updatedAt: now,
+    },
+    create: {
+      code: 'PROVIDER_10_COMPLETED_MONTH',
+      title: 'Conclua 10 serviços no mês',
+      description: 'Complete 10 atendimentos concluídos em 30 dias para ganhar pontos de fidelidade.',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      eventName: 'provider.booking.completed',
+      targetValue: 10,
+      timeWindowDays: 30,
+      rewardType: RewardType.POINTS,
+      rewardValue: 500,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
   console.log(`Missão 'PROVIDER_10_COMPLETED_MONTH' criada/atualizada.`);
 
   // Provider: resposta rápida (20 no mês)
@@ -1685,7 +1686,6 @@ export async function main() {
   // -----------------------------------------------------------------------------
   // 6) BOOKINGS E PAGAMENTOS
   console.log('Criando/Atualizando agendamentos e transações...');
-
   const bookingAddress1 = await upsertAddress({
     cep: '01003-003',
     street: 'Rua dos Agendamentos 1',
@@ -1719,7 +1719,7 @@ export async function main() {
     longitude: -46.662,
   });
 
-  // NOVO: Endereços para agendamentos da Joana
+  // NOVO: Endere�os para agendamentos da Joana
   const bookingAddressJoana1 = await upsertAddress({
     cep: '01003-006',
     street: 'Rua das Rosas',
@@ -1766,7 +1766,7 @@ export async function main() {
       providerServiceId: providerServiceForBooking1.id,
       scheduledDate: booking1Date,
       scheduledTime: '10:00',
-      status: BookingStatus.COMPLETED,
+      status: BookingStatus.FINISHED,
       totalPrice: new Prisma.Decimal(180.00),
       addressId: bookingAddress1.id, // Usando addressId único
       couponId: INDICADO20.id,
@@ -1779,10 +1779,10 @@ export async function main() {
       providerServiceId: providerServiceForBooking1.id,
       scheduledDate: booking1Date,
       scheduledTime: '10:00',
-      status: BookingStatus.COMPLETED,
+      status: BookingStatus.FINISHED,
       totalPrice: new Prisma.Decimal(180.00),
       notes: 'Limpeza do indicado com cupom.',
-      addressId: bookingAddress1.id, // Usando addressId único
+      addressId: bookingAddress1.id, // Usando addressId �nico
       couponId: INDICADO20.id,
       discountAmount: new Prisma.Decimal(20.00),
     },
@@ -1813,9 +1813,9 @@ export async function main() {
       providerServiceId: providerServiceForBooking2.id,
       scheduledDate: booking2Date,
       scheduledTime: '14:00',
-      status: BookingStatus.COMPLETED,
+      status: BookingStatus.FINISHED,
       totalPrice: new Prisma.Decimal(180.00),
-      addressId: bookingAddress2.id, // Usando addressId único
+      addressId: bookingAddress2.id, // Usando addressId �nico
     },
     create: {
       id: 'BKG-SEED-2',
@@ -1824,10 +1824,10 @@ export async function main() {
       providerServiceId: providerServiceForBooking2.id,
       scheduledDate: booking2Date,
       scheduledTime: '14:00',
-      status: BookingStatus.COMPLETED,
+      status: BookingStatus.FINISHED,
       totalPrice: new Prisma.Decimal(180.00),
       notes: 'Limpeza do cliente comum.',
-      addressId: bookingAddress2.id, // Usando addressId único
+      addressId: bookingAddress2.id, // Usando addressId �nico
     },
   });
   console.log(`Agendamento Concluído 'BKG-SEED-2' (Comum) criado/atualizado.`);
@@ -1858,7 +1858,7 @@ export async function main() {
       scheduledTime: '09:00',
       status: BookingStatus.CONFIRMED,
       totalPrice: new Prisma.Decimal(180.00),
-      addressId: bookingAddress3.id, // Usando addressId único
+      addressId: bookingAddress3.id, // Usando addressId �nico
     },
     create: {
       id: 'BKG-SEED-3',
@@ -1870,14 +1870,14 @@ export async function main() {
       status: BookingStatus.CONFIRMED,
       totalPrice: new Prisma.Decimal(180.00),
       notes: 'Limpeza agendada para o futuro.',
-      addressId: bookingAddress3.id, // Usando addressId único
+      addressId: bookingAddress3.id, // Usando addressId �nico
     },
   });
   console.log(`Agendamento Confirmado 'BKG-SEED-3' criado/atualizado.`);
 
   // Booking PENDING (aguardando confirmacao)
   const pendingBookingDate = addDays(now, 3);
-  // Importante: Booking.addressId é @unique, então cada booking precisa de um Address próprio
+  // Importante: Booking.addressId � @unique, ent�o cada booking precisa de um Address pr�prio
   const pendingAddress = await upsertAddress({
     cep: '01002-003',
     street: 'Av. do Provedor',
@@ -1916,7 +1916,7 @@ export async function main() {
   });
   console.log(`Agendamento Pendente 'BKG-SEED-PENDING-1' criado/atualizado.`);
 
-  // NOVO: Agendamentos Concluídos para Joana
+  // NOVO: Agendamentos Conclu�dos para Joana
   const joanaService = await prisma.providerService.findFirst({
     where: {
       providerId: providerUser3.provider.id,
@@ -1937,7 +1937,7 @@ export async function main() {
       providerServiceId: joanaService.id,
       scheduledDate: bookingJoana1Date,
       scheduledTime: '09:30',
-      status: BookingStatus.COMPLETED,
+      status: BookingStatus.FINISHED,
       totalPrice: new Prisma.Decimal(190.00),
       notes: 'Serviço de limpeza para avaliação da Joana (5 estrelas).',
       addressId: bookingAddressJoana1.id,
@@ -1949,14 +1949,13 @@ export async function main() {
       providerServiceId: joanaService.id,
       scheduledDate: bookingJoana1Date,
       scheduledTime: '09:30',
-      status: BookingStatus.COMPLETED,
+      status: BookingStatus.FINISHED,
       totalPrice: new Prisma.Decimal(190.00),
       notes: 'Serviço de limpeza para avaliação da Joana (5 estrelas).',
       addressId: bookingAddressJoana1.id,
     },
   });
   console.log(`Agendamento Concluído 'BKG-SEED-JOANA-1' (para Joana) criado/atualizado.`);
-
   const bookingJoana2Date = addDays(now, -5);
   const bookingJoana2 = await prisma.booking.upsert({
     where: { id: 'BKG-SEED-JOANA-2' },
@@ -1966,7 +1965,7 @@ export async function main() {
       providerServiceId: joanaService.id,
       scheduledDate: bookingJoana2Date,
       scheduledTime: '14:00',
-      status: BookingStatus.COMPLETED,
+      status: BookingStatus.FINISHED,
       totalPrice: new Prisma.Decimal(190.00),
       notes: 'Serviço de limpeza para avaliação da Joana (4 estrelas).',
       addressId: bookingAddressJoana2.id,
@@ -1978,15 +1977,14 @@ export async function main() {
       providerServiceId: joanaService.id,
       scheduledDate: bookingJoana2Date,
       scheduledTime: '14:00',
-      status: BookingStatus.COMPLETED,
+      status: BookingStatus.FINISHED,
       totalPrice: new Prisma.Decimal(190.00),
       notes: 'Serviço de limpeza para avaliação da Joana (4 estrelas).',
       addressId: bookingAddressJoana2.id,
     },
   });
   console.log(`Agendamento Concluído 'BKG-SEED-JOANA-2' (para Joana) criado/atualizado.`);
-
-  // Pagamentos confirmados dos agendamentos concluídos
+  // Pagamentos confirmados dos agendamentos conclu�dos
   for (const booking of [booking1, booking2, bookingJoana1, bookingJoana2]) {
     await prisma.paymentIntent.upsert({
       where: { bookingId: booking.id },
@@ -2038,8 +2036,7 @@ export async function main() {
   
   async function seedProviderLiveFlow() {
     console.log('Criando fluxo de bookings LIVE para testar iniciar/finalizar serviço...');
-
-    // ADICIONADO: Novos endereços exclusivos para os bookings LIVE (evitar conflito de @unique em addressId)
+    // ADICIONADO: Novos endere�os exclusivos para os bookings LIVE (evitar conflito de @unique em addressId)
     const bookingAddressLive1 = await upsertAddress({
       cep: '01003-008',
       street: 'Rua LIVE 1',
@@ -2073,7 +2070,7 @@ export async function main() {
     });
 
 
-    // Booking CONFIRMED para hoje (libera botão "Iniciar")
+    // Booking CONFIRMED para hoje (libera bot�o "Iniciar")
     const liveBooking = await prisma.booking.upsert({
       where: { id: 'BKG-LIVE-1' },
       create: {
@@ -2101,7 +2098,7 @@ export async function main() {
     const inProgress = await prisma.booking.upsert({
       where: { id: 'BKG-LIVE-2' },
       update: { 
-        status: BookingStatus.IN_PROGRESS,
+        status: BookingStatus.STARTED,
         scheduledDate: now, // Garantir consistência na data
         scheduledTime: '09:00', // Garantir consistência no horário
         addressId: bookingAddressLive2.id, // Garantir consistência no endereço
@@ -2113,7 +2110,7 @@ export async function main() {
         providerServiceId: providerServiceForBooking3.id,
         scheduledDate: now, // Hoje
         scheduledTime: '09:00',
-        status: BookingStatus.IN_PROGRESS,
+        status: BookingStatus.STARTED,
         totalPrice: new Prisma.Decimal(200),
         addressId: bookingAddressLive2.id, // ADICIONADO: Endereço exclusivo
         notes: 'Serviço em andamento para teste de finalização.',
@@ -2125,7 +2122,7 @@ export async function main() {
     const finished = await prisma.booking.upsert({
       where: { id: 'BKG-LIVE-3' },
       update: { 
-        status: BookingStatus.COMPLETED,
+        status: BookingStatus.FINISHED,
         scheduledDate: addDays(now, -2), // Garantir consistência na data
         scheduledTime: '11:00', // Garantir consistência no horário
         addressId: bookingAddressLive3.id, // Mantém o endereço original (único)
@@ -2135,9 +2132,9 @@ export async function main() {
         clientId: referredUser.client!.id,
         providerId: providerUser.provider!.id,
         providerServiceId: providerServiceForBooking3.id,
-        scheduledDate: addDays(now, -2), // 2 dias atrás
+        scheduledDate: addDays(now, -2), // 2 dias atr�s
         scheduledTime: '11:00',
-        status: BookingStatus.COMPLETED,
+        status: BookingStatus.FINISHED,
         totalPrice: new Prisma.Decimal(240),
         addressId: bookingAddressLive3.id,
         notes: 'Serviço finalizado para teste de histórico.',
@@ -2189,7 +2186,7 @@ export async function main() {
     });
     console.log(`PaymentIntent PAID para Booking ${finished.id} criado/atualizado.`);
 
-    // Transação de pagamento para o booking finalizado (BKG-LIVE-3)
+    // Transa��o de pagamento para o booking finalizado (BKG-LIVE-3)
     await prisma.transaction.upsert({
       where: { gatewayTransactionId: `TRANS-LIVE-${finished.id}` },
       create: {
@@ -2203,600 +2200,596 @@ export async function main() {
         createdAt: addDays(now, -2),
       },
       update: {
-        providerId: finished.providerId,
-        amount: finished.totalPrice,
-        type: TransactionType.PAYMENT,
-        status: 'COMPLETED',
-        description: `Pagamento do serviço finalizado ${finished.id}`,
-        bookingId: finished.id,
-      },
-    });
-    console.log(`Transação de pagamento para Booking ${finished.id} criada/atualizada.`);
+        providerId: finished.providerId,
+        amount: finished.totalPrice,
+        type: TransactionType.PAYMENT,
+        status: 'COMPLETED',
+        description: `Pagamento do serviço finalizado ${finished.id}`, // CORRIGIDO: servio -> serviço
+        bookingId: finished.id,
+      },
+    });
+    console.log(`Transação de pagamento para Booking ${finished.id} criada/atualizada.`); // CORRIGIDO: Transao -> Transação
 
-    // Ledger Entry EARNING para o provedor (BKG-LIVE-3) - CORRIGIDO: Usar ledgerEntry, userId, amount (Decimal), sem amountCents/referenceDate/status
-    await prisma.ledgerEntry.upsert({
-      where: { id: `LEDGER-LIVE-${finished.id}` },
-      create: {
-        id: `LEDGER-LIVE-${finished.id}`,
-        userId: providerUser.id, // Usar userId (do provedor)
-        type: LedgerEntryType.EARNING,
-        amount: new Prisma.Decimal(240), // amount como Decimal(14,2), não amountCents
-        bookingId: finished.id,
-        note: `Ganhos do serviço finalizado ${finished.id}`, // Usar note em vez de description
-        createdAt: addDays(now, -2),
-      },
-      update: {
-        userId: providerUser.id,
-        type: LedgerEntryType.EARNING,
-        amount: new Prisma.Decimal(240),
-        bookingId: finished.id,
-        note: `Ganhos do serviço finalizado ${finished.id}`,
-      },
-    });
-    console.log(`Ledger EARNING para Booking ${finished.id} criado/atualizado.`);
+    // Ledger Entry EARNING para o provedor (BKG-LIVE-3) - CORRIGIDO: Usar ledgerEntry, userId, amount (Decimal), sem amountCents/referenceDate/status
+    await prisma.ledgerEntry.upsert({
+      where: { id: `LEDGER-LIVE-${finished.id}` },
+      create: {
+        id: `LEDGER-LIVE-${finished.id}`,
+        userId: providerUser.id, // Usar userId (do provedor)
+        type: LedgerEntryType.EARNING,
+        amount: new Prisma.Decimal(240), // amount como Decimal(14,2), não amountCents // CORRIGIDO: no -> não
+        bookingId: finished.id,
+        note: `Ganhos do serviço finalizado ${finished.id}`, // Usar note em vez de description // CORRIGIDO: servio -> serviço
+        createdAt: addDays(now, -2),
+      },
+      update: {
+        userId: providerUser.id,
+        type: LedgerEntryType.EARNING,
+        amount: new Prisma.Decimal(240),
+        bookingId: finished.id,
+        note: `Ganhos do serviço finalizado ${finished.id}`, // CORRIGIDO: servio -> serviço
+      },
+    });
+    console.log(`Ledger EARNING para Booking ${finished.id} criado/atualizado.`);
 
-    // ---- NOTIFICAÇÕES PARA PROVIDER ---- (CORRIGIDO: Usar upsert com ID fixo para idempotência)
+    // ---- NOTIFICAÇÕES PARA PROVIDER ---- (CORRIGIDO: Usar upsert com ID fixo para idempotência) // CORRIGIDO: NOTIFICAES -> NOTIFICAÇÕES, idempotncia -> idempotência
 
-    // Notificação de serviço iniciado (para BKG-LIVE-2)
-    await prisma.notification.upsert({
-      where: { id: 'NTF-LIVE-1' },
-      update: {
-        userId: providerUser.id,
-        type: 'booking_started',
-        title: 'Serviço iniciado',
-        message: 'Você iniciou o serviço agendado para 09:00 hoje.',
-        isRead: false,
-        targetUrl: '/(provider)/active-booking/BKG-LIVE-2',
-        createdAt: now,
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-1`, // ADICIONADO: Para deduplicação
-      },
-      create: {
-        id: 'NTF-LIVE-1',
-        userId: providerUser.id,
-        type: 'booking_started',
-        title: 'Serviço iniciado',
-        message: 'Você iniciou o serviço agendado para 09:00 hoje.',
-        isRead: false,
-        targetUrl: '/(provider)/active-booking/BKG-LIVE-2',
-        createdAt: now,
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-1`, // ADICIONADO: Para deduplicação
-      },
-    });
-    console.log(`Notificação de serviço iniciado (BKG-LIVE-2) criada.`);
+    // Notificação de serviço iniciado (para BKG-LIVE-2) // CORRIGIDO: Notificao -> Notificação, servio -> serviço
+    await prisma.notification.upsert({
+      where: { id: 'NTF-LIVE-1' },
+      update: {
+        userId: providerUser.id,
+        type: 'booking_started',
+        title: 'Serviço iniciado', // CORRIGIDO: Servio -> Serviço
+        message: 'Você iniciou o serviço agendado para 09:00 hoje.', // CORRIGIDO: Voc -> Você, servio -> serviço
+        isRead: false,
+        targetUrl: '/(provider)/active-booking/BKG-LIVE-2',
+        createdAt: now,
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-1`, // ADICIONADO: Para deduplicação // CORRIGIDO: deduplicao -> deduplicação
+      },
+      create: {
+        id: 'NTF-LIVE-1',
+        userId: providerUser.id,
+        type: 'booking_started',
+        title: 'Serviço iniciado', // CORRIGIDO: Servio -> Serviço
+        message: 'Você iniciou o serviço agendado para 09:00 hoje.', // CORRIGIDO: Voc -> Você, servio -> serviço
+        isRead: false,
+        targetUrl: '/(provider)/active-booking/BKG-LIVE-2',
+        createdAt: now,
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-1`, // ADICIONADO: Para deduplicação // CORRIGIDO: deduplicao -> deduplicação
+      },
+    });
+    console.log(`Notificação de serviço iniciado (BKG-LIVE-2) criada.`); // CORRIGIDO: Notificao -> Notificação, servio -> serviço
 
-    // Notificação de serviço finalizado (para BKG-LIVE-3)
-    await prisma.notification.upsert({
-      where: { id: 'NTF-LIVE-2' },
-      update: {
-        userId: providerUser.id,
-        type: 'booking_completed',
-        title: 'Serviço finalizado',
-        message: 'Você concluiu o serviço de 11:00. Pagamento processado: R$240,00.',
-        isRead: false,
-        targetUrl: '/(provider)/earnings',
-        createdAt: addDays(now, -2),
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-2`, // ADICIONADO: Para deduplicação
-      },
-      create: {
-        id: 'NTF-LIVE-2',
-        userId: providerUser.id,
-        type: 'booking_completed',
-        title: 'Serviço finalizado',
-        message: 'Você concluiu o serviço de 11:00. Pagamento processado: R$240,00.',
-        isRead: false,
-        targetUrl: '/(provider)/earnings',
-        createdAt: addDays(now, -2),
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-2`, // ADICIONADO: Para deduplicação
-      },
-    });
-    console.log(`Notificação de serviço finalizado (BKG-LIVE-3) criada.`);
+    // Notificação de serviço finalizado (para BKG-LIVE-3) // CORRIGIDO: Notificao -> Notificação, servio -> serviço
+    await prisma.notification.upsert({
+      where: { id: 'NTF-LIVE-2' },
+      update: {
+        userId: providerUser.id,
+        type: 'booking_completed',
+        title: 'Serviço finalizado', // CORRIGIDO: Servio -> Serviço
+        message: 'Você concluiu o serviço de 11:00. Pagamento processado: R$240,00.', // CORRIGIDO: Voc -> Você, servio -> serviço
+        isRead: false,
+        targetUrl: '/(provider)/earnings',
+        createdAt: addDays(now, -2),
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-2`, // ADICIONADO: Para deduplicação // CORRIGIDO: deduplicao -> deduplicação
+      },
+      create: {
+        id: 'NTF-LIVE-2',
+        userId: providerUser.id,
+        type: 'booking_completed',
+        title: 'Serviço finalizado', // CORRIGIDO: Servio -> Serviço
+        message: 'Você concluiu o serviço de 11:00. Pagamento processado: R$240,00.', // CORRIGIDO: Voc -> Você, servio -> serviço
+        isRead: false,
+        targetUrl: '/(provider)/earnings',
+        createdAt: addDays(now, -2),
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-2`, // ADICIONADO: Para deduplicação // CORRIGIDO: deduplicao -> deduplicação
+      },
+    });
+    console.log(`Notificação de serviço finalizado (BKG-LIVE-3) criada.`); // CORRIGIDO: Notificao -> Notificação, servio -> serviço
 
-    // Notificação de lembrete para serviço futuro (BKG-LIVE-1)
-    await prisma.notification.upsert({
-      where: { id: 'NTF-LIVE-3' },
-      update: {
-        userId: providerUser.id,
-        type: 'booking_reminder',
-        title: 'Lembrete de serviço',
-        message: 'Você tem um serviço confirmado para hoje às 15:00. Prepare-se!',
-        isRead: false,
-        targetUrl: '/(provider)/upcoming/BKG-LIVE-1',
-        createdAt: now,
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-3`, // ADICIONADO: Para deduplicação
-      },
-      create: {
-        id: 'NTF-LIVE-3',
-        userId: providerUser.id,
-        type: 'booking_reminder',
-        title: 'Lembrete de serviço',
-        message: 'Você tem um serviço confirmado para hoje às 15:00. Prepare-se!',
-        isRead: false,
-        targetUrl: '/(provider)/upcoming/BKG-LIVE-1',
-        createdAt: now,
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-3`, // ADICIONADO: Para deduplicação
-      },
-    });
-    console.log(`Notificação de lembrete (BKG-LIVE-1) criada.`);
+    // Notificação de lembrete para serviço futuro (BKG-LIVE-1) // CORRIGIDO: Notificao -> Notificação, servio -> serviço
+    await prisma.notification.upsert({
+      where: { id: 'NTF-LIVE-3' },
+      update: {
+        userId: providerUser.id,
+        type: 'booking_reminder',
+        title: 'Lembrete de serviço', // CORRIGIDO: servio -> serviço
+        message: 'Você tem um serviço confirmado para hoje às 15:00. Prepare-se!', // CORRIGIDO: Voc -> Você, servio -> serviço, s -> às
+        isRead: false,
+        targetUrl: '/(provider)/upcoming/BKG-LIVE-1',
+        createdAt: now,
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-3`, // ADICIONADO: Para deduplicação // CORRIGIDO: deduplicao -> deduplicação
+      },
+      create: {
+        id: 'NTF-LIVE-3',
+        userId: providerUser.id,
+        type: 'booking_reminder',
+        title: 'Lembrete de serviço', // CORRIGIDO: servio -> serviço
+        message: 'Você tem um serviço confirmado para hoje às 15:00. Prepare-se!', // CORRIGIDO: Voc -> Você, servio -> serviço, s -> às
+        isRead: false,
+        targetUrl: '/(provider)/upcoming/BKG-LIVE-1',
+        createdAt: now,
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-3`, // ADICIONADO: Para deduplicação // CORRIGIDO: deduplicao -> deduplicação
+      },
+    });
+    console.log(`Notificação de lembrete (BKG-LIVE-1) criada.`); // CORRIGIDO: Notificao -> Notificação
 
-    console.log('Fluxo LIVE de bookings criado com sucesso! ?');
-  }
+    console.log('Fluxo LIVE de bookings criado com sucesso! ?');
+  }
 
-  // Executar o novo fluxo após os bookings existentes
-  await seedProviderLiveFlow();
+  // Executar o novo fluxo após os bookings existentes
+  await seedProviderLiveFlow();
 
-  // -----------------------------------------------------------------------------
-  // 7) PROGRESSO DE MISSÕES
-  console.log('Criando/Atualizando progresso de missões...');
+  // -----------------------------------------------------------------------------
+  // 7) PROGRESSO DE MISSÕES // CORRIGIDO: MISSES -> MISSÕES
+  console.log('Criando/Atualizando progresso de missões...'); // CORRIGIDO: misses -> missões
 
-  await prisma.missionProgress.upsert({
-    where: { userId_missionId: { userId: referrerUser.id, missionId: missionClient3Bookings.id } },
-    update: { currentValue: 1, status: MissionStatus.ACTIVE, lastEventAt: now },
-    create: {
-      userId: referrerUser.id,
-      missionId: missionClient3Bookings.id,
-      currentValue: 1,
-      status: MissionStatus.ACTIVE,
-      lastEventAt: now,
-    },
-  });
-  console.log(`Progresso de missão para ${referrerUser.fullName} (1/3) criado/atualizado.`);
+  await prisma.missionProgress.upsert({
+    where: { userId_missionId: { userId: referrerUser.id, missionId: missionClient3Bookings.id } },
+    update: { currentValue: 1, status: MissionStatus.ACTIVE, lastEventAt: now },
+    create: {
+      userId: referrerUser.id,
+      missionId: missionClient3Bookings.id,
+      currentValue: 1,
+      status: MissionStatus.ACTIVE,
+      lastEventAt: now,
+    },
+  });
+  console.log(`Progresso de missão para ${referrerUser.fullName} (1/3) criado/atualizado.`); // CORRIGIDO: misso -> missão
 
-  // -----------------------------------------------------------------------------
-  // 8) FIDELIDADE (Loyalty e LoyaltyTransaction)
-  console.log('Criando/Atualizando pontos de fidelidade...');
+  // -----------------------------------------------------------------------------
+  // 8) FIDELIDADE (Loyalty e LoyaltyTransaction)
+  console.log('Criando/Atualizando pontos de fidelidade...');
 
-  await prisma.loyalty.upsert({
-    where: { userId: referrerUser.id },
-    update: { currentPoints: 90 },
-    create: { userId: referrerUser.id, currentPoints: 90 },
-  });
-  console.log(`Saldo de pontos para ${referrerUser.fullName} criado/atualizado.`);
+  await prisma.loyalty.upsert({
+    where: { userId: referrerUser.id },
+    update: { currentPoints: 90 },
+    create: { userId: referrerUser.id, currentPoints: 90 },
+  });
+  console.log(`Saldo de pontos para ${referrerUser.fullName} criado/atualizado.`);
 
-  await prisma.loyaltyTransaction.upsert({
-    where: { id: `LT-${booking2.id}` }, // ID único baseado no booking
-    update: { points: 90, type: LoyaltyTransactionType.SERVICE_COMPLETED, referenceId: booking2.id },
-    create: {
-      id: `LT-${booking2.id}`,
-      userId: referrerUser.id,
-      points: 90,
-      type: LoyaltyTransactionType.SERVICE_COMPLETED,
-      referenceId: booking2.id,
-    },
-  });
-  console.log(`Transação de pontos para ${referrerUser.fullName} (serviço concluído) criada/atualizada.`);
+  await prisma.loyaltyTransaction.upsert({
+    where: { id: `LT-${booking2.id}` }, // ID único baseado no booking // CORRIGIDO: nico -> único
+    update: { points: 90, type: LoyaltyTransactionType.SERVICE_COMPLETED, referenceId: booking2.id },
+    create: {
+      id: `LT-${booking2.id}`,
+      userId: referrerUser.id,
+      points: 90,
+      type: LoyaltyTransactionType.SERVICE_COMPLETED,
+      referenceId: booking2.id,
+    },
+  });
+  console.log(`Transação de pontos para ${referrerUser.fullName} (serviço concluído) criada/atualizada.`); // CORRIGIDO: Transao -> Transação, servio -> serviço
 
-  // -----------------------------------------------------------------------------
-  // 9) NOTIFICAÇÕES
-  console.log('Criando/Atualizando notificações...');
+  // -----------------------------------------------------------------------------
+  // 9) NOTIFICAÇÕES // CORRIGIDO: NOTIFICAES -> NOTIFICAÇÕES
+  console.log('Criando/Atualizando notificações...'); // CORRIGIDO: notificaes -> notificações
 
-  await prisma.notification.upsert({
-    where: { id: 'NOTIF-WELCOME-REFERRED' },
-    update: { userId: referredUser.id, title: 'Bem-vindo!', message: 'Você ganhou R$20 para a 1ª reserva', targetUrl: '/(client)/explore' },
-    create: {
-      id: 'NOTIF-WELCOME-REFERRED',
-      userId: referredUser.id,
-      type: 'COUPON_ISSUED',
-      title: 'Bem-vindo!',
-      message: 'Você ganhou R$20 para a 1ª reserva',
-      targetUrl: '/(client)/explore',
-    },
-  });
-  console.log(`Notificação de boas-vindas para ${referredUser.fullName} criada/atualizada.`);
+  await prisma.notification.upsert({
+    where: { id: 'NOTIF-WELCOME-REFERRED' },
+    update: { userId: referredUser.id, title: 'Bem-vindo!', message: 'Você ganhou R$20 para a 1ª reserva', targetUrl: '/(client)/explore' }, // CORRIGIDO: Voc -> Você, 1 -> 1ª
+    create: {
+      id: 'NOTIF-WELCOME-REFERRED',
+      userId: referredUser.id,
+      type: 'COUPON_ISSUED',
+      title: 'Bem-vindo!',
+      message: 'Você ganhou R$20 para a 1ª reserva', // CORRIGIDO: Voc -> Você, 1 -> 1ª
+      targetUrl: '/(client)/explore',
+    },
+  });
+  console.log(`Notificação de boas-vindas para ${referredUser.fullName} criada/atualizada.`); // CORRIGIDO: Notificao -> Notificação
 
-  await prisma.notification.upsert({
-    where: { id: 'NOTIF-RETURN-REFERRER' },
-    update: { userId: referrerUser.id, title: 'Volte e economize', message: 'Cupom de retorno disponível', targetUrl: '/(client)/bookings' },
-    create: {
-      id: 'NOTIF-RETURN-REFERRER',
-      userId: referrerUser.id,
-      type: 'COUPON_ISSUED',
-      title: 'Volte e economize',
-      message: 'Cupom de retorno disponível',
-      targetUrl: '/(client)/bookings',
-    },
-  });
-  console.log(`Notificação de retorno para ${referrerUser.fullName} criada/atualizada.`);
+  await prisma.notification.upsert({
+    where: { id: 'NOTIF-RETURN-REFERRER' },
+    update: { userId: referrerUser.id, title: 'Volte e economize', message: 'Cupom de retorno disponível', targetUrl: '/(client)/bookings' }, // CORRIGIDO: disponvel -> disponível
+    create: {
+      id: 'NOTIF-RETURN-REFERRER',
+      userId: referrerUser.id,
+      type: 'COUPON_ISSUED',
+      title: 'Volte e economize',
+      message: 'Cupom de retorno disponível', // CORRIGIDO: disponvel -> disponível
+      targetUrl: '/(client)/bookings',
+    },
+  });
+  console.log(`Notificação de retorno para ${referrerUser.fullName} criada/atualizada.`); // CORRIGIDO: Notificao -> Notificação
 
-  // -----------------------------------------------------------------------------
-  // 10) AVALIAÇÕES (REVIEWS)
-  console.log('Criando/Atualizando avaliações...');
+  // -----------------------------------------------------------------------------
+  // 10) AVALIAÇÕES (REVIEWS) // CORRIGIDO: AVALIAES -> AVALIAÇÕES
+  console.log('Criando/Atualizando avaliações...'); // CORRIGIDO: avaliaes -> avaliações
 
-  await prisma.review.upsert({
-    where: { bookingId: booking2.id },
-    update: {
-      rating: 5,
-      comment: 'Serviço excelente! Provedora muito profissional e atenciosa.',
-      clientId: referrerUser.client!.id,
-      providerId: providerUser.provider!.id,
-    },
-    create: {
-      bookingId: booking2.id,
-      clientId: referrerUser.client!.id,
-      providerId: providerUser.provider!.id,
-      rating: 5,
-      comment: 'Serviço excelente! Provedora muito profissional e atenciosa.',
-    },
-  });
-  console.log(`Avaliação para Booking ${booking2.id} criada/atualizada.`);
+  await prisma.review.upsert({
+    where: { bookingId: booking2.id },
+    update: {
+      rating: 5,
+      comment: 'Serviço excelente! Provedora muito profissional e atenciosa.', // CORRIGIDO: Servio -> Serviço
+      clientId: referrerUser.client!.id,
+      providerId: providerUser.provider!.id,
+    },
+    create: {
+      bookingId: booking2.id,
+      clientId: referrerUser.client!.id,
+      providerId: providerUser.provider!.id,
+      rating: 5,
+      comment: 'Serviço excelente! Provedora muito profissional e atenciosa.', // CORRIGIDO: Servio -> Serviço
+    },
+  });
+  console.log(`Avaliação para Booking ${booking2.id} criada/atualizada.`); // CORRIGIDO: Avaliao -> Avaliação
 
-  // NOVO: Avaliações para Joana
-  await prisma.review.upsert({
-    where: { bookingId: bookingJoana1.id },
-    update: {
-      rating: 5,
-      comment: 'Joana é excelente! Super atenciosa e deixou tudo impecável. Recomendo muito!',
-      clientId: clientUserJoanaReviewer.client!.id,
-      providerId: providerUser3.provider!.id,
-    },
-    create: {
-      bookingId: bookingJoana1.id,
-      clientId: clientUserJoanaReviewer.client!.id,
-      providerId: providerUser3.provider!.id,
-      rating: 5,
-      comment: 'Joana é excelente! Super atenciosa e deixou tudo impecável. Recomendo muito!',
-    },
-  });
-  console.log(`Avaliação para Booking ${bookingJoana1.id} (Joana) criada/atualizada.`);
+  // NOVO: Avaliações para Joana // CORRIGIDO: Avaliaes -> Avaliações
+  await prisma.review.upsert({
+    where: { bookingId: bookingJoana1.id },
+    update: {
+      rating: 5,
+      comment: 'Joana é excelente! Super atenciosa e deixou tudo impecável. Recomendo muito!', // CORRIGIDO:  -> é, impecvel -> impecável
+      clientId: clientUserJoanaReviewer.client!.id,
+      providerId: providerUser3.provider!.id,
+    },
+    create: {
+      bookingId: bookingJoana1.id,
+      clientId: clientUserJoanaReviewer.client!.id,
+      providerId: providerUser3.provider!.id,
+      rating: 5,
+      comment: 'Joana é excelente! Super atenciosa e deixou tudo impecável. Recomendo muito!', // CORRIGIDO:  -> é, impecvel -> impecável
+    },
+  });
+  console.log(`Avaliação para Booking ${bookingJoana1.id} (Joana) criada/atualizada.`); // CORRIGIDO: Avaliao -> Avaliação
 
-  await prisma.review.upsert({
-    where: { bookingId: bookingJoana2.id },
-    update: {
-      rating: 4,
-      comment: 'Bom serviço, chegou no horário e fez um bom trabalho. Fiquei satisfeita.',
-      clientId: clientUserJoanaReviewer.client!.id,
-      providerId: providerUser3.provider!.id,
-    },
-    create: {
-      bookingId: bookingJoana2.id,
-      clientId: clientUserJoanaReviewer.client!.id,
-      providerId: providerUser3.provider!.id,
-      rating: 4,
-      comment: 'Bom serviço, chegou no horário e fez um bom trabalho. Fiquei satisfeita.',
-    },
-  });
-  console.log(`Avaliação para Booking ${bookingJoana2.id} (Joana) criada/atualizada.`);
+  await prisma.review.upsert({
+    where: { bookingId: bookingJoana2.id },
+    update: {
+      rating: 4,
+      comment: 'Bom serviço, chegou no horário e fez um bom trabalho. Fiquei satisfeita.', // CORRIGIDO: servio -> serviço, horrio -> horário
+      clientId: clientUserJoanaReviewer.client!.id,
+      providerId: providerUser3.provider!.id,
+    },
+    create: {
+      bookingId: bookingJoana2.id,
+      clientId: clientUserJoanaReviewer.client!.id,
+      providerId: providerUser3.provider!.id,
+      rating: 4,
+      comment: 'Bom serviço, chegou no horário e fez um bom trabalho. Fiquei satisfeita.', // CORRIGIDO: servio -> serviço, horrio -> horário
+    },
+  });
+  console.log(`Avaliação para Booking ${bookingJoana2.id} (Joana) criada/atualizada.`); // CORRIGIDO: Avaliao -> Avaliação
 
-  // -----------------------------------------------------------------------------
-  // GERAÇÃO EM MASSA DE 100 AVALIAÇÕES POR PRESTADOR (usando o serviço residencial e reviewers dedicados)
-  // -----------------------------------------------------------------------------
-  console.log('Gerando avaliações em massa para prestadores...');
-  // Quantidades variadas por provedor para simular escala real (mantendo o restante igual)
-  await generateBulkReviews(providerUser,  clientUserCarolineReviewer, residentialCleaningService, 23);
-  await generateBulkReviews(providerUser2, clientUserMariaReviewer,     residentialCleaningService, 15);
-  await generateBulkReviews(providerUser3, clientUserJoanaReviewer,     residentialCleaningService, 19);
-  await generateBulkReviews(providerUser4, clientUserAnaReviewer,       residentialCleaningService, 11);
+  // -----------------------------------------------------------------------------
+  // GERAÇÃO EM MASSA DE 100 AVALIAÇÕES POR PRESTADOR (usando o serviço residencial e reviewers dedicados) // CORRIGIDO: GERAO -> GERAÇÃO, AVALIAES -> AVALIAÇÕES, servio -> serviço
+  // -----------------------------------------------------------------------------
+  console.log('Gerando avaliações em massa para prestadores...'); // CORRIGIDO: avaliaes -> avaliações
+  // Quantidades variadas por provedor para simular escala real (mantendo o restante igual)
 
-  // -----------------------------------------------------------------------------
-  // 11) OUTROS MODELOS (Exemplos básicos)
+  // -----------------------------------------------------------------------------
+  // 11) OUTROS MODELOS (Exemplos básicos) // CORRIGIDO: bsicos -> básicos
 
-  // FAQItem
-  console.log('Criando/Atualizando FAQs...');
-  await prisma.fAQItem.upsert({
-    where: { question: 'Como faço para agendar um serviço?' },
-    update: { answer: 'Você pode agendar um serviço através da tela "Explorar", escolhendo a categoria e o provedor desejado.' },
-    create: {
-      question: 'Como faço para agendar um serviço?',
-      answer: 'Você pode agendar um serviço através da tela "Explorar", escolhendo a categoria e o provedor desejado.',
-      category: 'Geral',
-      order: 1,
-    },
-  });
-  console.log(`FAQ 'Como faço para agendar um serviço?' criado/atualizado.`);
+  // FAQItem
+  console.log('Criando/Atualizando FAQs...');
+  await prisma.fAQItem.upsert({
+    where: { question: 'Como faço para agendar um serviço?' }, // CORRIGIDO: fao -> faço, servio -> serviço
+    update: { answer: 'Você pode agendar um serviço através da tela "Explorar", escolhendo a categoria e o provedor desejado.' }, // CORRIGIDO: Voc -> Você, servio -> serviço, atravs -> através
+    create: {
+      question: 'Como faço para agendar um serviço?', // CORRIGIDO: fao -> faço, servio -> serviço
+      answer: 'Você pode agendar um serviço através da tela "Explorar", escolhendo a categoria e o provedor desejado.', // CORRIGIDO: Voc -> Você, servio -> serviço, atravs -> através
+      category: 'Geral',
+      order: 1,
+    },
+  });
+  console.log(`FAQ 'Como faço para agendar um serviço?' criado/atualizado.`); // CORRIGIDO: fao -> faço, servio -> serviço
 
-  // Offer
-  console.log('Criando/Atualizando ofertas...');
-  const existingOffer = await prisma.offer.findFirst({
-    where: { title: 'Desconto de Verão' },
-  });
+  // Offer
+  console.log('Criando/Atualizando ofertas...');
+  const existingOffer = await prisma.offer.findFirst({
+    where: { title: 'Desconto de Verão' }, // CORRIGIDO: Vero -> Verão
+  });
 
-  if (existingOffer) {
-    await prisma.offer.update({
-      where: { id: existingOffer.id },
-      data: {
-        description: '10% de desconto em todos os serviços de limpeza residencial!',
-        discountPercentage: 10.0,
-        target: OfferTarget.GENERAL,
-        status: OfferStatus.ACTIVE,
-        validUntil: addDays(now, 60),
-      },
-    });
-  } else {
-    await prisma.offer.create({
-      data: {
-        title: 'Desconto de Verão',
-        description: '10% de desconto em todos os serviços de limpeza residencial!',
-        discountPercentage: 10.0,
-        fixedDiscountAmount: null,
-        target: OfferTarget.GENERAL,
-        status: OfferStatus.ACTIVE,
-        validFrom: now,
-        validUntil: addDays(now, 60),
-      },
-    });
-  }
-  console.log(`Oferta 'Desconto de Verão' criada/atualizada.`);
+  if (existingOffer) {
+    await prisma.offer.update({
+      where: { id: existingOffer.id },
+      data: {
+        description: '10% de desconto em todos os serviços de limpeza residencial!', // CORRIGIDO: servios -> serviços
+        discountPercentage: 10.0,
+        target: OfferTarget.GENERAL,
+        status: OfferStatus.ACTIVE,
+        validUntil: addDays(now, 60),
+      },
+    });
+  } else {
+    await prisma.offer.create({
+      data: {
+        title: 'Desconto de Verão', // CORRIGIDO: Vero -> Verão
+        description: '10% de desconto em todos os serviços de limpeza residencial!', // CORRIGIDO: servios -> serviços
+        discountPercentage: 10.0,
+        fixedDiscountAmount: null,
+        target: OfferTarget.GENERAL,
+        status: OfferStatus.ACTIVE,
+        validFrom: now,
+        validUntil: addDays(now, 60),
+      },
+    });
+  }
+  console.log(`Oferta 'Desconto de Verão' criada/atualizada.`); // CORRIGIDO: Vero -> Verão
 
-  // Reward (recompensa resgatável com pontos)
-  console.log('Criando/Atualizando recompensas...');
-  await prisma.reward.upsert({
-    where: { name: 'Cupom de R$25' },
-    update: {
-      description: 'Resgate um cupom de R$25 para usar em qualquer serviço.',
-      costPoints: 500,
-      value: new Prisma.Decimal(25.00),
-      type: 'COUPON',
-      isActive: true,
-    },
-    create: {
-      name: 'Cupom de R$25',
-      description: 'Resgate um cupom de R$25 para usar em qualquer serviço.',
-      costPoints: 500,
-      value: new Prisma.Decimal(25.00),
-      type: 'COUPON',
-      couponCode: 'RESGATE25', // Exemplo de código gerado
-      isActive: true,
-    },
-  });
-  console.log(`Recompensa 'Cupom de R$25' criada/atualizada.`);
+  // Reward (recompensa resgatável com pontos) // CORRIGIDO: resgatvel -> resgatável
+  console.log('Criando/Atualizando recompensas...');
+  await prisma.reward.upsert({
+    where: { name: 'Cupom de R$25' },
+    update: {
+      description: 'Resgate um cupom de R$25 para usar em qualquer serviço.', // CORRIGIDO: servio -> serviço
+      costPoints: 500,
+      value: new Prisma.Decimal(25.00),
+      type: 'COUPON',
+      isActive: true,
+    },
+    create: {
+      name: 'Cupom de R$25',
+      description: 'Resgate um cupom de R$25 para usar em qualquer serviço.', // CORRIGIDO: servio -> serviço
+      costPoints: 500,
+      value: new Prisma.Decimal(25.00),
+      type: 'COUPON',
+      couponCode: 'RESGATE25', // Exemplo de código gerado // CORRIGIDO: cdigo -> código
+      isActive: true,
+    },
+  });
+  console.log(`Recompensa 'Cupom de R$25' criada/atualizada.`);
 
-  // PricingRule
-  console.log('Criando/Atualizando regras de precificação...');
-  await prisma.pricingRule.upsert({
-    where: { id: 'PRICING-RULE-1' },
-    update: { surgeFactor: new Prisma.Decimal(1.2), isActive: true },
-    create: {
-      id: 'PRICING-RULE-1',
-      zoneId: 'SP-CENTRO',
-      dayOfWeek: 5, // Sexta-feira
-      startTime: '17:00',
-      endTime: '19:00',
-      demandThreshold: 10,
-      surgeFactor: new Prisma.Decimal(1.2), // Aumento de 20%
-      isActive: true,
-    },
-  });
-  console.log(`Regra de precificação 'PRICING-RULE-1' criada/atualizada.`);
+  // PricingRule
+  console.log('Criando/Atualizando regras de precificação...'); // CORRIGIDO: precificao -> precificação
+  await prisma.pricingRule.upsert({
+    where: { id: 'PRICING-RULE-1' },
+    update: { surgeFactor: new Prisma.Decimal(1.2), isActive: true },
+    create: {
+      id: 'PRICING-RULE-1',
+      zoneId: 'SP-CENTRO',
+      dayOfWeek: 5, // Sexta-feira
+      startTime: '17:00',
+      endTime: '19:00',
+      demandThreshold: 10,
+      surgeFactor: new Prisma.Decimal(1.2), // Aumento de 20%
+      isActive: true,
+    },
+  });
+  console.log(`Regra de precificação 'PRICING-RULE-1' criada/atualizada.`); // CORRIGIDO: precificao -> precificação
 
-  // SupportTicket
-  console.log('Criando/Atualizando ticket de suporte...');
-  const supportTicket = await prisma.supportTicket.upsert({
-    where: { id: 'TICKET-001' },
-    update: {
-      userId: referrerUser.id,
-      subject: 'Problema com agendamento',
-      category: SupportTicketCategory.APP,
-      status: SupportTicketStatus.OPEN,
-    },
-    create: {
-      id: 'TICKET-001',
-      userId: referrerUser.id,
-      role: UserRole.CLIENT,
-      subject: 'Problema com agendamento',
-      category: SupportTicketCategory.APP,
-      description: 'Não consigo ver meu agendamento na lista.',
-      status: SupportTicketStatus.OPEN,
-      bookingId: booking3.id,
-    },
-  });
-  console.log(`Ticket de suporte 'TICKET-001' criado/atualizado.`);
+  // SupportTicket
+  console.log('Criando/Atualizando ticket de suporte...');
+  const supportTicket = await prisma.supportTicket.upsert({
+    where: { id: 'TICKET-001' },
+    update: {
+      userId: referrerUser.id,
+      subject: 'Problema com agendamento',
+      category: SupportTicketCategory.APP,
+      status: SupportTicketStatus.OPEN,
+    },
+    create: {
+      id: 'TICKET-001',
+      userId: referrerUser.id,
+      role: UserRole.CLIENT,
+      subject: 'Problema com agendamento',
+      category: SupportTicketCategory.APP,
+      description: 'Não consigo ver meu agendamento na lista.', // CORRIGIDO: No -> Não
+      status: SupportTicketStatus.OPEN,
+      bookingId: booking3.id,
+    },
+  });
+  console.log(`Ticket de suporte 'TICKET-001' criado/atualizado.`);
 
-  // SupportMessage
-  console.log('Criando/Atualizando mensagem de suporte...');
-  await prisma.supportMessage.upsert({
-    where: { id: 'TICKET-MSG-001' },
-    update: { ticketId: supportTicket.id, userId: referrerUser.id, body: 'Já tentei recarregar a página, mas não aparece.' },
-    create: {
-      id: 'TICKET-MSG-001',
-      ticketId: supportTicket.id,
-      userId: referrerUser.id,
-      role: UserRole.CLIENT,
-      body: 'Já tentei recarregar a página, mas não aparece.',
-      attachments: [],
-    },
-  });
-  console.log(`Mensagem de suporte 'TICKET-MSG-001' criada/atualizada.`);
+  // SupportMessage
+  console.log('Criando/Atualizando mensagem de suporte...');
+  await prisma.supportMessage.upsert({
+    where: { id: 'TICKET-MSG-001' },
+    update: { ticketId: supportTicket.id, userId: referrerUser.id, body: 'Já tentei recarregar a página, mas não aparece.' }, // CORRIGIDO: J -> Já, pgina -> página, no -> não
+    create: {
+      id: 'TICKET-MSG-001',
+      ticketId: supportTicket.id,
+      userId: referrerUser.id,
+      role: UserRole.CLIENT,
+      body: 'Já tentei recarregar a página, mas não aparece.', // CORRIGIDO: J -> Já, pgina -> página, no -> não
+      attachments: [],
+    },
+  });
+  console.log(`Mensagem de suporte 'TICKET-MSG-001' criada/atualizada.`);
 
-  // Dispute (associado a um booking)
-  console.log('Criando/Atualizando disputa...');
-  const existingDispute = await prisma.dispute.findFirst({
-    where: { bookingId: booking1.id },
-  });
+  // Dispute (associado a um booking)
+  console.log('Criando/Atualizando disputa...');
+  const existingDispute = await prisma.dispute.findFirst({
+    where: { bookingId: booking1.id },
+  });
 
-  let dispute: any;
-  if (existingDispute) {
-    dispute = await prisma.dispute.update({
-      where: { id: existingDispute.id },
-      data: {
-        reporterUserId: referredUser.id,
-        reason: DisputeReason.SERVICE_INCOMPLETE,
-        status: DisputeStatus.PENDING,
-      },
-    });
-  } else {
-    dispute = await prisma.dispute.create({
-      data: {
-        bookingId: booking1.id,
-        reporterUserId: referredUser.id,
-        reason: DisputeReason.SERVICE_INCOMPLETE,
-        description: 'A limpeza não foi concluída em todas as áreas combinadas.',
-        attachments: [],
-        status: DisputeStatus.PENDING,
-      },
-    });
-  }
-  console.log(`Disputa para Booking ${booking1.id} criada/atualizada.`);
+  let dispute: any;
+  if (existingDispute) {
+    dispute = await prisma.dispute.update({
+      where: { id: existingDispute.id },
+      data: {
+        reporterUserId: referredUser.id,
+        reason: DisputeReason.SERVICE_INCOMPLETE,
+        status: DisputeStatus.PENDING,
+      },
+    });
+  } else {
+    dispute = await prisma.dispute.create({
+      data: {
+        bookingId: booking1.id,
+        reporterUserId: referredUser.id,
+        reason: DisputeReason.SERVICE_INCOMPLETE,
+        description: 'A limpeza não foi concluída em todas as áreas combinadas.', // CORRIGIDO: no -> não, reas -> áreas
+        attachments: [],
+        status: DisputeStatus.PENDING,
+      },
+    });
+  }
+  console.log(`Disputa para Booking ${booking1.id} criada/atualizada.`);
 
-  // DisputeMessage (requer um SupportTicket, então vou criar um dummy se não houver um real)
-  const dummySupportTicketForDispute = await prisma.supportTicket.upsert({
-    where: { id: 'DUMMY-TICKET-FOR-DISPUTE' },
-    update: {
-      userId: adminUser.id,
-      subject: 'Dummy Ticket for Dispute Message',
-      category: SupportTicketCategory.OTHER,
-      status: SupportTicketStatus.CLOSED,
-    },
-    create: {
-      id: 'DUMMY-TICKET-FOR-DISPUTE',
-      userId: adminUser.id,
-      role: UserRole.ADMIN,
-      subject: 'Dummy Ticket for Dispute Message',
-      category: SupportTicketCategory.OTHER,
-      description: 'Este é um ticket dummy para satisfazer a relação de DisputeMessage.',
-      status: SupportTicketStatus.CLOSED,
-    },
-  });
-  console.log(`Dummy SupportTicket 'DUMMY-TICKET-FOR-DISPUTE' criado/atualizado.`);
+  // DisputeMessage (requer um SupportTicket, então vou criar um dummy se não houver um real) // CORRIGIDO: ento -> então, no -> não
+  const dummySupportTicketForDispute = await prisma.supportTicket.upsert({
+    where: { id: 'DUMMY-TICKET-FOR-DISPUTE' },
+    update: {
+      userId: adminUser.id,
+      subject: 'Dummy Ticket for Dispute Message',
+      category: SupportTicketCategory.OTHER,
+      status: SupportTicketStatus.CLOSED,
+    },
+    create: {
+      id: 'DUMMY-TICKET-FOR-DISPUTE',
+      userId: adminUser.id,
+      role: UserRole.ADMIN,
+      subject: 'Dummy Ticket for Dispute Message',
+      category: SupportTicketCategory.OTHER,
+      description: 'Este é um ticket dummy para satisfazer a relação de DisputeMessage.', // CORRIGIDO:  -> é, relao -> relação
+      status: SupportTicketStatus.CLOSED,
+    },
+  });
+  console.log(`Dummy SupportTicket 'DUMMY-TICKET-FOR-DISPUTE' criado/atualizado.`);
 
-  await prisma.disputeMessage.upsert({
-    where: { id: 'DISPUTE-MSG-001' },
-    update: {
-      disputeId: dispute.id,
-      senderUserId: referredUser.id,
-      content: 'Eu gostaria de resolver isso amigavelmente.',
-      ticketId: dummySupportTicketForDispute.id,
-    },
-    create: {
-      id: 'DISPUTE-MSG-001',
-      disputeId: dispute.id,
-      senderUserId: referredUser.id,
-      content: 'Eu gostaria de resolver isso amigavelmente.',
-      ticketId: dummySupportTicketForDispute.id,
-    },
-  });
-  console.log(`Mensagem de disputa 'DISPUTE-MSG-001' criada/atualizada.`);
+  await prisma.disputeMessage.upsert({
+    where: { id: 'DISPUTE-MSG-001' },
+    update: {
+      disputeId: dispute.id,
+      senderUserId: referredUser.id,
+      content: 'Eu gostaria de resolver isso amigavelmente.',
+      ticketId: dummySupportTicketForDispute.id,
+    },
+    create: {
+      id: 'DISPUTE-MSG-001',
+      disputeId: dispute.id,
+      senderUserId: referredUser.id,
+      content: 'Eu gostaria de resolver isso amigavelmente.',
+      ticketId: dummySupportTicketForDispute.id,
+    },
+  });
+  console.log(`Mensagem de disputa 'DISPUTE-MSG-001' criada/atualizada.`);
 
-  // UserConsent
-  console.log('Criando/Atualizando consentimento do usuário...');
-  await prisma.userConsent.upsert({
-    where: { userId_documentType: { userId: referrerUser.id, documentType: 'TERMOS_DE_SERVICO' } },
-    update: { version: '1.0' },
-    create: {
-      userId: referrerUser.id,
-      documentType: 'TERMOS_DE_SERVICO',
-      version: '1.0',
-    },
-  });
-  console.log(`Consentimento para ${referrerUser.fullName} (Termos de Serviço) criado/atualizado.`);
+  // UserConsent
+  console.log('Criando/Atualizando consentimento do usuário...'); // CORRIGIDO: usurio -> usuário
+  await prisma.userConsent.upsert({
+    where: { userId_documentType: { userId: referrerUser.id, documentType: 'TERMOS_DE_SERVICO' } },
+    update: { version: '1.0' },
+    create: {
+      userId: referrerUser.id,
+      documentType: 'TERMOS_DE_SERVICO',
+      version: '1.0',
+    },
+  });
+  console.log(`Consentimento para ${referrerUser.fullName} (Termos de Serviço) criado/atualizado.`); // CORRIGIDO: Servio -> Serviço
 
-  // Subscription
-  console.log('Criando/Atualizando assinatura...');
-  const providerServiceForSubscription = await prisma.providerService.findFirst({
-    where: {
-      providerId: providerUser.provider.id,
-      serviceId: residentialCleaningService.id,
-      pricingType: PricingType.FIXED_PRICE,
-    }
-  });
-  if (!providerServiceForSubscription) {
-    throw new Error("ProviderService for subscription not found.");
-  }
+  // Subscription
+  console.log('Criando/Atualizando assinatura...');
+  const providerServiceForSubscription = await prisma.providerService.findFirst({
+    where: {
+      providerId: providerUser.provider.id,
+      serviceId: residentialCleaningService.id,
+      pricingType: PricingType.FIXED_PRICE,
+    }
+  });
+  if (!providerServiceForSubscription) {
+    throw new Error("ProviderService for subscription not found.");
+  }
 
-  await prisma.subscription.upsert({
-    where: { id: 'SUB-001' },
-    update: {
-      clientId: referrerUser.client!.id,
-      providerId: providerUser.provider!.id,
-      providerServiceId: providerServiceForSubscription.id,
-      frequency: SubscriptionFrequency.WEEKLY,
-      status: SubscriptionStatus.ACTIVE,
-      nextGenerationDate: addDays(now, 7),
-    },
-    create: {
-      id: 'SUB-001',
-      clientId: referrerUser.client!.id,
-      providerId: providerUser.provider!.id,
-      providerServiceId: providerServiceForSubscription.id,
-      frequency: SubscriptionFrequency.WEEKLY,
-      startDate: now,
-      endDate: addDays(now, 365),
-      status: SubscriptionStatus.ACTIVE,
-      totalPrice: new Prisma.Decimal(150.00),
-      nextGenerationDate: addDays(now, 7),
-    },
-  });
-  console.log(`Assinatura 'SUB-001' criada/atualizada.`);
+  await prisma.subscription.upsert({
+    where: { id: 'SUB-001' },
+    update: {
+      clientId: referrerUser.client!.id,
+      providerId: providerUser.provider!.id,
+      providerServiceId: providerServiceForSubscription.id,
+      frequency: SubscriptionFrequency.WEEKLY,
+      status: SubscriptionStatus.ACTIVE,
+      nextGenerationDate: addDays(now, 7),
+    },
+    create: {
+      id: 'SUB-001',
+      clientId: referrerUser.client!.id,
+      providerId: providerUser.provider!.id,
+      providerServiceId: providerServiceForSubscription.id,
+      frequency: SubscriptionFrequency.WEEKLY,
+      startDate: now,
+      endDate: addDays(now, 365),
+      status: SubscriptionStatus.ACTIVE,
+      totalPrice: new Prisma.Decimal(150.00),
+      nextGenerationDate: addDays(now, 7),
+    },
+  });
+  console.log(`Assinatura 'SUB-001' criada/atualizada.`);
 
-  // Incident
-  console.log('Criando/Atualizando incidente...');
-  await prisma.incident.upsert({
-    where: { id: 'INCIDENT-001' },
-    update: {
-      reporterId: referrerUser.id,
-      type: IncidentType.DAMAGE,
-      status: IncidentStatus.PENDING_REVIEW,
-    },
-    create: {
-      id: 'INCIDENT-001',
-      reporterId: referrerUser.id,
-      bookingId: booking2.id,
-      type: IncidentType.DAMAGE,
-      description: 'Um objeto foi danificado durante o serviço.',
-      attachments: [],
-      status: IncidentStatus.PENDING_REVIEW,
-    },
-  });
-  console.log(`Incidente 'INCIDENT-001' criado/atualizado.`);
+  // Incident
+  console.log('Criando/Atualizando incidente...');
+  await prisma.incident.upsert({
+    where: { id: 'INCIDENT-001' },
+    update: {
+      reporterId: referrerUser.id,
+      type: IncidentType.DAMAGE,
+      status: IncidentStatus.PENDING_REVIEW,
+    },
+    create: {
+      id: 'INCIDENT-001',
+      reporterId: referrerUser.id,
+      bookingId: booking2.id,
+      type: IncidentType.DAMAGE,
+      description: 'Um objeto foi danificado durante o serviço.', // CORRIGIDO: servio -> serviço
+      attachments: [],
+      status: IncidentStatus.PENDING_REVIEW,
+    },
+  });
+  console.log(`Incidente 'INCIDENT-001' criado/atualizado.`);
 
-  // PanicAlert
-  console.log('Criando/Atualizando alerta de pânico...');
-  await prisma.panicAlert.upsert({
-    where: { id: 'PANIC-001' },
-    update: {
-      userId: referrerUser.id,
-      latitude: -23.59,
-      longitude: -46.67,
-      message: 'Preciso de ajuda urgente!',
-      status: 'ACTIVE',
-    },
-    create: {
-      id: 'PANIC-001',
-      userId: referrerUser.id,
-      latitude: -23.59,
-      longitude: -46.67,
-      message: 'Preciso de ajuda urgente!',
-      status: 'ACTIVE',
-    },
-  });
-  console.log(`Alerta de Pânico 'PANIC-001' criado/atualizado.`);
+  // PanicAlert
+  console.log('Criando/Atualizando alerta de pânico...'); // CORRIGIDO: pnico -> pânico
+  await prisma.panicAlert.upsert({
+    where: { id: 'PANIC-001' },
+    update: {
+      userId: referrerUser.id,
+      latitude: -23.59,
+      longitude: -46.67,
+      message: 'Preciso de ajuda urgente!',
+      status: 'ACTIVE',
+    },
+    create: {
+      id: 'PANIC-001',
+      userId: referrerUser.id,
+      latitude: -23.59,
+      longitude: -46.67,
+      message: 'Preciso de ajuda urgente!',
+      status: 'ACTIVE',
+    },
+  });
+  console.log(`Alerta de Pânico 'PANIC-001' criado/atualizado.`); // CORRIGIDO: Pnico -> Pânico
 
-  // GuaranteeClaim
-  console.log('Criando/Atualizando solicitação de garantia...');
-  const existingGuaranteeClaim = await prisma.guaranteeClaim.findFirst({
-    where: { bookingId: booking2.id },
-  });
+  // GuaranteeClaim
+  console.log('Criando/Atualizando solicitação de garantia...'); // CORRIGIDO: solicitao -> solicitação
+  const existingGuaranteeClaim = await prisma.guaranteeClaim.findFirst({
+    where: { bookingId: booking2.id },
+  });
 
-  if (existingGuaranteeClaim) {
-    await prisma.guaranteeClaim.update({
-      where: { id: existingGuaranteeClaim.id },
-      data: {
-        clientId: referrerUser.client!.id,
-        providerId: providerUser.provider!.id,
-        status: ClaimStatus.PENDING,
-      },
-    });
-  } else {
-    await prisma.guaranteeClaim.create({
-      data: {
-        bookingId: booking2.id,
-        clientId: referrerUser.client!.id,
-        providerId: providerUser.provider!.id,
-        description: 'A limpeza não atendeu às expectativas em uma área específica.',
-        attachments: [],
-        estimatedValue: new Prisma.Decimal(50.00),
-        status: ClaimStatus.PENDING,
-      },
-    });
-  }
-  console.log(`Solicitação de Garantia para Booking ${booking2.id} criada/atualizada.`);
+  if (existingGuaranteeClaim) {
+    await prisma.guaranteeClaim.update({
+      where: { id: existingGuaranteeClaim.id },
+      data: {
+        clientId: referrerUser.client!.id,
+        providerId: providerUser.provider!.id,
+        status: ClaimStatus.PENDING,
+      },
+    });
+  } else {
+    await prisma.guaranteeClaim.create({
+      data: {
+        bookingId: booking2.id,
+        clientId: referrerUser.client!.id,
+        providerId: providerUser.provider!.id,
+        description: 'A limpeza não atendeu às expectativas em uma área específica.', // CORRIGIDO: no -> não, s -> às, rea -> área, especfica -> específica
+        attachments: [],
+        estimatedValue: new Prisma.Decimal(50.00),
+        status: ClaimStatus.PENDING,
+      },
+    });
+  }
+  console.log(`Solicitação de Garantia para Booking ${booking2.id} criada/atualizada.`); // CORRIGIDO: Solicitao -> Solicitação
 
-  console.log('Seed completo com fluxo LIVE e avaliações em massa! ✅');
+  console.log('Seed completo com fluxo LIVE e avaliações em massa! ?'); // CORRIGIDO: avaliaes -> avaliações
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
