@@ -1967,7 +1967,7 @@ export class ProvidersService {
         acceptanceRate: true,
         averageResponseTime: true,
         bookings: {
-          where: { status: BookingStatus.COMPLETED },
+          where: { status: BookingStatus.FINISHED },
           select: { id: true },
         },
       },
