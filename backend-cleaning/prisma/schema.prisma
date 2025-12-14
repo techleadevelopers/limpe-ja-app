@@ -43,15 +43,27 @@ enum PricingType {
   CUSTOM_QUOTE
 }
 
+enum TransactionStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELED
+  REFUNDED
+  PROCESSED 
+  COMPLETED
+}
+
 enum BookingStatus {
   PENDING
+  PENDING_PROVIDER_CONFIRMATION
   CONFIRMED
-  COMPLETED
-  CANCELED  // Mantido como CANCELED no backend (canonical); usar adapters para CANCELLED no FE
+  ON_THE_WAY    // Prestador a caminho
+  ARRIVED       // Prestador chegou
+  STARTED       // Serviço iniciado
+  FINISHED      // Serviço finalizado
+  CANCELED
   PENDING_DISPUTE
   RESCHEDULED
-  IN_PROGRESS
-  PENDING_PROVIDER_CONFIRMATION
   REJECTED
   NO_SHOW
 }
@@ -453,51 +465,63 @@ model ProviderServiceVersion {
 }
 
 model Booking {
-  id                        String        @id @default(uuid())
-  clientId                  String
-  providerId                String
-  providerServiceId         String
-  client                    Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  provider                  Provider      @relation(fields: [providerId], references: [id], onDelete: Restrict)
-  providerService           ProviderService @relation(fields: [providerServiceId], references: [id])
-  scheduledDate             DateTime
-  scheduledTime             String
-  status                    BookingStatus @default(PENDING)
-  totalPrice                Decimal       @db.Decimal(10, 2)
-  notes                     String?
-  createdAt                 DateTime      @default(now())
-  updatedAt                 DateTime      @updatedAt
-  review                    Review?
-  transactions              Transaction[]
-  addressId                 String?       @unique  // 1:1 com Address; confirme se atende fluxos (sem endereços compartilhados)
-  address                   Address?      @relation("BookingAddress", fields: [addressId], references: [id])
-  dispute                   Dispute?
-  subscriptionId            String?
-  subscription              Subscription? @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
-  incidents                 Incident[]
-  guaranteeClaims           GuaranteeClaim[]
-  couponId                  String?
-  coupon                    Coupon?       @relation(fields: [couponId], references: [id])
-  couponUsage               CouponUsage?  @relation("BookingCouponUsage")
-  discountAmount            Decimal?      @db.Decimal(10, 2)
-  supportTickets            SupportTicket[]
-  paymentIntent             PaymentIntent?
-
-  // CORREÇÃO: Adicionado para relação bilateral com LedgerEntry
-  ledgerEntries             LedgerEntry[]
-
-  // ADICIONADO: Auditoria de início/fim (premium para telas e relatórios)
-  startedAt                 DateTime?
-  completedAt               DateTime?
-  startedByUserId           String?
-  completedByUserId         String?
-
-  // ADICIONADO: Relações para auditoria de quem iniciou/finalizou (melhora queries e integridade)
-  startedByUser             User?          @relation("BookingStartedBy", fields: [startedByUserId], references: [id])
-  completedByUser           User?          @relation("BookingCompletedBy", fields: [completedByUserId], references: [id])
-
-  // ADICIONADO: Índices para performance (próximos serviços, listagem por provider/status)
+  id                         String            @id @default(uuid())
+  clientId                   String
+  providerId                 String
+  providerServiceId          String
+  client                     Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  provider                   Provider          @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  providerService            ProviderService   @relation(fields: [providerServiceId], references: [id])
+  
+  // Agendamento
+  scheduledDate              DateTime
+  scheduledTime              String
+  scheduledStart             DateTime?
+  durationMinutes            Int?
+  status                     BookingStatus     @default(PENDING)
+  
+  // Preço e descontos
+  totalPrice                 Decimal           @db.Decimal(10, 2)
+  discountAmount             Decimal?          @db.Decimal(10, 2)
+  notes                      String?
+  
+  // Timestamps de progresso (FLUXO COMPLETO)
+  onTheWayAt                 DateTime?         // Quando prestador ativou "a caminho"
+  arrivedAt                  DateTime?         // Quando prestador ativou "cheguei"
+  startedAt                  DateTime?         // Quando serviço foi iniciado
+  completedAt                DateTime?         // Quando serviço foi finalizado
+  
+  // Auditoria (quem fez a ação)
+  startedByUserId            String?
+  completedByUserId          String?
+  startedByUser              User?             @relation("BookingStartedBy", fields: [startedByUserId], references: [id])
+  completedByUser            User?             @relation("BookingCompletedBy", fields: [completedByUserId], references: [id])
+  
+  // Relacionamentos
+  review                     Review?
+  isReviewed                 Boolean           @default(false)
+  transactions               Transaction[]
+  addressId                  String?           @unique
+  address                    Address?          @relation("BookingAddress", fields: [addressId], references: [id])
+  dispute                    Dispute?
+  subscriptionId             String?
+  subscription               Subscription?     @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
+  incidents                  Incident[]
+  guaranteeClaims            GuaranteeClaim[]
+  couponId                   String?
+  coupon                     Coupon?           @relation(fields: [couponId], references: [id])
+  couponUsage                CouponUsage?      @relation("BookingCouponUsage")
+  supportTickets             SupportTicket[]
+  paymentIntent              PaymentIntent?
+  ledgerEntries              LedgerEntry[]
+  
+  // Metadata
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+  
+  // Índices para performance
   @@index([providerId, status, scheduledDate])
+  @@index([clientId, status, scheduledDate])
   @@index([status, scheduledDate])
 }
 
@@ -588,28 +612,32 @@ model Offer {
 }
 
 model Transaction {
-  id                   String      @id @default(uuid())
+  id                   String            @id @default(uuid())
   providerId           String
-  provider             Provider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  amount               Decimal     @db.Decimal(10, 2)
+  provider             Provider          @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  amount               Decimal           @db.Decimal(10, 2)
   type                 TransactionType
-  status               String
+  status               TransactionStatus @default(PENDING)
   description          String?
-  createdAt            DateTime    @default(now())
+  createdAt            DateTime          @default(now())
+
   bookingId            String?
-  booking              Booking?    @relation(fields: [bookingId], references: [id])
-  gatewayTransactionId String?     @unique
+  booking              Booking?          @relation(fields: [bookingId], references: [id])
+
+  gatewayTransactionId String?           @unique
   qrCodeUrl            String?
   transactionRef       String?
-  couponId             String?
-  coupon               Coupon?     @relation(fields: [couponId], references: [id])
-  pixKeyType           PixKeyType?
-  pixKey               String?     // Chave PIX em texto puro (sensível); aplicar mascaramento/hash na aplicação e limpar este campo após migração (considerar virtual)
-  pixKeyMasked         String?     // ADICIONADO: Versão mascarada/hash para armazenamento seguro (ex: últimos dígitos ou hash); sempre popular na aplicação (backfill histórico recomendado)
 
-  // ADICIONADO: Índice para extrato de ganhos do provedor (últimas transações por provider/status/createdAt)
+  couponId             String?
+  coupon               Coupon?           @relation(fields: [couponId], references: [id])
+
+  pixKeyType           PixKeyType?
+  pixKey               String?           // valor sensível
+  pixKeyMasked         String?           // versão mascarada para exibição segura
+
   @@index([providerId, status, createdAt])
 }
+
 
 model PaymentIntent {
   id                 String              @id @default(uuid())
@@ -622,6 +650,7 @@ model PaymentIntent {
   externalOrderId    String?
   externalChargeId   String?
   externalQrCodeId   String?
+  referenceId        String?
   idempotencyKey     String?             @unique  // Garantir uso em API/seed para idempotência
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -651,6 +680,8 @@ model Availability {
   startTime   String
   endTime     String
   isAvailable Boolean  @default(true)
+
+  @@index([providerId, dayOfWeek])
 }
 
 model FAQItem {
@@ -1022,7 +1053,7 @@ model Payout {
 model WebhookReplay {
   id      String   @id @default(cuid())
   source  String
-  eventId String   @unique
+  eventId String
   seenAt  DateTime @default(now())
 }
 
