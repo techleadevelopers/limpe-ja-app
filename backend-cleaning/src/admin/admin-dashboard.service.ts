@@ -20,7 +20,7 @@ export class AdminDashboardService {
       this.prisma.provider.count({
         where: { verificationStatus: VerificationStatus.APPROVED },
       }),
-      this.prisma.booking.count({ where: { status: BookingStatus.COMPLETED } }),
+      this.prisma.booking.count({ where: { status: BookingStatus.FINISHED } }),
       this.prisma.provider.count({
         where: {
           verificationStatus: {
@@ -34,7 +34,7 @@ export class AdminDashboardService {
         },
       }),
       this.prisma.booking.aggregate({
-        where: { status: BookingStatus.COMPLETED },
+        where: { status: BookingStatus.FINISHED },
         _sum: { totalPrice: true },
       }),
     ]);
@@ -65,7 +65,7 @@ export class AdminDashboardService {
 
     const completedBookings = await this.prisma.booking.findMany({
       where: {
-        status: BookingStatus.COMPLETED,
+        status: BookingStatus.FINISHED,
         createdAt: { gte: startMonth },
       },
       select: { totalPrice: true, createdAt: true },
