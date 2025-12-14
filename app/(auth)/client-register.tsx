@@ -1029,7 +1029,11 @@ export default function ClientRegisterScreen() {
                                         placeholder="Nome Completo"
                                         placeholderTextColor="#A0AEC0"
                                         value={username}
-                                        onChangeText={(text) => { setUsername(text); setUsernameError(null); }}
+                                        onChangeText={(text) => {
+                                            setUsername(text);
+                                            setUsernameError(null);
+                                            if (generalError) setGeneralError(null);
+                                        }}
                                         onBlur={handleUsernameBlur}
                                         autoCapitalize="words"
                                         textContentType="name"
