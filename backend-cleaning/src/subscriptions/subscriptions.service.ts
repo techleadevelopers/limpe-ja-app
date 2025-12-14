@@ -282,13 +282,7 @@ export class SubscriptionsService {
       subscription.frequency,
     );
 
-    // Trigger recurring payment for this booking
-    await this.paymentsService.processRecurringPayment(
-      subscription.clientId,
-      subscription.id,
-      newBooking.id,
-      subscription.totalPrice.toNumber(),
-    );
+  
 
     return newBooking;
   }
