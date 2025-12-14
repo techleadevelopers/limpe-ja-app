@@ -29,7 +29,8 @@ export const CLIENT_ROUTES = {
 } as const;
 
 export const PROVIDER_ROUTES = {
-  DASHBOARD: '/(provider)/dashboard', // CORRIGIDO: Adicionado /(provider)
+  HOME: '/(provider)', // home canonical
+  DASHBOARD: '/(provider)', // alias legado
   SCHEDULE: '/(provider)/schedule', // CORRIGIDO: Adicionado /(provider)
   MANAGE_AVAILABILITY: '/(provider)/schedule/manage-availability', // CORRIGIDO: Adicionado /(provider)
   SERVICES_LIST: '/(provider)/services', // CORRIGIDO: Adicionado /(provider)
