@@ -3,4 +3,4 @@ git status --porcelain | ForEach-Object {
     git add "$file"
     git commit -m "chore: update $file"
 }
-git push origin main
+git push origin master
