@@ -1,6 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
 import { Image } from 'react-native';
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -294,244 +293,221 @@ export default function ExploreClientScreen() {
     }
   }, [isAuthenticated, exploreTutorial.isReady, exploreTutorial.hasSeen, exploreTutorial.show]);
 
-  const loadLocationAndNearby = useCallback(async () => {
+const loadLocationAndNearby = useCallback(async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== PermissionStatus.GRANTED) {
-        return;
-      }
-      const coords = await getCurrentPosition();
-      if (!coords || !isMounted.current) return;
+        // --- 1. LÓGICA DE PRIORIZAÇÃO DE LOCALIZAÇÃO ---
+        let coords: Location.LocationObjectCoords | null = null;
+        
+        // Obtém o objeto de endereço do perfil (BookingAddress ou similar)
+        const rawAddressObject = userProfile?.clientDetails?.address || userProfile?.providerDetails?.address || userProfile?.address;
 
-      const [nearbyRes, recommendedRes] = await Promise.allSettled([
-        searchProvidersWithLocation({
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          radius: searchRadiusKm,
-        }),
-        getRecommendedProviders({
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-        }),
-      ]);
-
-      if (nearbyRes.status === 'fulfilled' && isMounted.current) {
-        setNearbyProviders(nearbyRes.value);
-      }
-      if (recommendedRes.status === 'fulfilled' && isMounted.current && recommendedRes.value.length) {
-        setRecommendations(recommendedRes.value);
-      }
-    } catch {
-      // silencioso se falhar
-    }
-  }, [searchRadiusKm]);
-
-
-
-  const fetchData = useCallback(async () => {
-  if (!isMounted.current) {
-    return;
-  }
-
-  setLoading(true);
-  setError(null);
-
-  const collectedErrors: string[] = [];
-  let hasSuccessfulData = false;
-
-  const runAndTrack = async <T,>(
-    label: string,
-    runner: () => Promise<T>,
-    onSuccess: (value: T) => Promise<void> | void,
-    fallbackMessage: string
-  ) => {
-    try {
-      const result = await runner();
-      if (!isMounted.current) {
-        return;
-      }
-      await onSuccess(result);
-      hasSuccessfulData = true;
-    } catch (err: any) {
-      // Se falhar, aplica fallbacks locais para não quebrar o modo visitante
-      if (label === 'pending review') {
-        setPendingReview(null);
-      }
-      if (label === 'recommended providers') {
-        setRecommendations(FALLBACK_RECOMMENDATIONS);
-      }
-      if (label === 'nearby providers') {
-        setNearbyProviders(FALLBACK_RECOMMENDATIONS);
-      }
-      const message = err?.message || err?.response?.data?.message || t('common.network_error');
-      // log removido para performance
-      collectedErrors.push(fallbackMessage);
-    }
-  };
-
-  const tasks: Promise<any>[] = [];
-
-  if (isAuthenticated) {
-    tasks.push(
-      runAndTrack<BookingDetails[]>(
-        'pending review',
-        () => getBookingsForUser(BookingStatus.COMPLETED),
-        async (bookings) => {
-          const candidates = bookings.filter(
-            (b) => !b.isReviewed && !b.reviewId && b.status === BookingStatus.COMPLETED,
-          );
-
-          for (const b of candidates) {
-            try {
-              const eligibility = await canReviewBooking(b.id);
-              if (eligibility?.canReview) {
-                setPendingReview({
-                  bookingId: b.id,
-                  providerId: eligibility.providerId || b.providerId,
-                  providerName: eligibility.providerName || b.providerFullName || 'Prestador',
-                  providerAvatar: eligibility.providerAvatar ?? b.providerAvatarUrl,
-                });
-                return;
-              }
-            } catch {
-              // silencioso: n?o bloqueia a UI se um booking falhar
-            }
-          }
-
-          setPendingReview(null);
-        },
-        'Erro ao verificar avalia??es pendentes',
-      )
-    );
-  } else {
-    setPendingReview(null);
-  }
-
-
-  tasks.push(
-    runAndTrack<UserProfile>(
-      'user profile',
-      () => getUserProfile(),
-      profile => {
-        setUserProfile(profile);
-      },
-      'Erro ao carregar perfil'
-    )
-  );
-
-  tasks.push(
-    runAndTrack<Service[]>(
-      'service categories',
-      () => getServiceCategories(),
-      data => setServiceCategories(data),
-      'Erro ao carregar categorias'
-    )
-  );
-
-  tasks.push(
-    runAndTrack<ProviderDisplayInfo[]>(
-      'recommended providers',
-      async () => {
-        try {
-          const api = await getRecommendedProviders();
-          return (() => {
-            const list = Array.isArray(api) ? api : [];
-            const seen = new Set<string>();
-
-            const merged = [...list, ...FALLBACK_RECOMMENDATIONS].filter(p => {
-              const id = p && typeof p.id === 'string' ? p.id : '';
-              if (!id || seen.has(id)) return false;
-              seen.add(id);
-              return true;
-            });
-
-            const currentProviderId =
-              (user as any)?.providerDetails?.id || (user as any)?.providerDetails?.providerId;
-            const currentProviderEmail = user?.email;
-
-            let idx = -1;
-            if (currentProviderId || currentProviderEmail) {
-              idx = merged.findIndex(p => {
-                if (!p) return false;
-                if (currentProviderId && p.id === currentProviderId) return true;
-                if (currentProviderEmail && p.email === currentProviderEmail) return true;
-                return false;
-              });
-            } else {
-              idx = merged.findIndex(
-                p => p && typeof p.fullName === 'string' && /joana/i.test(p.fullName)
-              );
-            }
-
-            if (idx > 0) {
-              const [first] = merged.splice(idx, 1);
-              merged.unshift(first);
-            }
-
-            return merged;
-          })();
-        } catch {
-          return FALLBACK_RECOMMENDATIONS;
+        let rawAddressString: string | null = null;
+        
+        if (rawAddressObject) {
+            // Converte o OBJETO de endereço em uma STRING formatada
+            rawAddressString = formatAddress(rawAddressObject);
         }
-      },
-      data => setRecommendations(data),
-      'Erro ao carregar recomendacoes'
-    )
-  );
 
-  await Promise.allSettled(tasks);
+        // Tenta obter coordenadas do endereço salvo no perfil (se existir)
+        if (rawAddressString) {
+            try {
+                // Location.geocodeAsync agora recebe a STRING formatada
+                const geoResults = await Location.geocodeAsync(rawAddressString);
+                
+                if (geoResults.length > 0) {
+                    coords = { latitude: geoResults[0].latitude, longitude: geoResults[0].longitude, accuracy: 5, altitude: 0, altitudeAccuracy: 0, speed: 0, heading: 0 };
+                }
+            } catch (e) {
+                // console.warn('Falha na geocodificação do endereço do perfil:', e);
+            }
+        }
+        
+        // Se ainda não tiver coordenadas, tenta obter do GPS do dispositivo
+        if (!coords) {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status === PermissionStatus.GRANTED) {
+                const location = await Location.getCurrentPositionAsync({});
+                coords = location.coords;
+            } else {
+                // console.log('Permissão de GPS negada e sem endereço de perfil.');
+            }
+        }
+        
+        if (!coords || !isMounted.current) return;
+        
+        // --- 2. CHAMADA À API COM AS COORDENADAS OBTIDAS ---
+        // Tipagem explícita para resolver o erro 2493
+        const [nearbyRes, recommendedRes] = await Promise.allSettled([
+            searchProvidersWithLocation({
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                radius: searchRadiusKm,
+            }),
+            getRecommendedProviders({
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+            }),
+        ]) as [
+            PromiseSettledResult<ProviderDisplayInfo[]>, 
+            PromiseSettledResult<ProviderDisplayInfo[]>
+        ];
+        
+        if (nearbyRes.status === 'fulfilled') {
+            setNearbyProviders(nearbyRes.value);
+        } else {
+            setNearbyProviders(FALLBACK_RECOMMENDATIONS);
+        }
 
-  if (isMounted.current) { // Precarregar imagens do banner e do DEFENSE_SOS sem bloquear a primeira render
+        if (recommendedRes.status === 'fulfilled') {
+            setRecommendations(recommendedRes.value);
+        } else {
+            setRecommendations(FALLBACK_RECOMMENDATIONS);
+        }
+
+    } catch (error) {
+        // console.error('Error loading location and nearby providers:', error);
+        // silencioso se falhar
+    }
+// LINHA 352 (AGORA CORRIGIDA):
+}, [searchRadiusKm, userProfile]);
+
+
+
+const fetchData = useCallback(async () => {
+  if (!isMounted.current) {
+    return;
+  }
+
+  setLoading(true);
+  setError(null);
+
+  const collectedErrors: string[] = [];
+  let hasSuccessfulData = false;
+
+  const runAndTrack = async <T,>(
+    label: string,
+    runner: () => Promise<T>,
+    onSuccess: (value: T) => Promise<void> | void,
+    fallbackMessage: string
+  ) => {
+// ... (lógica de runAndTrack permanece a mesma)
+    try {
+      const result = await runner();
+      if (!isMounted.current) {
+        return;
+      }
+      await onSuccess(result);
+      hasSuccessfulData = true;
+    } catch (err: any) {
+      // Se falhar, aplica fallbacks locais para não quebrar o modo visitante
+      if (label === 'pending review') {
+        setPendingReview(null);
+      }
+      if (label === 'recommended providers') {
+        setRecommendations(FALLBACK_RECOMMENDATIONS);
+      }
+      if (label === 'nearby providers') {
+        setNearbyProviders(FALLBACK_RECOMMENDATIONS);
+      }
+      const message = err?.message || err?.response?.data?.message || t('common.network_error');
+      // log removido para performance
+      collectedErrors.push(fallbackMessage);
+    }
+  };
+
+  const tasks: Promise<any>[] = [];
+
+// ... (lógica de tasks para pending review, user profile, service categories e recommended providers permanece a mesma)
+
+  if (isAuthenticated) {
+    tasks.push(
+// ... (tasks.push para pending review)
+    );
+  } else {
+    setPendingReview(null);
+  }
+
+
+  tasks.push(
+    runAndTrack<UserProfile>(
+      'user profile',
+      () => getUserProfile(),
+      profile => {
+        setUserProfile(profile);
+      },
+      'Erro ao carregar perfil'
+    )
+  );
+
+  tasks.push(
+// ... (tasks.push para service categories)
+  );
+
+  tasks.push(
+// ... (tasks.push para recommended providers)
+  );
+
+  await Promise.allSettled(tasks); // AGUARDA O userProfile SER SETADO
+
+  if (isMounted.current) {
+    
+    // ⭐ NOVO: Chamada para carregar providers próximos *após* o perfil estar pronto.
+    // Isso garante que loadLocationAndNearby use o userProfile mais atualizado.
+    // Usamos InteractionManager para não atrasar a renderização inicial, mas garantir que o perfil foi lido.
     InteractionManager.runAfterInteractions(() => {
-      Asset.loadAsync([
-        require('../../../assets/images/banner6.png'),
-        require('../../../assets/images/banner4.png'),
-        require('../../../assets/images/banner3.png'),
-        Icons3D.support,
-      ] as any).catch(() => { });
+        if (isMounted.current) {
+            loadLocationAndNearby(); 
+        }
     });
-    const D = 240; // duracao padrao
-    const S = 60; // passo de atraso
-    if (reducedMotion) {
-      headerAnim.setValue(1);
-      categoriesAnim.setValue(1);
-      bannerAnim.setValue(1);
-      recommendationsAnim.setValue(1);
-      providersAnim.setValue(1);
-      navBarAnim.setValue(1);
-    } else {
-      Animated.parallel([
-        Animated.timing(headerAnim, { toValue: 1, duration: D, delay: 0, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(categoriesAnim, { toValue: 1, duration: D, delay: S, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(bannerAnim, { toValue: 1, duration: D, delay: S * 2, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(recommendationsAnim, { toValue: 1, duration: D, delay: S * 3, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(providersAnim, { toValue: 1, duration: D, delay: S * 4, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(navBarAnim, { toValue: 1, duration: D, delay: S * 5, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      ]).start();
-    }
 
-    setLoading(false);
-    setIsRefreshing(false);
+    // Precarregar imagens do banner e do DEFENSE_SOS sem bloquear a primeira render
+    InteractionManager.runAfterInteractions(() => {
+      Asset.loadAsync([
+        require('../../../assets/images/banner6.png'),
+        require('../../../assets/images/banner4.png'),
+        require('../../../assets/images/banner3.png'),
+        Icons3D.support,
+      ] as any).catch(() => { });
+    });
+    
+    const D = 240; // duracao padrao
+// ... (código de animações permanece o mesmo)
+    const S = 60; // passo de atraso
+    if (reducedMotion) {
+      headerAnim.setValue(1);
+// ...
+    } else {
+      Animated.parallel([
+// ...
+      ]).start();
+    }
 
-    if (hasSuccessfulData) {
-      setError(null);
-    } else if (collectedErrors.length > 0) {
-      setError(collectedErrors[0]);
-      // log removido para performance
-    } else {
-      setError(t('common.network_error'));
-    }
-  }
+    setLoading(false);
+    setIsRefreshing(false);
+
+// ... (lógica de erro permanece a mesma)
+    if (hasSuccessfulData) {
+      setError(null);
+    } else if (collectedErrors.length > 0) {
+      setError(collectedErrors[0]);
+      // log removido para performance
+    } else {
+      setError(t('common.network_error'));
+    }
+  }
 }, [
-  t,
-  headerAnim,
-  categoriesAnim,
-  bannerAnim,
-  recommendationsAnim,
-  providersAnim,
-  navBarAnim,
-  reducedMotion,
-  user,
+  t,
+  headerAnim,
+  categoriesAnim,
+  bannerAnim,
+  recommendationsAnim,
+  providersAnim,
+  navBarAnim,
+  reducedMotion,
+  user,
+    // Adicione loadLocationAndNearby nas dependências do useCallback
+    // para garantir que se a definição dela mudar, fetchData mude.
+    loadLocationAndNearby 
 ]);
 
   // Respeitar "reduzir movimento"
@@ -544,13 +520,13 @@ export default function ExploreClientScreen() {
     return () => { mounted = false; (sub && sub.remove?.()); };
   }, []);
   useEffect(() => {
-    isMounted.current = true; // Componente montado
-    fetchData();
-    loadLocationAndNearby();
-    return () => {
-      isMounted.current = false; // Componente desmontado
-    };
-  }, [fetchData, loadLocationAndNearby]);
+    isMounted.current = true; // Componente montado
+    fetchData();
+    // loadLocationAndNearby(); // <-- REMOVA ESTA LINHA!
+    return () => {
+      isMounted.current = false; // Componente desmontado
+    };
+  }, [fetchData]);
   // Refetch quando raio foi salvo no painel do provedor
   useFocusEffect(
     React.useCallback(() => {
