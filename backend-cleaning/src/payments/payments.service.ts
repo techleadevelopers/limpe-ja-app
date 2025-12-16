@@ -148,76 +148,144 @@ export class PaymentsService {
    * Processa o webhook de notificação de pagamento (compra do cliente) enviado pelo PSP.
    * Este método deve validar a assinatura (HMAC) e atualizar o status do PaymentIntent/Booking.
    */
-async handlePaymentWebhook(
-  signature: string,
-  payload: any,
-): Promise<void | MessageResponseDto> {
-  this.logger.log(
-    `[PaymentsService] Webhook recebido. Evento: ${payload.event}`,
-  );
-
-  // 1. Validação da Assinatura (HMAC)
-  const secret = this.configService.get<string>('PIX_WEBHOOK_SECRET');
-  if (!secret || !this.validateHmac(signature, payload)) {
-    this.logger.warn(
-      'Webhook com assinatura inválida recebido ou secret não configurado.',
+  async handlePaymentWebhook(
+    signature: string,
+    payload: any,
+  ): Promise<void | MessageResponseDto> {
+    this.logger.log(
+      `[PaymentsService] Webhook recebido. Evento: ${payload.event}`,
     );
-    throw new ForbiddenException('Assinatura de Webhook Inválida.');
-  }
-  // 2. Processamento do Evento (CORRIGIDO)
-  const status = payload?.transaction?.status
-    ? String(payload.transaction.status).toUpperCase()
-    : '';
 
-  if (
-    payload.event === 'charge.paid' ||
-    status === 'PAID' ||
-    status === 'COMPLETED' ||
-    status === 'APPROVED'
-  ) {
-    const externalRef =
-      payload?.data?.id ||
-      payload?.resource_id ||
-      payload?.transaction?.id;
+    // 1. Validação da Assinatura (HMAC)
+    const secret = this.configService.get<string>('PIX_WEBHOOK_SECRET');
+    if (!secret || !this.validateHmac(signature, payload)) {
+      this.logger.warn(
+        'Webhook com assinatura inválida recebido ou secret não configurado.',
+      );
+      throw new ForbiddenException('Assinatura de Webhook Inválida.');
+    }
+    // 2. Processamento do Evento (CORRIGIDO)
+    const status = payload?.transaction?.status
+      ? String(payload.transaction.status).toUpperCase()
+      : '';
 
-    const bookingId =
-      payload?.reference_id ||
-      payload?.transaction?.reference_id ||
-      externalRef;
+    if (
+      payload.event === 'charge.paid' ||
+      status === 'PAID' ||
+      status === 'COMPLETED' ||
+      status === 'APPROVED'
+    ) {
+      const externalRef =
+        payload?.data?.id ||
+        payload?.resource_id ||
+        payload?.transaction?.id;
 
-    if (bookingId) {
-      const intent = await this.prisma.paymentIntent.findFirst({
-        where: { externalRef },
-        include: { booking: true },
-      });
+      const bookingId =
+        payload?.reference_id ||
+        payload?.transaction?.reference_id ||
+        externalRef;
 
-      if (intent && intent.status !== PaymentIntentStatus.PAID) {
-        await this.prisma.$transaction(async (tx) => {
-          await tx.paymentIntent.update({
-            where: { id: intent.id },
-            data: { status: PaymentIntentStatus.PAID },
-          });
-
-          await tx.booking.update({
-            where: { id: intent.bookingId },
-            data: { status: BookingStatus.CONFIRMED },
-          });
+      if (bookingId) {
+        const intent = await this.prisma.paymentIntent.findFirst({
+          where: { externalRef },
+          // MODIFICAÇÃO: Incluir o booking e o provider para acessar totalPrice e userId
+          include: {
+            booking: {
+              include: {
+                provider: {
+                  select: { userId: true },
+                },
+              },
+            },
+          },
         });
 
-        this.logger.log(
-          `[PaymentsService] Pagamento ${externalRef} para o agendamento ${intent.bookingId} CONFIRMADO.`,
-        );
-      } else if (!intent) {
-        this.logger.warn(
-          `[PaymentsService] Webhook para ref ${externalRef} recebido, mas PaymentIntent não encontrado.`,
-        );
+        if (intent && intent.status !== PaymentIntentStatus.PAID) {
+          // Inicia uma transação para garantir atomicidade das atualizações
+          await this.prisma.$transaction(async (tx) => {
+            await tx.paymentIntent.update({
+              where: { id: intent.id },
+              data: { status: PaymentIntentStatus.PAID },
+            });
+
+            // O booking já está incluído no `intent`
+            const booking = intent.booking;
+
+            if (!booking) {
+              this.logger.error(`[PaymentsService] Booking not found for PaymentIntent ${intent.id}. Cannot process ledger.`);
+              // Se o booking não for encontrado, loga o erro e sai da transação.
+              // Dependendo da lógica de negócio, pode-se lançar uma exceção ou apenas logar.
+              return;
+            }
+
+            // Garante que o status do booking seja CONFIRMED
+            await tx.booking.update({
+              where: { id: booking.id },
+              data: { status: BookingStatus.CONFIRMED },
+            });
+
+            this.logger.log(
+              `[PaymentsService] Pagamento ${externalRef} para o agendamento ${booking.id} CONFIRMADO.`,
+            );
+
+            // --- INÍCIO DA IMPLEMENTAÇÃO SEGURA (IDEMPOTENTE) DO LEDGER ---
+            this.logger.log(`[PaymentsService] Processando ledger para booking ${booking.id}...`);
+
+            // 1. Proteção contra duplicação: Verifica se já existe uma entrada HOLD para este booking
+            const alreadyExists = await tx.ledgerEntry.findFirst({
+              where: {
+                bookingId: booking.id,
+                type: LedgerEntryType.HOLD,
+                amount: { gt: 0 }, // Assume que HOLD sempre tem valor positivo
+              },
+            });
+
+            if (alreadyExists) {
+              this.logger.warn(
+                `[PaymentsService] Entrada de ledger tipo HOLD para o booking ${booking.id} já existe. Ignorando duplicação.`,
+              );
+              return; // Webhook duplicado ou reprocessamento, não cria novas entradas no ledger
+            }
+
+            // 2. Valores: Calcula os valores brutos e de taxa
+            // booking.totalPrice é esperado ser um Prisma.Decimal ou um tipo numérico compatível
+            const grossAmount = new Prisma.Decimal(booking.totalPrice);
+            const feeAmount = grossAmount.mul(0.1); // Calcula 10% de taxa
+            const providerId = booking.provider.userId; // Acessa o userId do provider incluído
+
+            // 3. Ledger: Cria as entradas no ledger
+            await tx.ledgerEntry.createMany({
+              data: [
+                {
+                  userId: providerId,
+                  bookingId: booking.id,
+                  amount: grossAmount,
+                  type: LedgerEntryType.HOLD,
+                  note: `Pagamento bruto recebido (retido)`,
+                },
+                {
+                  userId: providerId,
+                  bookingId: booking.id,
+                  amount: feeAmount.neg(), // A taxa é um débito, então é negativa
+                  type: LedgerEntryType.FEE,
+                  note: `Taxa da plataforma`,
+                },
+              ],
+            });
+            this.logger.log(`[PaymentsService] Entradas de ledger criadas para o booking ${booking.id}.`);
+            // --- FIM DA IMPLEMENTAÇÃO SEGURA (IDEMPOTENTE) DO LEDGER ---
+          });
+        } else if (!intent) {
+          this.logger.warn(
+            `[PaymentsService] Webhook para ref ${externalRef} recebido, mas PaymentIntent não encontrado.`,
+          );
+        }
       }
     }
-  }
 
-  // 3. OK para o PSP
-  return { message: 'Webhook processado com sucesso' };
-}
+    // 3. OK para o PSP
+    return { message: 'Webhook processado com sucesso' };
+  }
 
   // Função de validação HMAC
   private validateHmac(signature: string, payload: any): boolean {
@@ -240,190 +308,201 @@ async handlePaymentWebhook(
   }
 
   // A função handlePixWebhook corrigida e com a tipagem `BookingWithUsers`
-// A função handlePixWebhook corrigida e funcional
-async handlePixWebhook(rawBody: any, parsedBody: any) {
-  try {
-    let data: any = null;
+  // A função handlePixWebhook corrigida e funcional
+  async handlePixWebhook(rawBody: any, parsedBody: any) {
+    try {
+      let data: any = null;
 
-    // 1. PRIORIDADE PARA O PARSED (se veio form-urlencoded)
-    if (parsedBody && typeof parsedBody === 'object') {
-      data = parsedBody;
-    }
-    
-    // 2. SE NÃO VEIO PARSED → tenta JSON puro
-    if (!data && rawBody) {
-      try {
-        data = JSON.parse(rawBody.toString());
-        console.log("[Webhook PIX] JSON parseado com sucesso");
-      } catch {
-        console.warn("[Webhook PIX] JSON inválido → usando string bruta");
-        data = { raw: rawBody.toString() };
+      // 1. PRIORIDADE PARA O PARSED (se veio form-urlencoded)
+      if (parsedBody && typeof parsedBody === 'object') {
+        data = parsedBody;
       }
+
+      // 2. SE NÃO VEIO PARSED → tenta JSON puro
+      if (!data && rawBody) {
+        try {
+          data = JSON.parse(rawBody.toString());
+          console.log("[Webhook PIX] JSON parseado com sucesso");
+        } catch {
+          console.warn("[Webhook PIX] JSON inválido → usando string bruta");
+          data = { raw: rawBody.toString() };
+        }
+      }
+
+      if (!data) return { success: false, message: "Webhook vazio" };
+
+      console.log(">>> WEBHOOK PARSED:", data);
+
+      // ---------------------------------------------------------
+      // EXTRAI O reference_id REAL do PagBank
+      // ---------------------------------------------------------
+
+      const referenceId =
+        data?.reference_id ||
+        data?.transaction?.reference_id ||
+        data?.charges?.[0]?.reference_id ||
+        null;
+
+      // ---------------------------------------------------------
+      // AQUI ESTÁ A LÓGICA DO "PAID" CORRIGIDA
+      // ---------------------------------------------------------
+
+      const chargeStatus =
+        data?.charges?.[0]?.status?.toUpperCase() ||
+        data?.status?.toUpperCase() ||
+        null;
+
+      if (chargeStatus === "PAID" || chargeStatus === "APPROVED" || chargeStatus === "COMPLETED") {
+        console.log("⚡ PAGAMENTO PIX CONFIRMADO ⚡");
+        console.log("REFERENCE_ID:", referenceId);
+
+        await this.confirmPixPayment(referenceId);
+
+        return { ok: true };
+      }
+
+      // ---------------------------------------------------------
+      // FIM DO BLOCO CORRIGIDO
+      // ---------------------------------------------------------
+
+      // 3. Detecta chargeId para fallback
+      const chargeId =
+        data?.charge?.id ||
+        data?.chargeId ||
+        data?.id ||
+        data?.charge_id ||
+        data?.transaction_id ||
+        data?.order_id ||
+        data?.order?.id ||
+        data?.resource_id ||
+        null;
+
+      const status = data?.status || null;
+
+      if (!chargeId) return { success: false, message: "chargeId ausente" };
+
+      // 4. BUSCA O PAYMENTINTENT
+      const intent = await this.prisma.paymentIntent.findFirst({
+        where: { externalRef: String(chargeId) },
+      });
+
+      if (!intent) {
+        console.warn(`Nenhum PaymentIntent encontrado para chargeId ${chargeId}`);
+        return {
+          success: true,
+          message: "chargeId não associado a nenhum booking",
+        };
+      }
+
+      // 5. CONFIRMA O BOOKING
+      await this.prisma.booking.update({
+        where: { id: intent.bookingId },
+        data: { status: "CONFIRMED" },
+      });
+
+      return {
+        success: true,
+        message: "Webhook processado",
+        chargeId,
+        status,
+      };
+
+    } catch (err) {
+      console.error("Erro no webhook PIX:", err);
+      return { success: false, message: "Erro interno no webhook" };
+    }
+  }
+
+  async confirmPixPayment(referenceId: string) {
+    this.logger.log(">>> CONFIRMANDO PIX PARA REFERENCE:", referenceId);
+
+    if (!referenceId) {
+      this.logger.warn("confirmPixPayment chamado sem referenceId");
+      return;
     }
 
-    if (!data) return { success: false, message: "Webhook vazio" };
-
-    console.log(">>> WEBHOOK PARSED:", data);
-
-    // ---------------------------------------------------------
-    // EXTRAI O reference_id REAL do PagBank
-    // ---------------------------------------------------------
-
-    const referenceId =
-      data?.reference_id ||
-      data?.transaction?.reference_id ||
-      data?.charges?.[0]?.reference_id ||
-      null;
-
-    // ---------------------------------------------------------
-    // AQUI ESTÁ A LÓGICA DO "PAID" CORRIGIDA
-    // ---------------------------------------------------------
-
-    const chargeStatus =
-      data?.charges?.[0]?.status?.toUpperCase() ||
-      data?.status?.toUpperCase() ||
-      null;
-
-    if (chargeStatus === "PAID" || chargeStatus === "APPROVED" || chargeStatus === "COMPLETED") {
-      console.log("⚡ PAGAMENTO PIX CONFIRMADO ⚡");
-      console.log("REFERENCE_ID:", referenceId);
-
-      await this.confirmPixPayment(referenceId);
-
-      return { ok: true };
-    }
-
-    // ---------------------------------------------------------
-    // FIM DO BLOCO CORRIGIDO
-    // ---------------------------------------------------------
-
-    // 3. Detecta chargeId para fallback
-    const chargeId =
-      data?.charge?.id ||
-      data?.chargeId ||
-      data?.id ||
-      data?.charge_id ||
-      data?.transaction_id ||
-      data?.order_id ||
-      data?.order?.id ||
-      data?.resource_id ||
-      null;
-
-    const status = data?.status || null;
-
-    if (!chargeId) return { success: false, message: "chargeId ausente" };
-
-    // 4. BUSCA O PAYMENTINTENT
     const intent = await this.prisma.paymentIntent.findFirst({
-      where: { externalRef: String(chargeId) },
+      where: {
+        OR: [
+          { externalOrderId: referenceId },
+          { externalChargeId: referenceId },
+        ],
+      },
     });
 
     if (!intent) {
-      console.warn(`Nenhum PaymentIntent encontrado para chargeId ${chargeId}`);
-      return {
-        success: true,
-        message: "chargeId não associado a nenhum booking",
-      };
+      this.logger.warn("Nenhum PaymentIntent encontrado para referência:", referenceId);
+      return;
     }
 
-    // 5. CONFIRMA O BOOKING
-    await this.prisma.booking.update({
+    // A lógica de ledger foi movida para handlePaymentWebhook para generalidade.
+    // Aqui, apenas confirmamos o booking, se ainda não estiver confirmado.
+    const booking = await this.prisma.booking.findUnique({
       where: { id: intent.bookingId },
-      data: { status: "CONFIRMED" },
+      select: { status: true }, // Apenas o status para verificar
     });
 
-    return {
-      success: true,
-      message: "Webhook processado",
-      chargeId,
-      status,
-    };
-
-  } catch (err) {
-    console.error("Erro no webhook PIX:", err);
-    return { success: false, message: "Erro interno no webhook" };
+    if (booking && booking.status !== BookingStatus.CONFIRMED) {
+      await this.prisma.booking.update({
+        where: { id: intent.bookingId },
+        data: { status: BookingStatus.CONFIRMED },
+      });
+      this.logger.log("✓ Booking confirmado via PIX:", intent.bookingId);
+    } else if (booking) {
+      this.logger.log(`Booking ${intent.bookingId} já está CONFIRMED. Nenhuma ação necessária.`);
+    } else {
+      this.logger.warn(`Booking ${intent.bookingId} não encontrado ao tentar confirmar PIX.`);
+    }
   }
-}
-
-async confirmPixPayment(referenceId: string) {
-  console.log(">>> CONFIRMANDO PIX PARA REFERENCE:", referenceId);
-
-  if (!referenceId) {
-    console.warn("confirmPixPayment chamado sem referenceId");
-    return;
-  }
-
-  const intent = await this.prisma.paymentIntent.findFirst({
-    where: {
-      OR: [
-        { externalOrderId: referenceId },
-        { externalChargeId: referenceId },
-      ],
-    },
-  });
-
-  if (!intent) {
-    console.warn("Nenhum PaymentIntent encontrado para referência:", referenceId);
-    return;
-  }
-
-  await this.prisma.booking.update({
-    where: { id: intent.bookingId },
-    data: { status: "CONFIRMED" },
-  });
-
-  console.log("✓ Booking confirmado via PIX:", intent.bookingId);
-}
-
 
 
   // Admin: listar transações com filtros básicos
-async listTransactions(type?: string, status?: string) {
-  const where: Prisma.TransactionWhereInput = {};
+  async listTransactions(type?: string, status?: string) {
+    const where: Prisma.TransactionWhereInput = {};
 
-  // Format TYPE (string → enum)
-  if (type) {
-    const normalizedType = type.toUpperCase() as keyof typeof TransactionType;
+    // Format TYPE (string → enum)
+    if (type) {
+      const normalizedType = type.toUpperCase() as keyof typeof TransactionType;
 
-    if (TransactionType[normalizedType]) {
-      where.type = TransactionType[normalizedType];
-    } else {
-      throw new BadRequestException(`Tipo de transação inválido: ${type}`);
+      if (TransactionType[normalizedType]) {
+        where.type = TransactionType[normalizedType];
+      } else {
+        throw new BadRequestException(`Tipo de transação inválido: ${type}`);
+      }
     }
-  }
 
-  // Format STATUS (string → enum)
-  if (status) {
-    const normalizedStatus = status.toUpperCase() as keyof typeof TransactionStatus;
+    // Format STATUS (string → enum)
+    if (status) {
+      const normalizedStatus = status.toUpperCase() as keyof typeof TransactionStatus;
 
-    if (TransactionStatus[normalizedStatus]) {
-      where.status = TransactionStatus[normalizedStatus];
-    } else {
-      throw new BadRequestException(`Status de transação inválido: ${status}`);
+      if (TransactionStatus[normalizedStatus]) {
+        where.status = TransactionStatus[normalizedStatus];
+      } else {
+        throw new BadRequestException(`Status de transação inválido: ${status}`);
+      }
     }
+
+    const txs = await this.prisma.transaction.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return txs.map((t) => ({
+      id: t.id,
+      providerId: t.providerId,
+      userId: undefined, // preservado exatamente como no seu código
+      amount: Number(t.amount),
+      type: t.type,
+      status: t.status,
+      description: t.description,
+      createdAt: t.createdAt.toISOString(),
+      bookingId: t.bookingId,
+      gatewayTransactionId: t.gatewayTransactionId,
+      qrCodeUrl: t.qrCodeUrl,
+      transactionRef: t.transactionRef,
+      couponId: t.couponId,
+    }));
   }
-
-  const txs = await this.prisma.transaction.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-  });
-
-  return txs.map((t) => ({
-    id: t.id,
-    providerId: t.providerId,
-    userId: undefined, // preservado exatamente como no seu código
-    amount: Number(t.amount),
-    type: t.type,
-    status: t.status,
-    description: t.description,
-    createdAt: t.createdAt.toISOString(),
-    bookingId: t.bookingId,
-    gatewayTransactionId: t.gatewayTransactionId,
-    qrCodeUrl: t.qrCodeUrl,
-    transactionRef: t.transactionRef,
-    couponId: t.couponId,
-  }));
-}
 
   // Admin: listar saques (Payouts) com mapeamento simples
   async listWithdrawals(status?: string) {
@@ -764,56 +843,56 @@ async listTransactions(type?: string, status?: string) {
         ? new Date(expirationDateStr)
         : expiration; // fallback to requested expiration if API omits
 
-const paymentIntentRecord = await this.prisma.paymentIntent.upsert({
-  where: { bookingId },
-  create: {
-    bookingId,
-    amountCents,
-    gateway: "PAGBANK_PIX",
+    const paymentIntentRecord = await this.prisma.paymentIntent.upsert({
+      where: { bookingId },
+      create: {
+        bookingId,
+        amountCents,
+        gateway: "PAGBANK_PIX",
 
-    // 🔥 IDs reais do PagBank
-    externalOrderId: orderId,   
-    externalChargeId: chargeId,
-    externalQrCodeId: qrCodeId,
+        // 🔥 IDs reais do PagBank
+        externalOrderId: orderId,
+        externalChargeId: chargeId,
+        externalQrCodeId: qrCodeId,
 
-    // 🔥 REFERÊNCIA DO PAGBANK (booking_xxxxx)
-    referenceId: referenceId,
-    externalRef: referenceId,
+        // 🔥 REFERÊNCIA DO PAGBANK (booking_xxxxx)
+        referenceId: referenceId,
+        externalRef: referenceId,
 
-    qrCodeText,
-    qrCodeUrl,
-    expiresAt,
+        qrCodeText,
+        qrCodeUrl,
+        expiresAt,
 
-    status,
-    idempotencyKey: idemKey,
-  },
-  update: {
-    amountCents,
+        status,
+        idempotencyKey: idemKey,
+      },
+      update: {
+        amountCents,
 
-    externalOrderId: orderId,
-    externalChargeId: chargeId,
-    externalQrCodeId: qrCodeId,
+        externalOrderId: orderId,
+        externalChargeId: chargeId,
+        externalQrCodeId: qrCodeId,
 
-    // 🔥 GARANTE QUE ATUALIZA TAMBÉM
-    referenceId: referenceId,
-    externalRef: referenceId,
+        // 🔥 GARANTE QUE ATUALIZA TAMBÉM
+        referenceId: referenceId,
+        externalRef: referenceId,
 
-    qrCodeText,
-    qrCodeUrl,
-    expiresAt,
+        qrCodeText,
+        qrCodeUrl,
+        expiresAt,
 
-    status,
-    idempotencyKey: idemKey,
-  },
-});
-  await this.prisma.booking.update({
-  where: { id: bookingId },
-  data: {
-    // ❌ remover isso caso esteja aqui:
-    // paymentStatus: 'PAID'
-  }
-});
- // === 7. RESPONDER AO APP NO NOVO FORMATO ===
+        status,
+        idempotencyKey: idemKey,
+      },
+    });
+    await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        // ❌ remover isso caso esteja aqui:
+        // paymentStatus: 'PAID'
+      }
+    });
+    // === 7. RESPONDER AO APP NO NOVO FORMATO ===
 
     return {
       orderId,
