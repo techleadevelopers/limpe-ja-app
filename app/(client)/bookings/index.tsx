@@ -258,6 +258,13 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
                 </View>
               )}
 
+              {item.status === BookingStatus.COMPLETED && !(item.isReviewed || item.reviewId) && (
+                <View style={styles.reviewBadge}>
+                  <Ionicons name="star-outline" size={13} color={UI.accent} style={[styles.metaIcon, styles.iconAdjust]} />
+                  <Text style={styles.reviewBadgeText}>Avaliar</Text>
+                </View>
+              )}
+
               <View style={styles.itemPriceContainer}>
                 <MaterialCommunityIcons name="currency-usd" size={14} color={UI.accent} style={styles.iconAdjust} />
                 <Text style={styles.itemPriceText}>{formatPriceBRL(item.totalPrice)}</Text>
@@ -753,6 +760,18 @@ const styles = StyleSheet.create({
 
   itemAddressContainer: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
   itemAddressText: { fontSize: 13, color: AppColors.textAuxiliary, flex: 1, fontFamily: 'Montserrat-Regular', lineHeight: 18 },
+
+  reviewBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(37,99,235,0.10)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 4,
+  },
+  reviewBadgeText: { fontSize: 12, color: UI.accent, fontWeight: '700', fontFamily: 'Montserrat-SemiBold', marginLeft: 4 },
 
   itemPriceContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   itemPriceText: { fontSize: 16, fontWeight: '700', color: UI.accent, marginLeft: 6, fontFamily: 'Montserrat-SemiBold' },
