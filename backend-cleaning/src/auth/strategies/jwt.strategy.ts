@@ -86,14 +86,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
       // ❌ REMOVIDO debug (flood)
       // this.logger.debug(`[JwtStrategy] validate: Usuário CLIENT. clientId: ${userPayload.clientId}`);
-    } 
-    else if (user.role === UserRole.PROVIDER && user.provider) {
+    } else if (user.role === UserRole.PROVIDER && user.provider) {
       userPayload.providerId = user.provider.id;
 
       // ❌ REMOVIDO debug (flood)
       // this.logger.debug(`[JwtStrategy] validate: Usuário PROVIDER. providerId: ${userPayload.providerId}`);
-    }
-    else if (user.role === UserRole.ADMIN) {
+    } else if (user.role === UserRole.ADMIN) {
       if (user.client) {
         userPayload.clientId = user.client.id;
 
