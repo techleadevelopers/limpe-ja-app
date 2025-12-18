@@ -30,7 +30,7 @@ export class MetricsService {
       userId,
       from,
       to,
-      'COMPLETED',
+      'FINISHED',
     );
     // CORREÇÃO AQUI: 'CANCELED_BY_CUSTOMER' foi alterado para 'CANCELED'
     const canceledBookings = await this.bookingsRepo.countBookings(
@@ -105,7 +105,7 @@ export class MetricsService {
       userId,
       undefined,
       undefined,
-      'COMPLETED',
+      'FINISHED',
     );
 
     return {
