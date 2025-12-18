@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -17,11 +17,23 @@ const SecaoContainer = <T extends { id: string | number }>({
   data,
   onVerTudoPress,
   titleColor = '#6a7181ff',
-  noDataText = 'Nenhum item disponível no momento.',
+  noDataText = 'Nenhum item disponivel no momento.',
   horizontal = false,
   renderItem,
 }: SecaoContainerProps<T>) => {
   const arrowAnim = useRef(new Animated.Value(0)).current;
+  const safeData = useMemo(
+    () =>
+      Array.isArray(data)
+        ? data.filter(
+            (item) =>
+              item &&
+              typeof item === 'object' &&
+              (typeof (item as any).id === 'string' || typeof (item as any).id === 'number'),
+          )
+        : [],
+    [data],
+  );
 
   return (
     <View style={styles.container}>
@@ -31,8 +43,13 @@ const SecaoContainer = <T extends { id: string | number }>({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.cardsScrollContainer}
         >
-          {data.length > 0 ? (
-            data.map((item, index) => <React.Fragment key={item.id}>{renderItem({ item, index })}</React.Fragment>)
+          {safeData.length > 0 ? (
+            safeData.map((item, index) => {
+              const rendered = renderItem({ item, index });
+              return React.isValidElement(rendered) ? (
+                <React.Fragment key={(item as any).id}>{rendered}</React.Fragment>
+              ) : null;
+            })
           ) : (
             <Text style={styles.emptyText}>{noDataText}</Text>
           )}
@@ -40,7 +57,6 @@ const SecaoContainer = <T extends { id: string | number }>({
 
         {horizontal && (
           <LinearGradient
-            // PREMIUM: Gradiente mais suave com base no fundo branco
             colors={['rgba(255, 255, 255, 0)', '#F1F2F2']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -48,7 +64,6 @@ const SecaoContainer = <T extends { id: string | number }>({
             pointerEvents="none"
           />
         )}
-        {/* PREMIUM: Ativado o fade da esquerda para simetria */}
         {horizontal && (
           <LinearGradient
             colors={['#F1F2F2', 'rgba(255, 255, 255, 0)']}
@@ -73,8 +88,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingBottom: 10,
     marginTop: -1,
-    paddingRight: 30, // dá espaço para o último card não encostar no fade
-    paddingLeft: 30,  // dá espaço para o primeiro card não encostar no fade
+    paddingRight: 30,
+    paddingLeft: 30,
   },
   emptyText: {
     flex: 1,
@@ -86,10 +101,9 @@ const styles = StyleSheet.create({
   rightFade: {
     position: 'absolute',
     right: 0,
-    
     top: 0,
     bottom: 0,
-    width: 15, 
+    width: 15,
   },
   leftFade: {
     position: 'absolute',
