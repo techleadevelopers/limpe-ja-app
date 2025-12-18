@@ -1,4 +1,7 @@
 // LimpeJaApp/app/(client)/explore/todos-prestadores-proximos.tsx
+import { getCurrentPosition } from '../../../services/locationService';
+import { getUserProfile } from '../../../services/clientService';
+// LimpeJaApp/app/(client)/explore/todos-prestadores-proximos.tsx
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
@@ -86,9 +89,37 @@ const styles = StyleSheet.create({
 const TodosPrestadoresProximosWrapped = withData(TodosPrestadoresProximosContent);
 
 export default function TodosPrestadoresProximosScreen() {
-  // Aqui você pode obter a localização real do usuário e passá-la para getNearbyProviders
-  // Por enquanto, usamos 0,0 como placeholders
-  const fetcher = React.useCallback(() => getNearbyProviders(0, 0), []); // Substitua 0,0 por coordenadas reais
+  const fetcher = React.useCallback(async () => {
+    let city: string | undefined;
+    let state: string | undefined;
+    let fallbackCoords: { latitude: number; longitude: number } | null = null;
+
+    try {
+      const profile = await getUserProfile();
+      const addr =
+        profile?.clientDetails?.address ||
+        profile?.providerDetails?.address ||
+        profile?.address;
+      city = typeof addr?.city === 'string' ? addr.city.trim().toLowerCase() : undefined;
+      state = typeof addr?.state === 'string' ? addr.state.trim().toLowerCase() : undefined;
+      if (typeof addr?.latitude === 'number' && typeof addr?.longitude === 'number') {
+        fallbackCoords = { latitude: addr.latitude, longitude: addr.longitude };
+      }
+    } catch {
+      // silencioso se o perfil falhar
+    }
+
+    const coords = await getCurrentPosition();
+    const coordsToUse = coords || fallbackCoords;
+
+    return getNearbyProviders({
+      ...(coordsToUse ? { latitude: coordsToUse.latitude, longitude: coordsToUse.longitude } : {}),
+      city,
+      state,
+      radius: 50,
+    });
+  }, []);
+
 
   return (
     <TodosPrestadoresProximosWrapped
