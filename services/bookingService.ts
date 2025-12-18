@@ -129,6 +129,22 @@ export async function completeBooking(bookingId: string): Promise<BookingDetails
     }
 }
 
+// DEV PANEL — QA ONLY — reutiliza endpoint real de aceite (prestador)
+export async function acceptBooking(bookingId: string): Promise<BookingDetails> {
+    try {
+        const response: AxiosResponse<BookingDetails> = await api.post<BookingDetails>(`/bookings/${bookingId}/accept`);
+        return mapBookingStatusIn(response.data);
+    } catch (error: any) {
+        if (__DEV__) {
+            console.warn(`Erro ao aceitar agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
+        }
+        if (axios.isAxiosError(error) && error.response) {
+            throw new Error(error.response.data.message || `Erro ao aceitar agendamento ${bookingId}.`);
+        }
+        throw new Error(`Erro de rede ou servidor ao aceitar agendamento ${bookingId}.`);
+    }
+}
+
 /**
  * @function cancelBooking
  * Cancela um agendamento específico.
