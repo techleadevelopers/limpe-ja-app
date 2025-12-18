@@ -102,15 +102,15 @@ export interface SmartSuggestion {
 
 // Tipo auxiliar para sugestões
 type ProviderWithRelationsForSuggestions = Prisma.ProviderGetPayload<{
-  include: {
-    providerServices: { include: { service: true } };
-    reviewsReceived: { orderBy: { createdAt: 'desc' }; take: 50 };
-    bookings: {
-      where: { status: 'FINISHED' }; // ✅ CORREÇÃO AQUI (trocou BookingStatus.FINISHED por 'FINISHED')
-      orderBy: { createdAt: 'desc' };
-      take: 100;
-    };
-  };
+  include: {
+    providerServices: { include: { service: true } };
+    reviewsReceived: { orderBy: { createdAt: 'desc' }; take: 50 };
+    bookings: {
+      where: { status: 'FINISHED' }; // ✅ CORREÇÃO AQUI (trocou BookingStatus.FINISHED por 'FINISHED')
+      orderBy: { createdAt: 'desc' };
+      take: 100;
+    };
+  };
 }>;
 
 @Injectable()
@@ -137,47 +137,43 @@ export class ReviewsService {
         return d;
       })();
     const dur =
-      booking.durationMinutes ??
-      booking.providerService?.durationMinutes ??
-      60;
+      booking.durationMinutes ?? booking.providerService?.durationMinutes ?? 60;
     return new Date(base.getTime() + dur * 60000);
   }
 
-async canReview(bookingId: string, userId: string) {
-  const booking = (await this.prisma.booking.findUnique({
-    where: { id: bookingId },
-    include: {
-      client: true,
-      provider: { include: { user: true } },
-      paymentIntent: true,
-      review: true,
-      providerService: true,
-    },
-  })) as BookingWithRelationsForReview | null; // 👈 CORREÇÃO AQUI
+  async canReview(bookingId: string, userId: string) {
+    const booking = (await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        client: true,
+        provider: { include: { user: true } },
+        paymentIntent: true,
+        review: true,
+        providerService: true,
+      },
+    })) as BookingWithRelationsForReview | null; // 👈 CORREÇÃO AQUI
     if (!booking) return { canReview: false, reason: 'not_found' };
-    
+
     // CORREÇÃO IMPLÍCITA: Os erros 2551/2339 para .client, .review e .paymentIntent
     // são provavelmente erros de inferência do ambiente. O include está correto
     // e essas propriedades DEVEM existir aqui. Mantendo o código original.
     if (booking.client?.userId !== userId)
       return { canReview: false, reason: 'forbidden' };
-      
+
     if (booking.status !== BookingStatus.FINISHED)
       return { canReview: false, reason: 'not_completed' };
-      
+
     const expectedEnd = booking.completedAt ?? this.computeExpectedEnd(booking);
     if (new Date() < expectedEnd)
       return { canReview: false, reason: 'too_early' };
-      
-    const payStatus =
-      (booking.paymentIntent?.status as PaymentIntentStatus | undefined);
-      
+
+    const payStatus = booking.paymentIntent?.status;
+
     if (payStatus === 'REFUNDED' || payStatus === 'CHARGEBACK')
       return { canReview: false, reason: 'refunded' };
-      
-    if (payStatus !== 'PAID')
-      return { canReview: false, reason: 'unpaid' };
-      
+
+    if (payStatus !== 'PAID') return { canReview: false, reason: 'unpaid' };
+
     if (booking.isReviewed || booking.review)
       return { canReview: false, reason: 'already_reviewed' };
 
@@ -207,10 +203,10 @@ async canReview(bookingId: string, userId: string) {
             review: true,
             providerService: true,
             // CORREÇÃO: REMOVIDO os campos escalares do include (Erro 2353)
-            // scheduledStart: true, 
-            // scheduledDate: true, 
-            // scheduledTime: true, 
-            // durationMinutes: true, 
+            // scheduledStart: true,
+            // scheduledDate: true,
+            // scheduledTime: true,
+            // durationMinutes: true,
           },
         });
 
@@ -222,13 +218,13 @@ async canReview(bookingId: string, userId: string) {
 
         if (booking.client?.userId !== userId) {
           throw new ForbiddenException(
-            "Você não tem permissão para avaliar este agendamento.",
+            'Você não tem permissão para avaliar este agendamento.',
           );
         }
 
         if (booking.status !== BookingStatus.FINISHED) {
           throw new BadRequestException(
-            "A avaliação só pode ser enviada para agendamentos concluídos.",
+            'A avaliação só pode ser enviada para agendamentos concluídos.',
           );
         }
 
@@ -236,19 +232,18 @@ async canReview(bookingId: string, userId: string) {
           booking.completedAt ?? this.computeExpectedEnd(booking);
         if (new Date() < expectedEnd) {
           throw new BadRequestException(
-            "A avaliação só pode ser enviada após o horário final do serviço.",
+            'A avaliação só pode ser enviada após o horário final do serviço.',
           );
         }
 
-        const payStatus =
-          (booking.paymentIntent?.status as PaymentIntentStatus | undefined);
-        if (payStatus === "REFUNDED" || payStatus === "CHARGEBACK") {
+        const payStatus = booking.paymentIntent?.status;
+        if (payStatus === 'REFUNDED' || payStatus === 'CHARGEBACK') {
           throw new BadRequestException(
-            "Pagamento reembolsado ou contestado. Avaliação bloqueada.",
+            'Pagamento reembolsado ou contestado. Avaliação bloqueada.',
           );
         }
-        if (payStatus !== "PAID") {
-          throw new BadRequestException("Pagamento não confirmado.");
+        if (payStatus !== 'PAID') {
+          throw new BadRequestException('Pagamento não confirmado.');
         }
 
         if (booking.isReviewed || booking.review) {
@@ -316,7 +311,7 @@ async canReview(bookingId: string, userId: string) {
       try {
         await this.missionsService.trackEvent(
           booking.client.userId,
-          "review.created",
+          'review.created',
           {
             bookingId: booking.id,
             providerId: booking.providerId,
@@ -352,9 +347,7 @@ async canReview(bookingId: string, userId: string) {
   }
 
   // CORREÇÃO: Alteração do tipo de retorno para o novo tipo (ReviewListResult[])
-  async findReviews(
-    getReviewsDto: GetReviewsDto,
-  ): Promise<ReviewListResult[]> { 
+  async findReviews(getReviewsDto: GetReviewsDto): Promise<ReviewListResult[]> {
     const { providerId, clientId, minRating, maxRating } = getReviewsDto;
     const limit = 10;
     const page = 1;
@@ -395,7 +388,9 @@ async canReview(bookingId: string, userId: string) {
           select: {
             scheduledDate: true,
             scheduledTime: true,
-            providerService: { select: { service: { select: { name: true } } } },
+            providerService: {
+              select: { service: { select: { name: true } } },
+            },
           },
         },
       },
@@ -417,7 +412,7 @@ async canReview(bookingId: string, userId: string) {
       },
       orderBy: { createdAt: 'desc' },
     });
-    
+
     // ... (restante da função)
     if (reviews.length === 0) {
       return {
@@ -491,18 +486,18 @@ async canReview(bookingId: string, userId: string) {
   ): Promise<SmartSuggestion[]> {
     const suggestions: SmartSuggestion[] = [];
 
-   const provider = (await this.prisma.provider.findUnique({
-    where: { id: providerId },
-    include: {
-      providerServices: { include: { service: true } },
-      reviewsReceived: { orderBy: { createdAt: 'desc' }, take: 50 },
-      bookings: {
-        where: { status: 'FINISHED' }, // ✅ CORREÇÃO AQUI (trocou BookingStatus.FINISHED por 'FINISHED')
-        orderBy: { createdAt: 'desc' },
-        take: 100,
-      },
-    },
-  })) as ProviderWithRelationsForSuggestions | null;
+    const provider = (await this.prisma.provider.findUnique({
+      where: { id: providerId },
+      include: {
+        providerServices: { include: { service: true } },
+        reviewsReceived: { orderBy: { createdAt: 'desc' }, take: 50 },
+        bookings: {
+          where: { status: 'FINISHED' }, // ✅ CORREÇÃO AQUI (trocou BookingStatus.FINISHED por 'FINISHED')
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        },
+      },
+    })) as ProviderWithRelationsForSuggestions | null;
 
     if (!provider) return suggestions;
 
