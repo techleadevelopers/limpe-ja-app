@@ -114,7 +114,7 @@ export const styles = StyleSheet.create({
   },
   headerTitle: {
     color: AppColors.textBody, // Usando AppColors
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '600',
   },
   // --- FIM DOS NOVOS ESTILOS PARA O CABEÇALHO ---
@@ -153,7 +153,7 @@ compactRatingBadge: {
     paddingVertical: 6,
     borderRadius: 16,
     marginLeft: 8,
-    left: -130,
+    left: -30,
     top: 1,
     
     // ⬅️ AJUSTE CRÍTICO: Remova qualquer largura fixa ou mínima
@@ -248,14 +248,14 @@ newProviderNoReviewsSubtitle: {
   robustStarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    left: 50,
+    left: 0,
   },
   robustReviewsText: {
     fontSize: 9,
     color: AppColors.mediumGray, // Usando AppColors
     marginLeft: 4,
     top: 15,
-    right: 70,
+    right: 0,
     fontWeight: '500',
   },
   starIcon: {
@@ -603,23 +603,31 @@ priceDropText: {
   bottom: 10,
 },
 
-priceWrapper: {
-  marginTop: 6,
-  marginBottom: 4,
-},
+  priceWrapper: {
+    marginTop: 6,
+    marginBottom: 0,
+  },
 
-priceValue: {
-  fontSize: 22,
-  fontWeight: '800',
-  color: AppColors.primaryInteractive,
-},
+  priceValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: AppColors.primaryInteractive,
+  },
 
-priceUnit: {
-  marginTop: 6,
-  fontSize: 14,
-  fontWeight: '600',
-  color: AppColors.textAuxiliary,
-},
+  priceSubLabel: {
+    marginTop: 2,
+    fontSize: 14,
+    left: 5,
+    fontWeight: '300',
+    color: AppColors.textAuxiliary,
+  },
+
+  priceUnit: {
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '600',
+    color: AppColors.textAuxiliary,
+  },
 
 locationDistanceText: {
   color: '#7C8590',
