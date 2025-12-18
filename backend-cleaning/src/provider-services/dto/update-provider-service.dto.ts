@@ -6,8 +6,10 @@ import {
   IsOptional,
   IsString,
   IsEnum,
+  ValidateIf,
 } from 'class-validator';
 import { PricingType } from '@prisma/client'; // Importar o enum PricingType
+import { MIN_HOURLY_MINUTES } from '../../common/constants/pricing';
 
 export class UpdateProviderServiceDto {
   @ApiPropertyOptional({
@@ -34,7 +36,8 @@ export class UpdateProviderServiceDto {
   })
   @IsOptional()
   @IsInt()
-  @Min(1)
+  @ValidateIf((o) => o.pricingType === PricingType.HOURLY)
+  @Min(MIN_HOURLY_MINUTES)
   durationMinutes?: number;
 
   @ApiPropertyOptional({
