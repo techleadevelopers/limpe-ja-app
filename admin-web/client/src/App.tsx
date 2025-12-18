@@ -24,7 +24,7 @@ import { Skeleton } from "./components/ui/skeleton";
 import { AnimatePresence, motion } from "framer-motion";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [, setLocation] = useLocation();
 
   if (isLoading) {
@@ -38,6 +38,19 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) {
     setLocation("/login");
     return null;
+  }
+
+  // RBAC básico: somente ADMIN deve acessar o painel
+  if (user?.role && user.role !== "ADMIN") {
+    setLocation("/login");
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-admin-bg px-4 text-center">
+        <div className="space-y-2">
+          <p className="text-lg font-semibold text-gray-800">Acesso não permitido</p>
+          <p className="text-sm text-gray-600">Esta área é restrita para administradores.</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;
@@ -143,4 +156,3 @@ function App() {
 }
 
 export default App;
-
