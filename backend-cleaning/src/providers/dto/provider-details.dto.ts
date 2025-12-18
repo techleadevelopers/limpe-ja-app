@@ -101,6 +101,14 @@ export class ProviderDetailsDto {
   avatarUrl: string | null;
 
   @ApiPropertyOptional({
+    description: 'Telefone do provedor',
+    example: '+5511999999999',
+  })
+  @IsOptional()
+  @IsString()
+  phone: string | null;
+
+  @ApiPropertyOptional({
     description: 'Anos de experiência do provedor',
     example: 5,
   })
@@ -164,6 +172,20 @@ export class ProviderDetailsDto {
   @IsInt()
   reviewCount: number;
 
+  @ApiProperty({
+    description: 'Data de criaA§ALo do cadastro',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  @IsString()
+  createdAt: string;
+
+  @ApiProperty({
+    description: 'Data da Aoltima atualizaA§ALo',
+    example: '2025-01-02T12:00:00.000Z',
+  })
+  @IsString()
+  updatedAt: string;
+
   @ApiPropertyOptional({
     type: () => [String],
     description: 'Badges do provedor (opcional para exibição)',
@@ -226,12 +248,15 @@ export class ProviderDetailsDto {
     this.id = source.id;
     this.fullName = source.fullName;
     this.avatarUrl = source.avatarUrl;
+    this.phone = source.phone ?? source.user?.phone ?? null;
     this.yearsOfExperience = source.yearsOfExperience;
     this.bio = source.bio;
     this.verificationStatus = source.verificationStatus; // NOVO
 
     // Email já vem direto em ProviderWithCalculatedRating
     this.email = source.email;
+    this.createdAt = source.createdAt;
+    this.updatedAt = source.updatedAt;
 
     if (source.address) {
       this.address = new CreateAddressDto();
