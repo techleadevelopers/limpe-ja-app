@@ -1,0 +1,26 @@
+groups:
+  - name: backend.rules
+    rules:
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route, method)) > 1.5
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 alto em {{ $labels.route }}"
+          description: "p95 > 1.5s por 5m ({{ $labels.method }})"
+
+      - alert: ErrorRateHigh
+        expr: (sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) * 100 > 2
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Erro 5xx acima de 2%"
+          description: "Erro 5xx acima de 2% nos últimos 5m"
+
+      - alert: ReadinessFail
+        expr: probe_success{job="health-readiness"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Readiness falhou"
+          description: "/health/readiness retornou falha"
