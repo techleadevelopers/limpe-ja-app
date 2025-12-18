@@ -168,6 +168,18 @@ export class PaymentsService {
     const status = payload?.transaction?.status
       ? String(payload.transaction.status).toUpperCase()
       : '';
+    const failedStatuses = [
+      'FAILED',
+      'CANCELED',
+      'CANCELLED',
+      'DECLINED',
+      'DENIED',
+      'REFUSED',
+      'EXPIRED',
+      'TIMEOUT',
+    ];
+    let shouldNotifyPaymentConfirmed = false;
+    let bookingForNotification: any = null;
 
     if (
       payload.event === 'charge.paid' ||
@@ -176,9 +188,7 @@ export class PaymentsService {
       status === 'APPROVED'
     ) {
       const externalRef =
-        payload?.data?.id ||
-        payload?.resource_id ||
-        payload?.transaction?.id;
+        payload?.data?.id || payload?.resource_id || payload?.transaction?.id;
 
       const bookingId =
         payload?.reference_id ||
@@ -192,9 +202,8 @@ export class PaymentsService {
           include: {
             booking: {
               include: {
-                provider: {
-                  select: { userId: true },
-                },
+                provider: { include: { user: true } },
+                client: { include: { user: true } },
               },
             },
           },
@@ -212,7 +221,9 @@ export class PaymentsService {
             const booking = intent.booking;
 
             if (!booking) {
-              this.logger.error(`[PaymentsService] Booking not found for PaymentIntent ${intent.id}. Cannot process ledger.`);
+              this.logger.error(
+                `[PaymentsService] Booking not found for PaymentIntent ${intent.id}. Cannot process ledger.`,
+              );
               // Se o booking não for encontrado, loga o erro e sai da transação.
               // Dependendo da lógica de negócio, pode-se lançar uma exceção ou apenas logar.
               return;
@@ -229,7 +240,9 @@ export class PaymentsService {
             );
 
             // --- INÍCIO DA IMPLEMENTAÇÃO SEGURA (IDEMPOTENTE) DO LEDGER ---
-            this.logger.log(`[PaymentsService] Processando ledger para booking ${booking.id}...`);
+            this.logger.log(
+              `[PaymentsService] Processando ledger para booking ${booking.id}...`,
+            );
 
             // 1. Proteção contra duplicação: Verifica se já existe uma entrada HOLD para este booking
             const alreadyExists = await tx.ledgerEntry.findFirst({
@@ -272,13 +285,92 @@ export class PaymentsService {
                 },
               ],
             });
-            this.logger.log(`[PaymentsService] Entradas de ledger criadas para o booking ${booking.id}.`);
+            this.logger.log(
+              `[PaymentsService] Entradas de ledger criadas para o booking ${booking.id}.`,
+            );
             // --- FIM DA IMPLEMENTAÇÃO SEGURA (IDEMPOTENTE) DO LEDGER ---
           });
+          shouldNotifyPaymentConfirmed = true;
+          bookingForNotification = intent.booking;
         } else if (!intent) {
           this.logger.warn(
             `[PaymentsService] Webhook para ref ${externalRef} recebido, mas PaymentIntent não encontrado.`,
           );
+        }
+      }
+    }
+
+    // Dispara push físico após confirmação de pagamento (cliente e prestador)
+    if (shouldNotifyPaymentConfirmed && bookingForNotification) {
+      const b = bookingForNotification;
+      const hhmm = String(b.scheduledTime || '').split(':');
+      const hora = `${String(parseInt(hhmm[0] || '0', 10)).padStart(2, '0')}:${String(parseInt(hhmm[1] || '0', 10)).padStart(2, '0')}`;
+      const providerName = b.provider?.user?.fullName || 'Prestador';
+      const clientName = b.client?.user?.fullName || 'Cliente';
+      if (b.client?.userId) {
+        await this.queues.addNotificationJob('send-notification', {
+          userId: b.client.userId,
+          kind: 'payment_confirmed',
+          title: 'Pagamento confirmado',
+          body: `Seu serviço com ${providerName} está confirmado para ${hora}.`,
+          deeplink: `/agendamento/${b.id}`,
+          priority: 1,
+          idempotencyKey: `notif:payment_confirmed:client:${b.id}`,
+        });
+      }
+      if (b.provider?.userId) {
+        await this.queues.addNotificationJob('send-notification', {
+          userId: b.provider.userId,
+          kind: 'payment_confirmed',
+          title: 'Novo atendimento confirmado',
+          body: `${clientName || 'Cliente'} confirmou pagamento para ${hora}.`,
+          deeplink: `/agendamento/${b.id}`,
+          priority: 1,
+          idempotencyKey: `notif:payment_confirmed:provider:${b.id}`,
+        });
+      }
+    }
+
+    // Falha de pagamento: marca intent como FAILED e notifica cliente
+    if (failedStatuses.includes(status)) {
+      const externalRef =
+        payload?.data?.id || payload?.resource_id || payload?.transaction?.id;
+      const intent = await this.prisma.paymentIntent.findFirst({
+        where: { externalRef },
+        include: {
+          booking: {
+            include: {
+              client: { include: { user: true } },
+            },
+          },
+        },
+      });
+      if (intent) {
+        if (intent.status !== PaymentIntentStatus.EXPIRED) {
+          await this.prisma.paymentIntent.update({
+            where: { id: intent.id },
+            data: { status: PaymentIntentStatus.EXPIRED },
+          });
+          if (intent.bookingId) {
+            await this.prisma.booking.update({
+              where: { id: intent.bookingId },
+              data: { status: BookingStatus.PENDING },
+            });
+          }
+        }
+        const b = intent.booking;
+        if (b?.client?.userId) {
+          const hhmm = String(b.scheduledTime || '').split(':');
+          const hora = `${String(parseInt(hhmm[0] || '0', 10)).padStart(2, '0')}:${String(parseInt(hhmm[1] || '0', 10)).padStart(2, '0')}`;
+          await this.queues.addNotificationJob('send-notification', {
+            userId: b.client.userId,
+            kind: 'payment_failed',
+            title: 'Pagamento não aprovado',
+            body: `O pagamento do atendimento ${b.id} falhou. Refaça o pagamento para manter o agendamento às ${hora}.`,
+            deeplink: `/agendamento/${b.id}`,
+            priority: 1,
+            idempotencyKey: `notif:payment_failed:client:${b.id}`,
+          });
         }
       }
     }
@@ -322,16 +414,16 @@ export class PaymentsService {
       if (!data && rawBody) {
         try {
           data = JSON.parse(rawBody.toString());
-          console.log("[Webhook PIX] JSON parseado com sucesso");
+          console.log('[Webhook PIX] JSON parseado com sucesso');
         } catch {
-          console.warn("[Webhook PIX] JSON inválido → usando string bruta");
+          console.warn('[Webhook PIX] JSON inválido → usando string bruta');
           data = { raw: rawBody.toString() };
         }
       }
 
-      if (!data) return { success: false, message: "Webhook vazio" };
+      if (!data) return { success: false, message: 'Webhook vazio' };
 
-      console.log(">>> WEBHOOK PARSED:", data);
+      console.log('>>> WEBHOOK PARSED:', data);
 
       // ---------------------------------------------------------
       // EXTRAI O reference_id REAL do PagBank
@@ -352,9 +444,13 @@ export class PaymentsService {
         data?.status?.toUpperCase() ||
         null;
 
-      if (chargeStatus === "PAID" || chargeStatus === "APPROVED" || chargeStatus === "COMPLETED") {
-        console.log("⚡ PAGAMENTO PIX CONFIRMADO ⚡");
-        console.log("REFERENCE_ID:", referenceId);
+      if (
+        chargeStatus === 'PAID' ||
+        chargeStatus === 'APPROVED' ||
+        chargeStatus === 'COMPLETED'
+      ) {
+        console.log('⚡ PAGAMENTO PIX CONFIRMADO ⚡');
+        console.log('REFERENCE_ID:', referenceId);
 
         await this.confirmPixPayment(referenceId);
 
@@ -379,7 +475,7 @@ export class PaymentsService {
 
       const status = data?.status || null;
 
-      if (!chargeId) return { success: false, message: "chargeId ausente" };
+      if (!chargeId) return { success: false, message: 'chargeId ausente' };
 
       // 4. BUSCA O PAYMENTINTENT
       const intent = await this.prisma.paymentIntent.findFirst({
@@ -387,37 +483,38 @@ export class PaymentsService {
       });
 
       if (!intent) {
-        console.warn(`Nenhum PaymentIntent encontrado para chargeId ${chargeId}`);
+        console.warn(
+          `Nenhum PaymentIntent encontrado para chargeId ${chargeId}`,
+        );
         return {
           success: true,
-          message: "chargeId não associado a nenhum booking",
+          message: 'chargeId não associado a nenhum booking',
         };
       }
 
       // 5. CONFIRMA O BOOKING
       await this.prisma.booking.update({
         where: { id: intent.bookingId },
-        data: { status: "CONFIRMED" },
+        data: { status: 'CONFIRMED' },
       });
 
       return {
         success: true,
-        message: "Webhook processado",
+        message: 'Webhook processado',
         chargeId,
         status,
       };
-
     } catch (err) {
-      console.error("Erro no webhook PIX:", err);
-      return { success: false, message: "Erro interno no webhook" };
+      console.error('Erro no webhook PIX:', err);
+      return { success: false, message: 'Erro interno no webhook' };
     }
   }
 
   async confirmPixPayment(referenceId: string) {
-    this.logger.log(">>> CONFIRMANDO PIX PARA REFERENCE:", referenceId);
+    this.logger.log('>>> CONFIRMANDO PIX PARA REFERENCE:', referenceId);
 
     if (!referenceId) {
-      this.logger.warn("confirmPixPayment chamado sem referenceId");
+      this.logger.warn('confirmPixPayment chamado sem referenceId');
       return;
     }
 
@@ -431,7 +528,10 @@ export class PaymentsService {
     });
 
     if (!intent) {
-      this.logger.warn("Nenhum PaymentIntent encontrado para referência:", referenceId);
+      this.logger.warn(
+        'Nenhum PaymentIntent encontrado para referência:',
+        referenceId,
+      );
       return;
     }
 
@@ -447,14 +547,17 @@ export class PaymentsService {
         where: { id: intent.bookingId },
         data: { status: BookingStatus.CONFIRMED },
       });
-      this.logger.log("✓ Booking confirmado via PIX:", intent.bookingId);
+      this.logger.log('✓ Booking confirmado via PIX:', intent.bookingId);
     } else if (booking) {
-      this.logger.log(`Booking ${intent.bookingId} já está CONFIRMED. Nenhuma ação necessária.`);
+      this.logger.log(
+        `Booking ${intent.bookingId} já está CONFIRMED. Nenhuma ação necessária.`,
+      );
     } else {
-      this.logger.warn(`Booking ${intent.bookingId} não encontrado ao tentar confirmar PIX.`);
+      this.logger.warn(
+        `Booking ${intent.bookingId} não encontrado ao tentar confirmar PIX.`,
+      );
     }
   }
-
 
   // Admin: listar transações com filtros básicos
   async listTransactions(type?: string, status?: string) {
@@ -473,18 +576,21 @@ export class PaymentsService {
 
     // Format STATUS (string → enum)
     if (status) {
-      const normalizedStatus = status.toUpperCase() as keyof typeof TransactionStatus;
+      const normalizedStatus =
+        status.toUpperCase() as keyof typeof TransactionStatus;
 
       if (TransactionStatus[normalizedStatus]) {
         where.status = TransactionStatus[normalizedStatus];
       } else {
-        throw new BadRequestException(`Status de transação inválido: ${status}`);
+        throw new BadRequestException(
+          `Status de transação inválido: ${status}`,
+        );
       }
     }
 
     const txs = await this.prisma.transaction.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
 
     return txs.map((t) => ({
@@ -704,7 +810,9 @@ export class PaymentsService {
     if (booking.providerId !== providerId)
       throw new BadRequestException('Booking não pertence a este provider.');
     if (booking.status !== BookingStatus.PENDING) {
-      throw new BadRequestException('Booking não está pendente para pagamento.');
+      throw new BadRequestException(
+        'Booking não está pendente para pagamento.',
+      );
     }
 
     const amountCents = Math.round(Number(booking.totalPrice) * 100);
@@ -848,7 +956,7 @@ export class PaymentsService {
       create: {
         bookingId,
         amountCents,
-        gateway: "PAGBANK_PIX",
+        gateway: 'PAGBANK_PIX',
 
         // 🔥 IDs reais do PagBank
         externalOrderId: orderId,
@@ -890,7 +998,7 @@ export class PaymentsService {
       data: {
         // ❌ remover isso caso esteja aqui:
         // paymentStatus: 'PAID'
-      }
+      },
     });
     // === 7. RESPONDER AO APP NO NOVO FORMATO ===
 
