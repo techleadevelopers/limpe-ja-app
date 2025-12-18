@@ -13,6 +13,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchProviders, updateProviderStatus as apiUpdateProviderStatus, deleteProvider } from "@/lib/api";
 import { Provider, VerificationStatus } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useMemo } from "react";
 
 
 // CORREÇÃO: Função para formatar o tempo relativo em português
@@ -47,10 +49,15 @@ function getStatusBadge(status: string) {
   }
 }
 
+const getDisplayName = (provider?: Provider | null) =>
+  provider?.fullName || provider?.name || "Sem nome";
+
 export default function Providers() {
   const [searchTerm, setSearchTerm] = useState("");
   // NOVO: Estado para o filtro de status
   const [statusFilter, setStatusFilter] = useState<VerificationStatus | "all">("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 9;
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -61,6 +68,7 @@ export default function Providers() {
     queryFn: () => fetchProviders(),
   });
 
+  const searchTermLower = searchTerm.toLowerCase();
   // A mutation para updateProviderStatus não é mais usada diretamente aqui para o modal,
   // mas pode ser útil para outras operações na página de provedores.
   // Mantenho-a caso haja outras funcionalidades que a utilizem.
@@ -72,7 +80,7 @@ export default function Providers() {
       queryClient.invalidateQueries({ queryKey: ['/verification/pending-queue'] });
       toast({
         title: "Status do Provedor Atualizado",
-        description: `${updatedProvider.name} agora está ${updatedProvider.verificationStatus.replace(/_/g, ' ').toLowerCase()}.`,
+        description: `${getDisplayName(updatedProvider)} agora está ${updatedProvider.verificationStatus.replace(/_/g, ' ').toLowerCase()}.`,
       });
       // O modal é fechado pelo próprio VerificationModal após a ação
       // setIsModalOpen(false);
@@ -88,12 +96,31 @@ export default function Providers() {
   });
 
   // CORREÇÃO: Lógica de filtro aprimorada para incluir o status
-  const filteredProviders = providers?.filter((provider: Provider) => {
-    const matchesSearch = (provider.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (provider.email || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || provider.verificationStatus === statusFilter;
-    return matchesSearch && matchesStatus;
-  }) || [];
+  const filteredProviders = useMemo(
+    () =>
+      providers?.filter((provider: Provider) => {
+        const matchesSearch =
+          (provider.fullName || provider.name || "").toLowerCase().includes(searchTermLower) ||
+          (provider.email || "").toLowerCase().includes(searchTermLower);
+        const matchesStatus = statusFilter === "all" || provider.verificationStatus === statusFilter;
+        return matchesSearch && matchesStatus;
+      }) || [],
+    [providers, searchTermLower, statusFilter],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredProviders.length / pageSize));
+  const paginatedProviders = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredProviders.slice(start, start + pageSize);
+  }, [filteredProviders, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const handleProviderClick = (provider: Provider) => {
     setSelectedProvider(provider);
@@ -178,19 +205,18 @@ export default function Providers() {
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
-                <Card key={i} className="shadow-floating border-0 animate-pulse">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center mb-4">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-                      <div className="ml-4 flex-1">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <Card key={i} className="shadow-floating border-0">
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex items-center mb-2">
+                      <Skeleton className="w-12 h-12 rounded-full" />
+                      <div className="ml-4 flex-1 space-y-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="h-3 bg-gray-200 rounded"></div>
-                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                    </div>
+                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-8 w-full" />
                   </CardContent>
                 </Card>
               ))}
@@ -199,9 +225,9 @@ export default function Providers() {
             <div className="text-center py-12 text-red-600">
               <p>Erro ao carregar provedores: {error?.message}</p>
             </div>
-          ) : (
+          ) : paginatedProviders.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProviders.map((provider: Provider, index: number) => (
+              {paginatedProviders.map((provider: Provider, index: number) => (
                 <motion.div
                   key={provider.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -217,12 +243,12 @@ export default function Providers() {
                         <div className="flex items-center">
                           {/* Imagem de perfil mockada, idealmente viria do provider.avatarUrl */}
                           <img 
-                            src={provider.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${provider.name}`}
-                            alt={`${provider.name} profile`}
+                            src={provider.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${getDisplayName(provider)}`}
+                            alt={`${getDisplayName(provider)} profile`}
                             className="w-12 h-12 rounded-full object-cover"
                           />
                           <div className="ml-3">
-                            <h3 className="font-semibold text-gray-900">{provider.name}</h3>
+                            <h3 className="font-semibold text-gray-900">{getDisplayName(provider)}</h3>
                             <p className="text-sm text-gray-500">{provider.email}</p>
                           </div>
                         </div>
@@ -280,6 +306,14 @@ export default function Providers() {
                   </Card>
                 </motion.div>
               ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum provedor encontrado</h3>
+              <p className="text-gray-500">
+                {searchTerm ? `Nenhum provedor corresponde a "${searchTerm}"` : "Nenhum provedor registrado ainda."}
+              </p>
             </div>
           )}
 
