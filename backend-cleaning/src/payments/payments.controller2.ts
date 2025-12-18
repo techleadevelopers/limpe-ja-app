@@ -155,42 +155,38 @@ export class PaymentsController {
   // ===========================================================================
   // Webhook PIX PagBank — RAW (URLENCODED)
   // ===========================================================================
-@Post('webhook/pix')
-@Header('Content-Type', 'application/json')
-@HttpCode(HttpStatus.OK)
-public async handlePixWebhook(
-  @Req() req: Request,
-  @Res() res: Response,
-) {
-  const rawBody: string =
-    (req as any).rawBody?.toString?.() ??
-    (req as any).bodyRaw?.toString?.() ??
-    '';
+  @Post('webhook/pix')
+  @Header('Content-Type', 'application/json')
+  @HttpCode(HttpStatus.OK)
+  public async handlePixWebhook(@Req() req: Request, @Res() res: Response) {
+    const rawBody: string =
+      (req as any).rawBody?.toString?.() ??
+      (req as any).bodyRaw?.toString?.() ??
+      '';
 
-  let parsed: any;
-try {
-  // Se vier Buffer → converte pra string antes
-  const text = Buffer.isBuffer(rawBody)
-    ? rawBody.toString('utf8')
-    : rawBody;
-    
-  // 1 → tenta JSON normalmente
-  parsed = JSON.parse(text);
-  console.log('[Webhook PIX] JSON parseado com sucesso');
-  console.log('>>> WEBHOOK PARSED:', parsed);
-} catch {
-  console.log('[Webhook PIX] JSON inválido → usando string bruta');
+    let parsed: any;
+    try {
+      // Se vier Buffer → converte pra string antes
+      const text = Buffer.isBuffer(rawBody)
+        ? rawBody.toString('utf8')
+        : rawBody;
 
-  // 2 → tenta transformar form-data URL-encoded para objeto
-  parsed = Object.fromEntries(new URLSearchParams(rawBody?.toString() ?? ""));
-}
-  const result = await this.paymentsService.handlePixWebhook(
-    rawBody,
-    parsed
-  );
+      // 1 → tenta JSON normalmente
+      parsed = JSON.parse(text);
+      console.log('[Webhook PIX] JSON parseado com sucesso');
+      console.log('>>> WEBHOOK PARSED:', parsed);
+    } catch {
+      console.log('[Webhook PIX] JSON inválido → usando string bruta');
 
-  return res.status(200).json(result);
-}
+      // 2 → tenta transformar form-data URL-encoded para objeto
+      parsed = Object.fromEntries(
+        new URLSearchParams(rawBody?.toString() ?? ''),
+      );
+    }
+    const result = await this.paymentsService.handlePixWebhook(rawBody, parsed);
+
+    return res.status(200).json(result);
+  }
   // ===========================================================================
   // Webhook Withdrawal
   // ===========================================================================
@@ -241,10 +237,7 @@ try {
     if (req.user?.role !== 'ADMIN')
       throw new InternalServerErrorException('Admin only');
 
-    return this.paymentsService.initiateRefund(
-      transactionId,
-      body?.amount,
-    );
+    return this.paymentsService.initiateRefund(transactionId, body?.amount);
   }
 
   // ===========================================================================
