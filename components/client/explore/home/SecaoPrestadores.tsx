@@ -1,14 +1,14 @@
 // app/(client)/explore/components/home/SecaoPrestadores.tsx
 
 import { Ionicons } from '@expo/vector-icons';
-import React, { useRef } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, Easing } from 'react-native'; // Importado Animated, Easing
+import React, { useMemo, useRef } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 
 interface SecaoPrestadoresProps {
   titulo: string;
-  data: ProviderDisplayInfo[]; // Já estava correto
+  data: ProviderDisplayInfo[];
   onVerTudoPress: () => void;
   titleColor?: string;
   noDataText?: string;
@@ -21,24 +21,40 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
   data,
   onVerTudoPress,
   titleColor = '#4f5a71ff',
-  noDataText = 'Nenhum prestador disponível no momento.',
+  noDataText = 'Nenhum prestador disponivel no momento.',
   horizontal = false,
   renderItem,
 }) => {
-  const arrowAnim = useRef(new Animated.Value(0)).current; // Animação para a seta
+  const arrowAnim = useRef(new Animated.Value(0)).current;
+
+  const safeData = useMemo(
+    () =>
+      Array.isArray(data)
+        ? data.filter(
+            (item) =>
+              item &&
+              typeof item === 'object' &&
+              typeof (item as any).id === 'string' &&
+              (item as any).id.trim() !== '' &&
+              typeof (item as any).fullName === 'string' &&
+              (item as any).fullName.trim() !== '',
+          )
+        : [],
+    [data],
+  );
 
   const onPressInViewAll = () => {
     Animated.spring(arrowAnim, {
-      toValue: 5, // Desloca a seta para a frente
+      toValue: 5,
       useNativeDriver: true,
-      friction: 5, // Ajuste para um efeito de mola mais suave
-      tension: 80, // Ajuste para um retorno rápido
+      friction: 5,
+      tension: 80,
     }).start();
   };
 
   const onPressOutViewAll = () => {
     Animated.spring(arrowAnim, {
-      toValue: 0, // Retorna a seta à posição original
+      toValue: 0,
       friction: 5,
       tension: 80,
       useNativeDriver: true,
@@ -49,24 +65,26 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={[styles.sectionTitle, { color: titleColor }]}>{titulo}</Text>
-        {onVerTudoPress && (
+        {onVerTudoPress ? (
           <TouchableOpacity
             onPress={onVerTudoPress}
             style={styles.viewAllButton}
             onPressIn={onPressInViewAll}
             onPressOut={onPressOutViewAll}
           >
-            
             <Animated.View style={{ transform: [{ translateX: arrowAnim }] }}>
-             <Ionicons name="add" size={16} color="#398beeff" />
+              <Ionicons name="add" size={16} color="#398beeff" />
             </Animated.View>
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
 
       <ScrollView horizontal={horizontal} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsScrollContainer}>
-        {data.length > 0 ? (
-          data.map((item, index) => renderItem({ item, index }))
+        {safeData.length > 0 ? (
+          safeData.map((item, index) => {
+            const rendered = renderItem({ item, index });
+            return React.isValidElement(rendered) ? rendered : null;
+          })
         ) : (
           <Text style={styles.emptyText}>{noDataText}</Text>
         )}
@@ -79,8 +97,7 @@ const styles = StyleSheet.create({
   container: {
     marginTop: -2,
     marginBottom: 12,
-   backgroundColor: 'transparent',
-
+    backgroundColor: 'transparent',
   },
   header: {
     paddingHorizontal: 16,
@@ -100,7 +117,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 4,
-    transform: [{ translateY: 14 }], // desloca mais para baixo (~8px)
+    transform: [{ translateY: 14 }],
   },
   viewAllText: {
     fontSize: 12,
