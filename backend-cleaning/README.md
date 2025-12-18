@@ -13,6 +13,13 @@ Bull (Queues): Uma biblioteca para Node.js que implementa filas de processamento
 JWT (JSON Web Tokens): Utilizado para autenticação e autorização de usuários, garantindo que apenas usuários autenticados e com as permissões corretas acessem os recursos protegidos.
 Swagger/OpenAPI: Ferramentas para documentação e teste de APIs, gerando uma documentação interativa que facilita o consumo dos endpoints por parte do frontend e outros serviços. (src/bookings/bookings.controller.ts, src/clients/clients.controller.ts, src/auth/auth.controller.ts)
 Sentry: Ferramenta de monitoramento de erros e performance, integrada para capturar exceções e rastrear o desempenho da aplicação em tempo real. (src/instrument.ts, src/app.module.ts)
+
+Observabilidade e Telemetria (novidades):
+- Métricas Prometheus expostas em `/metrics/prometheus` (histograma e contador HTTP). Consultas sugeridas em `documentation/monitoring-promql.md`.
+- Health checks: `/health/liveness` e `/health/readiness` (valida DB e cache).
+- Tracing OpenTelemetry: interceptor global (`TracingInterceptor`) gerando spans HTTP; inicializador em `src/tracing/otel.ts` exporta via OTLP/HTTP.
+- Env vars: `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `OTEL_DEBUG`.
+- Exemplos de configs para Prometheus/Alertmanager/Tempo/Jaeger: `documentation/observability-setup.md`, `documentation/prometheus.example.yml`, `documentation/rules/backend-alerts.yml`, `documentation/alertmanager.example.yml`.
 C. Estrutura Geral dos Módulos e Interconexões
 O backend é organizado em módulos coesos, cada um com responsabilidades bem definidas, promovendo a separação de preocupações e a manutenibilidade do código. A injeção de dependências do NestJS facilita a comunicação entre os módulos.
 
