@@ -310,7 +310,7 @@ export class LoyaltyService {
     // const client = await this.prisma.client.findUnique({ where: { userId }, select: { id: true } });
     // if (!client) return 0;
     // const completedBookings = await this.prisma.booking.findMany({
-    //   where: { clientId: client.id, status: 'COMPLETED' },
+    //   where: { clientId: client.id,  status: 'FINISHED' },
     //   orderBy: { createdAt: 'desc' },
     //   select: { createdAt: true },
     // });
