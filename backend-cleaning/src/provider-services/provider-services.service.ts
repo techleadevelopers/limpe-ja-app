@@ -10,6 +10,7 @@ import { UpdateProviderServiceDto } from './dto/update-provider-service.dto';
 import { ProviderService, Prisma } from '@prisma/client';
 import { ProvidersService } from '../providers/providers.service';
 import { ServicesService } from '../services/services.service';
+import { MIN_HOURLY_MINUTES } from '../common/constants/pricing';
 
 @Injectable()
 export class ProviderServicesService {
@@ -33,6 +34,11 @@ export class ProviderServicesService {
       pricePerRoom,
       pricePerHour,
     } = createProviderServiceDto; // ADICIONADO pricePerHour aqui
+
+    const normalizedDuration =
+      pricingType === 'HOURLY'
+        ? Math.max(durationMinutes ?? MIN_HOURLY_MINUTES, MIN_HOURLY_MINUTES)
+        : (durationMinutes ?? null);
 
     // Verificar se o provedor existe
     const providerExists = await this.providersService.findOne(providerId);
@@ -78,10 +84,7 @@ export class ProviderServicesService {
           price !== undefined && price !== null
             ? new Prisma.Decimal(price)
             : null,
-        durationMinutes:
-          durationMinutes !== undefined && durationMinutes !== null
-            ? durationMinutes
-            : null, // Permitir null
+        durationMinutes: normalizedDuration, // Normaliza HOURLY para pelo menos 240 min
         pricingType,
         // CORREÇÃO: Converter pricePerHour para Prisma.Decimal e permitir null
         pricePerHour:
@@ -187,7 +190,8 @@ export class ProviderServicesService {
               'Para HOURLY, defina pricePerHour>0 e durationMinutes>0.',
             );
           }
-          updateData.durationMinutes = dur;
+          const normalizedDur = Math.max(dur, MIN_HOURLY_MINUTES);
+          updateData.durationMinutes = normalizedDur;
           updateData.pricePerHour = new Prisma.Decimal(pph);
           updateData.price = null;
           updateData.pricePerSquareMeter = null;
@@ -196,8 +200,7 @@ export class ProviderServicesService {
         }
         case 'BY_SIZE': {
           const psm = ensurePositive(
-            pricePerSquareMeter ??
-              (existingService.pricePerSquareMeter as any),
+            pricePerSquareMeter ?? (existingService.pricePerSquareMeter as any),
           );
           const pr = ensurePositive(
             pricePerRoom ?? (existingService.pricePerRoom as any),
