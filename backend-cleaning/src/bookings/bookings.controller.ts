@@ -456,7 +456,9 @@ export class BookingsController {
   @Roles(UserRole.PROVIDER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Marcar prestador a caminho (CONFIRMED -> ON_THE_WAY)' })
+  @ApiOperation({
+    summary: 'Marcar prestador a caminho (CONFIRMED -> ON_THE_WAY)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Status atualizado para a caminho.',
@@ -475,7 +477,9 @@ export class BookingsController {
   @Roles(UserRole.PROVIDER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Registrar chegada do prestador (ON_THE_WAY -> ARRIVED)' })
+  @ApiOperation({
+    summary: 'Registrar chegada do prestador (ON_THE_WAY -> ARRIVED)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Status atualizado para chegou.',
