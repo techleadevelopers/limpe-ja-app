@@ -63,7 +63,10 @@ export class ReviewsController {
     @Body() submitReviewDto: SubmitReviewDto,
   ): Promise<ReviewEntity> {
     const userId = req.user['userId']; // usa userId do JWT
-    const review = await this.reviewsService.submitReview(userId, submitReviewDto);
+    const review = await this.reviewsService.submitReview(
+      userId,
+      submitReviewDto,
+    );
     return new ReviewEntity(review);
   }
 
