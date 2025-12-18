@@ -236,7 +236,7 @@ export class ClientsService {
       (b) => b.status === 'PENDING' || b.status === 'CONFIRMED',
     );
     const completedBookings = client.bookings.filter(
-      (b) => b.status === 'COMPLETED',
+      (b) => b.status === 'FINISHED',
     );
 
     const nextBooking =
@@ -249,7 +249,7 @@ export class ClientsService {
     ];
 
     const pendingReviews = client.bookings
-      .filter((b) => b.status === 'COMPLETED' && !b.review)
+      .filter((b) => b.status === 'FINISHED' && !b.review)
       .map((b) => ({
         id: b.id,
         bookingId: b.id,
