@@ -189,7 +189,7 @@ if (providerUser.provider) {
         where: { gatewayTransactionId: initialBalanceTransactionRef }, // CORREÇÃO AQUI: Usando gatewayTransactionId
         update: {
             amount: new Prisma.Decimal(200.00),
-            status: 'COMPLETED',
+             status: 'FINISHED',
             description: 'Saldo inicial injetado para teste de saque',
             gatewayTransactionId: initialBalanceTransactionRef, // Garantindo que seja atualizado
         },
@@ -197,7 +197,7 @@ if (providerUser.provider) {
             providerId: providerUser.provider.id,
             amount: new Prisma.Decimal(200.00),
             type: TransactionType.PAYMENT, // Representing funds coming into the provider's balance
-            status: 'COMPLETED',
+             status: 'FINISHED',
             description: 'Saldo inicial injetado para teste de saque',
             transactionRef: initialBalanceTransactionRef, // Mantendo transactionRef para referência customizada
             gatewayTransactionId: initialBalanceTransactionRef, // CORREÇÃO AQUI: Adicionando gatewayTransactionId
@@ -1285,7 +1285,7 @@ update: {
 providerId: booking.providerId, // Usar o providerId do booking para a transação
 amount: booking.totalPrice,
 type: TransactionType.PAYMENT,
-status: 'COMPLETED',
+ status: 'FINISHED',
 description: `Pagamento do serviço ${booking.id}`,
 bookingId: booking.id,
 },
@@ -1293,7 +1293,7 @@ create: {
 providerId: booking.providerId, // Usar o providerId do booking para a transação
 amount: booking.totalPrice,
 type: TransactionType.PAYMENT,
-status: 'COMPLETED',
+ status: 'FINISHED',
 description: `Pagamento do serviço ${booking.id}`,
 bookingId: booking.id,
 gatewayTransactionId: `TRANS-${booking.id}`,
