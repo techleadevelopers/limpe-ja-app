@@ -11,6 +11,27 @@ import { UserProfile } from '../types/backend/users';
  * @returns Um objeto BookingDetails normalizado.
  */
 export function normalizeBooking(raw: any): BookingDetails {
+  const normalizeStatus = (value: any): BookingStatus => {
+    const s = String(value || '').toUpperCase();
+    const map: Record<string, BookingStatus> = {
+      STARTED: BookingStatus.IN_PROGRESS,
+      IN_PROGRESS: BookingStatus.IN_PROGRESS,
+      ARRIVED: BookingStatus.IN_PROGRESS,
+      ON_THE_WAY: BookingStatus.IN_PROGRESS,
+      CONFIRMED: BookingStatus.CONFIRMED,
+      PENDING: BookingStatus.PENDING,
+      PENDING_PROVIDER_CONFIRMATION: BookingStatus.PENDING_PROVIDER_CONFIRMATION,
+      FINISHED: BookingStatus.COMPLETED,
+      COMPLETED: BookingStatus.COMPLETED,
+      CANCELLED: BookingStatus.CANCELLED,
+      CANCELED: BookingStatus.CANCELLED,
+      REJECTED: BookingStatus.REJECTED,
+      RESCHEDULED: BookingStatus.RESCHEDULED,
+      NO_SHOW: BookingStatus.NO_SHOW,
+    };
+    return map[s] || BookingStatus.PENDING;
+  };
+
   return {
     id: raw?.id || 'unknown-booking-id',
 
@@ -37,7 +58,7 @@ export function normalizeBooking(raw: any): BookingDetails {
     scheduledEndTime: raw?.scheduledEndTime || undefined,
 
     totalPrice: Number(raw?.totalPrice) || 0,
-    status: (raw?.status as BookingStatus) || BookingStatus.PENDING,
+    status: normalizeStatus(raw?.status),
     notes: raw?.notes || null,
 
     address: {
