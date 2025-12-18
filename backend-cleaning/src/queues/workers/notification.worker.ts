@@ -4,6 +4,7 @@ import { Job } from 'bull';
 import { Logger } from '@nestjs/common';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { EmailService } from '../../email/email.service'; // NEW
+import { RedisLockService } from '../../common/locks/redis-lock.service';
 
 @Processor('notifications')
 export class NotificationWorker {
@@ -12,39 +13,90 @@ export class NotificationWorker {
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService, // NEW
+    private readonly redisLock: RedisLockService,
   ) {}
+
+  private async shouldSendPush(idempotencyKey?: string): Promise<boolean> {
+    if (!idempotencyKey) return true;
+    const ttlMs = 24 * 60 * 60 * 1000; // 24h
+    const lockKey = `push:idem:${idempotencyKey}`;
+    const acquired = await this.redisLock.acquireLock(
+      lockKey,
+      `job:${Date.now()}`,
+      ttlMs,
+    );
+    return acquired;
+  }
 
   @Process('send-notification')
   async sendNotification(
     job: Job<{
       userId: string;
-      type: string;
-      message: string;
+      type?: string;
+      message?: string;
+      body?: string;
       targetUrl?: string;
+      deeplink?: string;
       title?: string;
       imageUrl?: string;
       actionButtons?: object;
+      priority?: string;
+      idempotencyKey?: string;
     }>,
   ): Promise<void> {
     this.logger.log(
       `Processando tarefa 'send-notification' para userId ${job.data.userId}.`,
     );
-    const { userId, type, message, targetUrl, title, imageUrl, actionButtons } =
-      job.data;
+    const {
+      userId,
+      type,
+      message,
+      body,
+      targetUrl,
+      deeplink,
+      title,
+      imageUrl,
+      actionButtons,
+      priority,
+      idempotencyKey,
+    } = job.data;
+    const finalMessage = message || body || title || 'Notificação';
+    const finalTarget = deeplink || targetUrl;
 
     try {
       // Usar o DTO para criar a notificação in-app
       await this.notificationsService.createNotification({
         userId,
         type,
-        message,
-        targetUrl,
+        message: finalMessage,
+        targetUrl: finalTarget,
         title,
         imageUrl,
         actionButtons,
       });
       this.logger.log(
         `Notificação in-app enviada com sucesso para userId ${userId}.`,
+      );
+
+      // Deduplicação forte por idempotencyKey (TTL 24h)
+      const canSendPush = await this.shouldSendPush(idempotencyKey);
+      if (!canSendPush) {
+        this.logger.warn(
+          `Push deduplicado (idempotencyKey=${idempotencyKey}) para userId ${userId}, não será reenviado.`,
+        );
+        return;
+      }
+
+      // Dispara push físico usando o mesmo payload (APNs/FCM)
+      await this.notificationsService.sendPushNotification(
+        userId,
+        title || finalMessage,
+        finalMessage,
+        {
+          deeplink: finalTarget,
+          priority: priority || 'high',
+          idempotencyKey,
+        },
       );
     } catch (error) {
       this.logger.error(
@@ -69,7 +121,21 @@ export class NotificationWorker {
     );
     const { userId, title, body, data } = job.data;
 
+    const idempotencyKey =
+      data?.['idempotencyKey'] ||
+      data?.['idempotency_key'] ||
+      data?.['idemKey'] ||
+      undefined;
+
     try {
+      const canSendPush = await this.shouldSendPush(idempotencyKey);
+      if (!canSendPush) {
+        this.logger.warn(
+          `Push deduplicado (idempotencyKey=${idempotencyKey}) para userId ${userId}, não será reenviado.`,
+        );
+        return;
+      }
+
       await this.notificationsService.sendPushNotification(
         userId,
         title,
