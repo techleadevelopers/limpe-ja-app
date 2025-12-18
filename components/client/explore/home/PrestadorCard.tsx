@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
         top: 0,
         marginBottom: 8,
         marginTop: 12,
-        borderRadius: 42,
+        borderRadius: 40,
         overflow: 'visible',
     
         // --- POLIMENTO APLICADO: SOMBRAS E BORDAS ---
@@ -210,15 +210,15 @@ const styles = StyleSheet.create({
         borderColor: 'transparent',
         borderBottomColor: 'transparent',
         
-        borderTopStartRadius: 42,
-        borderBottomStartRadius: 42,
-        borderTopEndRadius: 42,
-        borderBottomEndRadius: 42,
+        borderTopStartRadius: 40,
+        borderBottomStartRadius: 40,
+        borderTopEndRadius: 40,
+        borderBottomEndRadius: 40,
     },
     cardContainer: {
-        width: 76,
-        height: 76,
-        borderRadius: 42,
+        width: 73,
+        height: 73,
+        borderRadius: 40,
         padding: 2,
         position: 'relative',
         marginTop: -4,
@@ -261,16 +261,16 @@ const styles = StyleSheet.create({
     gradientOverlay: {
         width: '100%',
         height: '100%',
-        borderRadius: 42,
+        borderRadius: 40,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden', // Para manter o formato arredondado do gradiente
         position: 'relative',
     },
     imageWrapper: {
-        width: 70,                // reduzido (antes 65)
-        height: 70,
-        borderRadius: 38,
+        width: 67,                // reduzido (antes 65)
+        height: 67,
+        borderRadius: 36.5,
         overflow: 'visible',
         backgroundColor: '#f1f2f1', // tom neutro limpo de fundo
         justifyContent: 'center',
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0, // Removido `bottom: 1` para cobrir o wrapper exatamente
-        borderRadius: 35, // ⬅️ ATUALIZADO (Mesmo que o imageWrapper)
+        borderRadius: 34, // ⬅️ ATUALIZADO (Mesmo que o imageWrapper)
         backgroundColor: 'transparent',
         borderWidth: 1.5, // ⬅️ MELHORIA: Ligeiramente mais grosso (1.5) para mais presença no pulso
         borderColor: '#b9cfe9bd',
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
         height: '100%',
         resizeMode: 'cover',
         marginBottom: 2,
-        borderRadius: 34,
+        borderRadius: 33,
         borderWidth: 1.5,
         borderColor: '#b9cfe9bd',
         zIndex: 2,
