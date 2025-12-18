@@ -16,6 +16,7 @@ import { NotificationWorker } from './workers/notification.worker';
 import { VerificationWorker } from './workers/verification.worker';
 // ✅ importe seu módulo de i18n
 import { I18nModule } from '../common/i18n/i18n.module';
+import { RedisLockModule } from '../common/locks/redis-lock.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { I18nModule } from '../common/i18n/i18n.module';
     forwardRef(() => DisputeModule),
     forwardRef(() => PayoutsModule),
     I18nModule, // ✅ garante I18nService aqui também
+    RedisLockModule,
   ],
   controllers: [],
   providers: [
