@@ -1,0 +1,12 @@
+route:
+  receiver: slack-notify
+  repeat_interval: 1h
+
+receivers:
+  - name: slack-notify
+    slack_configs:
+      - api_url: https://hooks.slack.com/services/XXX/YYY/ZZZ
+        channel: "#alerts"
+        text: |
+          {{ .CommonAnnotations.summary }}
+          {{ .CommonAnnotations.description }}
