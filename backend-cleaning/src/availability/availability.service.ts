@@ -166,7 +166,9 @@ export class AvailabilityService {
       }
       // Bloqueia edição de slots que já passaram no dia atual
       if (dayOfWeek === todayDow && endMin <= minutesNow) {
-        throw new BadRequestException('Não é permitido alterar slot já passado.');
+        throw new BadRequestException(
+          'Não é permitido alterar slot já passado.',
+        );
       }
 
       // Verifica conflito com bookings futuros (PENDING/CONFIRMED/IN_PROGRESS/COMPLETED)
