@@ -282,8 +282,6 @@ export class SubscriptionsService {
       subscription.frequency,
     );
 
-  
-
     return newBooking;
   }
 
