@@ -7,8 +7,10 @@ import {
   Min,
   IsOptional,
   IsEnum,
+  ValidateIf,
 } from 'class-validator';
 import { PricingType } from '@prisma/client';
+import { MIN_HOURLY_MINUTES } from '../../common/constants/pricing';
 
 export class CreateProviderServiceDto {
   @ApiProperty({
@@ -45,7 +47,8 @@ export class CreateProviderServiceDto {
   })
   @IsOptional()
   @IsInt()
-  @Min(1)
+  @ValidateIf((o) => o.pricingType === PricingType.HOURLY)
+  @Min(MIN_HOURLY_MINUTES)
   durationMinutes?: number;
 
   @ApiPropertyOptional({
