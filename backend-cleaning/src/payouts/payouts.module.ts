@@ -11,7 +11,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ConnectModule } from '../connect/connect.module';
 
 // IMPORTAR PaymentsModule AQUI (Se estiver no mesmo nível, o path seria '../payments/payments.module')
-import { PaymentsModule } from '../payments/payments.module'; 
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
