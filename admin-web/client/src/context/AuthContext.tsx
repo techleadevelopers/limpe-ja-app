@@ -135,11 +135,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    // Lança um erro claro se o hook for usado sem o Provider correspondente.
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+    // Fallback seguro para evitar crash caso o Provider não envolva o componente (ex.: pré-visualização isolada).
+    console.warn('useAuth chamado fora de um AuthProvider. Usando contexto padrão não autenticado.');
+    return {
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      login: async () => { throw new Error('AuthProvider ausente'); },
+      logout: () => {},
+    } satisfies AuthContextType;
   }
   return context;
 };
-
 
 
