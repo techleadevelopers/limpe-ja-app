@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
@@ -39,6 +39,28 @@ import AnimatedReanimated, {
     withRepeat,
     withTiming,
 } from 'react-native-reanimated';
+
+const mapSignUpErrorMessage = (error: any): string => {
+    const status = error?.response?.status;
+    const rawMsg = (error?.message || '').toString().toLowerCase();
+
+    if (status === 409 || /email.*exist|já cadastrado|conflict|cpf.*exist/.test(rawMsg)) {
+        return 'Este e-mail ou CPF já está cadastrado. Faça login ou use outro e-mail/CPF.';
+    }
+    if (status === 400 || /validation|inválido|invalid/.test(rawMsg)) {
+        return 'Dados inválidos. Confira CPF, e-mail, data de nascimento e telefone.';
+    }
+    if (status === 429 || /too many|muitas tentativas/.test(rawMsg)) {
+        return 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.';
+    }
+    if (status && status >= 500) {
+        return 'Serviço indisponível no momento. Tente novamente em instantes.';
+    }
+    if (/network|timeout|conexão|internet|offline/.test(rawMsg)) {
+        return 'Não foi possível conectar. Verifique sua internet e tente novamente.';
+    }
+    return error?.message || 'Falha no registro. Tente novamente em instantes.';
+};
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
 
@@ -100,6 +122,7 @@ export default function ClientRegisterScreen() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [referralCode, setReferralCode] = useState('');
+    const [referralError, setReferralError] = useState<string | null>(null);
     const [cep, setCep] = useState('');
     const [street, setStreet] = useState('');
     const [number, setNumber] = useState('');
@@ -212,10 +235,11 @@ export default function ClientRegisterScreen() {
   const router = useRouter();
     const { signUpClient } = useAuth();
 
-    const applyReferral = useCallback(async (code: string) => {
+        const applyReferral = useCallback(async (code: string) => {
         const trimmed = code.trim();
         if (!trimmed) {
             await AsyncStorage.removeItem(REFERRAL_STORAGE_KEY);
+            setReferralError(null);
             return;
         }
         await AsyncStorage.setItem(REFERRAL_STORAGE_KEY, trimmed);
@@ -225,8 +249,10 @@ export default function ClientRegisterScreen() {
                 headers: { 'x-silent': '1' },
                 data: { code: trimmed },
             });
+            setReferralError(null);
         } catch (error) {
-            console.warn('[ClientRegisterScreen] Falha ao aplicar código de indicação:', error);
+            console.warn('[ClientRegisterScreen] Falha ao aplicar c��digo de indica��ǜo:', error);
+            setReferralError('C�digo de indica��o n�o encontrado ou expirado. Voc� pode continuar sem ele.');
         }
     }, []);
 
@@ -455,7 +481,16 @@ export default function ClientRegisterScreen() {
             else {
                 const [day, month, year] = dateOfBirth.split('/').map(Number);
                 const dateObj = new Date(year, month - 1, day);
-                if (isNaN(dateObj.getTime()) || dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) valid = false;
+                if (isNaN(dateObj.getTime()) || dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
+                    valid = false;
+                } else {
+                    const today = new Date();
+                    let age = today.getFullYear() - year;
+                    const monthDiff = today.getMonth() - (month - 1);
+                    const dayDiff = today.getDate() - day;
+                    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+                    if (age < 18) valid = false;
+                }
             }
         }
         if (!password.trim() || password.length < 6) valid = false;
@@ -544,6 +579,15 @@ export default function ClientRegisterScreen() {
                 if (isNaN(dateObj.getTime()) || dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
                     setDateOfBirthError('Data de nascimento inválida.');
                 } else {
+                    const today = new Date();
+                    let age = today.getFullYear() - year;
+                    const monthDiff = today.getMonth() - (month - 1);
+                    const dayDiff = today.getDate() - day;
+                    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+                    if (age < 18) {
+                        setDateOfBirthError('Você precisa ter 18 anos ou mais para criar uma conta.');
+                        return;
+                    }
                     setDateOfBirthError(null);
                 }
             }
@@ -561,8 +605,9 @@ export default function ClientRegisterScreen() {
     }, [password]);
 
     const handleReferralBlur = useCallback(() => {
-        // Opcional, sem erro específico
-    }, []);
+        if (referralError) return;
+        setReferralError(null);
+    }, [referralError]);
 
     const handleCepBlur = useCallback(() => {
         const cleanedCep = cep.replace(/\D/g, '');
@@ -662,15 +707,12 @@ export default function ClientRegisterScreen() {
             console.log("[ClientRegister] handleNext: Avançando para o Step 4 (Código de Indicação).");
         } else if (currentStep === 4) { // Step 4: Referral Code (opcional)
             const isValid = checkStep4Validity();
-            if (!isValid) {
-                handleReferralBlur();
-                setGeneralError('Por favor, verifique o código de indicação.');
-                console.warn("[ClientRegister] handleNext: Falha ao avançar: Step 4 inválido.");
-                return;
+            if (!isValid && referralError) {
+                setGeneralError(referralError);
             }
             setCurrentStep(5); // Step 5: Address
             setSubStepAddress(1);
-            console.log("[ClientRegister] handleNext: Avançando para o Step 5 (Endereço).");
+            console.log("[ClientRegister] handleNext: Avancando para o Step 5 (Endereco).");
         } else if (currentStep === 5) { // Step 5: Address
             if (subStepAddress === 1) {
                 const isValid = checkAddressSubStep1Validity();
@@ -712,28 +754,34 @@ export default function ClientRegisterScreen() {
                 try {
                     const ok = await ensureLocationPermission();
                     if (!ok) {
-                        setGeneralError('A permissão para acessar a localização foi negada. Por favor, habilite-a nas configurações do seu dispositivo.');
+                        setGeneralError('A permissao para acessar a localizacao foi negada. Por favor, habilite-a nas configuracoes do seu dispositivo.');
                         setIsLoading(false);
                         return;
                     }
 
                     const fullAddress = `${street.trim()}, ${number.trim()}, ${neighborhood.trim()}, ${city.trim()}, ${state.trim()}, ${cep.trim()}`;
-                    console.log("[ClientRegister] Geocodificando endereço:", fullAddress);
+                    console.log("[ClientRegister] Geocodificando endereco:", fullAddress);
 
-                    const location = await Location.geocodeAsync(fullAddress);
+                    let location;
+                    try {
+                        location = await Location.geocodeAsync(fullAddress);
+                    } catch (geoError) {
+                        setGeneralError('Servico de mapas indisponivel no momento. Tente novamente em instantes ou finalize mais tarde.');
+                        setIsLoading(false);
+                        return;
+                    }
                     if (!location || location.length === 0) {
-                        setGeneralError('Não foi possível encontrar as coordenadas para o endereço fornecido. Por favor, verifique o endereço e tente novamente.');
+                        setGeneralError('Nao foi possivel encontrar as coordenadas para o endereco fornecido. Por favor, verifique numero e CEP e tente novamente.');
                         setIsLoading(false);
                         return;
                     }
 
                     const { latitude, longitude } = location[0];
-                    console.log(`[ClientRegister] Coordenadas obtidas via expo-location: Latitude=${latitude}, Longitude=${longitude}`);
 
                     const [day, month, year] = dateOfBirth.split('/').map(Number);
                     const formattedDateOfBirth = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-                    // @ts-ignore - Suprimir erro TS se dateOfBirth não estiver no tipo RegisterClientDto (ajustar tipo no backend se necessário)
+                    // @ts-ignore - Suprimir erro TS se dateOfBirth nao estiver no tipo RegisterClientDto (ajustar tipo no backend se necessário)
                     const registerData: RegisterClientDto = {
                         email: email.trim(),
                         password: password.trim(),
@@ -763,12 +811,7 @@ export default function ClientRegisterScreen() {
                     router.replace('/(client)/explore'); // Após cadastro + login automático, leva o cliente direto para a HOME autenticada
                 } catch (error: any) {
                     console.error("[ClientRegister] handleNext (Step 5 - final sub-step): Erro durante o registro inicial:", error.message, error);
-                    const msg = (error?.message || '').toLowerCase();
-                    if (msg.includes('no results') || msg.includes('not find') || msg.includes('encontrar')) {
-                        setGeneralError('Não foi possível encontrar as coordenadas para este endereço. Verifique os dados e tente novamente.');
-                    } else {
-                        setGeneralError(error.message || 'Falha no registro inicial. Por favor, verifique o endereço e tente novamente.');
-                    }
+                    setGeneralError(mapSignUpErrorMessage(error));
                 } finally {
                     setIsLoading(false);
                     console.log("[ClientRegister] handleNext (Step 5 - final sub-step): isLoading definido como false.");
@@ -1217,16 +1260,21 @@ export default function ClientRegisterScreen() {
                                     </View>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Código de indicação (opcional)"
+                                        placeholder="Codigo de indicacao (opcional)"
                                         placeholderTextColor="#A0AEC0"
                                         value={referralCode}
-                                        onChangeText={(text) => { setReferralCode(text); referralChangeHandler(text); }}
+                                        onChangeText={(text) => {
+                                            setReferralCode(text);
+                                            setReferralError(null);
+                                            referralChangeHandler(text);
+                                        }}
                                         onBlur={handleReferralBlur}
                                         autoCapitalize="characters"
                                         autoCorrect={false}
                                     />
                                 </View>
 
+                                <AnimatedErrorMessage message={referralError} isVisible={!!referralError} centered={false} />
                                 <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
                                 {/* Navigation Buttons for Step 4 */}
@@ -1659,3 +1707,28 @@ const styles = StyleSheet.create({
         width: '100%',
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
