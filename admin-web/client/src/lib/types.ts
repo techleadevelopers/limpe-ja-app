@@ -154,9 +154,11 @@ export enum PanicStatus {
 
 export type Provider = {
     id: string;
-    name: string;
+    name?: string;
+    fullName?: string;
     email: string;
     phone?: string | null;
+    userPhone?: string | null;
     verificationStatus: VerificationStatus;
     documentPhotoFrontUrl?: string | null;
     documentPhotoBackUrl?: string | null;
@@ -169,6 +171,7 @@ export type Provider = {
     totalEarnings: string;
     latitude?: string | null;
     longitude?: string | null;
+    address?: Address | null;
     createdAt: string;
     updatedAt: string;
     city?: string;
@@ -186,6 +189,7 @@ export type Client = {
     userId: string;
     name: string;
     email: string;
+    role?: 'ADMIN' | 'CLIENT' | 'PROVIDER';
     phone?: string | null;
     cpf?: string | null;
     dateOfBirth?: string | null;
@@ -193,6 +197,7 @@ export type Client = {
     completedBookingsCount: number;
     noShowCount: number;
     cancellationCount: number;
+    totalSpent?: number | null;
     memberSince: string;
     status: 'active' | 'inactive' | 'blocked';
     lastActivity: string;
@@ -210,8 +215,8 @@ export type Address = {
     neighborhood: string;
     city: string;
     state: string;
-    latitude?: string | null;
-    longitude?: string | null;
+    latitude?: number | string | null;
+    longitude?: number | string | null;
 };
 
 export type Activity = {
