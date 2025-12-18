@@ -16,6 +16,7 @@ import {
 } from 'class-validator'; // <-- Adicione IsDefined aqui!
 import { Type } from 'class-transformer';
 import { CreateAddressDto } from '../../common/dto/create-address.dto';
+import { MIN_HOURLY_MINUTES } from '../../common/constants/pricing';
 
 export class CreateBookingDto {
   @ApiProperty({
@@ -79,7 +80,7 @@ export class CreateBookingDto {
   })
   @IsOptional()
   @IsInt()
-  @Min(1)
+  @Min(MIN_HOURLY_MINUTES)
   requestedDurationMinutes?: number;
 
   @ApiPropertyOptional({
