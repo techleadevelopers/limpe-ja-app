@@ -76,6 +76,28 @@
   .shadow-floating-lg {
     box-shadow: var(--shadow-floating-lg);
   }
+
+  /* Barra de rolagem premium/clean */
+  .scrollbar-premium {
+    scrollbar-width: thin;
+    scrollbar-color: var(--medium-blue) rgba(0, 0, 0, 0.05);
+  }
+  .scrollbar-premium::-webkit-scrollbar {
+    width: 10px;
+  }
+  .scrollbar-premium::-webkit-scrollbar-track {
+    background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(243,244,246,0.9));
+    border-radius: 999px;
+    margin: 4px;
+  }
+  .scrollbar-premium::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--medium-blue), hsl(207, 61%, 55%));
+    border-radius: 999px;
+    border: 2px solid rgba(255,255,255,0.8);
+  }
+  .scrollbar-premium::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, hsl(207, 61%, 45%), hsl(207, 61%, 52%));
+  }
   
   .text-light-blue {
     color: var(--light-blue);
