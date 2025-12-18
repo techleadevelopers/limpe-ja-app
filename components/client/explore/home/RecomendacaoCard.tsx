@@ -464,11 +464,24 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     }
   };
 
-  // Formatar a distância usando o valor seguro (mesma lógica do PrestadorCard)
-  const distanceLabel =
-    typeof item.distance === 'number' && item.distance >= 0
-      ? formatDistance(item.distance, undefined)
-      : undefined;
+  // Formatar a distancia aceitando number ou string com unidades
+  const parseDistanceMeters = (value: any): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      const numeric = parseFloat(normalized.replace(/[^0-9.,]/g, '').replace(',', '.'));
+      if (!Number.isFinite(numeric) || numeric < 0) return null;
+      const isKm = normalized.includes('km');
+      return isKm ? numeric * 1000 : numeric;
+    }
+    return null;
+  };
+
+  const distanceValueMeters = parseDistanceMeters((item as any)?.distance);
+  const distanceLabel = distanceValueMeters !== null ? formatDistance(distanceValueMeters, null) : null;
+  const showDistancePill = distanceLabel !== null;
 
   // Helper para formatar próximo horário (agora retorna objeto para stack vertical: dia e horário separados)
   const formatNextAvailable = (next: { date: string; time: string } | undefined) => {
@@ -582,26 +595,24 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   );
 
   return (
-    // NOVO: Wrapper com position: 'relative' para posicionar a distância absolutamente
+    // NOVO: Wrapper com position: "relative" para posicionar a distancia absolutamente
     <View style={styles.cardWrapperWithDistance}>
-      {/* NOVO: Micro-Pill de Localização/Distância (Sutil e Compacto) */}
-      {distanceLabel && (
+      {/* Micro-Pill de Localizacao/Distancia + horario (mesmo se distancia faltar) */}
+      {(showDistancePill || formattedNextAvailable) && (
         <View style={styles.distancePillSmall}>
-          {/* Ícone de Localização no topo */}
+          {/* Icone de Localizacao no topo */}
           <Ionicons name="location" size={S(15)} color="#5da2ecff" style={{ right: -22 }} />
-          
-          {/* NOVO: Valor e Unidade Juntos para maior clareza */}
+          {/* Valor e Unidade Juntos para maior clareza */}
           <Text style={styles.locationDistanceValue} numberOfLines={1} allowFontScaling={false}>
-            {/* Pegue o valor (ex: 6,3) e adicione 'km' ao lado. */}
-            {distanceLabel.split(' ')[0]} km 
+            {distanceLabel ?? '-- km'}
           </Text>
-          {/* NOVO: Badge animado flutuante para próximo horário (posição absolute no topo direito da imagem) */}
+          {/* Badge animado flutuante para proximo horario */}
           {formattedNextAvailable && (
-            <AnimatedReanimated.View 
+            <AnimatedReanimated.View
               style={[
-                styles.nextAvailableBadge, { transform: [{ scale: 1 }] }, 
-                // animatedPulseStyle removido: evita blur no texto do dia/hora
-                badgeVisibilityStyle  // Visibilidade: invisível 2s -> fade in 600ms -> visível 2s -> fade out 600ms
+                styles.nextAvailableBadge,
+                { transform: [{ scale: 1 }] },
+                badgeVisibilityStyle,
               ]}
             >
               <View style={styles.nextAvailableCircle}>
@@ -617,6 +628,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
           )}
         </View>
       )}
+      
 
       {/* CORRIGIDO: Aplica hoverScaleStyle (Reanimated) ao AnimatedCardBackground para compatibilidade */}
       <AnimatedCardBackground
@@ -775,22 +787,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     );
   })()}
 
-  {/* Novo bloco: horário com efeito de piscar */}
-  <View style={styles.scheduleRow}>
-  <Ionicons name="calendar-outline" size={S(10.0)} color="#5da2ecff" />
-    <AnimatedText
-      style={[styles.scheduleText, animatedPulseStyle]}
-      allowFontScaling={false}
-    >
-      Sex 08:00
-    </AnimatedText>
-  </View>
-
-  {!hasRating && ( // <-- SUBSTITUIR ESTE BLOCO (linhas 720-724)
-    <View style={styles.ratingSection}>
-      {renderStars(item.averageRating)}
-    </View>
-  )}
+ 
 </View>
 
           </View>
@@ -844,6 +841,8 @@ const styles = StyleSheet.create({
     flexDirection: 'column', // Mantido o seu layout de coluna
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: S(96), // largura mínima fixa para não encolher quando falta distância
+    minHeight: S(38), // altura mínima fixa para evitar pulo vertical no fade
     paddingHorizontal: S(30),
     paddingVertical: S(4),
     borderRadius: S(0), // Borda mais arredondada
