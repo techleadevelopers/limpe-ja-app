@@ -37,6 +37,28 @@ import AnimatedReanimated, {
   withTiming,
 } from 'react-native-reanimated';
 
+const mapSignUpErrorMessage = (error: any): string => {
+  const status = error?.response?.status;
+  const rawMsg = (error?.message || '').toString().toLowerCase();
+
+  if (status === 409 || /email.*exist|ja cadastrado|conflict|cpf.*exist/.test(rawMsg)) {
+    return 'Este e-mail ou CPF ja esta cadastrado. Faca login ou use outro e-mail/CPF.';
+  }
+  if (status === 400 || /validation|invalido|invalid/.test(rawMsg)) {
+    return 'Dados invalidos. Confira CPF, e-mail, data de nascimento e telefone.';
+  }
+  if (status === 429 || /too many|muitas tentativas/.test(rawMsg)) {
+    return 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.';
+  }
+  if (status && status >= 500) {
+    return 'Servico indisponivel no momento. Tente novamente em instantes.';
+  }
+  if (/network|timeout|conexao|internet|offline/.test(rawMsg)) {
+    return 'Nao foi possivel conectar. Verifique sua internet e tente novamente.';
+  }
+  return error?.message || 'Falha no registro. Tente novamente em instantes.';
+};
+
 const LOGO_IMAGE = require('../../../assets/images/logo2.png');
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -118,7 +140,7 @@ export default function RegisterProviderScreen() {
     setAddressError(null);
 
     if (cleanedCep.length !== 8) {
-      setCepInputError('CEP deve conter 8 dígitos.');
+      setCepInputError('CEP deve conter 8 dĂ­gitos.');
       setStreet('');
       setNeighborhood('');
       setCity('');
@@ -132,7 +154,7 @@ export default function RegisterProviderScreen() {
       const data = await response.json();
 
       if (data.erro) {
-        setCepInputError('CEP não encontrado ou inválido.');
+        setCepInputError('CEP nĂŁo encontrado ou invĂˇlido.');
         setStreet('');
         setNeighborhood('');
         setCity('');
@@ -209,9 +231,9 @@ export default function RegisterProviderScreen() {
         { rotateY: `${rotation}deg` },
         { translateY: floatY }
       ],
-      // Apenas shadowOpacity é animada aqui.
+      // Apenas shadowOpacity Ă© animada aqui.
       // As outras propriedades de sombra (shadowColor, shadowRadius, shadowOffset)
-      // serão definidas no styles.logo estaticamente.
+      // serĂŁo definidas no styles.logo estaticamente.
       shadowOpacity: glowOpacity,
     };
   });
@@ -258,7 +280,7 @@ export default function RegisterProviderScreen() {
           setState(formData.state || '');
           setCurrentStep(formData.currentStep || 1);
           setSubStepAddress(formData.subStepAddress || 1);
-          // Removida a mensagem de carregamento para não exibir o erro vermelho
+          // Removida a mensagem de carregamento para nĂŁo exibir o erro vermelho
           console.log("Provider form data loaded from AsyncStorage.");
         }
       } catch (e) {
@@ -280,7 +302,7 @@ export default function RegisterProviderScreen() {
     } else if (cleanedCep.length > 0 && cleanedCep.length !== 8) {
       // Clear fields if CEP is invalid/incomplete for robustness
       setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState('');
-      setCepInputError(cleanedCep.length < 8 ? "CEP incompleto. Digite os 8 dígitos." : null);
+      setCepInputError(cleanedCep.length < 8 ? "CEP incompleto. Digite os 8 dĂ­gitos." : null);
       setAddressError(null);
     } else if (cleanedCep.length === 0) {
       // Clear on empty
@@ -320,7 +342,16 @@ export default function RegisterProviderScreen() {
       else {
         const [day, month, year] = dateOfBirth.split('/').map(Number);
         const dateObj = new Date(year, month - 1, day);
-        if (isNaN(dateObj.getTime()) || dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) valid = false;
+        if (isNaN(dateObj.getTime()) || dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
+          valid = false;
+        } else {
+          const today = new Date();
+          let age = today.getFullYear() - year;
+          const monthDiff = today.getMonth() - (month - 1);
+          const dayDiff = today.getDate() - day;
+          if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+          if (age < 18) valid = false;
+        }
       }
     }
     if (!password.trim() || password.length < 6) valid = false;
@@ -345,11 +376,11 @@ export default function RegisterProviderScreen() {
   // --- BLUR HANDLERS (SET SPECIFIC ERRORS) ---
   const handleEmailBlur = useCallback(() => {
     if (!email.trim()) {
-      setEmailError('O e-mail é obrigatório.');
+      setEmailError('O e-mail Ă© obrigatĂłrio.');
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.\S+$/;
       if (!emailRegex.test(email.trim())) {
-        setEmailError('Formato de e-mail inválido.');
+        setEmailError('Formato de e-mail invĂˇlido.');
       } else {
         setEmailError(null);
       }
@@ -358,7 +389,7 @@ export default function RegisterProviderScreen() {
 
   const handleUsernameBlur = useCallback(() => {
     if (!username.trim()) {
-      setUsernameError('O nome completo é obrigatório.');
+      setUsernameError('O nome completo Ă© obrigatĂłrio.');
     } else {
       setUsernameError(null);
     }
@@ -366,11 +397,11 @@ export default function RegisterProviderScreen() {
 
   const handlePhoneBlur = useCallback(() => {
     if (!phone.trim()) {
-      setPhoneError('O telefone é obrigatório.');
+      setPhoneError('O telefone Ă© obrigatĂłrio.');
     } else {
       const cleanedPhone = phone.replace(/\D/g, '');
       if (cleanedPhone.length < 10 || cleanedPhone.length > 11) {
-        setPhoneError('O telefone deve ter 10 ou 11 dígitos.');
+        setPhoneError('O telefone deve ter 10 ou 11 dĂ­gitos.');
       } else {
         setPhoneError(null);
       }
@@ -380,9 +411,9 @@ export default function RegisterProviderScreen() {
   const handleCpfBlur = useCallback(() => {
     const cleanedCpf = cpf.replace(/\D/g, '');
     if (!cpf.trim()) {
-      setCpfError('O CPF é obrigatório.');
+      setCpfError('O CPF Ă© obrigatĂłrio.');
     } else if (cleanedCpf.length !== 11) {
-      setCpfError('CPF inválido. Deve conter 11 dígitos.');
+      setCpfError('CPF invĂˇlido. Deve conter 11 dĂ­gitos.');
     } else {
       setCpfError(null);
     }
@@ -390,17 +421,26 @@ export default function RegisterProviderScreen() {
 
   const handleDateOfBirthBlur = useCallback(() => {
     if (!dateOfBirth.trim()) {
-      setDateOfBirthError('A data de nascimento é obrigatória.');
+      setDateOfBirthError('A data de nascimento eh obrigatoria.');
     } else {
-      const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+      const dateRegex = /^\\d{2}\/\\d{2}\/\\d{4}$/;
       if (!dateRegex.test(dateOfBirth)) {
-        setDateOfBirthError('Formato de data inválido (DD/MM/AAAA).');
+        setDateOfBirthError('Formato de data invalido (DD/MM/AAAA).');
       } else {
         const [day, month, year] = dateOfBirth.split('/').map(Number);
         const dateObj = new Date(year, month - 1, day);
         if (isNaN(dateObj.getTime()) || dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
-          setDateOfBirthError('Data de nascimento inválida.');
+          setDateOfBirthError('Data de nascimento invalida.');
         } else {
+          const today = new Date();
+          let age = today.getFullYear() - year;
+          const monthDiff = today.getMonth() - (month - 1);
+          const dayDiff = today.getDate() - day;
+          if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+          if (age < 18) {
+            setDateOfBirthError('Voce precisa ter 18 anos ou mais para criar uma conta.');
+            return;
+          }
           setDateOfBirthError(null);
         }
       }
@@ -409,9 +449,9 @@ export default function RegisterProviderScreen() {
 
   const handlePasswordBlur = useCallback(() => {
     if (!password.trim()) {
-      setPasswordError('A senha é obrigatória.');
+      setPasswordError('A senha Ă© obrigatĂłria.');
     } else if (password.length < 6) {
-      setPasswordError('A senha deve ter no mínimo 6 caracteres.');
+      setPasswordError('A senha deve ter no mĂ­nimo 6 caracteres.');
     } else {
       setPasswordError(null);
     }
@@ -420,7 +460,7 @@ export default function RegisterProviderScreen() {
   const handleCepBlur = useCallback(() => {
     const cleanedCep = cep.replace(/\D/g, '');
     if (cleanedCep.length !== 8) {
-      setCepInputError("CEP inválido. Digite os 8 dígitos.");
+      setCepInputError("CEP invĂˇlido. Digite os 8 dĂ­gitos.");
     } else {
       setCepInputError(null);
     }
@@ -428,7 +468,7 @@ export default function RegisterProviderScreen() {
 
   const handleStreetBlur = useCallback(() => {
     if (!street.trim()) {
-      setStreetError('A rua é obrigatória.');
+      setStreetError('A rua Ă© obrigatĂłria.');
     } else {
       setStreetError(null);
     }
@@ -436,7 +476,7 @@ export default function RegisterProviderScreen() {
 
   const handleNumberBlur = useCallback(() => {
     if (!number.trim()) {
-      setNumberError('O número é obrigatório.');
+      setNumberError('O nĂşmero Ă© obrigatĂłrio.');
     } else {
       setNumberError(null);
     }
@@ -444,7 +484,7 @@ export default function RegisterProviderScreen() {
 
   const handleNeighborhoodBlur = useCallback(() => {
     if (!neighborhood.trim()) {
-      setNeighborhoodError('O bairro é obrigatório.');
+      setNeighborhoodError('O bairro Ă© obrigatĂłrio.');
     } else {
       setNeighborhoodError(null);
     }
@@ -452,7 +492,7 @@ export default function RegisterProviderScreen() {
 
   const handleCityBlur = useCallback(() => {
     if (!city.trim()) {
-      setCityError('A cidade é obrigatória.');
+      setCityError('A cidade Ă© obrigatĂłria.');
     } else {
       setCityError(null);
     }
@@ -460,16 +500,16 @@ export default function RegisterProviderScreen() {
 
   const handleStateBlur = useCallback(() => {
     if (!state.trim()) {
-      setStateError('O estado é obrigatório.');
+      setStateError('O estado Ă© obrigatĂłrio.');
     } else if (state.trim().length !== 2 || !/^[A-Z]{2}$/i.test(state.trim())) {
-      setStateError('O estado (UF) deve ter 2 letras válidas.');
+      setStateError('O estado (UF) deve ter 2 letras vĂˇlidas.');
     } else {
       setStateError(null);
     }
   }, [state]);
 
   const handleNext = async () => {
-    console.log(`[RegisterProvider] handleNext: Tentando avançar do Step ${currentStep}. SubStep: ${subStepAddress}`);
+    console.log(`[RegisterProvider] handleNext: Tentando avanĂ§ar do Step ${currentStep}. SubStep: ${subStepAddress}`);
     setGeneralError(null);
     setAddressError(null);
     // Simple guard to avoid double-taps triggering multiple geocode calls
@@ -483,49 +523,49 @@ export default function RegisterProviderScreen() {
         handleUsernameBlur();
         handleEmailBlur();
         setGeneralError('Por favor, preencha nome e e-mail corretamente.');
-        console.warn("[RegisterProvider] handleNext: Falha ao avançar: Step 1 inválido.");
+        console.warn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 1 invĂˇlido.");
         return;
       }
       setCurrentStep(2);
-      console.log("[RegisterProvider] handleNext: Avançando para o Step 2 (Telefone + CPF).");
+      console.log("[RegisterProvider] handleNext: AvanĂ§ando para o Step 2 (Telefone + CPF).");
     } else if (currentStep === 2) { // Step 2: Phone + CPF
       const isValid = checkStep2Validity();
       if (!isValid) {
         handlePhoneBlur();
         handleCpfBlur();
         setGeneralError('Por favor, preencha telefone e CPF corretamente.');
-        console.warn("[RegisterProvider] handleNext: Falha ao avançar: Step 2 inválido.");
+        console.warn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 2 invĂˇlido.");
         return;
       }
       setCurrentStep(3);
-      console.log("[RegisterProvider] handleNext: Avançando para o Step 3 (Data + Senha).");
+      console.log("[RegisterProvider] handleNext: AvanĂ§ando para o Step 3 (Data + Senha).");
     } else if (currentStep === 3) { // Step 3: DateOfBirth + Password
       const isValid = checkStep3Validity();
       if (!isValid) {
         handleDateOfBirthBlur();
         handlePasswordBlur();
         setGeneralError('Por favor, preencha data de nascimento e senha corretamente.');
-        console.warn("[RegisterProvider] handleNext: Falha ao avançar: Step 3 inválido.");
+        console.warn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 3 invĂˇlido.");
         return;
       }
       setCurrentStep(4); // New Step 4 for Address
       setSubStepAddress(1);
-      console.log("[RegisterProvider] handleNext: Avançando para o Step 4 (Endereço).");
+      console.log("[RegisterProvider] handleNext: AvanĂ§ando para o Step 4 (EndereĂ§o).");
     } else if (currentStep === 4) { // Step 4: Address
       if (subStepAddress === 1) {
         const isValid = checkAddressSubStep1Validity();
         if (!isValid) {
           handleCepBlur();
-          setAddressError("CEP inválido. Digite os 8 dígitos.");
-          console.warn("[RegisterProvider] handleNext: Falha ao avançar: Sub-step 1 (CEP) inválido.");
+          setAddressError("CEP invĂˇlido. Digite os 8 dĂ­gitos.");
+          console.warn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Sub-step 1 (CEP) invĂˇlido.");
           return;
         }
         if (cepLoading) {
-          setAddressError('Aguarde a busca do CEP ser concluída.');
+          setAddressError('Aguarde a busca do CEP ser concluĂ­da.');
           return;
         }
         setSubStepAddress(2);
-        console.log("[RegisterProvider] handleNext: Avançando para o Sub-step 2 (Detalhes do Endereço).");
+        console.log("[RegisterProvider] handleNext: AvanĂ§ando para o Sub-step 2 (Detalhes do EndereĂ§o).");
       } else if (subStepAddress === 2) {
         const isValid = checkAddressSubStep2Validity();
         if (!isValid) {
@@ -534,21 +574,21 @@ export default function RegisterProviderScreen() {
           handleNeighborhoodBlur();
           handleCityBlur();
           handleStateBlur();
-          setAddressError('Por favor, preencha todos os campos de endereço corretamente.');
-          console.warn("[RegisterProvider] handleNext: Falha ao avançar: Sub-step 2 (Detalhes do Endereço) inválido.");
+          setAddressError('Por favor, preencha todos os campos de endereĂ§o corretamente.');
+          console.warn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Sub-step 2 (Detalhes do EndereĂ§o) invĂˇlido.");
           return;
         }
         setIsLoading(true);
         try {
           const ok = await ensureLocationPermission();
           if (!ok) {
-            setAddressError('A permissão para acessar a localização foi negada. Por favor, habilite-a nas configurações do seu dispositivo.');
+            setAddressError('A permissĂŁo para acessar a localizaĂ§ĂŁo foi negada. Por favor, habilite-a nas configuraĂ§Ăµes do seu dispositivo.');
             setIsLoading(false);
             return;
           }
 
           const fullAddress = `${street.trim()}, ${number.trim()}, ${neighborhood.trim()}, ${city.trim()}, ${state.trim()}, ${cep.trim()}`;
-          console.log("[RegisterProvider] Geocodificando endereço:", fullAddress);
+          console.log("[RegisterProvider] Geocodificando endereĂ§o:", fullAddress);
 
           // Geocode with cache + bounded retries (rate-limit safe)
           const geocodeWithBackoff = async (address: string): Promise<{ latitude: number; longitude: number }> => {
@@ -634,7 +674,7 @@ export default function RegisterProviderScreen() {
               longitude,
             },
           });
-          console.log("[RegisterProvider] handleNext (Step 4 - final sub-step): signUpProvider do AuthContext retornou sucesso. Redirecionando para Detalhes do Serviço.");
+          console.log("[RegisterProvider] handleNext (Step 4 - final sub-step): signUpProvider do AuthContext retornou sucesso. Redirecionando para Detalhes do ServiĂ§o.");
           // Clear AsyncStorage after successful registration
           await AsyncStorage.removeItem('providerRegisterFormData');
           router.replace('/(auth)/provider-register/service-details');
@@ -643,19 +683,19 @@ export default function RegisterProviderScreen() {
           const msg = (error?.message || '').toLowerCase();
           const isRate = msg.includes('rate limit') || msg.includes('too many');
           if (isRate) {
-            setAddressError('Geocodificação temporariamente indisponível por excesso de tentativas. Aguarde alguns segundos e toque em Finalizar novamente.');
+            setAddressError('Servico de mapas temporariamente indisponivel por excesso de tentativas. Aguarde alguns segundos e tente novamente.');
           } else if (msg.includes('no results') || msg.includes('not find') || msg.includes('encontrar')) {
-            setAddressError('Não foi possível encontrar as coordenadas para este endereço. Verifique os dados e tente novamente.');
+            setAddressError('Nao foi possivel encontrar as coordenadas para este endereco. Verifique numero e CEP e tente novamente.');
+          } else if (msg.includes('geocod')) {
+            setAddressError('Servico de mapas indisponivel no momento. Tente novamente em instantes.');
           } else {
-            setAddressError(error.message || 'Falha no registro inicial. Por favor, verifique o endereço e tente novamente.');
+            setGeneralError(mapSignUpErrorMessage(error));
           }
-        } finally {
-          setIsLoading(false);
           console.log("[RegisterProvider] handleNext (Step 4 - final sub-step): isLoading definido como false.");
         }
       }
     }
-    // Sutil delay para transição suave (premium feel)
+    // Sutil delay para transiĂ§ĂŁo suave (premium feel)
     await new Promise(resolve => setTimeout(resolve, 150));
   };
 
@@ -677,7 +717,7 @@ export default function RegisterProviderScreen() {
     setStateError(null);
 
     if (currentStep === 1) {
-      // No Step 1, voltar para a tela anterior (ex: seleção de tipo de usuário)
+      // No Step 1, voltar para a tela anterior (ex: seleĂ§ĂŁo de tipo de usuĂˇrio)
       router.back();
     } else if (currentStep === 4) { // Address step
       if (subStepAddress === 1) {
@@ -716,26 +756,26 @@ export default function RegisterProviderScreen() {
 
     switch (currentStep) {
       case 1:
-        stepText = `Dados Básicos`;
-        microcopy = 'Vamos começar com seu nome e e-mail. É rápido!';
+        stepText = `Dados BĂˇsicos`;
+        microcopy = 'Vamos comeĂ§ar com seu nome e e-mail. Ă‰ rĂˇpido!';
         break;
       case 2:
         stepText = ` Contato e Identidade`;
-        microcopy = 'Agora, telefone e CPF para contato e verificação.';
+        microcopy = 'Agora, telefone e CPF para contato e verificaĂ§ĂŁo.';
         break;
       case 3:
         stepText = `Dados Pessoais`;
-        microcopy = 'Data de nascimento e senha para segurança.';
+        microcopy = 'Data de nascimento e senha para seguranĂ§a.';
         break;
       case 4:
         switch (subStepAddress) {
           case 1:
-            stepText = ` Endereço (CEP)`;
-            microcopy = 'Informe seu CEP e buscamos o endereço automaticamente.';
+            stepText = ` EndereĂ§o (CEP)`;
+            microcopy = 'Informe seu CEP e buscamos o endereĂ§o automaticamente.';
             break;
           case 2:
-            stepText = `Endereço (Detalhes)`;
-            microcopy = 'Confirme e complete os detalhes do seu endereço.';
+            stepText = `EndereĂ§o (Detalhes)`;
+            microcopy = 'Confirme e complete os detalhes do seu endereĂ§o.';
             break;
         }
         break;
@@ -750,7 +790,7 @@ export default function RegisterProviderScreen() {
     } else if (currentStep === 3) {
       return 'Voltar para Contato e Identidade';
     } else if (currentStep === 2) {
-      return 'Voltar para Dados Básicos';
+      return 'Voltar para Dados BĂˇsicos';
     }
     return '';
   };
@@ -767,9 +807,9 @@ export default function RegisterProviderScreen() {
         return '';
       case 4:
         switch (subStepAddress) {
-          case 1: return 'Endereço: CEP';
-          case 2: return 'Endereço: Detalhes';
-          default: return 'Endereço';
+          case 1: return 'EndereĂ§o: CEP';
+          case 2: return 'EndereĂ§o: Detalhes';
+          default: return 'EndereĂ§o';
         }
       default:
         return '';
@@ -906,7 +946,7 @@ export default function RegisterProviderScreen() {
 
                 <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
-                {/* Navigation Buttons for Step 1: Back + Next (agora com botão de voltar integrado) */}
+                {/* Navigation Buttons for Step 1: Back + Next (agora com botĂŁo de voltar integrado) */}
                 <View style={styles.navigationButtons}>
                   <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
                     <Ionicons name="arrow-back-outline" size={18} color="#00BCD4" />
@@ -917,7 +957,7 @@ export default function RegisterProviderScreen() {
                     onPress={handleNext}
                     disabled={isLoading || !isNextButtonEnabledStep1}
                   >
-                    <Text style={styles.navButtonTextNext}>Avançar</Text>
+                    <Text style={styles.navButtonTextNext}>AvanĂ§ar</Text>
                     <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
                   </TouchableOpacity>
                 </View>
@@ -933,7 +973,7 @@ export default function RegisterProviderScreen() {
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="Telefone (DDD + Número)"
+                    placeholder="Telefone (DDD + NĂşmero)"
                     placeholderTextColor="#A0AEC0"
                     value={phone}
                     onChangeText={(text) => { setPhone(formatPhoneNumber(text)); setPhoneError(null); }}
@@ -950,7 +990,7 @@ export default function RegisterProviderScreen() {
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="CPF (apenas números)"
+                    placeholder="CPF (apenas nĂşmeros)"
                     placeholderTextColor="#A0AEC0"
                     value={cpf}
                     onChangeText={(text) => { setCpf(formatCpf(text)); setCpfError(null); }}
@@ -974,7 +1014,7 @@ export default function RegisterProviderScreen() {
                     onPress={handleNext}
                     disabled={isLoading || !isNextButtonEnabledStep2}
                   >
-                    <Text style={styles.navButtonTextNext}>Avançar</Text>
+                    <Text style={styles.navButtonTextNext}>AvanĂ§ar</Text>
                     <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
                   </TouchableOpacity>
                 </View>
@@ -1007,7 +1047,7 @@ export default function RegisterProviderScreen() {
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="Senha (mínimo 6 caracteres)"
+                    placeholder="Senha (mĂ­nimo 6 caracteres)"
                     placeholderTextColor="#A0AEC0"
                     value={password}
                     onChangeText={(text) => { setPassword(text); setPasswordError(null); }}
@@ -1039,7 +1079,7 @@ export default function RegisterProviderScreen() {
                       <ActivityIndicator color="#FFFFFF" />
                     ) : (
                       <>
-                        <Text style={styles.navButtonTextNext}>Avançar</Text>
+                        <Text style={styles.navButtonTextNext}>AvanĂ§ar</Text>
                         <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
                       </>
                     )}
@@ -1048,7 +1088,7 @@ export default function RegisterProviderScreen() {
               </View>
             )}
 
-            {/* Step 4: Endereço (Sub-steps) */}
+            {/* Step 4: EndereĂ§o (Sub-steps) */}
             {currentStep === 4 && (
               <View style={styles.stepContent}>
                 {/* Sub-step 1: CEP */}
@@ -1060,14 +1100,14 @@ export default function RegisterProviderScreen() {
                       </View>
                       <TextInput
                         style={styles.input}
-                        placeholder="CEP (apenas números)"
+                        placeholder="CEP (apenas nĂşmeros)"
                         placeholderTextColor="#A0AEC0"
                         value={cep}
                         onChangeText={(text) => {
                           setCep(text.replace(/\D/g, ''));
                           setCepInputError(null);
                           setAddressError(null);
-                          // Removido o fetch manual aqui; agora é gerenciado pelo useEffect
+                          // Removido o fetch manual aqui; agora Ă© gerenciado pelo useEffect
                           if (text.replace(/\D/g, '').length < 8) {
                             setStreet('');
                             setNeighborhood('');
@@ -1075,7 +1115,7 @@ export default function RegisterProviderScreen() {
                             setState('');
                           }
                         }}
-                        // Removido onBlur para depender da automação via useEffect
+                        // Removido onBlur para depender da automaĂ§ĂŁo via useEffect
                         keyboardType="numeric"
                         maxLength={8}
                       />
@@ -1093,14 +1133,14 @@ export default function RegisterProviderScreen() {
                         onPress={handleNext}
                         disabled={isLoading || !isNextButtonEnabledAddressSubStep1}
                       >
-                        <Text style={styles.navButtonTextNext}>Próximo</Text>
+                        <Text style={styles.navButtonTextNext}>PrĂłximo</Text>
                         <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
                       </TouchableOpacity>
                     </View>
                   </View>
                 )}
 
-                {/* Sub-step 2: Detalhes do Endereço */}
+                {/* Sub-step 2: Detalhes do EndereĂ§o */}
                 {subStepAddress === 2 && (
                   <View style={styles.subStepContainer}>
                     <View style={[styles.inputWrapper, streetError ? styles.inputWrapperError : {}]}>
@@ -1126,7 +1166,7 @@ export default function RegisterProviderScreen() {
                       </View>
                       <TextInput
                         style={styles.input}
-                        placeholder="Número"
+                        placeholder="NĂşmero"
                         placeholderTextColor="#A0AEC0"
                         value={number}
                         onChangeText={(text) => { setNumber(text); setNumberError(null); }}
@@ -1234,7 +1274,7 @@ const styles = StyleSheet.create({
   },
   scrollContentContainer: {
     flexGrow: 1,
-    justifyContent: 'center', // Centraliza verticalmente o conteúdo todo
+    justifyContent: 'center', // Centraliza verticalmente o conteĂşdo todo
     alignItems: 'center',
     paddingBottom: 60,
     paddingTop: 20,
@@ -1242,7 +1282,7 @@ const styles = StyleSheet.create({
   contentWrapper: {
     flex: 1,
     width: '100%',
-    maxWidth: 380, // Ajustado para centralização perfeita em telas médias
+    maxWidth: 380, // Ajustado para centralizaĂ§ĂŁo perfeita em telas mĂ©dias
     paddingHorizontal: 40, // Padding menor para centro exato
     paddingTop: Platform.OS === 'ios' ? 20 : 15,
     alignItems: 'center',
@@ -1250,7 +1290,7 @@ const styles = StyleSheet.create({
   },
   stepContent: {
     width: '100%',
-    alignItems: 'center', // Força centralização dos inputs
+    alignItems: 'center', // ForĂ§a centralizaĂ§ĂŁo dos inputs
   },
   subStepContainer: {
     width: '100%',
@@ -1258,7 +1298,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 20, // Logo mais próxima
+    marginBottom: 20, // Logo mais prĂłxima
     top: 130,
     right: 10,
   },
@@ -1303,7 +1343,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
     height: 45,
-    marginBottom: 10, // Espaço mínimo para o erro ficar colado abaixo
+    marginBottom: 10, // EspaĂ§o mĂ­nimo para o erro ficar colado abaixo
     shadowColor: 'rgba(100, 100, 150, 0.15)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -1415,5 +1455,3 @@ const styles = StyleSheet.create({
     width: '100%',
   }
 });
-
-
