@@ -883,7 +883,8 @@ if (isAuthenticated && user?.id) {
           style={{
             flex: 1,
             textAlign: 'center',
-            fontSize: 15,
+            fontSize: 17,
+            left: 4,
             fontFamily: 'Montserrat-Regular',
             fontWeight: '800',
             color: AppColors.textBody,
@@ -1001,9 +1002,10 @@ if (isAuthenticated && user?.id) {
             <View style={styles.priceBackgroundWrapper}>
               <View style={styles.priceWrapper}>
                 <Text style={styles.priceValue}>{firstServicePrice}</Text>
+                <Text style={styles.priceSubLabel}>(Preço por Hora)</Text>
               </View>
               {firstProviderService?.pricingType === PricingType.HOURLY && (
-                <Text style={styles.priceUnit}>Preço por hora</Text>
+                <Text style={styles.priceUnit}>(Preço por hora)</Text>
               )}
             </View>
           </View>
@@ -1238,5 +1240,3 @@ if (isAuthenticated && user?.id) {
     </View>
   );
 }
-
-
