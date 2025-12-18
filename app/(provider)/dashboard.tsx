@@ -727,7 +727,7 @@ const quickActionStyles = StyleSheet.create({
 // Componente de Item de Solicitação (RequestItem - refinado com haptics e clean spacing)
 const RequestItem: React.FC<{
   item: BookingDetails;
-  onAccept?: (id: string) => void;
+  onAccept?: (id: string, clientName?: string) => void;
   onReject?: (id: string) => void;
   onDetails: (id: string) => void;
   onChat?: (clientId: string, clientName: string) => void;
@@ -812,7 +812,7 @@ const RequestItem: React.FC<{
           disabled={!!isUpdating}
           onPress={() => {
             if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            onAccept && onAccept(item.id);
+            onAccept && onAccept(item.id, clientName);
           }}
           onPressIn={acceptTouchAnimation.onPressIn}
           onPressOut={acceptTouchAnimation.onPressOut}
@@ -1031,11 +1031,12 @@ export default function ProviderDashboardScreen() {
   const goReviews = () => router.push(PROVIDER_ROUTES.REVIEWS as any); // CORRIGIDO: Usar a constante da rota
   const goEarnings = () => router.push(PROVIDER_ROUTES.EARNINGS as any);
   const goWithdraw = () => router.push(PROVIDER_ROUTES.WITHDRAW as any); // CORREÇÃO: Usar a constante da rota
-  const handleAcceptRequest = async (bookingId: string) => {
+  const handleAcceptRequest = async (bookingId: string, clientName?: string) => {
     console.log(`[DashboardScreen] handleAcceptRequest: Tentando aceitar agendamento ${bookingId}.`);
+    const displayName = clientName && clientName.trim().length > 0 ? clientName : bookingId;
     Alert.alert(
       'Aceitar Solicitação',
-      `Tem certeza que deseja aceitar o agendamento ${bookingId}?`,
+      `Tem certeza que deseja aceitar o agendamento ${displayName}?`,
       [
         { text: 'Cancelar', style: 'cancel', onPress: () => console.log('[DashboardScreen] Aceitar cancelado.') },
         {
