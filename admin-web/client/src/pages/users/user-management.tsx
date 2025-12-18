@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Users, Search, Filter, MoreHorizontal, Calendar, Mail, Phone, MapPin, Shield, Ban, UserPlus, Edit } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { fetchClients, updateClientProfile, fetchClientById } from "@/lib/api"; // Importar novas funções
+import { fetchClients, updateClientProfile, fetchClientById, deleteUser } from "@/lib/api"; // Importar novas funções
 import { Client, Address } from "@/lib/types"; // Importar o tipo Client e Address
 
 // Componente para o modal de edição de cliente
@@ -58,16 +58,28 @@ const ClientEditModal = ({ clientId, isOpen, onClose }: ClientEditModalProps) =>
   // Atualiza o formulário quando os dados do cliente são carregados
   useEffect(() => {
     if (client) {
+      const dob =
+        client.dateOfBirth && client.dateOfBirth.includes('T')
+          ? client.dateOfBirth.split('T')[0]
+          : client.dateOfBirth || '';
       setFormData({
         name: client.name,
         email: client.email,
         phone: client.phone,
         cpf: client.cpf,
-        dateOfBirth: client.dateOfBirth,
+        dateOfBirth: dob,
         // Outros campos que você queira editar
       });
       if (client.address) {
-        setAddressData(client.address);
+        setAddressData({
+          cep: client.address.cep || '',
+          street: client.address.street || '',
+          number: client.address.number || '',
+          complement: client.address.complement || '',
+          neighborhood: client.address.neighborhood || '',
+          city: client.address.city || '',
+          state: client.address.state || '',
+        });
       } else {
         setAddressData({});
       }
@@ -219,11 +231,27 @@ function getStatusBadge(status: string) {
   }
 }
 
+const getRoleBadge = (role?: string) => {
+  switch (role) {
+    case "PROVIDER":
+      return "bg-blue-100 text-blue-700";
+    case "CLIENT":
+      return "bg-emerald-100 text-emerald-700";
+    case "ADMIN":
+      return "bg-purple-100 text-purple-700";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+};
+
 export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const [selectedClientForEdit, setSelectedClientForEdit] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedForView, setSelectedForView] = useState<string | null>(null);
 
   // Use a API real para buscar clientes
   const { data: clients, isLoading, isError, error } = useQuery<Client[], Error>({
@@ -231,12 +259,27 @@ export default function UserManagement() {
     queryFn: () => fetchClients(),
   });
 
-  const filteredClients = clients?.filter(client => {
-    const matchesSearch = (client.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (client.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || client.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  }) || [];
+  const filteredClients = useMemo(
+    () =>
+      clients?.filter(client => {
+        const matchesSearch =
+          (client.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (client.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === "all" || client.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      }) || [],
+    [clients, searchTerm, statusFilter],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredClients.length / pageSize));
+  const paginatedClients = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredClients.slice(start, start + pageSize);
+  }, [filteredClients, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const stats = {
     total: clients?.length || 0,
@@ -255,6 +298,60 @@ export default function UserManagement() {
     setSelectedClientForEdit(null);
   };
 
+  const deleteUserMutation = useMutation({
+    mutationFn: (id: string) => deleteUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/clients'] });
+      toast({ title: "Usuário excluído", description: "A conta foi removida com sucesso.", variant: "success" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro ao excluir usuário", description: err?.message || "Não foi possível excluir.", variant: "destructive" });
+    },
+  });
+
+const handleDeleteUser = (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir este usuário? Essa ação não pode ser desfeita.")) {
+      deleteUserMutation.mutate(id);
+    }
+  };
+
+  const handleExportCsv = () => {
+    const headers = [
+      'Nome',
+      'Email',
+      'Telefone',
+      'Status',
+      'Role',
+      'TotalGasto',
+      'Agendamentos',
+      'NoShow',
+      'Cancelamentos',
+      'UltimaAtividade',
+    ];
+    const rows = filteredClients.map(c => [
+      c.name ?? '',
+      c.email ?? '',
+      c.phone ?? '',
+      c.status ?? '',
+      c.role ?? '',
+      Number(c.totalSpent ?? 0).toFixed(2),
+      c.completedBookingsCount ?? 0,
+      c.noShowCount ?? 0,
+      c.cancellationCount ?? 0,
+      c.lastActivity ?? '',
+    ]);
+    const csv = [headers, ...rows]
+      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'clientes.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex h-screen bg-admin-bg">
       <Sidebar />
@@ -265,7 +362,7 @@ export default function UserManagement() {
           subtitle="Gerencie contas de clientes, perfis e programas de fidelidade."
         />
         
-        <main className="flex-1 overflow-y-auto p-8">
+        <main className="flex-1 overflow-y-auto p-8 scrollbar-premium">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
             <Card className="shadow-floating border-0">
@@ -384,6 +481,9 @@ export default function UserManagement() {
                     </div>
                   </DialogContent>
                 </Dialog>
+                <Button variant="outline" onClick={handleExportCsv}>
+                  Exportar CSV
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -410,7 +510,10 @@ export default function UserManagement() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredClients.map((client, index) => (
+                  {paginatedClients.map((client, index) => {
+                    const totalSpent = Number(client.totalSpent ?? 0);
+                    const lastActivity = client.lastActivity ? formatRelativeTime(client.lastActivity) : "Sem atividade";
+                    return (
                     <motion.div
                       key={client.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -432,6 +535,9 @@ export default function UserManagement() {
                               <Badge className={`text-xs px-2 py-1 border-0 ${getStatusBadge(client.status)}`}>
                                 {client.status}
                               </Badge>
+                              <Badge className={`text-xs px-2 py-1 border-0 ${getRoleBadge(client.role)}`}>
+                                {client.role || "N/A"}
+                              </Badge>
                               <Badge className={`text-xs px-2 py-1 border ${getLoyaltyBadge(client.loyaltyTier)}`}>
                                 {client.loyaltyTier}
                               </Badge>
@@ -449,8 +555,8 @@ export default function UserManagement() {
                             </div>
                             
                             <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                              <span>Total Gasto: R$ {client.totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                              <span>Última atividade: {formatRelativeTime(client.lastActivity)}</span>
+                              <span>Total Gasto: R$ {totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                              <span>Última atividade: {lastActivity}</span>
                             </div>
                             {/* NOVAS MÉTRICAS DE COMPORTAMENTO */}
                             <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
@@ -468,16 +574,24 @@ export default function UserManagement() {
                             onClick={() => handleOpenEditModal(client.id)}
                           >
                             <Edit size={14} className="mr-1" />
-                            Editar Perfil
+                            Ver / Editar
                           </Button>
                           
-                          <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
-                            <MoreHorizontal size={16} />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-100 hover:bg-red-50"
+                            onClick={() => handleDeleteUser(client.id)}
+                            disabled={deleteUserMutation.isPending}
+                          >
+                            <Ban size={14} className="mr-1" />
+                            Excluir
                           </Button>
                         </div>
                       </div>
                     </motion.div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               
@@ -488,6 +602,31 @@ export default function UserManagement() {
                   <p className="text-gray-500">
                     {searchTerm ? `Nenhum cliente corresponde a "${searchTerm}"` : "Nenhum cliente registrado ainda."}
                   </p>
+                </div>
+              )}
+              {!isLoading && filteredClients.length > 0 && (
+                <div className="flex items-center justify-between pt-4">
+                  <p className="text-sm text-gray-500">
+                    Página {currentPage} de {totalPages} · {filteredClients.length} clientes
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Próxima
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
