@@ -52,7 +52,8 @@ export class CreatePixChargeDto {
 export class PixChargeResponseDto {
   // === PROPRIEDADE ADICIONADA NA CORREÇÃO ANTERIOR ===
   @ApiProperty({
-    description: 'ID interno do PaymentIntent (referência principal no sistema)',
+    description:
+      'ID interno do PaymentIntent (referência principal no sistema)',
     example: 'uuid-do-payment-intent',
   })
   @IsUUID()
@@ -114,7 +115,7 @@ export class PixChargeResponseDto {
   @Min(0.01)
   @IsNotEmpty()
   amount: number;
-  
+
   // === PROPRIEDADE ADICIONADA PARA CORRIGIR O NOVO ERRO DE TIPAGEM ===
   @ApiProperty({ description: 'Valor da cobrança em centavos', example: 15075 })
   @IsNumber()
