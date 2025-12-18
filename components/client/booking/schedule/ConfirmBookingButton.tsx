@@ -111,7 +111,7 @@ const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
           <ActivityIndicator color={AppColors.white} />
         ) : (
           <Text style={s.text}>
-            {selectedTime && hasSelectedServicePrice ? `Agendar (${confirmButtonText})` : 'Selecione Data, Hora e Endereço'}
+            {selectedTime && hasSelectedServicePrice ? `Agendar • (${confirmButtonText})` : 'Selecione Data, Hora e Endereço'}
           </Text>
         )}
       </TouchableOpacity>
@@ -171,7 +171,5 @@ const s = StyleSheet.create({
 });
 
 export default ConfirmBookingButton;
-
-
 
 
