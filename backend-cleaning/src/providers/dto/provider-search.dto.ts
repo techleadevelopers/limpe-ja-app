@@ -23,6 +23,22 @@ export class ProviderSearchDto {
   searchTerm?: string;
 
   @ApiPropertyOptional({
+    description: 'Cidade para filtrar provedores (filtro rígido por cidade)',
+    example: 'Campinas',
+  })
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional({
+    description: 'Estado (UF) para filtrar provedores',
+    example: 'SP',
+  })
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @ApiPropertyOptional({
     description: 'ID do tipo de serviço para filtrar',
     example: 'uuid-do-servico',
   })
