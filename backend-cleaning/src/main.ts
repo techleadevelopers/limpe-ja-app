@@ -11,6 +11,9 @@ import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import * as process from 'process';
 import { I18nService } from './common/i18n/i18n.service';
+import { initPrometheus } from './metrics/prometheus';
+import { TracingInterceptor } from './common/interceptors/tracing.interceptor';
+import { initTracing } from './tracing/otel';
 
 async function bootstrap() {
   console.time('AppStartupTotal');
@@ -21,6 +24,21 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const i18nService = app.get(I18nService);
+
+  // =======================================================
+  //                   PROMETHEUS METRICS
+  // =======================================================
+  initPrometheus();
+
+  // =======================================================
+  //                 OPEN TELEMETRY TRACING
+  // =======================================================
+  initTracing({
+    serviceName:
+      configService.get<string>('OTEL_SERVICE_NAME') || 'backend-cleaning',
+    otlpEndpoint: configService.get<string>('OTEL_EXPORTER_OTLP_ENDPOINT'),
+    debug: configService.get<string>('OTEL_DEBUG') === '1',
+  });
 
   const sentryDsn = configService.get<string>('SENTRY_DSN');
   const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
@@ -37,9 +55,7 @@ async function bootstrap() {
     });
     console.log('[Sentry] Inicializado com sucesso.');
   } else {
-    console.warn(
-      '[Sentry] SENTRY_DSN não configurado. Sentry desativado.'
-    );
+    console.warn('[Sentry] SENTRY_DSN não configurado. Sentry desativado.');
   }
 
   // =======================================================
@@ -50,7 +66,7 @@ async function bootstrap() {
       req.setEncoding('utf8');
       let data = '';
 
-      req.on('data', chunk => {
+      req.on('data', (chunk) => {
         data += chunk;
       });
 
@@ -67,7 +83,6 @@ async function bootstrap() {
 
         return next();
       });
-
     } else {
       return next();
     }
@@ -119,8 +134,8 @@ async function bootstrap() {
       transform: true,
       transformOptions: { enableImplicitConversion: true },
 
-      exceptionFactory: errors => {
-        const messages = errors.map(error => {
+      exceptionFactory: (errors) => {
+        const messages = errors.map((error) => {
           const constraintMessage = Object.values(error.constraints ?? {})[0];
           return constraintMessage;
         });
@@ -135,15 +150,18 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter(i18nService));
 
   // =======================================================
+  //                  TRACING INTERCEPTOR
+  // =======================================================
+  app.useGlobalInterceptors(app.get(TracingInterceptor));
+
+  // =======================================================
   //                    FIREBASE ADMIN
   // =======================================================
   try {
     admin.initializeApp();
     console.log('[Firebase Admin] Inicializado automaticamente.');
   } catch (error: any) {
-    console.error(
-      `[Firebase Admin] Erro: ${error.message}`
-    );
+    console.error(`[Firebase Admin] Erro: ${error.message}`);
 
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       try {
@@ -159,21 +177,20 @@ async function bootstrap() {
         });
 
         console.log(
-          '[Firebase Admin] Inicializado via GOOGLE_APPLICATION_CREDENTIALS.'
+          '[Firebase Admin] Inicializado via GOOGLE_APPLICATION_CREDENTIALS.',
         );
-
       } catch (innerError: any) {
         console.error(
-          `[Firebase Admin] Falha no carregamento manual: ${innerError.message}`
+          `[Firebase Admin] Falha no carregamento manual: ${innerError.message}`,
         );
 
         throw new Error(
-          'Firebase Admin SDK failed to initialize via GOOGLE_APPLICATION_CREDENTIALS.'
+          'Firebase Admin SDK failed to initialize via GOOGLE_APPLICATION_CREDENTIALS.',
         );
       }
     } else {
       console.warn(
-        '[Firebase Admin] SDK NÃO INICIALIZADO — notificações podem falhar.'
+        '[Firebase Admin] SDK NÃO INICIALIZADO — notificações podem falhar.',
       );
     }
   }
