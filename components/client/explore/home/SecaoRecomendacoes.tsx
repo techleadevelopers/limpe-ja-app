@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useRef } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 
@@ -18,35 +18,45 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
   titulo,
   data,
   onVerTudoPress,
-  titleColor = '#636a79', // Cor original mantida como fallback
-  noDataText = 'Nenhuma recomendação disponível no momento.',
+  titleColor = '#636a79',
+  noDataText = 'Nenhuma recomendacao disponivel no momento.',
   horizontal = false,
   renderItem,
 }) => {
-  const safeData = Array.isArray(data) ? data.filter((item) => item && item.fullName) : [];
+  const safeData = useMemo(
+    () =>
+      Array.isArray(data)
+        ? data.filter(
+            (item) =>
+              item &&
+              typeof item === 'object' &&
+              typeof (item as any).id === 'string' &&
+              (item as any).id.trim() !== '' &&
+              typeof (item as any).fullName === 'string' &&
+              (item as any).fullName.trim() !== '',
+          )
+        : [],
+    [data],
+  );
 
-  // Parâmetros do carrossel (alinhados ao RecomendacaoCard)
-  // Ajuste fino: refletir largura e espaçamento reais do RecomendacaoCard (com escala de 7%)
   const CARD_SCALE = 1.07;
-  const CARD_BASE_WIDTH = 115 * CARD_SCALE; // ~123.05
-  const CARD_MARGIN_RIGHT = 15 * CARD_SCALE; // ~16.05 (combina com marginRight atual do card)
-  const ITEM_FULL_SIZE = CARD_BASE_WIDTH + CARD_MARGIN_RIGHT; // passo de snap
+  const CARD_BASE_WIDTH = 115 * CARD_SCALE;
+  const CARD_MARGIN_RIGHT = 15 * CARD_SCALE;
+  const ITEM_FULL_SIZE = CARD_BASE_WIDTH + CARD_MARGIN_RIGHT;
 
-  // Animated scroll value para aplicar escala/opacidade por item
   const scrollX = useRef(new Animated.Value(0)).current;
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.sectionTitle}>{titulo}</Text>
-        {onVerTudoPress && (
+        <Text style={[styles.sectionTitle, { color: titleColor }]}>{titulo}</Text>
+        {onVerTudoPress ? (
           <TouchableOpacity onPress={onVerTudoPress} style={styles.viewAllButton}>
             <Ionicons name="add" size={16} color="#398beeff" />
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
 
-      {/* Scroll premium com snap, escala central e fade nas bordas */}
       <View style={styles.carouselWrapper}>
         {safeData.length > 0 ? (
           <Animated.ScrollView
@@ -54,10 +64,9 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.cardsScrollContainer}
             decelerationRate="fast"
-            onScroll={Animated.event(
-              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-              { useNativeDriver: true }
-            )}
+            onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+              useNativeDriver: true,
+            })}
             scrollEventThrottle={16}
           >
             {safeData.map((item, index) => {
@@ -66,6 +75,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
                 index * ITEM_FULL_SIZE,
                 (index + 1) * ITEM_FULL_SIZE,
               ];
+
               const scale = scrollX.interpolate({
                 inputRange,
                 outputRange: [0.94, 1.02, 0.94],
@@ -82,15 +92,26 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
                 extrapolate: 'clamp',
               });
 
+              if (
+                !item ||
+                typeof item !== 'object' ||
+                typeof (item as any).id !== 'string' ||
+                typeof (item as any).fullName !== 'string'
+              ) {
+                return null;
+              }
+
+              const rendered = renderItem({ item, index });
+              if (!React.isValidElement(rendered)) {
+                return null;
+              }
+
               return (
                 <Animated.View
-                  key={item.id}
-                  style={[
-                    styles.itemWrapper,
-                    { transform: [{ translateY }, { scale }], opacity },
-                  ]}
+                  key={(item as any).id || `rec-${index}`}
+                  style={[styles.itemWrapper, { transform: [{ translateY }, { scale }], opacity }]}
                 >
-                  {renderItem({ item, index })}
+                  {rendered}
                 </Animated.View>
               );
             })}
@@ -99,22 +120,16 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
           <Text style={styles.emptyText}>{noDataText}</Text>
         )}
 
-        {/* Fade lateral sutil para conforto visual */}
         <LinearGradient
           pointerEvents="none"
-          // Aumenta a opacidade do fade da esquerda (mais marcante)
-          colors={[
-            "rgba(241,242,241,1)",
-            "rgba(241,242,241,0.98)",
-            "rgba(241,242,241,0.14)"
-          ]}
+          colors={['rgba(241,242,241,1)', 'rgba(241,242,241,0.98)', 'rgba(241,242,241,0.14)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[styles.edgeFade, styles.edgeLeft]}
         />
         <LinearGradient
           pointerEvents="none"
-          colors={["rgba(241,242,241,0)", "rgba(241,242,241,0.94)", "rgba(241,242,241,1)"]}
+          colors={['rgba(241,242,241,0)', 'rgba(241,242,241,0.94)', 'rgba(241,242,241,1)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[styles.edgeFade, styles.edgeRight]}
@@ -129,9 +144,7 @@ const styles = StyleSheet.create({
     marginTop: -25,
     marginBottom: -10,
     paddingHorizontal: 6,
-    backgroundColor: 'transparent', // Mantido transparente conforme original, mas pode ser 'rgba(255,255,255,0.65)' para efeito de vidro
-    // borderRadius: 18, // Adicionar se o background for ativado
-    // paddingTop: 5, // Adicionar se o background for ativado
+    backgroundColor: 'transparent',
   },
   header: {
     paddingHorizontal: 10,
@@ -141,25 +154,18 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   sectionTitle: {
-      fontSize: 15.5,
-      fontFamily: 'Montserrat-Regular',
-      fontWeight: '600',
-      // PREMIUM: Estilo de título refinado
-      color: 'rgba(44, 62, 80, 0.85)',
-      letterSpacing: 0.5,
-      marginTop: 22,
+    fontSize: 15.5,
+    fontFamily: 'Montserrat-Regular',
+    fontWeight: '600',
+    color: 'rgba(44, 62, 80, 0.85)',
+    letterSpacing: 0.5,
+    marginTop: 22,
   },
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 1,
-    transform: [{ translateY: 14 }], // desloca mais para baixo (~8px)
-  },
-  viewAllText: {
-    fontSize: 1,
-    color: '#6c7989ff',
-    fontWeight: '600',
-    marginTop: 5,
+    transform: [{ translateY: 14 }],
   },
   cardsScrollContainer: {
     paddingHorizontal: 15,
@@ -169,23 +175,21 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   itemWrapper: {
-    // Mantém o espaçamento original do card
-    marginRight: 0, // o RecomendacaoCard já tem marginRight interno
-    
+    marginRight: 0,
   },
   edgeFade: {
     position: 'absolute',
-    top: 8, // alinha com a altura do conteúdo (ajuste fino)
+    top: 8,
     bottom: 10,
     width: 28,
     zIndex: 2,
   },
   edgeLeft: {
-    left: -16, // empurra o fade mais para fora à esquerda
+    left: -16,
     bottom: 0,
   },
   edgeRight: {
-    right: -16, // empurra o fade mais para fora à direita
+    right: -16,
   },
   emptyText: {
     flex: 1,
@@ -197,3 +201,5 @@ const styles = StyleSheet.create({
 });
 
 export default SecaoRecomendacoes;
+
+
