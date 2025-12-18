@@ -533,13 +533,54 @@ export async function deleteProviderServiceOffering(providerId: string, serviceO
 // NOVAS FUNÇÕES PARA BUSCAR LISTAS DE PROVEDORES PARA A TELA INICIAL
 // =========================================================================
 
+
+/**
+ * Lista provedores por proximidade. Usa latitude/longitude quando disponivel; caso contrario,
+ * tenta filtrar por cidade/UF (se fornecidos). A unidade de `radius` deve seguir o contrato do backend.
+ */
+export async function getNearbyProviders(params: {
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  city?: string;
+  state?: string;
+}): Promise<ProviderDisplayInfo[]> {
+  try {
+    const hasLat = typeof params.latitude === 'number' && isFinite(params.latitude);
+    const hasLon = typeof params.longitude === 'number' && isFinite(params.longitude);
+    const query: ProviderSearchQuery = {};
+
+    if (hasLat && hasLon) {
+      query.latitude = params.latitude;
+      query.longitude = params.longitude;
+      query.sortBy = 'distance';
+      if (params.radius != null) query.radius = params.radius as any;
+    } else {
+      if (params.city) query.city = params.city;
+      if (params.state) query.state = params.state;
+    }
+
+    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers', {
+      params: query,
+      headers: { 'X-Silent': '1' },
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar provedores proximos:', error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Erro ao buscar provedores proximos.');
+    }
+    throw new Error(`Erro de rede ou servidor ao buscar provedores proximos.`);
+  }
+}
+
 /**
  * @function getRecommendedProviders
  * Obtém uma lista de provedores recomendados para a tela inicial.
  * Chama o endpoint GET /providers/recommended.
  * @returns Uma Promise que resolve para um array de provedores (ProviderDisplayInfo para frontend).
  */
-export async function getRecommendedProviders(params?: { latitude?: number; longitude?: number }): Promise<ProviderDisplayInfo[]> {
+export async function getRecommendedProviders(params?: { latitude?: number; longitude?: number; radius?: number }): Promise<ProviderDisplayInfo[]> {
   try {
     const finalParams = params || {};
     const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/recommended', {
@@ -548,11 +589,11 @@ export async function getRecommendedProviders(params?: { latitude?: number; long
     });
     return response.data;
   } catch (error: any) {
-    console.error('Erro ao buscar provedores próximos:', error.response?.data || error.message);
+    console.error('Erro ao buscar provedores proximos:', error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || 'Erro ao buscar provedores próximos.');
+      throw new Error(error.response.data.message || 'Erro ao buscar provedores proximos.');
     }
-    throw new Error(`Erro de rede ou servidor ao buscar provedores próximos.`);
+    throw new Error(`Erro de rede ou servidor ao buscar provedores proximos.`);
   }
 }
 
@@ -748,3 +789,5 @@ export async function acceptProviderTerms(termsVersion: string): Promise<{ terms
     throw new Error('Erro de rede ou servidor ao registrar aceite de termos.');
   }
 }
+
+
