@@ -61,6 +61,9 @@ function getStatusInfo(status: string) {
   }
 }
 
+const getDisplayName = (provider?: Provider | null) =>
+  provider?.fullName || provider?.name || "Sem nome";
+
 export default function VerificationQueue() {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -80,7 +83,7 @@ export default function VerificationQueue() {
       queryClient.invalidateQueries({ queryKey: ['/providers'] });
       toast({
         title: "Status do Provedor Atualizado",
-        description: `${updatedProvider.name} agora está ${updatedProvider.verificationStatus}.`,
+        description: `${getDisplayName(updatedProvider)} agora está ${updatedProvider.verificationStatus}.`,
       });
       setIsModalOpen(false);
       setSelectedProvider(null);
@@ -228,6 +231,7 @@ export default function VerificationQueue() {
               ) : (
                 <div className="space-y-4">
                   {queue?.map((provider: Provider, index: number) => {
+                    const displayName = getDisplayName(provider);
                     const statusInfo = getStatusInfo(provider.verificationStatus || "");
                     const StatusIcon = statusInfo.icon;
                     
@@ -246,7 +250,7 @@ export default function VerificationQueue() {
                         
                         <div className="ml-4 flex-1">
                           <div className="flex items-center gap-3 mb-1">
-                            <h3 className="font-semibold text-gray-900">{provider.name}</h3>
+                            <h3 className="font-semibold text-gray-900">{displayName}</h3>
                             <Badge className={`text-xs px-2 py-1 border ${statusInfo.badge}`}>
                               {statusInfo.priority} Prioridade
                             </Badge>
@@ -284,7 +288,7 @@ export default function VerificationQueue() {
                       <Eye className="text-medium-blue" size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{selectedProvider.name}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">{getDisplayName(selectedProvider)}</h3>
                       <p className="text-sm text-gray-600">{selectedProvider.email || selectedProvider.phone || "Contato não informado"}</p>
                     </div>
                   </div>
