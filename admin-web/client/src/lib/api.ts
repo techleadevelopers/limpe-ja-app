@@ -295,16 +295,52 @@ export const fetchPricingHistory = async (limit = 50, cursor = 0): Promise<{ ite
     return fetchApi(`/admin/settings/pricing/history${query}`);
 };
 
-// --- FunÃ§Ãµes de Clientes ---
-export const fetchClients = async (): Promise<Client[]> => { return fetchApi("/users"); };
+// --- Fun??es de Clientes ---
+const mapUserProfileToClient = (user: any): Client => {
+    const client = user?.clientDetails ?? user?.client ?? {};
+    const addr = client?.address ?? null;
+    const bookingsCount = client?._count?.bookings ?? client?.bookings?.length ?? user?.completedBookingsCount ?? 0;
+    return {
+        id: client?.id ?? user?.id ?? "",
+        userId: client?.userId ?? user?.id ?? "",
+        name: client?.fullName ?? user?.fullName ?? user?.email ?? "",
+        email: user?.email ?? "",
+        role: user?.role,
+        phone: client?.phone ?? user?.phone ?? null,
+        cpf: client?.cpf ?? null,
+        dateOfBirth: client?.dateOfBirth ?? null,
+        address: addr,
+        completedBookingsCount: bookingsCount,
+        noShowCount: client?.noShowCount ?? 0,
+        cancellationCount: client?.cancellationCount ?? 0,
+        totalSpent: client?.totalSpent ?? user?.totalSpent ?? null,
+        memberSince: user?.createdAt ?? "",
+        status: user?.status ?? "active",
+        lastActivity: user?.updatedAt ?? user?.createdAt ?? "",
+        loyaltyTier: user?.loyalty?.tier ?? "bronze",
+        createdAt: user?.createdAt ?? "",
+        updatedAt: user?.updatedAt ?? "",
+    };
+};
 
-export const fetchClientById = async (id: string): Promise<Client> => { return fetchApi(`/users/${id}`); };
+export const fetchClients = async (): Promise<Client[]> => {
+    const users = await fetchApi<any[]>("/users");
+    return (users ?? []).map(mapUserProfileToClient);
+};
 
+export const fetchClientById = async (id: string): Promise<Client> => {
+    const user = await fetchApi<any>(`/users/${id}`);
+    return mapUserProfileToClient(user);
+};
 export const updateClientProfile = async (id: string, data: Partial<Client>): Promise<Client> => {
     return fetchApi(`/clients/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
     });
+};
+
+export const deleteUser = async (id: string): Promise<void> => {
+    return fetchApi(`/users/${id}`, { method: 'DELETE' });
 };
 
 // --- FunÃ§Ãµes de ServiÃ§os Globais ---
