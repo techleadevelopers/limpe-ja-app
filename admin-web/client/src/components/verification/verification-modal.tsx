@@ -2,15 +2,16 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Star, CheckCircle, User, X } from "lucide-react";
+import { Star, CheckCircle, User, X, MapPin, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Importa a função de API corrigida
-import { updateProviderStatus } from "@/lib/api";
+import { updateProviderProfile, updateProviderStatus } from "@/lib/api";
 // CORREÇÃO: Importa Provider e VerificationStatus
 import { Provider, VerificationStatus } from "@/lib/types";
 import RejectionModal from "./rejection-modal";
@@ -41,15 +42,30 @@ function formatRelativeTime(date: Date): string {
 
 export default function VerificationModal({ provider, isOpen, onClose }: VerificationModalProps) {
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
+  const [latitudeInput, setLatitudeInput] = useState("");
+  const [longitudeInput, setLongitudeInput] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (provider) {
+      const lat = provider.address?.latitude ?? provider.latitude;
+      const lon = provider.address?.longitude ?? provider.longitude;
+      setLatitudeInput(lat !== null && lat !== undefined ? String(lat) : "");
+      setLongitudeInput(lon !== null && lon !== undefined ? String(lon) : "");
+    } else {
+      setLatitudeInput("");
+      setLongitudeInput("");
+    }
+  }, [provider]);
 
   // Mova as declarações de useMutation para o topo do componente
   const approveMutation = useMutation({
     mutationFn: (providerId: string) => updateProviderStatus(providerId, VerificationStatus.APPROVED),
     onSuccess: () => {
       toast({ title: "Sucesso!", description: "Provedor aprovado com sucesso.", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: ['verificationQueue'] });
+      queryClient.invalidateQueries({ queryKey: ['/verification/pending-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['/providers'] });
       onClose();
     },
     onError: (error: any) => {
@@ -62,7 +78,8 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
       updateProviderStatus(providerId, VerificationStatus.REJECTED, reason),
     onSuccess: () => {
       toast({ title: "Sucesso!", description: "Provedor rejeitado com sucesso.", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: ['verificationQueue'] });
+      queryClient.invalidateQueries({ queryKey: ['/verification/pending-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['/providers'] });
       onClose();
       setIsRejectionModalOpen(false);
     },
@@ -70,9 +87,47 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
       toast({ title: "Erro na Rejeição", description: error.message, variant: "destructive" });
     },
   });
-  
+
+  const updateLocationMutation = useMutation({
+    mutationFn: async ({ latitude, longitude }: { latitude: number; longitude: number }) => {
+      if (!provider?.address) {
+        throw new Error("EndereA§o nALo disponA­vel para ediA§ALo.");
+      }
+      const addr = provider.address;
+      const payload = {
+        cep: addr.cep,
+        street: addr.street,
+        number: addr.number,
+        complement: addr.complement ?? undefined,
+        neighborhood: addr.neighborhood,
+        city: addr.city,
+        state: addr.state,
+        latitude,
+        longitude,
+      };
+      return updateProviderProfile(provider.id, { address: payload });
+    },
+    onSuccess: () => {
+      toast({
+        title: "LocalizaA§ALo atualizada",
+        description: "Latitude e longitude salvas no cadastro do provedor.",
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/verification/pending-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['/providers'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao salvar localizaA§ALo",
+        description: error?.message || "NALo foi possA­vel atualizar as coordenadas.",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!provider) return null;
 
+  const displayName = provider.fullName || provider.name || "Sem nome";
 
   const handleApprove = () => {
     approveMutation.mutate(provider.id);
@@ -86,6 +141,36 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
     // A lógica de bloqueio ainda precisa ser implementada
     // Se houver um endpoint para isso, você criaria uma nova mutation aqui
     toast({ title: "Funcionalidade em desenvolvimento", description: "A lógica de bloqueio ainda não foi implementada.", variant: "warning" });
+  };
+
+  const handleUpdateLocation = () => {
+    if (!provider?.address) {
+      toast({
+        title: "Endereço indisponível",
+        description: "Não há endereço cadastrado para ajustar a localização.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const lat = parseFloat(latitudeInput.replace(",", "."));
+    const lon = parseFloat(longitudeInput.replace(",", "."));
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      toast({
+        title: "Coordenadas inválidas",
+        description: "Digite valores numéricos para latitude e longitude.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      toast({
+        title: "Fora do intervalo",
+        description: "Latitude deve estar entre -90 e 90, e longitude entre -180 e 180.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateLocationMutation.mutate({ latitude: lat, longitude: lon });
   };
 
   return (
@@ -107,11 +192,11 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
             <div className="flex items-center p-4 bg-gray-50 rounded-xl">
               <img 
                 src={`https://images.unsplash.com/photo-150720939${Math.floor(Math.random() * 10)}?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100`}
-                alt={`${provider.name} profile`}
+                alt={`${displayName} profile`}
                 className="w-16 h-16 rounded-full object-cover"
               />
               <div className="ml-4 flex-1">
-                <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{displayName}</h3>
                 <p className="text-gray-600">{provider.email}</p>
                 <div className="flex items-center mt-2 space-x-4">
                   <span className="text-sm text-gray-600 flex items-center">
@@ -159,7 +244,7 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
                     <h5 className="text-sm font-medium text-blue-900 mb-2">Resultados OCR</h5>
                     {provider.ocrResult ? (
                       <div className="text-xs text-blue-800 space-y-1">
-                        <p><strong>Nome:</strong> {provider.ocrResult.fullName || provider.name}</p>
+                        <p><strong>Nome:</strong> {provider.ocrResult.fullName || displayName}</p>
                         <p><strong>Número do Documento:</strong> {provider.ocrResult.documentNumber || "N/A"}</p>
                         <p><strong>Data de Nascimento:</strong> {provider.ocrResult.birthDate || "N/A"}</p>
                         <p><strong>Tipo de Documento:</strong> {provider.ocrResult.documentType || "N/A"}</p>
@@ -217,7 +302,7 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Telefone:</span>
-                    <span className="text-sm text-gray-900">{provider.phone || "N/A"}</span>
+                    <span className="text-sm text-gray-900">{provider.phone || provider.userPhone || "N/A"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Cidade:</span>
@@ -243,6 +328,54 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Manual Location Fix */}
+            <div className="space-y-3 border border-dashed border-gray-200 rounded-xl p-4 bg-gray-50">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <h4 className="text-md font-semibold text-gray-900 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-medium-blue" />
+                    Ajustar LocalizaA§ALo
+                  </h4>
+                  <p className="text-xs text-gray-600">Edite latitude/longitude se o endereA§o estiver incorreto.</p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleUpdateLocation}
+                  disabled={updateLocationMutation.isPending}
+                  className="bg-medium-blue text-white"
+                >
+                  {updateLocationMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <MapPin className="w-4 h-4 mr-2" />
+                  )}
+                  Salvar localizaA§ALo
+                </Button>
+              </div>
+              {provider.address ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <span className="text-xs text-gray-600">Latitude</span>
+                    <Input
+                      value={latitudeInput}
+                      onChange={(e) => setLatitudeInput(e.target.value)}
+                      placeholder="-22.90"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-gray-600">Longitude</span>
+                    <Input
+                      value={longitudeInput}
+                      onChange={(e) => setLongitudeInput(e.target.value)}
+                      placeholder="-43.20"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600">Sem endereA§o cadastrado para este provedor.</p>
+              )}
             </div>
 
             {/* Action Buttons */}
