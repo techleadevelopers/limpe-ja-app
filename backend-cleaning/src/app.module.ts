@@ -1,4 +1,9 @@
-import { Module, forwardRef } from '@nestjs/common';
+import {
+  Module,
+  forwardRef,
+  MiddlewareConsumer,
+  NestModule,
+} from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -62,6 +67,9 @@ import { AdminModule } from './admin/admin.module';
 
 // Queues
 import { QueuesModule } from './queues/queues.module';
+import { HealthModule } from './health/health.module';
+import { HttpMetricsMiddleware } from './common/middleware/http-metrics.middleware';
+import { TracingInterceptor } from './common/interceptors/tracing.interceptor';
 
 @Module({
   imports: [
@@ -131,8 +139,13 @@ import { QueuesModule } from './queues/queues.module';
     SettingsModule,
     UploadModule,
     ConnectModule,
+    HealthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, TracingInterceptor],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(HttpMetricsMiddleware).forRoutes('*');
+  }
+}
