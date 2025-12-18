@@ -31,10 +31,10 @@ export class BookingEntity implements PrismaBooking {
   completedAt: Date | null;
   startedByUserId: string | null;
   completedByUserId: string | null;
-  
+
   // ✅ CORREÇÃO: ADICIONADO os novos campos de fluxo (onTheWayAt, arrivedAt)
   onTheWayAt: Date | null;
-  arrivedAt: Date | null; 
+  arrivedAt: Date | null;
 
   // CORREÇÃO AQUI: Propriedade addressId deve ser string | null
   addressId: string | null; // O tipo é string | null, conforme definido no schema.prisma (String?)
@@ -127,7 +127,7 @@ export class BookingEntity implements PrismaBooking {
     this.completedAt = partial.completedAt
       ? new Date(partial.completedAt as any)
       : null;
-      
+
     // ✅ CORREÇÃO: Inicializar os novos campos de fluxo
     this.onTheWayAt = partial.onTheWayAt
       ? new Date(partial.onTheWayAt as any)
