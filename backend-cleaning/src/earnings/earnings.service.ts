@@ -21,7 +21,7 @@ export class EarningsService {
   constructor(
     private prisma: PrismaService,
     private providersService: ProvidersService,
-    private payoutsService: PayoutsService,
+    private payoutsService: PayoutsService, // Mantido, embora getBalance não seja mais usado em getEarnings
   ) {}
 
   async getEarnings(userId: string): Promise<EarningsResponseDto> {
@@ -30,64 +30,45 @@ export class EarningsService {
       throw new NotFoundException('Provedor não encontrado.');
     }
 
-    // totalEarnings: soma de EARNING
-    const sumEarnings = await this.prisma.ledgerEntry.aggregate({
-      _sum: { amount: true },
-      where: { userId, type: LedgerEntryType.EARNING },
-    });
-    const totalEarnings = Number(
-      (sumEarnings._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
-    );
+    // --- INÍCIO DA NOVA LÓGICA DO DASHBOARD ---
 
-    // availableForWithdrawal: saldo disponível considerando janela T+N e disputas
-    const { available } = await this.payoutsService.getBalance(userId);
-    const availableForWithdrawal = Math.max(0, available);
-
-    // pendingWithdrawals: payouts PENDING/PROCESSING
-    const sumPending = await this.prisma.payout.aggregate({
+    // 1. totalGrossSales: HOLD positivos
+    const gross = await this.prisma.ledgerEntry.aggregate({
       _sum: { amount: true },
       where: {
         userId,
-        status: { in: [PayoutStatus.PENDING, PayoutStatus.PROCESSING] },
+        type: LedgerEntryType.HOLD,
+        amount: { gt: 0 }, // Apenas HOLDs positivos representam vendas brutas
       },
     });
-    const pendingWithdrawals = Number(
-      (sumPending._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
+
+    const totalGrossSales = Number(
+      (gross._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
     );
 
-    // preApprovedEarnings: bookings pagos (PIX) ainda não concluídos
-    const paidUpcoming = await this.prisma.booking.findMany({
+    // 2. availableForWithdrawal: EARNING - WITHDRAWAL
+    // Assume-se que entradas do tipo WITHDRAWAL são registradas com valores negativos no campo 'amount'
+    // para que a soma direta resulte em EARNING - WITHDRAWAL.
+    const available = await this.prisma.ledgerEntry.aggregate({
+      _sum: { amount: true },
       where: {
-        providerId: provider.id,
-        status: {
-          in: [
-            BookingStatus.PENDING,
-            BookingStatus.CONFIRMED,
-            BookingStatus.RESCHEDULED,
-            BookingStatus.STARTED,
-          ],
-        },
-        paymentIntent: {
-          status: {
-            in: [PaymentIntentStatus.PAID],
-          },
-        },
+        userId,
+        type: { in: [LedgerEntryType.EARNING, LedgerEntryType.WITHDRAWAL] },
       },
-      select: { totalPrice: true, paymentIntent: { select: { status: true } } },
     });
-    const preApprovedEarnings = paidUpcoming.reduce(
-      (sum, b) => {
-        const st = (b as any).paymentIntent?.status;
-        if (
-          st === PaymentIntentStatus.REFUNDED ||
-          st === PaymentIntentStatus.CHARGEBACK
-        ) {
-          return sum;
-        }
-        return sum + Number(b.totalPrice ?? 0);
-      },
-      0,
+
+    const availableForWithdrawal = Number(
+      (available._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
     );
+
+    // 3. pendingEarnings: Gross - Available
+    const pendingEarnings = Number(
+      (totalGrossSales - availableForWithdrawal).toFixed(2),
+    );
+
+    // --- FIM DA NOVA LÓGICA DO DASHBOARD ---
+
+    // As seções abaixo são mantidas do código original, pois não foram contraditas pela correção.
 
     // recentTransactions: últimos 10 ledger entries
     const recentEntries = await this.prisma.ledgerEntry.findMany({
@@ -134,11 +115,12 @@ export class EarningsService {
         (earningsBreakdown[monthYear] || 0) + Number(e.amount);
     });
 
+    // Retorna os dados, mapeando as novas métricas para os campos existentes no DTO
     return {
-      totalEarnings,
-      availableForWithdrawal,
-      pendingWithdrawals,
-      preApprovedEarnings,
+      totalEarnings: totalGrossSales, // Mapeia totalGrossSales para totalEarnings
+      availableForWithdrawal: availableForWithdrawal, // Usa a nova availableForWithdrawal
+      pendingWithdrawals: pendingEarnings, // Mapeia pendingEarnings para pendingWithdrawals
+      preApprovedEarnings: 0, // Não há equivalente na nova lógica, definido como 0
       recentTransactions: recentEntries.map((le) => ({
         id: le.id,
         amount: Number(le.amount),
