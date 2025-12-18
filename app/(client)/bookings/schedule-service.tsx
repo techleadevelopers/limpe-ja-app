@@ -61,6 +61,7 @@ import { useDevice } from '@/utils/responsive';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
+
 const SafetyReminderBanner = () => (
   <View style={styles.safetyBannerContainer}>
     <LinearGradient
@@ -484,6 +485,8 @@ export default function ScheduleServiceScreen() {
     const notesAnim = useRef(new Animated.Value(0)).current; // Stagger 2: Notes
     const cupomAnim = useRef(new Animated.Value(0)).current; // Stagger 3: Coupon
     const summaryAnim = useRef(new Animated.Value(0)).current; // Stagger 4: Summary
+    const slotBadgeScale = useRef(new Animated.Value(1)).current;
+    const slotBadgePulse = useRef(new Animated.Value(0)).current;
 
     const [currentStep, setCurrentStep] = useState<number>(1);
 
@@ -743,6 +746,43 @@ export default function ScheduleServiceScreen() {
         };
     }, []);
 
+    useEffect(() => {
+        if (currentStep !== 2 || selectedProviderService?.pricingType !== PricingType.HOURLY || selectedSlots.length === 0) {
+            slotBadgePulse.stopAnimation();
+            return;
+        }
+        slotBadgePulse.setValue(0);
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(slotBadgePulse, {
+                    toValue: 1,
+                    duration: 1500,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(slotBadgePulse, {
+                    toValue: 0,
+                    duration: 1500,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ])
+        );
+        loop.start();
+        return () => loop.stop();
+    }, [currentStep, selectedProviderService?.pricingType, selectedSlots.length, slotBadgePulse]);
+
+    useEffect(() => {
+        if (selectedSlots.length === 0) {
+            slotBadgeScale.setValue(1);
+            return;
+        }
+        Animated.sequence([
+            Animated.spring(slotBadgeScale, { toValue: 1.08, useNativeDriver: true, friction: 4 }),
+            Animated.spring(slotBadgeScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
+        ]).start();
+    }, [selectedSlots.length, slotBadgeScale]);
+
     // ? PREMIUM: Animação de entrada para step 2 (review) - inicia baixo e sobe suavemente para conforto UX
     // ? AJUSTE: Animações paralelas com delays mínimos para entrada quase instantânea (profissional e rápida)
     useEffect(() => {
@@ -907,62 +947,55 @@ export default function ScheduleServiceScreen() {
         };
 
         const sortSlots = (slots: string[]) => [...slots].sort((a, b) => toMinutes(a) - toMinutes(b));
-
-        const normalizeContiguousSlots = (slots: string[]) => {
-            if (!slots || slots.length === 0) return [] as string[];
-            const sorted = sortSlots(slots);
-            const contiguous: string[] = [sorted[0]];
-            for (let i = 1; i < sorted.length; i++) {
-                const prev = toMinutes(contiguous[contiguous.length - 1]);
-                const curr = toMinutes(sorted[i]);
-                if (curr - prev === 60) {
-                    contiguous.push(sorted[i]);
+        const availableTimes = sortSlots(displaySlotsInfo.filter(s => s.isAvailable).map(s => s.time));
+        const expandToMinSlots = (baseTime: string) => {
+            const idx = availableTimes.indexOf(baseTime);
+            if (idx === -1) return [baseTime];
+            let result = [baseTime];
+            // expande para frente
+            for (let i = idx + 1; i < availableTimes.length && result.length < MIN_HOURLY_SLOTS; i++) {
+                const prev = result[result.length - 1];
+                if (toMinutes(availableTimes[i]) - toMinutes(prev) === 60) {
+                    result.push(availableTimes[i]);
                 } else {
-                    break; // mantem apenas o bloco contiguo (evita buracos)
+                    break;
                 }
             }
-            return contiguous;
+            // se ainda faltar, expande para tr?s
+            for (let i = idx - 1; i >= 0 && result.length < MIN_HOURLY_SLOTS; i--) {
+                const first = result[0];
+                if (toMinutes(first) - toMinutes(availableTimes[i]) === 60) {
+                    result.unshift(availableTimes[i]);
+                } else {
+                    break;
+                }
+            }
+            return sortSlots(result);
         };
 
         if (selectedProviderService?.pricingType === PricingType.HOURLY) {
             setSelectedSlots(prev => {
                 const current = prev ?? [];
-                let next: string[] = [];
-
                 const alreadySelected = current.includes(time);
 
                 if (alreadySelected) {
-                    next = normalizeContiguousSlots(current.filter(t => t !== time));
-                } else if (current.length === 0) {
-                    next = [time];
-                } else {
-                    const sorted = sortSlots(current);
-                    const first = sorted[0];
-                    const last = sorted[sorted.length - 1];
-
-                    const m = toMinutes(time);
-                    const firstM = toMinutes(first);
-                    const lastM = toMinutes(last);
-
-                    // Expande so nas pontas (contiguo); se clicar no meio ou distante, inicia nova selecao.
-                    if (m === lastM + 60) {
-                        next = [...sorted, time];
-                    } else if (m === firstM - 60) {
-                        next = [time, ...sorted];
-                    } else {
-                        next = [time];
-                    }
-
-                    next = normalizeContiguousSlots(next);
-                }
-
-                if (next.length === 0) {
                     setSelectedTime(null);
                     setDurationInMinutes(null);
                     return [] as string[];
                 }
 
-                next = sortSlots(next);
+                const next = expandToMinSlots(time);
+
+                if (next.length < MIN_HOURLY_SLOTS) {
+                    NotificationUIService.showError(
+                        t('schedule_service.min_hourly_block', { defaultValue: 'Este horario nao possui 4h disponiveis. Selecione um horario com pelo menos 4h contiguas.' }),
+                        t('schedule_service.min_hourly_block_title', { defaultValue: 'Minimo de 4h' }),
+                    );
+                    setSelectedTime(null);
+                    setDurationInMinutes(null);
+                    return [] as string[];
+                }
+
                 setSelectedTime(next[0]);
                 setDurationInMinutes(next.length * 60);
 
@@ -1614,9 +1647,15 @@ export default function ScheduleServiceScreen() {
         scaleAnim,
     ]);
 
+    const MIN_HOURLY_SLOTS = 4;
+
     const isNextButtonDisabled = useMemo(() => {
         if (currentStep === 1) {
+            const needMinSlots =
+                selectedProviderService?.pricingType === PricingType.HOURLY &&
+                selectedSlots.length < MIN_HOURLY_SLOTS;
             return selectedSlots.length === 0
+                || needMinSlots
                 || !address.street
                 || !address.number
                 || !address.neighborhood
@@ -1624,7 +1663,7 @@ export default function ScheduleServiceScreen() {
                 || !address.state;
         }
         return false;
-    }, [currentStep, selectedSlots, address]);
+    }, [currentStep, selectedSlots, address, selectedProviderService?.pricingType]);
 
     const isConfirmButtonDisabled = useMemo(() => {
         if (!selectedProviderService) return true;
@@ -1639,7 +1678,9 @@ export default function ScheduleServiceScreen() {
             || isBooking;
 
         if (selectedProviderService.pricingType === PricingType.HOURLY) {
-            return baseDisabled || (durationInMinutes == null || durationInMinutes <= 0);
+            return baseDisabled
+                || selectedSlots.length < MIN_HOURLY_SLOTS
+                || (durationInMinutes == null || durationInMinutes <= 0);
         }
         if (selectedProviderService.pricingType === PricingType.BY_SIZE) {
             return baseDisabled || (squareMeters == null || squareMeters <= 0);
@@ -1663,13 +1704,27 @@ export default function ScheduleServiceScreen() {
 
         if (hasHours && priceForDisplay > 0) {
             const hoursLabel = selectedHoursLabel ?? `${totalHours} ${totalHours === 1 ? 'hora' : 'horas'}`;
-            return `Agendar ${hoursLabel} • ${formatBRL(priceForDisplay)}`;
+            return `Agendar ${hoursLabel} • ${formatBRL(priceForDisplay)}/h`;
         }
         if (finalCalculatedPrice > 0) {
-            return formatBRL(finalCalculatedPrice);
+            return isHourly ? `${formatBRL(finalCalculatedPrice)}/h` : formatBRL(finalCalculatedPrice);
         }
         return t('schedule_service.select_date_time_address', { defaultValue: 'Selecione Data, Hora e Endereco' });
     }, [selectedProviderService?.pricingType, totalHours, hourlyTotalPrice, finalCalculatedPrice, selectedHoursLabel, t]);
+
+    const slotBadgeVisible =
+        currentStep === 1 &&
+        selectedProviderService?.pricingType === PricingType.HOURLY &&
+        selectedSlots.length > 0;
+    const slotBadgeLabel = `${selectedSlots.length}h`;
+    const slotBadgeGlowOpacity = slotBadgePulse.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0, 0.45, 0],
+    });
+    const slotBadgeGlowScale = slotBadgePulse.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1, 1.2],
+    });
 
 
     if (isLoading) {
@@ -1939,6 +1994,23 @@ export default function ScheduleServiceScreen() {
                             hasSelectedServicePrice={!!selectedProviderService?.price}
                         />
                     </Animated.View>
+                )}
+
+                {slotBadgeVisible && (
+                    <TouchableOpacity
+                        style={styles.slotBadgeContainer}
+                        activeOpacity={0.9}
+                    >
+                        <Animated.View
+                            style={[
+                                styles.slotBadgeGlow,
+                                { opacity: slotBadgeGlowOpacity, transform: [{ scale: slotBadgeGlowScale }] },
+                            ]}
+                        />
+                        <Animated.View style={[styles.slotBadgeButton, { transform: [{ scale: slotBadgeScale }] }]}>
+                            <Text style={styles.slotBadgeText}>{slotBadgeLabel}</Text>
+                        </Animated.View>
+                    </TouchableOpacity>
                 )}
             </View>
 
@@ -2466,7 +2538,37 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
     },
+    slotBadgeContainer: {
+        position: 'absolute',
+        right: 22,
+        bottom: 180,
+        zIndex: 50,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    slotBadgeGlow: {
+        position: 'absolute',
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: '#FFCDD2',
+    },
+    slotBadgeButton: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: '#E53935',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 8,
+    },
+    slotBadgeText: {
+        color: '#FFFFFF',
+        fontSize: 18,
+        fontWeight: '800',
+    },
 });
-
-
-
