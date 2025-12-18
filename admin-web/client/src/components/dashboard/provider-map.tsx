@@ -15,6 +15,9 @@ type ProviderMapProps = {
   height?: number;
 };
 
+const resolveDisplayName = (provider: Provider) =>
+  provider.fullName || provider.name || "Sem nome";
+
 export default function ProviderMap({ height = 460 }: ProviderMapProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -26,7 +29,7 @@ export default function ProviderMap({ height = 460 }: ProviderMapProps) {
   });
 
   const filteredProviders = (providers || []).filter((provider) => {
-    const name = (provider.name || "").toLowerCase();
+    const name = resolveDisplayName(provider).toLowerCase();
     const matchesSearch = name.includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || provider.verificationStatus === statusFilter;
     return matchesSearch && matchesStatus;
@@ -107,7 +110,9 @@ export default function ProviderMap({ height = 460 }: ProviderMapProps) {
               ) : filteredProviders.length === 0 ? (
                 <div className="text-sm text-gray-600">Nenhum provedor encontrado para os filtros atuais.</div>
               ) : (
-                filteredProviders.slice(0, 24).map((p) => (
+                filteredProviders.slice(0, 24).map((p) => {
+                  const displayName = resolveDisplayName(p);
+                  return (
                   <div key={p.id} className="pointer-events-auto flex items-center gap-2 bg-white/90 rounded-lg px-3 py-2 shadow">
                     <span className={`w-2 h-2 rounded-full ${
                       p.verificationStatus === VerificationStatus.APPROVED
@@ -116,14 +121,15 @@ export default function ProviderMap({ height = 460 }: ProviderMapProps) {
                         ? "bg-red-500"
                         : "bg-amber-500"
                     }`} />
-                    <span className="text-xs text-gray-800 truncate" title={p.name}>{p.name}</span>
+                    <span className="text-xs text-gray-800 truncate" title={displayName}>{displayName}</span>
                     {p.city && (
                       <Badge variant="outline" className="ml-auto text-[10px]">
                         <MapPin className="w-3 h-3 mr-1" /> {p.city}
                       </Badge>
                     )}
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -132,4 +138,3 @@ export default function ProviderMap({ height = 460 }: ProviderMapProps) {
     </Card>
   );
 }
-
