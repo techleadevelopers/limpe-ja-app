@@ -1,6 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { Image } from 'react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -77,6 +78,96 @@ const FALLBACK_CATEGORIES: Service[] = [
   { id: 'upholstery', name: 'Estofados', icon: 'estofados.png' } as Service,
   { id: 'office-clean', name: 'Escritório', icon: 'escritorio.png' } as Service,
 ];
+type CityStateHint = {
+  city?: string;
+  state?: string;
+  latitude?: number;
+  longitude?: number;
+};
+
+const normalizeLocationText = (v?: string | null) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
+const toNum = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const computeDistanceMeters = (
+  baseLat?: number | null,
+  baseLon?: number | null,
+  targetLat?: number | null,
+  targetLon?: number | null,
+): number | null => {
+  const lat1 = toNum(baseLat);
+  const lon1 = toNum(baseLon);
+  const lat2 = toNum(targetLat);
+  const lon2 = toNum(targetLon);
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(toRad(lat1)) * Math.cos(toRad(lat2));
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+const extractLocationHint = (profile?: UserProfile | null): CityStateHint => {
+  const addr =
+    profile?.clientDetails?.address ||
+    profile?.providerDetails?.address ||
+    profile?.address;
+
+  const latitude =
+    typeof addr?.latitude === 'number' && isFinite(addr.latitude) ? addr.latitude : undefined;
+  const longitude =
+    typeof addr?.longitude === 'number' && isFinite(addr.longitude) ? addr.longitude : undefined;
+
+  return {
+    city: normalizeLocationText(addr?.city),
+    state: normalizeLocationText(addr?.state),
+    latitude,
+    longitude,
+  };
+};
+
+const filterByRadiusOrCity = (
+  items: ProviderDisplayInfo[],
+  radiusMeters: number,
+  hint: CityStateHint
+): ProviderDisplayInfo[] => {
+  if (!Array.isArray(items)) return [];
+  const hasCityState = !!(hint.city && hint.state);
+  return items.filter((item) => {
+    if (!item) return false;
+    const dist = Number(item.distance);
+    if (Number.isFinite(dist) && radiusMeters > 0) {
+      return dist <= radiusMeters;
+    }
+    if (hasCityState) {
+      const providerCity = normalizeLocationText(item.address?.city);
+      const providerState = normalizeLocationText(item.address?.state);
+      if (providerCity && providerState) {
+        return providerCity === hint.city && providerState === hint.state;
+      }
+      // Se o provider nÇõo trouxe cidade/UF, nÇõo bloqueie a exibiÇõÇœo.
+      return true;
+    }
+    return true;
+  });
+};
+
+const sortByDistanceStable = (items: ProviderDisplayInfo[]): ProviderDisplayInfo[] => {
+  return (items || [])
+    .map((it, idx) => ({
+      it,
+      idx,
+      dist: Number.isFinite((it as any)?.distance) ? Number((it as any)?.distance) : Number.POSITIVE_INFINITY,
+    }))
+    .sort((a, b) => {
+      if (a.dist !== b.dist) return a.dist - b.dist;
+      return a.idx - b.idx;
+    })
+    .map(({ it }) => it);
+};
+
 
 // --- INTERFACES PARA COMPONENTES (DEFINIDAS AQUI PARA EXEMPLO) ---
 interface CarouselBannerItemProps {
@@ -209,6 +300,12 @@ export default function ExploreClientScreen() {
   const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // Padrão 50 km (como no código original)
   // Novo estado para o filtro de preço
   const [priceFilter, setPriceFilter] = useState<PricingType | null>(null);
+  const locationHint = useMemo(() => extractLocationHint(userProfile), [userProfile]);
+  const locationHintRef = useRef<CityStateHint>(locationHint);
+  const userCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  useEffect(() => {
+    locationHintRef.current = locationHint;
+  }, [locationHint]);
 
   const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
   const [showPersistentCouponPill, setShowPersistentCouponPill] = useState(false);
@@ -293,221 +390,290 @@ export default function ExploreClientScreen() {
     }
   }, [isAuthenticated, exploreTutorial.isReady, exploreTutorial.hasSeen, exploreTutorial.show]);
 
-const loadLocationAndNearby = useCallback(async () => {
+  const locationFetchStarted = useRef(false);
+  const locationFetchDone = useRef(false);
+
+  const loadLocationAndNearby = useCallback(async () => {
+    if (locationFetchStarted.current || locationFetchDone.current) return; // evita loop de chamadas
+    locationFetchStarted.current = true;
     try {
-        // --- 1. LÓGICA DE PRIORIZAÇÃO DE LOCALIZAÇÃO ---
-        let coords: Location.LocationObjectCoords | null = null;
-        
-        // Obtém o objeto de endereço do perfil (BookingAddress ou similar)
-        const rawAddressObject = userProfile?.clientDetails?.address || userProfile?.providerDetails?.address || userProfile?.address;
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      const hint = locationHintRef.current;
+      const profileCoords =
+        typeof hint.latitude === 'number' && typeof hint.longitude === 'number'
+          ? { latitude: hint.latitude, longitude: hint.longitude }
+          : null;
+      let coords = null as null | { latitude: number; longitude: number };
+      if (status === PermissionStatus.GRANTED) {
+        coords = await getCurrentPosition();
+      }
+      const coordsToUse = coords || profileCoords;
+      if (!coordsToUse) {
+        // sem GPS e sem fallback de perfil: marca como concluído para não reentrar em loop
+        locationFetchDone.current = true;
+        return;
+      }
+      userCoordsRef.current = coordsToUse;
+      if (!locationHintRef.current?.latitude || !locationHintRef.current?.longitude) {
+        locationHintRef.current = { ...locationHintRef.current, ...coordsToUse };
+      }
 
-        let rawAddressString: string | null = null;
-        
-        if (rawAddressObject) {
-            // Converte o OBJETO de endereço em uma STRING formatada
-            rawAddressString = formatAddress(rawAddressObject);
-        }
-
-        // Tenta obter coordenadas do endereço salvo no perfil (se existir)
-        if (rawAddressString) {
-            try {
-                // Location.geocodeAsync agora recebe a STRING formatada
-                const geoResults = await Location.geocodeAsync(rawAddressString);
-                
-                if (geoResults.length > 0) {
-                    coords = { latitude: geoResults[0].latitude, longitude: geoResults[0].longitude, accuracy: 5, altitude: 0, altitudeAccuracy: 0, speed: 0, heading: 0 };
-                }
-            } catch (e) {
-                // console.warn('Falha na geocodificação do endereço do perfil:', e);
-            }
-        }
-        
-        // Se ainda não tiver coordenadas, tenta obter do GPS do dispositivo
-        if (!coords) {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status === PermissionStatus.GRANTED) {
-                const location = await Location.getCurrentPositionAsync({});
-                coords = location.coords;
-            } else {
-                // console.log('Permissão de GPS negada e sem endereço de perfil.');
-            }
-        }
-        
-        if (!coords || !isMounted.current) return;
-        
-        // --- 2. CHAMADA À API COM AS COORDENADAS OBTIDAS ---
-        // Tipagem explícita para resolver o erro 2493
-        const [nearbyRes, recommendedRes] = await Promise.allSettled([
-            searchProvidersWithLocation({
-                latitude: coords.latitude,
-                longitude: coords.longitude,
+      const [nearbyRes, recommendedRes] = await Promise.allSettled([
+        coordsToUse
+          ? searchProvidersWithLocation({
+              latitude: coordsToUse.latitude,
+              longitude: coordsToUse.longitude,
+              radius: searchRadiusKm,
+            })
+          : Promise.resolve([] as ProviderDisplayInfo[]),
+        getRecommendedProviders(
+          coordsToUse
+            ? {
+                latitude: coordsToUse.latitude,
+                longitude: coordsToUse.longitude,
                 radius: searchRadiusKm,
-            }),
-            getRecommendedProviders({
-                latitude: coords.latitude,
-                longitude: coords.longitude,
-            }),
-        ]) as [
-            PromiseSettledResult<ProviderDisplayInfo[]>, 
-            PromiseSettledResult<ProviderDisplayInfo[]>
-        ];
-        
-        if (nearbyRes.status === 'fulfilled') {
-            setNearbyProviders(nearbyRes.value);
-        } else {
-            setNearbyProviders(FALLBACK_RECOMMENDATIONS);
-        }
+              }
+            : {}
+        ),
+      ]);
 
-        if (recommendedRes.status === 'fulfilled') {
-            setRecommendations(recommendedRes.value);
-        } else {
-            setRecommendations(FALLBACK_RECOMMENDATIONS);
-        }
-
-    } catch (error) {
-        // console.error('Error loading location and nearby providers:', error);
-        // silencioso se falhar
+      if (nearbyRes.status === 'fulfilled' && isMounted.current) {
+        setNearbyProviders(Array.isArray(nearbyRes.value) ? nearbyRes.value : []);
+      }
+      if (recommendedRes.status === 'fulfilled' && isMounted.current && recommendedRes.value.length) {
+        setRecommendations(recommendedRes.value);
+      }
+      locationFetchDone.current = true;
+    } catch {
+      // silencioso se falhar
+    } finally {
+      locationFetchDone.current = true; // evita reentrar em loop mesmo em caso de falha
+      locationFetchStarted.current = false;
     }
-// LINHA 352 (AGORA CORRIGIDA):
-}, [searchRadiusKm, userProfile]);
+  }, [searchRadiusKm]);
 
 
 
-const fetchData = useCallback(async () => {
-  if (!isMounted.current) {
-    return;
-  }
+  const fetchData = useCallback(async () => {
+  if (!isMounted.current) {
+    return;
+  }
 
-  setLoading(true);
-  setError(null);
+  setLoading(true);
+  setError(null);
 
-  const collectedErrors: string[] = [];
-  let hasSuccessfulData = false;
+  const hint = locationHintRef.current;
 
-  const runAndTrack = async <T,>(
-    label: string,
-    runner: () => Promise<T>,
-    onSuccess: (value: T) => Promise<void> | void,
-    fallbackMessage: string
-  ) => {
-// ... (lógica de runAndTrack permanece a mesma)
-    try {
-      const result = await runner();
-      if (!isMounted.current) {
-        return;
-      }
-      await onSuccess(result);
-      hasSuccessfulData = true;
-    } catch (err: any) {
-      // Se falhar, aplica fallbacks locais para não quebrar o modo visitante
-      if (label === 'pending review') {
-        setPendingReview(null);
-      }
-      if (label === 'recommended providers') {
-        setRecommendations(FALLBACK_RECOMMENDATIONS);
-      }
-      if (label === 'nearby providers') {
-        setNearbyProviders(FALLBACK_RECOMMENDATIONS);
-      }
-      const message = err?.message || err?.response?.data?.message || t('common.network_error');
-      // log removido para performance
-      collectedErrors.push(fallbackMessage);
-    }
-  };
+  const collectedErrors: string[] = [];
+  let hasSuccessfulData = false;
 
-  const tasks: Promise<any>[] = [];
+  const runAndTrack = async <T,>(
+    label: string,
+    runner: () => Promise<T>,
+    onSuccess: (value: T) => Promise<void> | void,
+    fallbackMessage: string
+  ) => {
+    try {
+      const result = await runner();
+      if (!isMounted.current) {
+        return;
+      }
+      await onSuccess(result);
+      hasSuccessfulData = true;
+    } catch (err: any) {
+      // Se falhar, aplica fallbacks locais para não quebrar o modo visitante
+      if (label === 'pending review') {
+        setPendingReview(null);
+      }
+      if (label === 'recommended providers') {
+        setRecommendations(FALLBACK_RECOMMENDATIONS);
+      }
+      if (label === 'nearby providers') {
+        setNearbyProviders(FALLBACK_RECOMMENDATIONS);
+      }
+      const message = err?.message || err?.response?.data?.message || t('common.network_error');
+      // log removido para performance
+      collectedErrors.push(fallbackMessage);
+    }
+  };
 
-// ... (lógica de tasks para pending review, user profile, service categories e recommended providers permanece a mesma)
+  const tasks: Promise<any>[] = [];
+  const primaryTasks: Promise<any>[] = [];
 
-  if (isAuthenticated) {
-    tasks.push(
-// ... (tasks.push para pending review)
-    );
-  } else {
-    setPendingReview(null);
-  }
+  if (isAuthenticated) {
+    tasks.push(
+      runAndTrack<BookingDetails[]>(
+        'pending review',
+        () => getBookingsForUser(BookingStatus.COMPLETED),
+        async (bookings) => {
+          const candidates = bookings.filter(
+            (b) => !b.isReviewed && !b.reviewId && b.status === BookingStatus.COMPLETED,
+          );
+
+          for (const b of candidates) {
+            try {
+              const eligibility = await canReviewBooking(b.id);
+              if (eligibility?.canReview) {
+                setPendingReview({
+                  bookingId: b.id,
+                  providerId: eligibility.providerId || b.providerId,
+                  providerName: eligibility.providerName || b.providerFullName || 'Prestador',
+                  providerAvatar: eligibility.providerAvatar ?? b.providerAvatarUrl,
+                });
+                return;
+              }
+            } catch {
+              // silencioso: n?o bloqueia a UI se um booking falhar
+            }
+          }
+
+          setPendingReview(null);
+        },
+        'Erro ao verificar avalia??es pendentes',
+      )
+    );
+  } else {
+    setPendingReview(null);
+  }
 
 
-  tasks.push(
-    runAndTrack<UserProfile>(
-      'user profile',
-      () => getUserProfile(),
-      profile => {
-        setUserProfile(profile);
-      },
-      'Erro ao carregar perfil'
-    )
-  );
+  tasks.push(
+    runAndTrack<UserProfile>(
+      'user profile',
+      () => getUserProfile(),
+      profile => {
+        setUserProfile(profile);
+      },
+      'Erro ao carregar perfil'
+    )
+  );
 
-  tasks.push(
-// ... (tasks.push para service categories)
-  );
+  tasks.push(
+    runAndTrack<Service[]>(
+      'service categories',
+      () => getServiceCategories(),
+      data => setServiceCategories(data),
+      'Erro ao carregar categorias'
+    )
+  );
 
-  tasks.push(
-// ... (tasks.push para recommended providers)
-  );
+  const recommendedTask = runAndTrack<ProviderDisplayInfo[]>(
+    'recommended providers',
+    async () => {
+      try {
+        const api = await getRecommendedProviders(
+          hint.latitude != null && hint.longitude != null
+            ? { latitude: hint.latitude, longitude: hint.longitude, radius: searchRadiusKm }
+            : ({} as any)
+        );
+        return (() => {
+          const list = Array.isArray(api) ? api : [];
+          const seen = new Set<string>();
 
-  await Promise.allSettled(tasks); // AGUARDA O userProfile SER SETADO
+          const merged = [...list, ...FALLBACK_RECOMMENDATIONS].filter(p => {
+            const id = p && typeof p.id === 'string' ? p.id : '';
+            if (!id || seen.has(id)) return false;
+            seen.add(id);
+            return true;
+          });
 
-  if (isMounted.current) {
-    
-    // ⭐ NOVO: Chamada para carregar providers próximos *após* o perfil estar pronto.
-    // Isso garante que loadLocationAndNearby use o userProfile mais atualizado.
-    // Usamos InteractionManager para não atrasar a renderização inicial, mas garantir que o perfil foi lido.
+          const currentProviderId =
+            (user as any)?.providerDetails?.id || (user as any)?.providerDetails?.providerId;
+          const currentProviderEmail = user?.email;
+
+          let idx = -1;
+          if (currentProviderId || currentProviderEmail) {
+            idx = merged.findIndex(p => {
+              if (!p) return false;
+              if (currentProviderId && p.id === currentProviderId) return true;
+              if (currentProviderEmail && p.email === currentProviderEmail) return true;
+              return false;
+            });
+          } else {
+            idx = merged.findIndex(
+              p => p && typeof p.fullName === 'string' && /joana/i.test(p.fullName)
+            );
+          }
+
+          if (idx > 0) {
+            const [first] = merged.splice(idx, 1);
+            merged.unshift(first);
+          }
+
+          return merged;
+        })();
+      } catch {
+        return FALLBACK_RECOMMENDATIONS;
+      }
+    },
+    data => setRecommendations(data),
+    'Erro ao carregar recomendacoes'
+  );
+  tasks.push(recommendedTask);
+  primaryTasks.push(recommendedTask);
+
+  await Promise.race([
+    Promise.allSettled(primaryTasks),
+    new Promise((resolve) => setTimeout(resolve, 1200)),
+  ]);
+  if (isMounted.current) {
+    setLoading(false); // libera a tela assim que as recomendacoes chegam (ou apos timeout curto)
+  }
+
+  await Promise.allSettled(tasks);
+
+  if (isMounted.current) { // Precarregar imagens do banner e do DEFENSE_SOS sem bloquear a primeira render
     InteractionManager.runAfterInteractions(() => {
-        if (isMounted.current) {
-            loadLocationAndNearby(); 
-        }
+      Asset.loadAsync([
+        require('../../../assets/images/banner6.png'),
+        require('../../../assets/images/banner4.png'),
+        require('../../../assets/images/banner3.png'),
+        Icons3D.support,
+      ] as any).catch(() => { });
     });
+    const D = 240; // duracao padrao
+    const S = 60; // passo de atraso
+    if (reducedMotion) {
+      headerAnim.setValue(1);
+      categoriesAnim.setValue(1);
+      bannerAnim.setValue(1);
+      recommendationsAnim.setValue(1);
+      providersAnim.setValue(1);
+      navBarAnim.setValue(1);
+    } else {
+      Animated.parallel([
+        Animated.timing(headerAnim, { toValue: 1, duration: D, delay: 0, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(categoriesAnim, { toValue: 1, duration: D, delay: S, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(bannerAnim, { toValue: 1, duration: D, delay: S * 2, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(recommendationsAnim, { toValue: 1, duration: D, delay: S * 3, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(providersAnim, { toValue: 1, duration: D, delay: S * 4, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(navBarAnim, { toValue: 1, duration: D, delay: S * 5, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]).start();
+    }
 
-    // Precarregar imagens do banner e do DEFENSE_SOS sem bloquear a primeira render
-    InteractionManager.runAfterInteractions(() => {
-      Asset.loadAsync([
-        require('../../../assets/images/banner6.png'),
-        require('../../../assets/images/banner4.png'),
-        require('../../../assets/images/banner3.png'),
-        Icons3D.support,
-      ] as any).catch(() => { });
-    });
-    
-    const D = 240; // duracao padrao
-// ... (código de animações permanece o mesmo)
-    const S = 60; // passo de atraso
-    if (reducedMotion) {
-      headerAnim.setValue(1);
-// ...
-    } else {
-      Animated.parallel([
-// ...
-      ]).start();
-    }
+    setLoading(false);
+    setIsRefreshing(false);
 
-    setLoading(false);
-    setIsRefreshing(false);
-
-// ... (lógica de erro permanece a mesma)
-    if (hasSuccessfulData) {
-      setError(null);
-    } else if (collectedErrors.length > 0) {
-      setError(collectedErrors[0]);
-      // log removido para performance
-    } else {
-      setError(t('common.network_error'));
-    }
-  }
+    if (hasSuccessfulData) {
+      setError(null);
+    } else if (collectedErrors.length > 0) {
+      setError(collectedErrors[0]);
+      // log removido para performance
+    } else {
+      setError(t('common.network_error'));
+    }
+  }
 }, [
-  t,
-  headerAnim,
-  categoriesAnim,
-  bannerAnim,
-  recommendationsAnim,
-  providersAnim,
-  navBarAnim,
-  reducedMotion,
-  user,
-    // Adicione loadLocationAndNearby nas dependências do useCallback
-    // para garantir que se a definição dela mudar, fetchData mude.
-    loadLocationAndNearby 
+  t,
+  headerAnim,
+  categoriesAnim,
+  bannerAnim,
+  recommendationsAnim,
+  providersAnim,
+  navBarAnim,
+  searchRadiusKm,
+  reducedMotion,
+  user,
 ]);
 
   // Respeitar "reduzir movimento"
@@ -520,13 +686,13 @@ const fetchData = useCallback(async () => {
     return () => { mounted = false; (sub && sub.remove?.()); };
   }, []);
   useEffect(() => {
-    isMounted.current = true; // Componente montado
-    fetchData();
-    // loadLocationAndNearby(); // <-- REMOVA ESTA LINHA!
-    return () => {
-      isMounted.current = false; // Componente desmontado
-    };
-  }, [fetchData]);
+    isMounted.current = true; // Componente montado
+    fetchData();
+    loadLocationAndNearby();
+    return () => {
+      isMounted.current = false; // Componente desmontado
+    };
+  }, [fetchData, loadLocationAndNearby]);
   // Refetch quando raio foi salvo no painel do provedor
   useFocusEffect(
     React.useCallback(() => {
@@ -734,40 +900,95 @@ const fetchData = useCallback(async () => {
   const categoriesToRender = safeServiceCategories.length > 0 ? safeServiceCategories : FALLBACK_CATEGORIES;
 
   // Filtrar nearbyProviders com base no priceFilter
+  const radiusMeters = searchRadiusKm * 1000;
   const filteredNearbyProviders = Array.isArray(nearbyProviders)
     ? nearbyProviders.filter((item) => {
       if (!item || !item.fullName) return false;
-      if (!priceFilter) return true; // Sem filtro de preço, mostra todos
+      if (!priceFilter) return true; // Sem filtro de preco, mostra todos
 
-      // Verifica se o provedor tem algum serviço que corresponda ao tipo de preço
+      // Verifica se o provedor tem algum servico que corresponda ao tipo de preco
       return item.providerServices?.some((service) => {
         if (service.pricingType === priceFilter) {
           const price = getNumericPriceValue(service);
-          return price > 0; // Apenas serviços com preço válido
+          return price > 0; // Apenas servicos com preco valido
         }
         return false;
       });
     })
     : [];
-  const prioritizedNearbyProviders = prioritizeNewest(filteredNearbyProviders);
+  const nearbyWithComputedDistance = filteredNearbyProviders.map((item) => {
+    if (!item || !userCoordsRef.current) return item;
+    const currentDistance = Number(item.distance);
+    if (Number.isFinite(currentDistance)) return item;
+    const addr = item.address || (item as any).address || {};
+    const targetLat = addr.latitude ?? addr.lat ?? addr.location?.lat ?? null;
+    const targetLon = addr.longitude ?? addr.lng ?? addr.location?.lng ?? null;
+    const computed = computeDistanceMeters(
+      userCoordsRef.current.latitude,
+      userCoordsRef.current.longitude,
+      targetLat,
+      targetLon
+    );
+    if (computed == null) return item;
+    return { ...(item as any), distance: computed };
+  });
+  const nearbyWithinRadius = filterByRadiusOrCity(nearbyWithComputedDistance, radiusMeters, locationHintRef.current);
+  const sortedNearbyProviders = sortByDistanceStable(nearbyWithinRadius);
 
   const safeRecommendations = (() => {
+    const distanceById = new Map<string, number | null | undefined>(
+      sortedNearbyProviders.map((p) => [p.id, (p as any)?.distance]),
+    );
+    const withDistance = (item: ProviderDisplayInfo): ProviderDisplayInfo => {
+      if (item == null || typeof item !== 'object') return item;
+      let dist = distanceById.get(item.id);
+      // Fallback: se veio sem distance, calcula via coordenadas obtidas (GPS/permission) ou hint de perfil
+      const baseLat = userCoordsRef.current?.latitude ?? locationHintRef.current?.latitude;
+      const baseLon = userCoordsRef.current?.longitude ?? locationHintRef.current?.longitude;
+      if ((dist == null || Number.isNaN(dist as any)) && baseLat != null && baseLon != null) {
+        const addr = (item as any)?.address || {};
+        const targetLat = addr.latitude ?? addr.lat ?? addr.location?.lat ?? null;
+        const targetLon = addr.longitude ?? addr.lng ?? addr.location?.lng ?? null;
+        const computed = computeDistanceMeters(baseLat, baseLon, targetLat, targetLon);
+        if (computed != null) dist = computed;
+      }
+      if (dist == null || Number.isNaN(dist as any)) return item;
+      if (item.distance === dist) return item;
+      return { ...(item as any), distance: dist };
+    };
+
     const valid = Array.isArray(recommendations)
-      ? recommendations.filter((item) => item && typeof item.fullName === 'string')
+      ? recommendations.filter(
+          (item) =>
+            item &&
+            typeof item === 'object' &&
+            typeof (item as any).id === 'string' &&
+            (item as any).id.trim() !== '' &&
+            typeof (item as any).fullName === 'string' &&
+            (item as any).fullName.trim() !== '',
+        )
       : [];
-    const mergedPool = prioritizeNewest([...valid, ...prioritizedNearbyProviders]);
+    const hydratedRecs = valid.map(withDistance);
+    // Nao filtramos recomendacoes por raio/cidade para nao cortar prestadores aprovados; nearby ja respeita raio.
+    const filteredRecs = hydratedRecs;
+    const mergedPool = [...filteredRecs, ...sortedNearbyProviders];
+    const mergedSorted = sortByDistanceStable(mergedPool);
     const deduped: ProviderDisplayInfo[] = [];
     const seen = new Set<string>();
-    mergedPool.forEach(it => {
+    mergedSorted.forEach(it => {
       if (it?.id && !seen.has(it.id)) {
         seen.add(it.id);
         deduped.push(it);
       }
     });
-    if (deduped.length === 0) return FALLBACK_RECOMMENDATIONS;
     const mergedFallback = FALLBACK_RECOMMENDATIONS.filter(it => it && it.id && !seen.has(it.id));
-    return [...deduped, ...mergedFallback];
+    const combined = [...deduped, ...mergedFallback];
+    return combined.length > 0 ? combined : FALLBACK_RECOMMENDATIONS;
   })();
+
+  // Usa o mesmo pool unificado de recomendações (recs + nearby + fallback) para os PrestadorCards,
+  // garantindo que a seção de prestadores exiba o mesmo universo de providers já deduplicado.
+  const prestadoresData = safeRecommendations;
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
@@ -1031,7 +1252,7 @@ const fetchData = useCallback(async () => {
                   <SecaoPrestadores
                     titulo={t('search.nearby_providers')}
                     onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos' as any)}
-                    data={prioritizedNearbyProviders}
+                    data={prestadoresData}
 
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
