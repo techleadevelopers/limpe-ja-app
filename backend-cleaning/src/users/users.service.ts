@@ -80,7 +80,7 @@ export type UserWithIncludes = Prisma.UserGetPayload<{
         providerServices: { include: { service: true } };
         reviewsReceived: { include: { client: { include: { user: true } } } };
         bookings: {
-          where: { status: 'COMPLETED' };
+          where: { status: 'FINISHED' };
           orderBy: { createdAt: 'desc' };
           take: 100;
         };
@@ -157,7 +157,7 @@ export class UsersService {
                 include: { client: { include: { user: true } } },
               },
               bookings: {
-                where: { status: 'COMPLETED' },
+                where: { status: 'FINISHED' },
                 orderBy: { createdAt: 'desc' },
                 take: 100,
               },
@@ -227,7 +227,7 @@ export class UsersService {
                   include: { client: { include: { user: true } } },
                 },
                 bookings: {
-                  where: { status: 'COMPLETED' },
+                  where: { status: 'FINISHED' },
                   orderBy: { createdAt: 'desc' },
                   take: 100,
                 },
@@ -327,7 +327,7 @@ export class UsersService {
                 include: { client: { include: { user: true } } },
               },
               bookings: {
-                where: { status: 'COMPLETED' },
+                where: { status: 'FINISHED' },
                 orderBy: { createdAt: 'desc' },
                 take: 100,
               },
