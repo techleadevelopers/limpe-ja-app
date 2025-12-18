@@ -600,10 +600,10 @@ export class PayoutsService {
         `[PayoutsService] Delegando evento '${eventType}' para PaymentsService.handlePixPaymentWebhook.`,
       );
       // Passa 'undefined' para os argumentos de segurança (signature/rawBody) que não são mais usados.
-     await this.paymentsService.handlePixWebhook(
-    undefined, // NÃO TEM MAIS RAWPAYLOAD
-    payload    // webhookData (único dado que importa agora)
-  );
+      await this.paymentsService.handlePixWebhook(
+        undefined, // NÃO TEM MAIS RAWPAYLOAD
+        payload, // webhookData (único dado que importa agora)
+      );
       return { ok: true }; // Termina o processamento aqui
     }
 
@@ -628,20 +628,31 @@ export class PayoutsService {
     }
 
     const normalized = this.normalizeStatus(status);
-    if (payout.status === PayoutStatus.PAID && normalized !== PayoutStatus.PAID) {
+    if (
+      payout.status === PayoutStatus.PAID &&
+      normalized !== PayoutStatus.PAID
+    ) {
       this.logger.warn(
         `handleGatewayWebhook: ignoring transition from PAID to ${normalized} for payout ${payoutId}`,
       );
       return { ok: true, ignored: true };
     }
-    if (payout.gatewayTxnId && gatewayTxnId && payout.gatewayTxnId !== gatewayTxnId) {
+    if (
+      payout.gatewayTxnId &&
+      gatewayTxnId &&
+      payout.gatewayTxnId !== gatewayTxnId
+    ) {
       this.logger.warn(
         `handleGatewayWebhook: gatewayTxnId mismatch for payout ${payoutId}`,
       );
       throw new ForbiddenException('gatewayTxnId mismatch');
     }
 
-    await this.applyGatewayUpdate({ payoutId, status: normalized, gatewayTxnId });
+    await this.applyGatewayUpdate({
+      payoutId,
+      status: normalized,
+      gatewayTxnId,
+    });
     return { ok: true };
   }
 
@@ -740,13 +751,13 @@ export class PayoutsService {
             type: LedgerEntryType.WITHDRAWAL,
           },
         });
-        
+
         // Find the fee entry associated with the withdrawal (if applicable)
         const feeEntry = await tx.ledgerEntry.findFirst({
           where: {
             userId: payout.userId,
             type: LedgerEntryType.FEE,
-            // You might need a more precise way to link the fee to the withdrawal, 
+            // You might need a more precise way to link the fee to the withdrawal,
             // but for simplicity, we assume the last fee before the payout was the one.
             // If the schema allowed a `payoutId` on LedgerEntry, it would be better.
             // For now, let's just reverse the withdrawal amount.
@@ -755,16 +766,16 @@ export class PayoutsService {
         });
 
         // Sum the amount to be released (payout amount + fee amount)
-        let rollbackAmount = payout.amount;
+        const rollbackAmount = payout.amount;
         // In a proper system, we should retrieve the actual fee associated with this Payout
         // and reverse it too. Assuming the fee debit was handled, we roll back only the payout amount for safety
         // if linking is hard. If the fee debit was done with the payout, the total negative value
         // of both entries should be reversed.
 
-        // Since the original code created two separate negative entries (WITHDRAWAL and FEE), 
-        // rolling back only the withdrawal amount (payout.amount) implicitly reverses the total debit 
+        // Since the original code created two separate negative entries (WITHDRAWAL and FEE),
+        // rolling back only the withdrawal amount (payout.amount) implicitly reverses the total debit
         // to return the funds to the balance.
-        
+
         await tx.ledgerEntry.create({
           data: {
             userId: payout.userId,
@@ -773,7 +784,7 @@ export class PayoutsService {
             note: `Payout ${targetStatus.toLowerCase()} rollback: R$ ${payout.amount.toFixed(2)} returned.`,
           },
         });
-        
+
         // **Atenção:** O código original não faz um rollback explícito da taxa (`LedgerEntryType.FEE`).
         // Se a intenção era que a taxa não fosse cobrada em caso de falha/cancelamento,
         // o código deve criar um RELEASE para a taxa também.
@@ -811,9 +822,9 @@ export class PayoutsService {
         targetStatus === PayoutStatus.PAID
           ? 'WITHDRAWAL_PAID'
           : targetStatus === PayoutStatus.FAILED ||
-            targetStatus === PayoutStatus.CANCELED
-          ? 'WITHDRAWAL_FAILED'
-          : 'WITHDRAWAL_STATUS';
+              targetStatus === PayoutStatus.CANCELED
+            ? 'WITHDRAWAL_FAILED'
+            : 'WITHDRAWAL_STATUS';
       await this.queues.addNotificationJob('send-notification', {
         userId: updatedPayout.userId,
         type,
