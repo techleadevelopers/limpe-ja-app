@@ -9,10 +9,11 @@ import { ReviewsMetricsRepository } from './repositories/reviews.metrics.repo';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module'; // Para usar JwtAuthGuard
 import { PrivacyPolicy } from './policies/privacy.policy'; // Importe a classe PrivacyPolicy
+import { PrometheusController } from './prometheus.controller';
 
 @Module({
   imports: [PrismaModule, AuthModule], // PrismaModule para acesso ao DB, AuthModule para guards
-  controllers: [MetricsController],
+  controllers: [MetricsController, PrometheusController],
   providers: [
     MetricsService,
     BookingsMetricsRepository,
