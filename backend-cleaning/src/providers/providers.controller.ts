@@ -127,7 +127,7 @@ export class ProvidersController {
         `[ProvidersController] findRecommendedProviders: erro interno, retornando fallback simples. Erro: ${err?.message || err}`,
       );
       const fallback = await this.providersService.findAllProviders({
-        limit: 5,
+        limit: 50,
       });
       return fallback.map((p) => new ProviderDetailsDto(p));
     }
