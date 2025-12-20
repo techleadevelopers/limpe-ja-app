@@ -465,65 +465,69 @@ model ProviderServiceVersion {
 }
 
 model Booking {
-  id                         String            @id @default(uuid())
-  clientId                   String
-  providerId                 String
-  providerServiceId          String
-  client                     Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  provider                   Provider          @relation(fields: [providerId], references: [id], onDelete: Restrict)
-  providerService            ProviderService   @relation(fields: [providerServiceId], references: [id])
-  
+  id               String          @id @default(uuid())
+  clientId         String
+  providerId       String
+  providerServiceId String
+
+  client           Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  provider         Provider        @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  providerService  ProviderService @relation(fields: [providerServiceId], references: [id])
+
   // Agendamento
-  scheduledDate              DateTime
-  scheduledTime              String
-  scheduledStart             DateTime?
-  durationMinutes            Int?
-  status                     BookingStatus     @default(PENDING)
-  
+  scheduledDate    DateTime
+  scheduledTime    String
+  scheduledStart   DateTime?
+  durationMinutes  Int?
+  scheduledEnd     DateTime?        // ✅ NOVO: derivado (scheduledStart + durationMinutes)
+  status           BookingStatus    @default(PENDING)
+
   // Preço e descontos
-  totalPrice                 Decimal           @db.Decimal(10, 2)
-  discountAmount             Decimal?          @db.Decimal(10, 2)
-  notes                      String?
-  
+  totalPrice       Decimal          @db.Decimal(10, 2)
+  discountAmount   Decimal?         @db.Decimal(10, 2)
+  notes            String?
+
   // Timestamps de progresso (FLUXO COMPLETO)
-  onTheWayAt                 DateTime?         // Quando prestador ativou "a caminho"
-  arrivedAt                  DateTime?         // Quando prestador ativou "cheguei"
-  startedAt                  DateTime?         // Quando serviço foi iniciado
-  completedAt                DateTime?         // Quando serviço foi finalizado
-  
+  onTheWayAt       DateTime?        // Quando prestador ativou "a caminho"
+  arrivedAt        DateTime?        // Quando prestador ativou "cheguei"
+  startedAt        DateTime?        // Quando serviço foi iniciado
+  completedAt      DateTime?        // Quando serviço foi finalizado
+
   // Auditoria (quem fez a ação)
-  startedByUserId            String?
-  completedByUserId          String?
-  startedByUser              User?             @relation("BookingStartedBy", fields: [startedByUserId], references: [id])
-  completedByUser            User?             @relation("BookingCompletedBy", fields: [completedByUserId], references: [id])
-  
+  startedByUserId    String?
+  completedByUserId  String?
+  startedByUser      User?          @relation("BookingStartedBy", fields: [startedByUserId], references: [id])
+  completedByUser    User?          @relation("BookingCompletedBy", fields: [completedByUserId], references: [id])
+
   // Relacionamentos
-  review                     Review?
-  isReviewed                 Boolean           @default(false)
-  transactions               Transaction[]
-  addressId                  String?           @unique
-  address                    Address?          @relation("BookingAddress", fields: [addressId], references: [id])
-  dispute                    Dispute?
-  subscriptionId             String?
-  subscription               Subscription?     @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
-  incidents                  Incident[]
-  guaranteeClaims            GuaranteeClaim[]
-  couponId                   String?
-  coupon                     Coupon?           @relation(fields: [couponId], references: [id])
-  couponUsage                CouponUsage?      @relation("BookingCouponUsage")
-  supportTickets             SupportTicket[]
-  paymentIntent              PaymentIntent?
-  ledgerEntries              LedgerEntry[]
-  
+  review           Review?
+  isReviewed       Boolean          @default(false)
+  transactions     Transaction[]
+  addressId        String?          @unique
+  address          Address?         @relation("BookingAddress", fields: [addressId], references: [id])
+  dispute          Dispute?
+  subscriptionId   String?
+  subscription     Subscription?    @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
+  incidents        Incident[]
+  guaranteeClaims  GuaranteeClaim[]
+  couponId         String?
+  coupon           Coupon?          @relation(fields: [couponId], references: [id])
+  couponUsage      CouponUsage?     @relation("BookingCouponUsage")
+  supportTickets   SupportTicket[]
+  paymentIntent    PaymentIntent?
+  ledgerEntries    LedgerEntry[]
+
   // Metadata
-  createdAt                  DateTime          @default(now())
-  updatedAt                  DateTime          @updatedAt
-  
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
   // Índices para performance
   @@index([providerId, status, scheduledDate])
   @@index([clientId, status, scheduledDate])
   @@index([status, scheduledDate])
+  @@index([providerId, scheduledStart, scheduledEnd]) // ✅ NOVO: overlap fast
 }
+
 
 model Chat {
   id                String    @id @default(uuid())
