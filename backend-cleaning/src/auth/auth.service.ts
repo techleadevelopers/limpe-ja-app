@@ -32,15 +32,12 @@ import {
   Booking,
   BookingStatus,
 } from '@prisma/client';
-import {
-  ProvidersService,
-  ProviderWithCalculatedRating,
-} from '../providers/providers.service';
 import { ClientWithIncludes as ImportedClientWithIncludes } from '../clients/clients.service';
 import { EmailService } from '../common/services/email.service';
 import { GeocodingService } from '../common/services/geocoding.service';
 import { ConfigService } from '@nestjs/config';
 import { ReferralsService } from '../referrals/referrals.service'; // NOVO: Importar ReferralsService
+import { UserWithIncludes } from '../users/users.service';
 
 // --- INÍCIO DAS CORREÇÕES DE TIPAGEM E ESTRUTURA ---
 const loginProviderInclude = {
@@ -131,7 +128,6 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-    private providersService: ProvidersService,
     private emailService: EmailService,
     private geocodingService: GeocodingService,
     private configService: ConfigService,
@@ -179,31 +175,20 @@ export class AuthService {
     const expiresIn = this.configService.get<string>('jwt.expirationTime');
     const accessToken = this.jwtService.sign(payload, { expiresIn });
 
-    let mappedProvider: ProviderWithCalculatedRating | undefined;
-    if (fullUser.provider) {
-      // CORREÇÃO: Agora o include tem availability, então a tipagem bate
-      mappedProvider = this.providersService.mapProviderToCalculatedRating(
-        fullUser.provider,
-      );
-    }
+    const clientWithCounts = fullUser.client
+      ? {
+          ...fullUser.client,
+          noShowCount: fullUser.client.noShowCount ?? 0,
+          cancellationCount: fullUser.client.cancellationCount ?? 0,
+        }
+      : undefined;
 
-    // CORREÇÃO: O objeto passado para o DTO deve incluir as relações de Loyalty e Referral
-    const userProfileDataForDto = {
+    const userProfileDataForDto: UserWithIncludes = {
       ...fullUser,
-      client: fullUser.client
-        ? {
-            ...fullUser.client,
-            noShowCount: (fullUser.client as any).noShowCount,
-            cancellationCount: (fullUser.client as any).cancellationCount,
-          }
-        : undefined,
-      provider: mappedProvider, // mappedProvider já é ProviderWithCalculatedRating
-      loyalty: fullUser.loyalty, // Adicionado
-      referredBy: fullUser.referredBy, // Adicionado
-      referralsMade: fullUser.referralsMade, // Adicionado
-    };
+      client: clientWithCounts,
+    } as UserWithIncludes;
 
-    const userProfile = new UserProfileDto(userProfileDataForDto as any); // Usando 'as any' temporariamente para o objeto complexo
+    const userProfile = new UserProfileDto(userProfileDataForDto);
 
     // Telemetria: user_logged_in
     this.logger.log(
