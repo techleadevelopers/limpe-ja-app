@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(auth)/components/InputWithIcon.tsx
+// LimpeJaApp/app/auth/components/InputWithIcon.tsx
 import React from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, TextStyle, ViewStyle } from 'react-native'; // Importe TextStyle e ViewStyle
 import { Ionicons } from '@expo/vector-icons';
