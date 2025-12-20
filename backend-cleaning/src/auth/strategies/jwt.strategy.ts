@@ -58,10 +58,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           provider: true,
         },
       });
-    } catch (dbError) {
+    } catch (dbError: unknown) {
+      const message =
+        dbError instanceof Error ? dbError.message : 'Erro desconhecido';
+      const stack = dbError instanceof Error ? dbError.stack : undefined;
       this.logger.error(
-        `[JwtStrategy] validate: Erro ao buscar usuário no DB para ID ${payload.sub}: ${dbError.message}`,
-        dbError.stack,
+        `[JwtStrategy] validate: Erro ao buscar usuário no DB para ID ${payload.sub}: ${message}`,
+        stack,
       );
       throw new UnauthorizedException(
         'Erro de validação de token: Falha no acesso ao usuário.',
