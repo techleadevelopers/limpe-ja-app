@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(client)/bookings/components/success/AdditionalBookingDetails.tsx
+// LimpeJaApp/app/client/bookings/components/success/AdditionalBookingDetails.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Platform, Dimensions } from 'react-native';
 
