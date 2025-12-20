@@ -802,7 +802,7 @@ const styles = StyleSheet.create({
     width: S(116),
     height: S(163), // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
     marginRight: S(13),
-    marginBottom: 6,
+    marginBottom: 2,
     marginTop: 8,
     left: 3,
     position: 'relative', // Essencial
