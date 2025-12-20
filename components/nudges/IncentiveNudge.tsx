@@ -16,7 +16,7 @@ type Props = {
 const IncentiveNudge: React.FC<Props> = ({
   delayMs = 5000,
   throttleHours = 24,
-  showOnRoutes = ['/(client)/explore'],
+  showOnRoutes = ['/client/explore'],
   bottomOffset = 84, // aparece “um degrau” acima do de segurança, se ambos estiverem na mesma tela
   points = 50,
   actionLabel = 'Ver missões',
@@ -31,7 +31,7 @@ const IncentiveNudge: React.FC<Props> = ({
       title="Ganhe pontos"
       message={`Conclua seu próximo serviço e ganhe +${points} pts para trocar por cupons.`}
       actionLabel={actionLabel}
-      onAction={() => router.push('/(client)/missions' as any)}
+      onAction={() => router.push('/client/missions' as any)}
       delayMs={delayMs}
       throttleHours={throttleHours}
       showOnRoutes={showOnRoutes}
