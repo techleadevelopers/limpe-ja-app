@@ -1,17 +1,16 @@
-﻿import { Slot, SplashScreen, usePathname, useRouter, useSegments } from 'expo-router';
+import { Slot, SplashScreen, usePathname, useRouter, useSegments } from 'expo-router';
 import React, { useEffect, useState, useRef } from 'react';
 import {
     ActivityIndicator,
     StyleSheet,
     Text,
     View,
-    Image,
     Animated,
     TouchableOpacity,
     Platform,
     Alert,
+    LogBox,
 } from 'react-native';
-import { LogBox } from 'react-native'; // âœ… ADICIONADO: Para ignorar o warning especÃ­fico do LogBox (dev mode apenas)
 import 'react-native-reanimated';
 import { io } from 'socket.io-client';
 import Constants from 'expo-constants';
@@ -161,7 +160,7 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
         activeOpacity={0.95}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
-        onPress={() => router.push(`/(provider)/active-booking/${booking.id}` as any)}
+        onPress={() => router.push(`/provider/active-booking/${booking.id}` as any)}
         accessibilityRole="button"
         accessibilityLabel={`${cta} serviço`}
         style={{ borderRadius: 999 }}
@@ -340,6 +339,10 @@ function useNotificationsSocket(authToken?: string | null) {
 }
 
 
+const QA_PANEL_ENABLED = typeof __DEV__ !== 'undefined' && __DEV__
+  ? true
+  : process.env.EXPO_PUBLIC_ENABLE_QA_PANEL === 'true';
+
 function RootLayoutContent() {
     const { isAuthenticated, isLoading: authIsLoading, user, token } = useAuth();
     const router = useRouter();
@@ -388,7 +391,7 @@ function RootLayoutContent() {
                 setInitializationError(e?.message ?? 'Erro desconhecido na inicialização.');
                 try {
                     NotificationUIService.showError(t("common.generic_error"), t("common.error"));
-                } catch (err) {
+                } catch {
                     // Removido: console.warn('[RootLayoutContent] NotificationUIService.showError falhou:', err);
                 }
             } finally {
@@ -397,7 +400,7 @@ function RootLayoutContent() {
                     try {
                         await SplashScreen.hideAsync();
                         // Removido: console.log('[RootLayoutContent | prepareApp] Splash screen nativa oculta. Aplicativo pronto para roteamento.');
-                    } catch (e) {
+                    } catch {
                         // Removido: console.warn('[RootLayoutContent | prepareApp] Falha ao esconder splash:', e);
                     }
                 }
@@ -471,22 +474,28 @@ function RootLayoutContent() {
 
         const decideAndRedirect = async () => {
             const path = pathname ?? '';
-            const isFeedbackRoute = isPathOrChild('/(common)/feedback', normalizePath(path));
-            // Permitir HOME/Explore (e filhas) para guest sem redirecionar de volta para /welcome
-            if (!isAuthenticated && (path.includes('/(client)/explore') || path.startsWith('/explore'))) {
+            const isFeedbackRoute = isPathOrChild('/common/feedback', normalizePath(path));
+
+            const normalizedPath = normalizePath(path);
+            if (QA_PANEL_ENABLED && normalizedPath === '/dev-panel') {
                 return;
             }
-            const inAuthGroup = segments[0] === '(auth)';
-            const inProviderGroup = segments[0] === '(provider)';
-            const isWelcomeRoute = pathname === '/welcome';
+            // Permitir HOME/Explore (e filhas) para guest sem redirecionar de volta para /register-options
+            if (!isAuthenticated && (path.includes('/client/explore') || path.startsWith('/explore'))) {
+                return;
+            }
+            const registerOptionsPath = '/auth/register-options';
+            const inAuthGroup = segments[0] === 'auth';
+            const inProviderGroup = segments[0] === 'provider';
+            const isRegisterRoute = pathname === registerOptionsPath;
 
             // Guest: regras específicas de acesso (cadastro obrigatório em rotas protegidas)
             if (!isAuthenticated) {
                 const protectedRoutes = [
-                    '/(client)/bookings',
-                    '/(client)/messages',
-                    '/(client)/profile',
-                    '/(provider)',
+                    '/client/bookings',
+                    '/client/messages',
+                    '/client/profile',
+                    '/provider',
                     '/bookings',
                     '/messages',
                 ];
@@ -504,7 +513,7 @@ function RootLayoutContent() {
                                 text: 'Continuar',
                                 onPress: () => {
                                     try {
-                                        router.push('/(auth)/client-register' as any);
+                                        router.push('/auth/client-register' as any);
                                     } catch {}
                                 },
                             },
@@ -517,9 +526,9 @@ function RootLayoutContent() {
                     return;
                 }
 
-                // Visitante só pode acessar: welcome, rotas de auth e explore
-                if (!isWelcomeRoute && !inAuthGroup && !path.startsWith('/(client)/explore') && !isFeedbackRoute) {
-                    router.replace('/welcome');
+                // Visitante só pode acessar: register-options, rotas de auth e explore
+                if (!isRegisterRoute && !inAuthGroup && !path.startsWith('/client/explore') && !isFeedbackRoute) {
+                    router.replace(registerOptionsPath as any);
                     return;
                 }
 
@@ -527,9 +536,9 @@ function RootLayoutContent() {
             }
 
             const isBookingOrChat =
-                path.startsWith('/(client)/bookings') ||
+                path.startsWith('/client/bookings') ||
                 path.startsWith('/bookings') ||
-                path.startsWith('/(client)/messages') ||
+                path.startsWith('/client/messages') ||
                 path.startsWith('/messages');
 
             if (isBookingOrChat) {
@@ -537,15 +546,15 @@ function RootLayoutContent() {
                 return;
             }
 
-            if (isAuthenticated && user?.role === UserRole.PROVIDER && inProviderGroup && !isWelcomeRoute) {
+            if (isAuthenticated && user?.role === UserRole.PROVIDER && inProviderGroup) {
                 // Removido: console.log de provedor no grupo.
                 return;
             }
 
             if (!isAuthenticated) {
-                if (!inAuthGroup && !isWelcomeRoute) {
+                if (!inAuthGroup && !isRegisterRoute) {
                     // Removido: console.log de redirecionamento para /welcome.
-                    router.replace('/welcome');
+                    router.replace(registerOptionsPath as any);
                     return;
                 }
                 // Removido: console.log de permanÃªncia em rota pÃºblica.
@@ -598,7 +607,7 @@ function RootLayoutContent() {
 
             if (user?.role && (user.role === UserRole.ADMIN || user.role === UserRole.CLIENT)) {
                 const targetRoute = normalizePath(CLIENT_ROUTES.EXPLORE);
-                const isCurrentPathInClientGroup = segments[0] === '(client)';
+                const isCurrentPathInClientGroup = segments[0] === 'client';
 
                 if (isFeedbackRoute) {
                     return;
@@ -615,7 +624,7 @@ function RootLayoutContent() {
         };
 
         decideAndRedirect();
-    }, [isAuthenticated, user, authIsLoading, router, segments, pathname, appReady]);
+    }, [isAuthenticated, user, authIsLoading, router, segments, pathname, appReady, initializationError]);
 
     if (!appReady || authIsLoading || initializationError) {
         return (
