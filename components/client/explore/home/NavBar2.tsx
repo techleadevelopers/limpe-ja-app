@@ -39,28 +39,28 @@ const navItems: NavItemType[] = [
         iconSet: 'Ionicons',
         icon: 'sunny-outline',
         activeIcon: 'home',
-        path: '/(client)/today',
+        path: '/client/today',
     },
     {
         name: 'Search',
         iconSet: 'Ionicons',
         icon: 'search-outline',
         activeIcon: 'search',
-        path: '/(client)/search',
+        path: '/client/search',
     },
     {
         name: '',
         iconSet: 'Image',
         imageSource: require('../../../../assets/images/safe.png'),
         isCentral: true,
-        path: '/(client)/bookings/schedule-service',
+        path: '/client/bookings/schedule-service',
     },
     {
         name: 'Calendar',
         iconSet: 'Ionicons',
         icon: 'calendar-outline',
         activeIcon: 'calendar',
-        path: '/(client)/bookings',
+        path: '/client/bookings',
     },
     {
         name: 'Inbox',
@@ -68,7 +68,7 @@ const navItems: NavItemType[] = [
         icon: 'mail-outline',
         activeIcon: 'mail',
         // CORRIGIDO AQUI: Aponta para a lista de mensagens (index.tsx)
-        path: '/(client)/messages',
+        path: '/client/messages',
     },
 ];
 
@@ -87,13 +87,13 @@ const NavBar: React.FC<NavBarProps> = ({ unreadMessagesCount }) => {
     const insets = useSafeAreaInsets();
 
     const isRouteActive = (itemPath: string) => {
-        if (itemPath === '/(client)/today' && pathname === '/') {
+        if (itemPath === '/client/today' && pathname === '/') {
             return true;
         }
-        // A rota do inbox agora é '/(client)/messages'.
-        // Se o pathname começar com '/(client)/messages', incluindo '/(client)/messages/[chatId]',
+        // A rota do inbox agora é '/client/messages'.
+        // Se o pathname começar com '/client/messages', incluindo '/client/messages/[chatId]',
         // o ícone do Inbox deve estar ativo.
-        if (itemPath === '/(client)/messages' && pathname.startsWith('/(client)/messages')) {
+        if (itemPath === '/client/messages' && pathname.startsWith('/client/messages')) {
             return true;
         }
         return pathname.startsWith(itemPath);
