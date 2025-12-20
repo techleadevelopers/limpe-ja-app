@@ -34,6 +34,15 @@ import { ReportDisputeDto } from './dto/report-dispute.dto';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { I18nService } from '../common/i18n/i18n.service';
 
+type RequestWithUser = Request & {
+  user: {
+    userId: string;
+    role: UserRole;
+    locale?: string;
+  };
+  locale?: string;
+};
+
 @ApiTags('bookings')
 @Controller('bookings')
 export class BookingsController {
@@ -54,15 +63,14 @@ export class BookingsController {
     type: [BookingDetailsDto],
   })
   async findAllBookings(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Query('status') status?: BookingStatus,
   ): Promise<BookingDetailsDto[]> {
-    const userId = req.user['userId'];
-    const role = req.user['role'];
+    const { userId, role } = req.user;
     const bookings = await this.bookingsService.findUserBookings(
       userId,
       role,
-      status as any,
+      status,
       req,
     );
     return bookings.map((b) => new BookingDetailsDto(b));
@@ -87,10 +95,10 @@ export class BookingsController {
     description: 'Provedor ou serviço do provedor não encontrado.',
   })
   async create(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Body() createBookingDto: CreateBookingDto,
   ): Promise<BookingDetailsDto> {
-    const userId = req.user['userId'];
+    const userId = req.user.userId;
     const booking = await this.bookingsService.create(
       userId,
       createBookingDto,
@@ -122,10 +130,10 @@ export class BookingsController {
     description: 'Erro interno ao criar agendamento ou cobrança PIX.',
   })
   async scheduleAndPay(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Body() createBookingDto: CreateBookingDto,
   ): Promise<BookingAndPixResponseDto> {
-    const userId = req.user['userId'];
+    const userId = req.user.userId;
     const { booking, pixCharge } =
       await this.bookingsService.createBookingAndPixCharge(
         userId,
@@ -152,11 +160,11 @@ export class BookingsController {
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   async findMyBookings(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Query('status') status?: BookingStatus,
   ): Promise<BookingDetailsDto[]> {
-    const userId = req.user['userId'];
-    const userRole = req.user['role'];
+    const userId = req.user.userId;
+    const userRole = req.user.role;
     const bookings = await this.bookingsService.findUserBookings(
       userId,
       userRole,
@@ -179,16 +187,16 @@ export class BookingsController {
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
   async findOne(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('id') id: string,
   ): Promise<BookingDetailsDto> {
-    const userId = req.user['userId'];
-    const userRole = req.user['role'];
+    const userId = req.user.userId;
+    const userRole = req.user.role;
     const booking = await this.bookingsService.findOne(id, req);
 
     if (!booking) {
       throw new NotFoundException(
-        await this.i18n.translate('booking.notFound', (req as any).locale, {
+        await this.i18n.translate('booking.notFound', req.locale, {
           id,
         }),
       );
@@ -200,10 +208,7 @@ export class BookingsController {
 
     if (!isClientOfBooking && !isProviderOfBooking && !isAdmin) {
       throw new ForbiddenException(
-        await this.i18n.translate(
-          'booking.forbidden.access',
-          (req as any).locale,
-        ),
+        await this.i18n.translate('booking.forbidden.access', req.locale),
       );
     }
 
@@ -224,17 +229,17 @@ export class BookingsController {
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
   async updateStatus(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('id') id: string,
     @Body() updateBookingStatusDto: UpdateBookingStatusDto,
   ): Promise<BookingDetailsDto> {
-    const userId = req.user['userId'];
-    const userRole = req.user['role'];
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     const booking = await this.bookingsService.findOne(id, req);
     if (!booking) {
       throw new NotFoundException(
-        await this.i18n.translate('booking.notFound', (req as any).locale, {
+        await this.i18n.translate('booking.notFound', req.locale, {
           id,
         }),
       );
@@ -242,18 +247,12 @@ export class BookingsController {
 
     if (userRole === UserRole.CLIENT && booking.client.userId !== userId) {
       throw new ForbiddenException(
-        await this.i18n.translate(
-          'booking.forbidden.updateStatus',
-          (req as any).locale,
-        ),
+        await this.i18n.translate('booking.forbidden.updateStatus', req.locale),
       );
     }
     if (userRole === UserRole.PROVIDER && booking.provider.userId !== userId) {
       throw new ForbiddenException(
-        await this.i18n.translate(
-          'booking.forbidden.updateStatus',
-          (req as any).locale,
-        ),
+        await this.i18n.translate('booking.forbidden.updateStatus', req.locale),
       );
     }
 
@@ -280,25 +279,22 @@ export class BookingsController {
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
   async cancelBooking(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('id') id: string,
   ): Promise<BookingDetailsDto> {
-    const userId = req.user['userId'];
+    const userId = req.user.userId;
     const booking = await this.bookingsService.findOne(id, req);
 
     if (!booking) {
       throw new NotFoundException(
-        await this.i18n.translate('booking.notFound', (req as any).locale, {
+        await this.i18n.translate('booking.notFound', req.locale, {
           id,
         }),
       );
     }
     if (booking.client.userId !== userId) {
       throw new ForbiddenException(
-        await this.i18n.translate(
-          'booking.forbidden.updateStatus',
-          (req as any).locale,
-        ),
+        await this.i18n.translate('booking.forbidden.updateStatus', req.locale),
       );
     }
 
@@ -345,7 +341,7 @@ export class BookingsController {
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
   @ApiResponse({ status: 400, description: 'Requisição inválida.' })
   async reportIssue(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('id') id: string,
     @Body('reason') reason: string,
   ): Promise<BookingDetailsDto> {
@@ -353,12 +349,12 @@ export class BookingsController {
       throw new BadRequestException(
         await this.i18n.translate(
           'booking.badRequest.issueReasonRequired',
-          (req as any).locale,
+          req.locale,
         ),
       );
     }
-    const userId = req.user['userId'];
-    const userRole = req.user['role'];
+    const userId = req.user.userId;
+    const userRole = req.user.role;
     const updatedBooking = await this.bookingsService.reportIssue(
       id,
       userId,
@@ -386,12 +382,12 @@ export class BookingsController {
   @ApiResponse({ status: 400, description: 'Dados da disputa inválidos.' })
   @HttpCode(HttpStatus.ACCEPTED)
   async reportDispute(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('id') bookingId: string,
     @Body() reportDisputeDto: ReportDisputeDto,
   ): Promise<MessageResponseDto> {
-    const userId = req.user['userId'];
-    const userRole = req.user['role'];
+    const userId = req.user.userId;
+    const userRole = req.user.role;
     await this.bookingsService.reportDispute(
       bookingId,
       userId,
@@ -402,7 +398,7 @@ export class BookingsController {
     return {
       message: await this.i18n.translate(
         'booking.disputeReportedSuccess',
-        (req as any).locale,
+        req.locale,
       ),
     };
   }
@@ -428,7 +424,7 @@ export class BookingsController {
   })
   @ApiResponse({ status: 400, description: 'Requisição inválida.' })
   async resolveDispute(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('id') bookingId: string,
     @Body('resolution') resolution: string,
     @Body('refundAmount') refundAmount?: number,
@@ -438,7 +434,7 @@ export class BookingsController {
       throw new BadRequestException(
         await this.i18n.translate(
           'booking.badRequest.disputeResolutionRequired',
-          (req as any).locale,
+          req.locale,
         ),
       );
     }
@@ -467,8 +463,8 @@ export class BookingsController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
-  async onTheWay(@Req() req: Request, @Param('id') id: string) {
-    const userId = req.user['userId'];
+  async onTheWay(@Req() req: RequestWithUser, @Param('id') id: string) {
+    const userId = req.user.userId;
     const booking = await this.bookingsService.onTheWayService(id, userId);
     return new BookingDetailsDto(booking);
   }
@@ -488,8 +484,8 @@ export class BookingsController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
-  async arrive(@Req() req: Request, @Param('id') id: string) {
-    const userId = req.user['userId'];
+  async arrive(@Req() req: RequestWithUser, @Param('id') id: string) {
+    const userId = req.user.userId;
     const booking = await this.bookingsService.arriveAtLocation(id, userId);
     return new BookingDetailsDto(booking);
   }
@@ -504,8 +500,8 @@ export class BookingsController {
     description: 'Serviço iniciado com sucesso.',
     type: BookingDetailsDto,
   })
-  async start(@Req() req: Request, @Param('id') id: string) {
-    const userId = req.user['userId'];
+  async start(@Req() req: RequestWithUser, @Param('id') id: string) {
+    const userId = req.user.userId;
     const booking = await this.bookingsService.startService(id, userId);
     return new BookingDetailsDto(booking);
   }
@@ -520,8 +516,8 @@ export class BookingsController {
     description: 'Serviço concluído com sucesso.',
     type: BookingDetailsDto,
   })
-  async complete(@Req() req: Request, @Param('id') id: string) {
-    const userId = req.user['userId'];
+  async complete(@Req() req: RequestWithUser, @Param('id') id: string) {
+    const userId = req.user.userId;
     const booking = await this.bookingsService.completeService(id, userId);
     return new BookingDetailsDto(booking);
   }
@@ -550,8 +546,8 @@ export class BookingsController {
     status: 200,
     description: 'Retorna se pode avaliar e detalhes do prestador.',
   })
-  async canReview(@Req() req: Request, @Param('id') id: string) {
-    const userId = req.user['userId'];
+  async canReview(@Req() req: RequestWithUser, @Param('id') id: string) {
+    const userId = req.user.userId;
     return this.bookingsService.canReview(id, userId);
   }
 }
