@@ -53,7 +53,7 @@ const FAB_SOS: React.FC<FAB_SOSProps> = ({ bottomOffset = 20 }) => {
   };
 
   const handlePress = () => {
-    router.push('/(common)/safety/panic' as any);
+    router.push('/common/safety/panic' as any);
   };
 
   const glowOpacity = pulseAnim.interpolate({
