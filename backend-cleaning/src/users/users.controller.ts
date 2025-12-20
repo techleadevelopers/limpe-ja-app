@@ -15,7 +15,7 @@ import {
   Post,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { UsersService, UserWithIncludes } from './users.service';
+import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserProfileDto } from './dto/user-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -46,6 +46,16 @@ export class UsersController {
   private readonly logger = new Logger(UsersController.name);
 
   constructor(private readonly usersService: UsersService) {}
+
+  private formatError(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'string') return error;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown error';
+    }
+  }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
@@ -114,9 +124,11 @@ export class UsersController {
         `[UsersController] getMyProfile: Perfil pronto para ${userId}.`,
       );
       return new UserProfileDto(user);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = this.formatError(error);
+      const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `[UsersController] getMyProfile: Erro geral: ${error.message}. Stack: ${error.stack}`,
+        `[UsersController] getMyProfile: Erro geral: ${message}. Stack: ${stack}`,
       );
       if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException(
@@ -163,9 +175,10 @@ export class UsersController {
         `[UsersController] updateMyProfile: Perfil atualizado para ${userId}.`,
       );
       return new UserProfileDto(updatedUser);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = this.formatError(error);
       this.logger.error(
-        `[UsersController] updateMyProfile: Erro ao atualizar perfil: ${error.message}`,
+        `[UsersController] updateMyProfile: Erro ao atualizar perfil: ${message}`,
       );
       throw error;
     }
@@ -193,8 +206,9 @@ export class UsersController {
         `[UsersController] findAll: Mapeando ${users.length} usuários para DTOs.`,
       );
       return users.map((user) => new UserProfileDto(user));
-    } catch (error: any) {
-      this.logger.error(`[UsersController] findAll: Erro: ${error.message}`);
+    } catch (error: unknown) {
+      const message = this.formatError(error);
+      this.logger.error(`[UsersController] findAll: Erro: ${message}`);
       throw error;
     }
   }
@@ -221,9 +235,10 @@ export class UsersController {
         message:
           'Solicitação de exclusão recebida. Sua conta será desativada e removida após o período de carência. Um e-mail de confirmação será enviado.',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = this.formatError(error);
       this.logger.error(
-        `[UsersController] deleteMyAccount: Erro ao solicitar exclusão: ${error.message}`,
+        `[UsersController] deleteMyAccount: Erro ao solicitar exclusão: ${message}`,
       );
       throw error;
     }
@@ -257,8 +272,9 @@ export class UsersController {
       }
       this.logger.log(`[UsersController] findOne: Perfil pronto para ${id}.`);
       return new UserProfileDto(user);
-    } catch (error: any) {
-      this.logger.error(`[UsersController] findOne: Erro: ${error.message}`);
+    } catch (error: unknown) {
+      const message = this.formatError(error);
+      this.logger.error(`[UsersController] findOne: Erro: ${message}`);
       throw error;
     }
   }
@@ -285,8 +301,9 @@ export class UsersController {
       await this.usersService.remove(id);
       this.logger.log(`[UsersController] remove: Sucesso para ${id}.`);
       return { message: `Usuário com ID ${id} foi marcado para exclusão.` };
-    } catch (error: any) {
-      this.logger.error(`[UsersController] remove: Erro: ${error.message}`);
+    } catch (error: unknown) {
+      const message = this.formatError(error);
+      this.logger.error(`[UsersController] remove: Erro: ${message}`);
       throw error;
     }
   }
@@ -312,9 +329,10 @@ export class UsersController {
         message:
           'Solicitação de exportação recebida. Link será enviado por e-mail quando os dados estiverem prontos.',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = this.formatError(error);
       this.logger.error(
-        `[UsersController] requestDataExport: Erro ao solicitar exportação: ${error.message}`,
+        `[UsersController] requestDataExport: Erro ao solicitar exportação: ${message}`,
       );
       throw error;
     }
