@@ -1,6 +1,7 @@
 // src/payments/payments.module.ts
 import { Module, forwardRef } from '@nestjs/common';
-import { PaymentsController } from './payments.controller2';
+import { PaymentsController } from './payments.controller';
+import { PaymentsWebhooksController } from './payments.webhooks.controller';
 import { PaymentsService } from './payments.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ProvidersModule } from '../providers/providers.module';
@@ -24,7 +25,7 @@ import { ConnectModule } from '../connect/connect.module';
     forwardRef(() => PayoutsModule),
     ConnectModule,
   ],
-  controllers: [PaymentsController],
+  controllers: [PaymentsController, PaymentsWebhooksController],
   providers: [PaymentsService],
   exports: [PaymentsService],
 })
