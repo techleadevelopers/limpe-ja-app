@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(client)/bookings/components/success/SuccessHeader.tsx
+// LimpeJaApp/app/client/bookings/components/success/SuccessHeader.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Platform, Image, Animated, Easing, SafeAreaView } from 'react-native';
 import { AppDurations } from '../../../../constants/appStyles'; // Importar AppDurations
