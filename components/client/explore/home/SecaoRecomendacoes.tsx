@@ -141,7 +141,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: -25,
+    marginTop: -29,
     marginBottom: -10,
     paddingHorizontal: 6,
     backgroundColor: 'transparent',
