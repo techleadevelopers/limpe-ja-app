@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(auth)/components/AnimatedErrorMessage.tsx
+// LimpeJaApp/app/auth/components/AnimatedErrorMessage.tsx
 import React, { useEffect, useRef } from 'react';
 import { Animated, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 
