@@ -1,126 +1,58 @@
-📑 Verification Module
+# Verification Module
 
-O módulo de Verificação (VerificationModule) é responsável pelo processo de validação de identidade de prestadores de serviço na plataforma. Ele garante segurança e confiabilidade, exigindo que prestadores enviem documentos oficiais e selfies para prova de vida, que são processados e avaliados antes da aprovação do perfil.
+`VerificationModule` garante a identidade e compliance dos prestadores. Ele orquestra uploads de documentos/selfies, acionamento de filas para análise (OCR + prova de vida), execução de background check e exposição de rotas administrativas que ativam notificações e status manualmente.
 
-📂 Estrutura dos Arquivos
+## Arquitetura e dependências
 
-verification.controller.ts → Define os endpoints HTTP expostos para o cliente.
+- **verification.module.ts** importa `PrismaModule`, `ProvidersModule`, `QueuesModule`, `NotificationsModule`, `UploadModule` e registra `VerificationController`, `VerificationService` e `DocumentProcessingService`.
+- **verification.controller.ts** protege rotas com `JwtAuthGuard` + `RolesGuard` e usa `@Roles` para diferenciar `PROVIDER` (auto-uploads) e `ADMIN` (fila, status manual, rejeição). Swagger documenta uploads multipart.
+- **verification.service.ts** cuida de toda a lógica: persistência Prisma, geração de URLs via `DocumentProcessingService`, enfileiramento com `QueuesModule`, telemetria (`[TELEMETRY] verification_*`), notificações e interação com novos serviços (ex: `CriminalBackgroundCheckService`).
+- **DTOs/entities** – `UploadDocumentDto`, `UploadSelfieDto`, `DocumentPhoto` entity (metadados), `VerificationStatus` enum (UNVERIFIED, UNDER_REVIEW, VERIFIED, REJECTED).
+- **Extras** – `criminal-background-check.service.ts` encapsula chamadas a provedores externos, usado pela service para reputação e risco.
 
-verification.service.ts → Contém toda a lógica de negócio da verificação (armazenar, processar e validar documentos).
+## Endpoints expostos (`verification.controller.ts`)
 
-verification.module.ts → Configura as dependências do módulo e integra com outros serviços.
+| Método | Rota | Guardas + Papel | Descrição |
+| --- | --- | --- | --- |
+| `GET /verification/pending-queue` | `UserRole.ADMIN` | Lista provedores em `UNDER_REVIEW`. Serve dashboard de compliance. |
+| `POST /verification/upload-document/:type` | `UserRole.PROVIDER` | Upload multipart (frente/verso) do documento (`DocumentPhotoType`). Valida arquivo, envia para queue, retorna URL e mensagem. |
+| `POST /verification/upload-selfie` | `UserRole.PROVIDER` | Upload da selfie + documento; dispara jobs de prova de vida. |
+| `POST /verification/upload-avatar` | `UserRole.PROVIDER|CLIENT` | Atualiza avatar via `DocumentProcessingService` (reuso de fluxo). |
+| `POST /verification/advance-status` | `UserRole.PROVIDER` | Própria solicitação para mover status (ex: `UNVERIFIED → UNDER_REVIEW`). |
+| `PATCH /verification/:providerId/status` | `UserRole.ADMIN` | Atualiza manualmente status (`VERIFIED`, `REJECTED`, etc) com motivo (obrigatório para rejeição). |
+| `POST /verification/reject/:providerId` | `UserRole.ADMIN` | Rejeita o provedor com motivo; dispara notificação/compliance. |
+| `GET /verification/status/:providerId` | `UserRole.ADMIN|PROVIDER` | Consulta atual status, documentos enviados e histórico. |
 
-DTOs (Data Transfer Objects):
+## Fluxos do `VerificationService`
 
-upload-document.dto.ts → Estrutura de dados para envio de documentos.
+1. **Upload document/ selfie** – valida `providerId`, checa tipo (`FRONT`/`BACK`), chama `DocumentProcessingService` para armazenar/assinar URLs, salva registros em `DocumentPhoto`, envia job para `QueuesModule` (OCR, validações). Cada upload também atualiza `verificationStatus` para `UNDER_REVIEW` e dispara notificação com template adequado.
+2. **Fila & background check** – após upload, `QueuesModule` entrega tarefas que podem chamar `CriminalBackgroundCheckService` (arquivo dedicado). O serviço loga resultados e, quando pronto, marca `verificationStatus` (ex: `VERIFIED` ao passar todos os filtros) e envia notificação via `NotificationsModule`.
+3. **Advance status (self-service)** – `advanceVerificationStatus` permite que o próprio provedor “movimente” o status (ex: `UNVERIFIED → UNDER_REVIEW`) quando enviou tudo; o service reconfirma requisitos antes de alterar o campo.
+4. **Admin workflows** – `getPendingProviders` retorna filas, `updateProviderVerificationStatusManually` aplica `VERIFIED/REJECTED` com logging, e `rejectProvider` exige razão (enviada na notificação e salva no audit trail). Ambos chamam métodos de service que disparam `notifications` com contexto apropriado.
+5. **Status endpoint** – `getVerificationStatus` compila `verificationStatus`, lista de documentos+selfie, e banners de compliance (uso interno).
+6. **DocumentProcessing reuse** – `uploadAvatar` executa o mesmo fluxo de upload/assinar URLs, simplificando uso (avatar e documentos usam o mesmo provider).
+7. **Criminal background** – `criminal-background-check.service.ts` faz check modular, logando sucesso/falha/timeout, e o service pode reagir (ex: rejeitar) na pipeline.
 
-upload-selfie.dto.ts → Estrutura de dados para upload de selfie.
+## Modelos e estados
 
-🚀 Fluxo de Negócio
+- **`VerificationStatus`** – `UNVERIFIED`, `UNDER_REVIEW`, `VERIFIED`, `REJECTED`; o status impede o provider de aceitar serviços enquanto estiver `UNVERIFIED`.  
+- **`DocumentPhoto`** – representa uploads (`type`, `status`, `url`, `providerId`, timestamps); a entidade alimenta `queues` e auditoria.  
+- **DTOs** – `UploadDocumentDto` (providerId, documentType, file metadata) e `UploadSelfieDto`.  
+- **`VerificationQueuePayload`** – metadata para workers (OCR path, providerId, documentType).  
+- **`CriminalBackgroundCheckResult`** – usado pelo serviço dedicado para registrar cabecalho, risco e decisão.
 
-Upload de Documentos
+## Integrações e observabilidade
 
-O prestador envia imagens/documentos oficiais (RG, CNH, passaporte).
+- **QueuesModule** – enfileira OCR, validação facial, reprovação automática, etc.  
+- **NotificationsModule** – notifica o provider (novo status, rejeição, solicitação de retrabalho).  
+- **ProvidersModule** – atualiza o perfil do provider (`verificationStatus`) e limita ações (negócios bloqueados para `UNVERIFIED`).  
+- **DocumentProcessingModule / UploadModule** – gerencia armazenamento de arquivos (GCS/S3) e fornece URLs assinadas.  
+- **CriminalBackgroundCheckService** – enfileira/verifica dados governamentais (uso de API externa).  
+- **Logger + Telemetria** – `VerificationService` e controller registram `[TELEMETRY] verification_*` para uploads, status avançado, rejeição e aprovações.  
+- **Swaggers** – `@ApiConsumes`, `@ApiBody` descrevem multipart forms para uploads com `memoryStorage`.
 
-O backend armazena as informações no banco e envia para o serviço de processamento de documentos (DocumentProcessingService).
+## Recomendações
 
-Esse serviço pode realizar extração de dados (OCR), validação de autenticidade e cruzamento com os dados cadastrais.
-
-Upload de Selfie (Prova de Vida)
-
-O prestador deve enviar uma foto selfie.
-
-A selfie pode ser comparada com a foto do documento enviado para garantir que a identidade é válida.
-
-Processamento & Análise
-
-O VerificationService coordena o processamento dos dados.
-
-Ele utiliza filas de processamento (via QueuesModule) para realizar tarefas assíncronas como:
-
-OCR de documentos.
-
-Validação facial.
-
-Notificação ao time de compliance caso algo esteja inconsistente.
-
-Resultado da Verificação
-
-Se aprovado → O prestador passa a ter o status VERIFIED.
-
-Se pendente → Mantém status UNDER_REVIEW até análise.
-
-Se rejeitado → O prestador recebe um status REJECTED e uma notificação com instruções.
-
-⚙️ Integrações
-
-PrismaModule → Persistência de dados dos documentos e status de verificação.
-
-ProvidersModule → Liga o status de verificação ao cadastro do prestador.
-
-QueuesModule → Processa documentos e selfies de forma assíncrona.
-
-NotificationsModule → Notifica prestadores sobre aprovação, rejeição ou pendência.
-
-📌 Endpoints Disponíveis (VerificationController)
-🔹 Upload de Documento
-POST /verification/document
-
-
-Body (UploadDocumentDto):
-
-{
-  "providerId": "abc123",
-  "documentType": "RG",
-  "fileUrl": "https://storage/app/docs/rg123.jpg"
-}
-
-🔹 Upload de Selfie
-POST /verification/selfie
-
-
-Body (UploadSelfieDto):
-
-{
-  "providerId": "abc123",
-  "fileUrl": "https://storage/app/selfies/selfie123.jpg"
-}
-
-🔹 Consultar Status de Verificação
-GET /verification/status/:providerId
-
-
-Response:
-
-{
-  "providerId": "abc123",
-  "status": "UNDER_REVIEW",
-  "documents": [
-    { "type": "RG", "status": "PENDING" },
-    { "type": "SELFIE", "status": "PENDING" }
-  ]
-}
-
-🧠 Regras de Negócio
-
-Apenas prestadores de serviço passam pelo fluxo de verificação.
-
-O processo exige documento oficial válido e uma selfie de prova de vida.
-
-O sistema utiliza filas para escalar o processamento e não sobrecarregar o backend.
-
-O prestador não pode aceitar serviços enquanto estiver com status UNVERIFIED.
-
-📊 Estados Possíveis de Verificação
-
-UNVERIFIED → Prestador ainda não iniciou o processo.
-
-UNDER_REVIEW → Documentos enviados, aguardando processamento/aprovação.
-
-VERIFIED → Prestador aprovado, pode atuar normalmente.
-
-REJECTED → Documentação inválida ou inconsistência detectada.
-
-✅ Resumo
-
-O VerificationModule garante a segurança da plataforma através de um fluxo estruturado de validação de identidade. Ele conecta o upload de documentos e selfies com serviços de processamento, filas assíncronas e notificações, garantindo que somente prestadores verificados possam atuar.
+1. Mantenha `QueuesModule` + workers ativos (OCR/prova de vida) para evitar backlog; monitore `verification/pending-queue`.  
+2. Automatize notificações em `updateProviderVerificationStatusManually` e `rejectProvider` para fechar o ciclo compliance → negócio.  
+3. Quando for necessário exigir novas verificações (ex: recheck periódico ou reupload), reutilize `uploadDocument`/`uploadSelfie` com `DocumentPhoto.status` + `verificationStatus` resets.  
