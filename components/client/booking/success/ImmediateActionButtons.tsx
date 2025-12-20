@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(client)/bookings/components/success/ImmediateActionButtons.tsx
+// LimpeJaApp/app/client/bookings/components/success/ImmediateActionButtons.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
