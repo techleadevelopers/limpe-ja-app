@@ -36,7 +36,9 @@ export class UpdateProviderServiceDto {
   })
   @IsOptional()
   @IsInt()
-  @ValidateIf((o) => o.pricingType === PricingType.HOURLY)
+  @ValidateIf(
+    (o: UpdateProviderServiceDto) => o.pricingType === PricingType.HOURLY,
+  )
   @Min(MIN_HOURLY_MINUTES)
   durationMinutes?: number;
 
