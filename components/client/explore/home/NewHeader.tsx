@@ -53,9 +53,9 @@ const NewHeader: React.FC<NewHeaderProps> = ({
   };
 
   const handleProfilePress = () =>
-    router.push('/(client)/profile' as any);
+    router.push('/client/profile' as any);
   const handleCategoryPress = () =>
-    router.push('/(client)/explore/menu' as any);
+    router.push('/client/explore/menu' as any);
 
   const effectiveVisitor = isVisitor || !isAuthenticated;
 
@@ -68,13 +68,13 @@ const NewHeader: React.FC<NewHeaderProps> = ({
           { text: 'Cancelar', style: 'cancel' },
           {
             text: 'Continuar',
-            onPress: () => router.push('/(auth)/client-register' as any),
+            onPress: () => router.push('/auth/client-register' as any),
           },
         ]
       );
       return;
     }
-    router.push('/(client)/notifications' as any);
+    router.push('/client/notifications' as any);
   };
 
   const fetchUnread = useCallback(async () => {
@@ -188,16 +188,16 @@ const getGreeting = () => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: Constants.statusBarHeight - 42,
+    paddingVertical: Constants.statusBarHeight - 180,
     left: 3,
-    top: 6,
-    marginHorizontal:12,
+    top: 0,
+    marginHorizontal: 12,
     paddingHorizontal: 9,
     borderBottomEndRadius: 40,
     borderBottomStartRadius: 40,
     borderTopEndRadius: 40,
     borderTopStartRadius: 40,
-    marginBottom: 17,
+    marginBottom: -8,
 
     flexDirection: 'row',
     justifyContent: 'space-between',
