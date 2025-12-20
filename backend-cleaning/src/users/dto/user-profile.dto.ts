@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { User, UserRole, Prisma, Loyalty, Referral } from '@prisma/client'; // Importe Referral do schema
+import { User, UserRole, Prisma, Referral, PricingType } from '@prisma/client';
+import {
+  ProviderServiceForFrontend,
+  ServiceForFrontend,
+} from '../../providers/providers.service';
 import {
   IsString,
   IsEnum,
@@ -10,7 +14,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ProviderDetailsDto } from '../../providers/dto/provider-details.dto';
-import { UserWithIncludes } from '../users.service'; // CORRIGIDO: Importe o type do service
+import { UserWithIncludes } from '../users.service';
 
 // === TIPOS DE SERVIÇO (MANTIDOS) ===
 import { ProviderWithCalculatedRating } from '../../providers/providers.service';
@@ -172,23 +176,21 @@ export class UserProfileDto {
   @IsNumber()
   loyaltyPoints?: number | null;
 
-  // CORRIGIDO: Suporte a indicações do schema (Referral[])
   @ApiPropertyOptional({
     description: 'Indicações feitas pelo usuário',
     type: [String],
   })
   @IsOptional()
-  referralsMade?: string[]; // IDs de Referral
+  referralsMade?: string[];
 
   @ApiPropertyOptional({
     description: 'Indicações recebidas pelo usuário',
     type: [String],
   })
   @IsOptional()
-  referredBy?: string[]; // CORRIGIDO: 'referredBy' do schema (IDs de Referral recebidas)
+  referredBy?: string[];
 
   constructor(user: UserWithIncludes) {
-    // Tipado com includes
     this.id = user.id;
     this.email = user.email;
     this.avatarUrl = user.avatarUrl;
@@ -196,127 +198,152 @@ export class UserProfileDto {
     this.createdAt = user.createdAt;
     this.updatedAt = user.updatedAt;
 
-    // Fallbacks para opcionais (do schema)
     if (user.role === UserRole.CLIENT && user.client) {
       this.fullName = user.client.fullName;
       this.phone = user.client.phone;
       this.clientDetails = new ClientDetailsDto(user.client);
     } else if (user.role === UserRole.PROVIDER && user.provider) {
-      this.fullName = user.provider.fullName; // Do schema: fullName em Provider
+      this.fullName = user.provider.fullName;
       this.phone = user.provider.phone;
 
-      // === CORREÇÃO: Função utilitária para converter Prisma.Decimal para number ===
-      // O erro ocorre porque DTOs de frontend esperam 'number', mas o Prisma retorna 'Decimal'.
-      const convertDecimalToNumber = (
-        decimalValue: Prisma.Decimal | null | undefined,
-      ): number | null => {
-        if (decimalValue && decimalValue instanceof Prisma.Decimal) {
-          // Usa .toNumber() para conversão segura
-          return decimalValue.toNumber();
-        }
-        return null;
+      // ✅ Helper: Decimal -> number (porque ProviderServiceForFrontend é number)
+      const toNumber = (v: Prisma.Decimal | null | undefined): number => {
+        if (!v) return 0;
+        // Prisma.Decimal tem toNumber()
+        return v.toNumber();
       };
 
-      // 1. Converte os 'providerServices', garantindo que todos os campos Decimal sejam number
-      const providerServicesConverted =
-        user.provider.providerServices?.map((ps) => {
-          const pricePerSquareMeter =
-            convertDecimalToNumber(ps.pricePerSquareMeter) ?? 0;
-          const pricePerRoom = convertDecimalToNumber(ps.pricePerRoom) ?? 0;
+      const toNumberOrNull = (
+        v: Prisma.Decimal | null | undefined,
+      ): number | null => {
+        if (v == null) return null;
+        return v.toNumber();
+      };
 
-          // Conversão do preço do Service aninhado (agora opcional)
-          const baseServicePrice =
-            convertDecimalToNumber(ps.service?.price) ?? 0;
+      const toISOStringSafe = (d: unknown): string => {
+        if (d instanceof Date) return d.toISOString();
+        if (typeof d === 'string') return d; // caso já venha string em algum fluxo
+        return new Date(d as any).toISOString();
+      };
 
-          return {
-            ...ps,
-            // Campos ProviderService (conversão)
-            pricePerSquareMeter,
-            pricePerRoom,
+      const providerServicesConverted: ProviderServiceForFrontend[] = (
+        user.provider.providerServices ?? []
+      ).map((ps): ProviderServiceForFrontend => {
+        const service: ServiceForFrontend = {
+          id: ps.service.id,
+          name: ps.service.name,
+          description: ps.service.description ?? null,
+          icon: ps.service.icon ?? null,
+          defaultPricingType:
+            ps.service.defaultPricingType ?? PricingType.FIXED_PRICE,
+          price: toNumber(ps.service.price),
+          createdAt: toISOStringSafe(ps.service.createdAt),
+          updatedAt: toISOStringSafe(ps.service.updatedAt),
+        };
 
-            // Service aninhado (conversão do preço base)
-            service: ps.service
-              ? ({ ...ps.service, price: baseServicePrice } as any)
-              : (ps.service as any),
-          };
-        }) || []; // Retorna array vazio se não houver serviços
+        return {
+          id: ps.id,
+          providerId: ps.providerId,
+          serviceId: ps.serviceId,
 
-      // 2. Calcular propriedades ausentes
-      const reviews = user.provider.reviewsReceived || [];
+          price: toNumber(ps.price),
+          pricePerHour: ps.pricePerHour,
+          pricePerSquareMeter: toNumberOrNull(ps.pricePerSquareMeter),
+          pricePerRoom: toNumberOrNull(ps.pricePerRoom),
+          createdAt: toISOStringSafe(ps.createdAt),
+          updatedAt: toISOStringSafe(ps.updatedAt),
+
+          durationMinutes: ps.durationMinutes ?? null,
+          description: ps.description ?? null,
+          pricingType: ps.pricingType,
+
+          service,
+        };
+      });
+
+      const reviews = user.provider.reviewsReceived ?? [];
       const averageRating =
         reviews.length > 0
-          ? parseFloat(
+          ? Number(
               (
-                reviews.reduce((sum, r) => sum + (r as any).rating, 0) /
+                reviews.reduce((sum, review) => sum + review.rating, 0) /
                 reviews.length
               ).toFixed(1),
             )
           : 0;
       const reviewCount = reviews.length;
 
-      // 3. Mapeamento para ProviderWithCalculatedRating (usando os serviços convertidos)
-
-      // NOVO: Converte dateOfBirth para string (ISO) se for um objeto Date
       const dateOfBirthString =
         user.provider.dateOfBirth instanceof Date
           ? user.provider.dateOfBirth.toISOString()
-          : user.provider.dateOfBirth; // Mantém null ou string se já for
+          : (user.provider.dateOfBirth as any);
 
-      // NOVO: Converte createdAt para string (ISO)
       const createdAtString =
         user.provider.createdAt instanceof Date
           ? user.provider.createdAt.toISOString()
-          : user.provider.createdAt;
+          : (user.provider.createdAt as any);
 
-      // NOVO: Converte updatedAt para string (ISO)
       const updatedAtString =
         user.provider.updatedAt instanceof Date
           ? user.provider.updatedAt.toISOString()
-          : user.provider.updatedAt;
+          : (user.provider.updatedAt as any);
+
+      const providerExtras = user.provider as Record<string, unknown>;
+
+      const documentPhotoFrontUrl =
+        typeof providerExtras.documentPhotoFrontUrl === 'string'
+          ? providerExtras.documentPhotoFrontUrl
+          : null;
+      const documentPhotoBackUrl =
+        typeof providerExtras.documentPhotoBackUrl === 'string'
+          ? providerExtras.documentPhotoBackUrl
+          : null;
+      const selfieWithDocumentUrl =
+        typeof providerExtras.selfieWithDocumentUrl === 'string'
+          ? providerExtras.selfieWithDocumentUrl
+          : null;
+      const rejectionReason =
+        typeof providerExtras.rejectionReason === 'string'
+          ? providerExtras.rejectionReason
+          : null;
+      const backgroundCheckResult = (providerExtras.backgroundCheckResult ??
+        null) as Prisma.JsonValue | null;
+      const ocrResult = (providerExtras.ocrResult ??
+        null) as Prisma.JsonValue | null;
+      const livenessResult = (providerExtras.livenessResult ??
+        null) as Prisma.JsonValue | null;
 
       const calculatedProvider: ProviderWithCalculatedRating = {
         ...user.provider,
-
-        // CORREÇÃO DO ERRO 2352: Sobrescreve dateOfBirth, createdAt e updatedAt
         dateOfBirth: dateOfBirthString,
         createdAt: createdAtString,
         updatedAt: updatedAtString,
-
-        // Sobrescreve 'providerServices' com a nova estrutura 'number'
-        providerServices: providerServicesConverted as any, // 'as any' para forçar a compatibilidade de tipo após a conversão Decimal -> number
-
-        email: user.email, // Email vem do User principal
+        providerServices: providerServicesConverted,
+        email: user.email,
         averageRating,
         reviewCount,
-        // Campos obrigatórios que podem não estar presentes no select original
-        pixKey: (user.provider as any).pixKey ?? null,
-        pixKeyMasked: (user.provider as any).pixKeyMasked ?? null,
-        documentPhotoFrontUrl:
-          (user.provider as any).documentPhotoFrontUrl ?? null,
-        documentPhotoBackUrl:
-          (user.provider as any).documentPhotoBackUrl ?? null,
-        selfieWithDocumentUrl:
-          (user.provider as any).selfieWithDocumentUrl ?? null,
-        backgroundCheckResult:
-          (user.provider as any).backgroundCheckResult ?? null,
-        rejectionReason: (user.provider as any).rejectionReason ?? null,
-        ocrResult: (user.provider as any).ocrResult ?? null,
-        livenessResult: (user.provider as any).livenessResult ?? null,
-        // Outros campos calculados/ausentes (como address, city, state, etc., que vêm do spread)
+        pixKey: user.provider.pixKey ?? null,
+        pixKeyMasked: user.provider.pixKeyMasked ?? null,
+        documentPhotoFrontUrl,
+        documentPhotoBackUrl,
+        selfieWithDocumentUrl,
+        backgroundCheckResult,
+        rejectionReason,
+        ocrResult,
+        livenessResult,
         user: {
           email: user.email,
           role: user.role,
           isVerified: user.isVerified,
           fullName: user.fullName,
         },
-      } as ProviderWithCalculatedRating; // Type assertion para resolver o erro de tipo de nível superior
+      };
 
       this.providerDetails = new ProviderDetailsDto(calculatedProvider);
     }
 
-    this.loyaltyPoints = user.loyalty?.currentPoints ?? null; // Do schema: currentPoints em Loyalty
+    this.loyaltyPoints = user.loyalty?.currentPoints ?? null;
 
-    // CORRIGIDO: Mapeamento de referrals do schema
     this.referralsMade = user.referralsMade?.map((r: Referral) => r.id) ?? [];
     this.referredBy = user.referredBy?.map((r: Referral) => r.id) ?? [];
   }
