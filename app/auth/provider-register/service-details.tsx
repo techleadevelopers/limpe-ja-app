@@ -36,6 +36,7 @@ import {
 import verificationService from '../../../services/verificationService';
 import axios, { isAxiosError } from 'axios';
 import ServiceDetailsStep5Premium from '../../../components/auth/ServiceDetailsStep5Premium';
+import { AUTH_ROUTES } from '../../routes';
 
 const SERVICE_OPTIONS = [
   { id: 'residencial', label: 'Residencial', icon: 'home', set: 'ion' },
@@ -429,7 +430,7 @@ export default function ServiceDetailsScreen() {
         if (router.canGoBack()) {
             router.back();
         } else {
-            router.replace('/auth/provider-register');
+            router.replace(AUTH_ROUTES.PROVIDER_REGISTER);
         }
     }
 };
@@ -574,7 +575,7 @@ if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
       await AsyncStorage.removeItem('serviceDetailsFormData');
       
       // Navegação direta, sem alert
-      router.push('/auth/provider-register/verify-account' as any);
+      router.push(AUTH_ROUTES.PROVIDER_VERIFY_ACCOUNT);
 
     } catch (error: any) {
       console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message);
