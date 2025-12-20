@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(client)/bookings/components/success/ProviderInfoSection.tsx
+// LimpeJaApp/app/client/bookings/components/success/ProviderInfoSection.tsx
 import React, { useEffect, useRef } from 'react';
 import { Image, StyleSheet, Text, View, Animated, Easing, Platform } from 'react-native';
 import { renderStars } from '../../../../utils/ui-helpers'; // Assumindo que renderStars está aqui
