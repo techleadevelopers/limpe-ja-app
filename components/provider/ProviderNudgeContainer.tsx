@@ -9,7 +9,7 @@ const ProviderNudgeContainer = () => {
   // Para este caso, vamos assumir que o 'code' é o 'code' da prop do SmartNudge.
   const handleApplyMissionCoupon = (code: string) => {
     // Logic to navigate or apply mission-related coupons
-    // Exemplo: router.push('/(provider)/missions');
+    // Exemplo: router.push('/provider/missions');
   };
 
   return (
@@ -26,7 +26,7 @@ const ProviderNudgeContainer = () => {
         message="Faltam 2 serviços para sua recompensa."
         delayMs={4000}
         throttleHours={48}
-        showOnRoutes={['/(provider)/dashboard', '/(provider)/earnings']}
+        showOnRoutes={['/provider/dashboard', '/provider/earnings']}
         bottomOffset={90} // Positioned above the provider's nav bar
         onAction={() => handleApplyMissionCoupon("META10")} // <-- onAction CORRIGIDO: Agora é uma função sem argumentos que chama handleApplyMissionCoupon com o código específico.
         icon="trophy-outline"
