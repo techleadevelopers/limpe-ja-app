@@ -1,4 +1,4 @@
-// app/(client)/explore/components/provider/HeaderSection.tsx
+// app/client/explore/components/provider/HeaderSection.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { ImageBackground, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
