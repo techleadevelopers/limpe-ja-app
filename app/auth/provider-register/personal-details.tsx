@@ -15,6 +15,7 @@ import {
     View,
 } from 'react-native';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
+import { AUTH_ROUTES } from '../../routes';
 
 // Importando os novos componentes
 import { DatePickerInput } from '../../../components/auth/components/DatePickerInput';
@@ -243,7 +244,7 @@ export default function PersonalDetailsScreen() {
 
     setTimeout(() => {
       setIsSubmitting(false);
-      router.push('/auth/provider-register/service-details');
+      router.push(AUTH_ROUTES.PROVIDER_SERVICE_DETAILS);
     }, 800);
   };
 
