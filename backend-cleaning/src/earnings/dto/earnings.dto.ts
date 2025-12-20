@@ -24,7 +24,7 @@ class TransactionDto {
   description: string;
 
   @ApiProperty({
-    description: 'Data/hora de cria��o da transação',
+    description: 'Data/hora de criação da transação',
     example: '2025-06-07T10:00:00Z',
   })
   createdAt: string;
