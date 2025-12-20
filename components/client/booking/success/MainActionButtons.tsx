@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(client)/bookings/components/success/MainActionButtons.tsx
+// LimpeJaApp/app/client/bookings/components/success/MainActionButtons.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
