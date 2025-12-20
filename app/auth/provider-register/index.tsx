@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
 import { RegisterProviderDto } from '../../../types/backend/auth';
+import { AUTH_ROUTES } from '../../routes';
 
 import { AnimatedErrorMessage } from '../../../components/auth/components/AnimatedErrorMessage';
 import * as Location from 'expo-location';
@@ -672,7 +673,7 @@ export default function RegisterProviderScreen() {
           console.log("[RegisterProvider] handleNext (Step 4 - final sub-step): signUpProvider do AuthContext retornou sucesso. Redirecionando para Detalhes do ServiĂ§o.");
           // Clear AsyncStorage after successful registration
           await AsyncStorage.removeItem('providerRegisterFormData');
-          router.replace('/auth/provider-register/service-details');
+          router.replace(AUTH_ROUTES.PROVIDER_SERVICE_DETAILS);
         } catch (error: any) {
           console.error("[RegisterProvider] handleNext (Step 4 - final sub-step): Erro durante o registro inicial:", error.message, error);
           const msg = (error?.message || '').toLowerCase();
