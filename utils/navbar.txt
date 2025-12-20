@@ -39,35 +39,35 @@ const navItems: NavItemType[] = [
     iconSet: 'Ionicons',
     icon: 'home-outline',
     activeIcon: 'home',
-    path: '/(client)/explore',
+    path: '/client/explore',
   },
   {
     name: 'Buscar',
     iconSet: 'Ionicons',
     icon: 'search-outline',
     activeIcon: 'search',
-    path: '/(client)/search',
+    path: '/client/search',
   },
   {
     name: '', // Este é o item central que vamos modificar
     iconSet: 'Image', // ATUALIZADO: Indica que este item usa uma imagem
     imageSource: require('../../../../../assets/images/safe.png'), // NOVO: Caminho da imagem
     isCentral: true,
-    path: '/(client)/bookings/schedule-service',
+    path: '/client/bookings/schedule-service',
   },
   {
     name: 'Agenda',
     iconSet: 'Ionicons',
     icon: 'calendar-outline',
     activeIcon: 'calendar',
-    path: '/(client)/bookings',
+    path: '/client/bookings',
   },
   {
     name: 'Perfil',
     iconSet: 'Ionicons',
     icon: 'person-outline',
     activeIcon: 'person',
-    path: '/(client)/profile',
+    path: '/client/profile',
   },
 ];
 
@@ -83,7 +83,7 @@ const NavBar: React.FC<NavBarProps> = ({ unreadMessagesCount }) => {
 
   const isRouteActive = (itemPath: string) => {
     // A rota principal '/' também deve ativar 'Home'
-    if (itemPath === '/(client)/explore' && pathname === '/(client)/explore') {
+    if (itemPath === '/client/explore' && pathname === '/client/explore') {
       return true;
     }
     // Para outras rotas, verifica se o pathname começa com o itemPath, mas não é a rota principal.
