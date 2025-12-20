@@ -1,4 +1,4 @@
-// app/(provider)/components/dashboard/CircularProgressChart.tsx
+// app/provider/components/dashboard/CircularProgressChart.tsx
 import React, { useRef, useEffect, useState } from 'react'; // Import useState
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
