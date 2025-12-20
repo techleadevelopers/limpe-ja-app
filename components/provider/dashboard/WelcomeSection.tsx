@@ -1,4 +1,4 @@
-// app/(provider)/components/dashboard/WelcomeSection.tsx
+// app/provider/components/dashboard/WelcomeSection.tsx
 import React, { useEffect, useRef } from 'react';
 import { Text, StyleSheet, Animated } from 'react-native';
 
