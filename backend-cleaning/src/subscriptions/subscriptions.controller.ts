@@ -8,7 +8,9 @@ import {
   Body,
   UseGuards,
   Req,
+  BadRequestException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { SubscriptionsService } from './subscriptions.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
@@ -16,6 +18,14 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Assuming JWT gu
 import { RolesGuard } from '../auth/guards/roles.guard'; // Assuming Roles guard
 import { Roles } from '../auth/decorators/roles.decorator'; // Assuming Roles decorator
 import { UserRole } from '@prisma/client'; // Assuming Prisma enum for roles
+
+type RequestWithUser = Request & {
+  user?: {
+    id?: string;
+    userId?: string;
+    role?: UserRole;
+  };
+};
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('subscriptions')
@@ -26,42 +36,52 @@ export class SubscriptionsController {
   @Roles(UserRole.CLIENT) // Only clients can create subscriptions
   async create(
     @Body() createSubscriptionDto: CreateSubscriptionDto,
-    @Req() req,
+    @Req() req: RequestWithUser,
   ) {
+    const userId = req.user?.id ?? req.user?.userId;
+    const role = req.user?.role;
+    if (!userId || !role) {
+      throw new BadRequestException('Usuário não autenticado.');
+    }
     // Ensure the subscription is for the authenticated client
-    if (
-      req.user.role === UserRole.CLIENT &&
-      req.user.id !== createSubscriptionDto.clientId
-    ) {
+    if (role === UserRole.CLIENT && userId !== createSubscriptionDto.clientId) {
       // Or, better, derive clientId from req.user.id directly if it's a client's subscription
-      createSubscriptionDto.clientId = req.user.id;
+      createSubscriptionDto.clientId = userId;
     }
     return this.subscriptionsService.create(createSubscriptionDto);
   }
 
   @Get('me')
   @Roles(UserRole.CLIENT) // Clients can get their own subscriptions
-  async getSubscriptionsForUser(@Req() req) {
-    return this.subscriptionsService.getSubscriptionsForUser(req.user.id);
+  async getSubscriptionsForUser(@Req() req: RequestWithUser) {
+    const userId = req.user?.id ?? req.user?.userId;
+    if (!userId) {
+      throw new BadRequestException('Usuário não autenticado.');
+    }
+    return this.subscriptionsService.getSubscriptionsForUser(userId);
   }
 
   // ADMIN: Listar todas as assinaturas (com filtro opcional de status)
   @Get()
   @Roles(UserRole.ADMIN)
-  async findAll(@Req() req) {
+  async findAll(@Req() req: RequestWithUser) {
     const status = req.query?.status as string | undefined;
     return this.subscriptionsService.findAll(status);
   }
 
   @Get(':id')
   @Roles(UserRole.CLIENT, UserRole.ADMIN) // Clients can view their own, Admin can view any
-  async getSubscriptionDetails(@Param('id') id: string, @Req() req) {
+  async getSubscriptionDetails(
+    @Param('id') id: string,
+    @Req() req: RequestWithUser,
+  ) {
     // Add logic to ensure client can only see their own subscription
-    return this.subscriptionsService.getSubscriptionDetails(
-      id,
-      req.user.id,
-      req.user.role,
-    );
+    const userId = req.user?.id ?? req.user?.userId;
+    const role = req.user?.role;
+    if (!userId || !role) {
+      throw new BadRequestException('Usuário não autenticado.');
+    }
+    return this.subscriptionsService.getSubscriptionDetails(id, userId, role);
   }
 
   @Patch(':id')
@@ -69,22 +89,20 @@ export class SubscriptionsController {
   async update(
     @Param('id') id: string,
     @Body() updateSubscriptionDto: UpdateSubscriptionDto,
-    @Req() req,
+    @Req() req: RequestWithUser,
   ) {
+    const userId = req.user?.id ?? req.user?.userId;
+    const role = req.user?.role;
+    if (!userId || !role) {
+      throw new BadRequestException('Usuário não autenticado.');
+    }
     // Add logic to ensure client can only update their own subscription
     return this.subscriptionsService.update(
       id,
       updateSubscriptionDto,
-      req.user.id,
-      req.user.role,
+      userId,
+      role,
     );
   }
 
-  // Internal endpoint, possibly for admin or triggered by a webhook/scheduled job
-  // Not exposed to general users
-  // @Post(':subscriptionId/generate-next-booking')
-  // @Roles(UserRole.ADMIN) // Or internal API key guard
-  // async generateNextBooking(@Param('subscriptionId') subscriptionId: string) {
-  //   return this.subscriptionsService.generateRecurringBooking(subscriptionId);
-  // }
 }
