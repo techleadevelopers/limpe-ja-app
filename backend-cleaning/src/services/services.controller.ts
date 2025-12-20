@@ -16,7 +16,7 @@ import { ServiceDetailsDto } from './dto/service-details.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole, Service as PrismaServiceType } from '@prisma/client'; // <-- Importar Service do Prisma para tipagem
+import { UserRole } from '@prisma/client'; // <-- Importar Service do Prisma para tipagem
 import {
   ApiBearerAuth,
   ApiOperation,
