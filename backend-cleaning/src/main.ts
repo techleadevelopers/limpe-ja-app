@@ -5,6 +5,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as admin from 'firebase-admin';
+import * as fs from 'fs';
 import * as path from 'path';
 import { json, urlencoded } from 'express';
 import * as Sentry from '@sentry/node';
@@ -62,7 +63,10 @@ async function bootstrap() {
   //        WEBHOOK PIX - RAW BODY (SEM SEGURANÇA)
   // =======================================================
   app.use((req: any, res, next) => {
-    if (req.originalUrl.includes('/payments/webhook/pix')) {
+    if (
+      req.originalUrl.includes('/payments/webhook/pix') ||
+      req.originalUrl.includes('/payouts/webhook/gateway')
+    ) {
       req.setEncoding('utf8');
       let data = '';
 
@@ -88,9 +92,42 @@ async function bootstrap() {
     }
   });
 
+  // =======================================================
+  //        WEBHOOK PSP - RAW BODY PARA ASSINATURA PAGSEGURO
+  // =======================================================
+  app.use((req: any, res, next) => {
+    if (req.originalUrl.includes('/payouts/webhook/gateway')) {
+      req.setEncoding('utf8');
+      let data = '';
+
+      req.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      req.on('end', () => {
+        req.rawBody = data;
+
+        try {
+          req.body = JSON.parse(data);
+          console.log('[Webhook PSP] JSON parseado com sucesso');
+        } catch (err) {
+          req.body = data;
+          console.error('[Webhook PSP] JSON inválido → usando string bruta');
+        }
+
+        return next();
+      });
+    } else {
+      return next();
+    }
+  });
+
   // Evitar que o JSON parser sobrescreva o webhook PIX
   app.use((req: any, res, next) => {
-    if (req.originalUrl.includes('/payments/webhook/pix')) {
+    if (
+      req.originalUrl.includes('/payments/webhook/pix') ||
+      req.originalUrl.includes('/payouts/webhook/gateway')
+    ) {
       return next();
     }
     return json({ limit: '10mb' })(req, res, next);
@@ -170,7 +207,8 @@ async function bootstrap() {
           process.env.GOOGLE_APPLICATION_CREDENTIALS,
         );
 
-        const serviceAccount = require(serviceAccountPath);
+        const serviceAccountRaw = fs.readFileSync(serviceAccountPath, 'utf8');
+        const serviceAccount = JSON.parse(serviceAccountRaw);
 
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
@@ -241,4 +279,7 @@ async function bootstrap() {
   console.timeEnd('AppStartupTotal');
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Nest bootstrap failed', err);
+  process.exit(1);
+});
