@@ -8,6 +8,8 @@ import { UserProfile } from '../types/backend/users';
 import userService from '../services/userService';
 import axios from 'axios';
 import type { AxiosRequestConfig } from 'axios';
+import { router } from 'expo-router';
+import { AUTH_ROUTES } from '../constants/routes';
 
 // 🔥 IMPORTAÇÃO DO SOCKET.IO
 import io from "socket.io-client";
@@ -131,6 +133,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!isAuthCritical) throw new Error('Unauthorized');
 
       await logout();
+      try {
+        router.replace(AUTH_ROUTES.LOGIN as any);
+      } catch {
+        // ignore navigation failures
+      }
       throw new Error('Unauthorized');
     },
     [logout],
@@ -140,6 +147,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUnauthorizedCallback(handleUnauthorized as any);
     loadStoredData();
   }, [handleUnauthorized]);
+
+  useEffect(() => {
+    if (user?.id) {
+      debugLog('[AuthContext] Reforçando registro do push token para', user.id);
+      registerDevicePushToken().catch(() => {});
+    }
+  }, [user?.id]);
 
   const updateAuthState = (authData: AuthDataFromStorage) => {
     if (authData.token && authData.role && authData.id && authData.user) {
