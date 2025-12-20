@@ -1,10 +1,5 @@
 // src/clients/clients.service.ts
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common'; // Adicionado Logger
+import { Injectable, NotFoundException, Logger } from '@nestjs/common'; // Adicionado Logger
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateClientProfileDto } from './dto/update-client-profile.dto';
 import { Client, Prisma, User, Address, Booking, Review } from '@prisma/client';
@@ -140,23 +135,19 @@ export class ClientsService {
     let addressUpsert: Prisma.AddressUpsertWithoutClientInput | undefined;
 
     if (updateClientProfileDto.address) {
-      const addressString = this.buildAddressString(
-        updateClientProfileDto.address as Partial<Address>,
-      );
+      const addressDto: Partial<Address> = updateClientProfileDto.address;
+      const addressString = this.buildAddressString(addressDto);
       const geo = addressString ? await geocodeAddress(addressString) : null;
-      const coords = this.applyGeocodeFallback(
-        updateClientProfileDto.address as Partial<Address>,
-        geo,
-      );
+      const coords = this.applyGeocodeFallback(addressDto, geo);
       finalLatitude = coords.latitude;
       finalLongitude = coords.longitude;
-      const addressPayload = { ...updateClientProfileDto.address } as any;
+      const addressPayload: Partial<Address> = { ...addressDto };
       if (finalLatitude !== undefined) addressPayload.latitude = finalLatitude;
       if (finalLongitude !== undefined)
         addressPayload.longitude = finalLongitude;
       addressUpsert = {
-        create: addressPayload,
-        update: addressPayload,
+        create: addressPayload as Prisma.AddressCreateWithoutClientInput,
+        update: addressPayload as Prisma.AddressUpdateWithoutClientInput,
       };
     }
 
@@ -203,8 +194,10 @@ export class ClientsService {
           );
         }
       }
+      const errorMessage =
+        error instanceof Error ? error.message : 'Erro desconhecido';
       this.logger.error(
-        `[ClientsService] updateClient: Erro ao atualizar cliente ${clientId}: ${error.message}`,
+        `[ClientsService] updateClient: Erro ao atualizar cliente ${clientId}: ${errorMessage}`,
       );
       throw error;
     }
