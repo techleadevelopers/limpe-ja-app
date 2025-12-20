@@ -36,22 +36,15 @@ export class LoyaltyService {
     // --- NOVO: Lógica de Multiplicadores ---
     // O 'points' recebido no DTO é o 'pontos_base' (calculado pelo módulo chamador, ex: BookingsService)
 
-    // 1. Fetch do Tier do usuário (assumindo um campo 'tier' no modelo Loyalty ou um novo modelo UserTier)
-    const userLoyalty = await this.prisma.loyalty.findUnique({
-      where: { userId },
-    });
+    // 1. Fetch do Tier do usuário (placeholder: mantido estático até modelagem do tier)
     const m_tier = 1.0;
-    // Assumindo que o tier é um campo no Loyalty ou calculado com base em pontosLast90Days
-    // if (userLoyalty?.currentTier === 'PRATA') m_tier = 1.1;
-    // else if (userLoyalty?.currentTier === 'OURO') m_tier = 1.25;
-    // else if (userLoyalty?.currentTier === 'PLATINA') m_tier = 1.5;
 
     // 2. Fetch do Streak de reservas do usuário (requer lógica para calcular semanas consecutivas)
-    const weeksConsecutiveBookings = await this.getUserBookingStreak(userId);
+    const weeksConsecutiveBookings = this.getUserBookingStreak(userId);
     const m_streak = 1 + 0.05 * Math.min(weeksConsecutiveBookings, 6);
 
     // 3. Fetch do status de review do usuário (requer lógica para verificar review recente com boa nota)
-    const hasRecentGoodReview = await this.hasRecentGoodReview(userId);
+    const hasRecentGoodReview = this.hasRecentGoodReview(userId);
     const m_review = hasRecentGoodReview ? 1.1 : 1.0;
 
     // Aplicação da fórmula final: pontos = floor(pontos_base × m_tier × m_streak × m_review)
@@ -182,7 +175,8 @@ export class LoyaltyService {
 
     // Determina tipo de desconto baseado no valor:
     const isPercent = new Prisma.Decimal(reward.value).lte(1);
-    const valueType = isPercent ? 'PERCENT' : 'FIXED';
+    const valueType: 'PERCENT' | 'FIXED' = isPercent ? 'PERCENT' : 'FIXED';
+    const couponTarget = 'GENERAL';
 
     const now = new Date();
     const validUntilDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 dias de validade
@@ -194,12 +188,12 @@ export class LoyaltyService {
     // Cria o cupom via service
     await this.couponsService.create({
       code,
-      type: valueType as any,
+      type: valueType,
       value: Number(new Prisma.Decimal(reward.value).toFixed(2)),
       validFrom: now.toISOString(),
       validUntil,
       maxUses: 1,
-      target: 'GENERAL' as any,
+      target: couponTarget,
       description:
         reward.description ?? 'Cupom resgatado com pontos de fidelidade',
       isActive: true,
@@ -262,8 +256,8 @@ export class LoyaltyService {
     type?: string,
     q?: string,
   ) {
-    const where: any = { isActive: true };
-    if (type) where.type = type;
+    const where: Prisma.RewardWhereInput = { isActive: true };
+    if (type) where.type = { equals: type };
     if (q) where.name = { contains: q, mode: 'insensitive' };
     const rewards = await this.prisma.reward.findMany({
       where,
@@ -289,23 +283,21 @@ export class LoyaltyService {
 
   // TODO: Implementar busca de tier do usuário.
   // Isso exigiria uma nova tabela (ex: UserTier) ou um campo no modelo User/Loyalty.
-  private async getUserTier(
-    userId: string,
-  ): Promise<'BRONZE' | 'PRATA' | 'OURO' | 'PLATINA'> {
+  private getUserTier(userId: string): 'BRONZE' | 'PRATA' | 'OURO' | 'PLATINA' {
     // Exemplo: Buscar do Prisma.userTier ou calcular baseado em pontos acumulados
     // const userTierRecord = await this.prisma.userTier.findUnique({ where: { userId } });
     // return userTierRecord?.tier || 'BRONZE';
 
     // Por enquanto, retorna um valor padrão para não quebrar a lógica
     this.logger.warn(
-      `[LoyaltyService] getUserTier não implementado. Retornando BRONZE.`,
+      `[LoyaltyService] getUserTier não implementado para user ${userId}. Retornando BRONZE.`,
     );
     return 'BRONZE';
   }
 
   // TODO: Implementar cálculo de streak de reservas.
   // Isso exigiria analisar o histórico de bookings do usuário.
-  private async getUserBookingStreak(userId: string): Promise<number> {
+  private getUserBookingStreak(userId: string): number {
     // Exemplo: Contar semanas consecutivas com bookings COMPLETED
     // const client = await this.prisma.client.findUnique({ where: { userId }, select: { id: true } });
     // if (!client) return 0;
@@ -316,14 +308,14 @@ export class LoyaltyService {
     // });
     // Lógica complexa para calcular semanas consecutivas...
     this.logger.warn(
-      `[LoyaltyService] getUserBookingStreak não implementado. Retornando 0.`,
+      `[LoyaltyService] getUserBookingStreak não implementado para user ${userId}. Retornando 0.`,
     );
     return 0; // Placeholder
   }
 
   // TODO: Implementar verificação de review recente com boa nota.
   // Isso exigiria analisar o histórico de reviews do usuário.
-  private async hasRecentGoodReview(userId: string): Promise<boolean> {
+  private hasRecentGoodReview(userId: string): boolean {
     // Exemplo: Verificar se há uma review >= 4 estrelas nas últimas 4 semanas
     // const client = await this.prisma.client.findUnique({ where: { userId }, select: { id: true } });
     // if (!client) return false;
@@ -333,7 +325,7 @@ export class LoyaltyService {
     // });
     // return !!recentReview;
     this.logger.warn(
-      `[LoyaltyService] hasRecentGoodReview não implementado. Retornando false.`,
+      `[LoyaltyService] hasRecentGoodReview não implementado para user ${userId}. Retornando false.`,
     );
     return false; // Placeholder
   }
@@ -402,6 +394,9 @@ export class LoyaltyService {
     const oneHundredEightyDaysAgo = new Date(
       Date.now() - 180 * 24 * 60 * 60 * 1000,
     );
+    this.logger.debug(
+      `[LoyaltyService] Data de corte para expiração: ${oneHundredEightyDaysAgo.toISOString()}`,
+    );
 
     // Esta é uma lógica conceitual. A implementação real requer um modelo de dados mais granular para pontos.
     // Exemplo: Se cada LoyaltyTransaction tivesse um `expiresAt`
@@ -438,5 +433,6 @@ export class LoyaltyService {
     this.logger.log(
       '[LoyaltyService] Expiração de pontos concluída (conceitual).',
     );
+    await Promise.resolve();
   }
 }
