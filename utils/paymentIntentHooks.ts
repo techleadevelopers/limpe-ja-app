@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(client)/bookings/paymentIntentHooks.ts
+// LimpeJaApp/app/client/bookings/paymentIntentHooks.ts
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
