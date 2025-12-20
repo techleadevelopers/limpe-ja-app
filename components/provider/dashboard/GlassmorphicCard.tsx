@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(provider)/components/dashboard/GlassmorphicCard.tsx
+// LimpeJaApp/app/provider/components/dashboard/GlassmorphicCard.tsx
 import React, { useEffect, useRef } from 'react';
 import {
   View,
