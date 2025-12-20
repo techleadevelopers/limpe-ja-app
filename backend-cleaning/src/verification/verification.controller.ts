@@ -34,13 +34,19 @@ import {
 } from '@nestjs/swagger';
 import { IsString, IsOptional, IsEnum } from 'class-validator';
 import { Request } from 'express';
-import { SubmitCpfDto } from './dto/submit-cpf.dto';
 import { DocumentPhotoType } from './dto/upload-document.dto';
-import { UploadSelfieDto } from './dto/upload-selfie.dto';
 import { VerificationService } from './verification.service';
 import { ProviderWithCalculatedRating } from '../providers/providers.service';
 import { VerificationStatus } from '../shared/enums/verification-status.enum';
 import { Multer, memoryStorage } from 'multer';
+
+type RequestWithUser = Request & {
+  user?: {
+    userId?: string;
+    providerId?: string;
+    role?: UserRole;
+  };
+};
 
 export class UpdateVerificationStatusDto {
   @ApiProperty({
@@ -129,11 +135,11 @@ export class VerificationController {
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async uploadDocument(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('type') type: DocumentPhotoType,
     @UploadedFile() file: Multer.File,
   ) {
-    const providerId = req.user['providerId'];
+    const providerId = req.user?.providerId;
     this.logger.log(
       `[VerificationController] uploadDocument: Recebido arquivo para providerId: ${providerId}, tipo: ${type}`,
     );
@@ -148,6 +154,11 @@ export class VerificationController {
     if (!Object.values(DocumentPhotoType).includes(type)) {
       throw new BadRequestException(
         'Tipo de documento inválido. Use FRONT ou BACK.',
+      );
+    }
+    if (!providerId) {
+      throw new BadRequestException(
+        'ID do provedor não encontrado no token. Este endpoint é para provedores.',
       );
     }
     const uploadedUrl = await this.verificationService.uploadDocumentPhoto(
@@ -190,8 +201,11 @@ export class VerificationController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  async uploadSelfie(@Req() req: Request, @UploadedFile() file: Multer.File) {
-    const providerId = req.user['providerId'];
+  async uploadSelfie(
+    @Req() req: RequestWithUser,
+    @UploadedFile() file: Multer.File,
+  ) {
+    const providerId = req.user?.providerId;
     this.logger.log(
       `[VerificationController] uploadSelfie: Recebido arquivo para providerId: ${providerId}`,
     );
@@ -201,6 +215,11 @@ export class VerificationController {
       );
       throw new BadRequestException(
         'Nenhum arquivo enviado ou o arquivo é inválido.',
+      );
+    }
+    if (!providerId) {
+      throw new BadRequestException(
+        'ID do provedor não encontrado no token. Este endpoint é para provedores.',
       );
     }
     const uploadedUrl = await this.verificationService.uploadSelfieWithDocument(
@@ -242,8 +261,11 @@ export class VerificationController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário/Provedor não encontrado.' })
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  async uploadAvatar(@Req() req: Request, @UploadedFile() file: Multer.File) {
-    const providerId = req.user['providerId'];
+  async uploadAvatar(
+    @Req() req: RequestWithUser,
+    @UploadedFile() file: Multer.File,
+  ) {
+    const providerId = req.user?.providerId;
 
     if (!providerId) {
       throw new BadRequestException(
@@ -286,8 +308,13 @@ export class VerificationController {
     status: 403,
     description: 'Acesso proibido (requer função de PROVEDOR).',
   })
-  async advanceVerificationStatus(@Req() req: Request) {
-    const providerId = req.user['providerId'];
+  async advanceVerificationStatus(@Req() req: RequestWithUser) {
+    const providerId = req.user?.providerId;
+    if (!providerId) {
+      throw new BadRequestException(
+        'ID do provedor não encontrado no token. Este endpoint é para provedores.',
+      );
+    }
     await this.verificationService.advanceVerificationStatus(providerId);
     return { message: 'Verification status advanced successfully.' };
   }
@@ -385,11 +412,11 @@ export class VerificationController {
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   async getVerificationStatus(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('providerId') paramProviderId: string,
   ) {
-    const requestingUserId = req.user['userId'];
-    const requestingUserRole = req.user['role'];
+    const requestingUserId = req.user?.userId ?? '';
+    const requestingUserRole = req.user?.role;
     let providerIdToFetch = paramProviderId;
     if (requestingUserRole === UserRole.PROVIDER) {
       const providerByUser =
