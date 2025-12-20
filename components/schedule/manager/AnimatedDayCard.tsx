@@ -1,4 +1,4 @@
-// app/(provider)/schedule/components/AnimatedDayCard.tsx
+// app/provider/schedule/components/AnimatedDayCard.tsx
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View, Switch, Platform } from 'react-native'; // <--- CORRIGIDO: Adicionado Platform
 import { Ionicons } from '@expo/vector-icons';
