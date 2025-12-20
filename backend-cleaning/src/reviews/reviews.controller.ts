@@ -28,41 +28,51 @@ import {
 import { Request } from 'express';
 import { ReviewEntity } from './entities/review.entity';
 
+type RequestWithUser = Request & {
+  user?: {
+    userId?: string;
+    providerId?: string;
+    role?: UserRole;
+  };
+};
+
 @ApiTags('reviews')
 @Controller('reviews')
 export class ReviewsController {
-  // Declare and initialize the logger
   private readonly logger = new Logger(ReviewsController.name);
 
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Post()
-  @Roles(UserRole.CLIENT) // Apenas clientes podem enviar avaliações
+  @Roles(UserRole.CLIENT) // Apenas clientes podem enviar avaliacoes
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Enviar uma nova avaliação para um serviço concluído',
+    summary: 'Enviar uma nova avaliacao para um servico concluido',
   })
   @ApiResponse({
     status: 201,
-    description: 'Avaliação enviada com sucesso.',
+    description: 'Avaliacao enviada com sucesso.',
     type: ReviewEntity,
   })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 401, description: 'Nao autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({
     status: 404,
-    description: 'Agendamento não encontrado ou não concluído.',
+    description: 'Agendamento nao encontrado ou nao concluido.',
   })
   @ApiResponse({
     status: 409,
-    description: 'Agendamento já possui uma avaliação.',
+    description: 'Agendamento ja possui uma avaliacao.',
   })
   async submitReview(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Body() submitReviewDto: SubmitReviewDto,
   ): Promise<ReviewEntity> {
-    const userId = req.user['userId']; // usa userId do JWT
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new ForbiddenException('Usuario nao autorizado.');
+    }
     const review = await this.reviewsService.submitReview(
       userId,
       submitReviewDto,
@@ -71,15 +81,15 @@ export class ReviewsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obter avaliações com filtros (pode ser público)' })
+  @ApiOperation({ summary: 'Obter avaliacoes com filtros (publico)' })
   @ApiResponse({
     status: 200,
-    description: 'Lista de avaliações.',
+    description: 'Lista de avaliacoes.',
     type: [ReviewEntity],
   })
   @ApiResponse({
     status: 404,
-    description: 'Nenhuma avaliação encontrada com os filtros fornecidos.',
+    description: 'Nenhuma avaliacao encontrada com os filtros fornecidos.',
   })
   async getReviews(
     @Query() getReviewsDto: GetReviewsDto,
@@ -91,54 +101,54 @@ export class ReviewsController {
   // NEW ENDPOINT: Get reviews for a specific provider
   @Get('provider/:providerId')
   @ApiOperation({
-    summary: 'Obter todas as avaliações para um provedor específico',
+    summary: 'Obter todas as avaliacoes para um provedor especifico',
   })
   @ApiResponse({
     status: 200,
-    description: 'Lista de avaliações do provedor.',
+    description: 'Lista de avaliacoes do provedor.',
     type: [ReviewEntity],
   })
   @ApiResponse({
     status: 404,
-    description: 'Nenhuma avaliação encontrada para o provedor.',
+    description: 'Nenhuma avaliacao encontrada para o provedor.',
   })
   async getReviewsByProviderId(
     @Param('providerId') providerId: string,
   ): Promise<ReviewEntity[]> {
     this.logger.log(
-      `[ReviewsController] getReviewsByProviderId: Buscando avaliações para provedor ID: ${providerId}`,
+      `[ReviewsController] getReviewsByProviderId: Buscando avaliacoes para provedor ID: ${providerId}`,
     );
     const reviews = await this.reviewsService.findReviews({ providerId }); // Reusing findReviews with providerId filter
     if (!reviews || reviews.length === 0) {
-      // É melhor retornar um array vazio do que lançar 404 para um endpoint de lista
+      // Melhor retornar um array vazio do que lancar 404 para um endpoint de lista
       return [];
     }
     return reviews.map((review) => new ReviewEntity(review));
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obter uma avaliação por ID' })
+  @ApiOperation({ summary: 'Obter uma avaliacao por ID' })
   @ApiResponse({
     status: 200,
-    description: 'Detalhes da avaliação.',
+    description: 'Detalhes da avaliacao.',
     type: ReviewEntity,
   })
-  @ApiResponse({ status: 404, description: 'Avaliação não encontrada.' })
+  @ApiResponse({ status: 404, description: 'Avaliacao nao encontrada.' })
   async getReviewById(@Param('id') id: string): Promise<ReviewEntity> {
     const review = await this.reviewsService.findOne(id);
     if (!review) {
-      throw new NotFoundException(`Avaliação com ID "${id}" não encontrada.`);
+      throw new NotFoundException(`Avaliacao com ID "${id}" nao encontrada.`);
     }
     return new ReviewEntity(review);
   }
 
   @Get('provider/:providerId/breakdown')
   @ApiOperation({
-    summary: 'Obter análise detalhada de avaliações do provedor',
+    summary: 'Obter analise detalhada de avaliacoes do provedor',
   })
   @ApiResponse({
     status: 200,
-    description: 'Breakdown detalhado das avaliações.',
+    description: 'Breakdown detalhado das avaliacoes.',
   })
   async getProviderRatingBreakdown(@Param('providerId') providerId: string) {
     return this.reviewsService.getDetailedRatingBreakdown(providerId);
@@ -148,18 +158,22 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Obter sugestões inteligentes baseadas em IA para o provedor',
+    summary: 'Obter sugestoes inteligentes baseadas em IA para o provedor',
   })
-  @ApiResponse({ status: 200, description: 'Lista de sugestões inteligentes.' })
+  @ApiResponse({ status: 200, description: 'Lista de sugestoes inteligentes.' })
   async getSmartSuggestions(
     @Param('providerId') providerId: string,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    // Verificar se o usuário tem permissão para ver as sugestões deste provedor
-    const userProviderId = req.user['providerId'];
-    if (userProviderId !== providerId && req.user['role'] !== 'ADMIN') {
+    // Verificar se o usuario tem permissao para ver as sugestoes deste provedor
+    const user = req.user;
+    if (!user) {
+      throw new ForbiddenException('Usuario nao autorizado.');
+    }
+    const { providerId: userProviderId, role } = user;
+    if (userProviderId !== providerId && role !== UserRole.ADMIN) {
       throw new ForbiddenException(
-        'Acesso negado às sugestões deste provedor.',
+        'Acesso negado as sugestoes deste provedor.',
       );
     }
 
