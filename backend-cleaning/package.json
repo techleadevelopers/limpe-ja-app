@@ -25,7 +25,8 @@
     "seed": "ts-node prisma/seed/seed.ts && ts-node prisma/seed/align.ts",
     "seed:validate": "ts-node scripts/seed-validate.ts",
     "seed:check": "npm run generate && ts-node scripts/seed-validate.ts",
-    "backfill:location": "ts-node scripts/backfill-address-location.ts"
+    "backfill:location": "ts-node scripts/backfill-address-location.ts",
+    "check:api-contract": "node scripts/check_api_contract.js"
   },
   "dependencies": {
     "@keyv/redis": "^5.1.0",
