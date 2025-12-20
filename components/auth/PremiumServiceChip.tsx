@@ -1,6 +1,6 @@
 // PremiumServiceChip.tsx
 import React, { useRef, useEffect } from 'react';
-import { TouchableOpacity, View, Text, StyleSheet, Animated, Platform, StyleProp, ViewStyle } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet, Animated, Platform, Easing } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -13,31 +13,46 @@ type ChipProps = {
   iconSet?: 'ion' | 'mci';
   iconName: string;
   disabled?: boolean;
-  // CORREÇÃO: Usamos 'any' para o estilo para evitar o conflito de tipos complexos 
-  // ao misturar StyleProp com AnimatedProps.
-  style?: any; 
+  style?: any;
 };
 
 export const PremiumServiceChip: React.FC<ChipProps> = ({
-  id, label, selected, onPress, iconSet = 'ion', iconName, disabled, style
+  id,
+  label,
+  selected,
+  onPress,
+  iconSet = 'ion',
+  iconName,
+  disabled,
+  style
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
-  const sheen = useRef(new Animated.Value(0)).current;
+  const highlightAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (selected) {
-      Animated.loop(
+      const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(sheen, { toValue: 1, duration: 1600, useNativeDriver: true }),
-          Animated.timing(sheen, { toValue: 0, duration: 0, useNativeDriver: true }),
-          Animated.delay(2200),
+          Animated.timing(highlightAnim, {
+            toValue: 1,
+            duration: 1400,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          Animated.timing(highlightAnim, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+          Animated.delay(1600),
         ])
-      ).start();
-    } else {
-      sheen.stopAnimation();
-      sheen.setValue(0);
+      );
+      loop.start();
+      return () => loop.stop();
     }
-  }, [selected]);
+    highlightAnim.stopAnimation();
+    highlightAnim.setValue(0);
+  }, [selected, highlightAnim]);
 
   const handlePressIn = () => {
     Animated.spring(scale, { toValue: 0.98, useNativeDriver: true }).start();
@@ -47,11 +62,10 @@ export const PremiumServiceChip: React.FC<ChipProps> = ({
   };
 
   const IconComp = iconSet === 'ion' ? Ionicons : MaterialCommunityIcons;
-
-  const sheenTranslate = sheen.interpolate({ inputRange: [0, 1], outputRange: [-120, 160] });
+  const highlightScale = highlightAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.2] });
+  const highlightOpacity = highlightAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.35] });
 
   return (
-    // Aplicamos o estilo externo (style) aqui, que contém as animações de stagger
     <Animated.View style={[{ transform: [{ scale }], width: '48%', marginBottom: 12 }, style]}>
       <TouchableOpacity
         activeOpacity={0.9}
@@ -64,21 +78,17 @@ export const PremiumServiceChip: React.FC<ChipProps> = ({
         disabled={disabled}
         style={[chipStyles.card, disabled && { opacity: 0.5 }]}
       >
-        {/* Borda em degradê / anel de seleção */}
         <LinearGradient
           colors={selected ? ['#7DB7FF', '#3B82F6'] : ['#E9EEF6', '#E9EEF6']}
           style={chipStyles.border}
         >
-          {/* Corpo frosted */}
           <View style={[chipStyles.inner, selected && chipStyles.innerSelected]}>
-            {/* Badge check */}
             {selected && (
               <View style={chipStyles.badge}>
                 <Ionicons name="checkmark" size={14} color="#fff" />
               </View>
             )}
 
-            {/* Ícone */}
             <View style={chipStyles.iconWrap}>
               <IconComp
                 name={iconName as any}
@@ -89,14 +99,16 @@ export const PremiumServiceChip: React.FC<ChipProps> = ({
                 <Animated.View
                   pointerEvents="none"
                   style={[
-                    chipStyles.sheen,
-                    { transform: [{ translateX: sheenTranslate }, { rotate: '-20deg' }] },
+                    chipStyles.highlightSquare,
+                    {
+                      opacity: highlightOpacity,
+                      transform: [{ scale: highlightScale }],
+                    },
                   ]}
                 />
               )}
             </View>
 
-            {/* Label */}
             <Text
               numberOfLines={1}
               style={[chipStyles.label, selected && chipStyles.labelSelected]}
@@ -147,15 +159,14 @@ const chipStyles = StyleSheet.create({
       ios: { shadowOpacity: 0 },
     }),
   },
-  sheen: {
+  highlightSquare: {
     position: 'absolute',
-    top: -8,
-    left: 0,
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.26)',
-    opacity: 0.45,
+    width: 52,
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+    top: -4,
+    left: -6,
   },
   label: {
     fontSize: 14,
