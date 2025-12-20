@@ -1,16 +1,25 @@
-import { Controller, Post, Res, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Res,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { Response } from 'express';
-// Importe a função main do seu seed.ts
-// Certifique-se de que o seed.ts exporta a função main, ex: "export async function main() { ... }"
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 import { main as seedDatabase } from '../../prisma/seed/seed'; // Ajuste o caminho conforme necessário
 
 @Controller('test') // Isso define o prefixo da rota como /test
 export class TestController {
-  constructor() {} // private readonly prisma: PrismaService // Se precisar de algum serviço no seed, injete aqui. Ex:
+  constructor() {}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Post('seed') // Isso define o endpoint completo como /test/seed
   async seed(@Res() res: Response) {
-    // Guard-rail para garantir que não roda em produção
     if (process.env.NODE_ENV === 'production') {
       return res
         .status(HttpStatus.FORBIDDEN)
@@ -19,7 +28,7 @@ export class TestController {
 
     try {
       console.log('Recebida requisição para seed do banco de dados...');
-      await seedDatabase(); // Chama a função main importada do seu seed.ts
+      await seedDatabase();
       console.log('Seed do banco de dados concluído via API.');
       return res.status(HttpStatus.OK).send('Database seeded successfully!');
     } catch (error) {
