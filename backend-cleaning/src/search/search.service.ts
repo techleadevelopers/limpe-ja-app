@@ -1,39 +1,39 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 // src/search/search.service.ts
-import { Injectable, Logger } from '@nestjs/common'; // CORREÇÃO: Importar Logger
-import {
-  SearchQueryDto,
-  SortByOption,
-  SearchType,
-} from './dto/search-query.dto'; // Import SearchType
+import { Injectable, Logger } from '@nestjs/common';
+import { SearchQueryDto, SearchType } from './dto/search-query.dto';
 import { ProvidersService } from '../providers/providers.service';
 import { ServicesService } from '../services/services.service';
-import { ProviderServicesService } from '../provider-services/provider-services.service'; // NOVO: Importar
+import { ProviderServicesService } from '../provider-services/provider-services.service';
 import { ProviderDetailsDto } from '../providers/dto/provider-details.dto';
-import { ServiceDetailsDto } from '../services/dto/service-details.dto'; // Assuming ServiceDetailsDto is Service
-import { ProviderSearchDto } from '../providers/dto/provider-search.dto';
-import { OffersService } from '../offers/offers.service'; // Importe o OffersService se ele existir
-// import { OfferDetailsDto } from '../offers/dto/offer-details.dto'; // Importe o DTO de ofertas
-import { PricingService } from '../pricing/pricing.service'; // NEW: Import PricingService
-import { DynamicPriceResult } from '../pricing/dto/calculate-price.dto'; // CORREÇÃO: Importar DynamicPriceResult para tipagem
+import { ServiceDetailsDto } from '../services/dto/service-details.dto';
+import { OffersService } from '../offers/offers.service';
+import { PricingService } from '../pricing/pricing.service';
+import { DynamicPriceResult } from '../pricing/dto/calculate-price.dto';
+import { ProviderServiceSearchResultDto } from './dto/provider-service-search-result.dto';
 
-// Supondo que você crie um DTO para os detalhes de um ProviderService
-import { ProviderServiceDetailsDto } from '../provider-services/dto/provider-service-details.dto'; // Exemplo
-import { ProviderServiceSearchResultDto } from './dto/provider-service-search-result.dto'; // Exemplo
+type ProviderServicesSearcher = {
+  search?: (params: Record<string, unknown>) => Promise<unknown>;
+};
+
+type ServicesSearcher = {
+  search?: (term?: string) => Promise<unknown>;
+};
 
 @Injectable()
 export class SearchService {
-  private readonly logger = new Logger(SearchService.name); // CORREÇÃO: Adicionar logger
+  private readonly logger = new Logger(SearchService.name);
 
   constructor(
     private readonly providersService: ProvidersService,
     private readonly servicesService: ServicesService,
-    private readonly providerServicesService: ProviderServicesService, // NOVO: Injetar
-    private readonly offersService: OffersService, // Se houver um OffersService, descomente
-    private readonly pricingService: PricingService, // NEW: Inject PricingService
+    private readonly providerServicesService: ProviderServicesService,
+    private readonly offersService: OffersService,
+    private readonly pricingService: PricingService,
   ) {}
 
   async performSearch(searchQueryDto: SearchQueryDto): Promise<{
-    providerServices: ProviderServiceSearchResultDto[]; // NOVO: Resultado principal
+    providerServices: ProviderServiceSearchResultDto[];
     providers: ProviderDetailsDto[];
     services: ServiceDetailsDto[];
     offers?: any[];
@@ -60,114 +60,111 @@ export class SearchService {
       providerServices: [],
       providers: [],
       services: [],
-      offers: [], // Initialize offers array
+      offers: [],
     };
 
-    // 1. Busca Principal: Serviços específicos oferecidos por provedores (ProviderService)
-    // Esta seria a busca mais relevante para o usuário final
-    // CORREÇÃO: Comparação correta do enum
+    // 1. Provider services
     if (
       !type ||
       type === SearchType.PROVIDER_SERVICES ||
       type === SearchType.ALL
     ) {
-      // The providerServicesService.search() would need to be implemented to:
-      // - Filter by 'query' (in service name/description or provider bio)
-      // - Filter by 'location' and geospatial (latitude, longitude, radius)
-      // - Sort by 'sortBy' (rating, distance, experience)
-      // - Return a combination of Provider and ProviderService
-      // Placeholder method for ProviderServicesService.search
-      const providerServicesResults = await (
-        this.providerServicesService as any
-      ).search({
-        // <--- CORREÇÃO: Cast para 'any' para simular o método 'search'
-        searchTerm: query,
-        location,
-        latitude,
-        longitude,
-        radius,
-        sortBy,
-        limit,
-        offset,
-        // Adicionar outros filtros necessários, como serviceId, minRating, etc.
-      });
+      const providerSearchFn = (
+        this.providerServicesService as ProviderServicesSearcher
+      ).search;
+      const providerServicesResults =
+        (providerSearchFn &&
+          (await providerSearchFn({
+            searchTerm: query,
+            location,
+            latitude,
+            longitude,
+            radius,
+            sortBy,
+            limit,
+            offset,
+          }))) ||
+        [];
+      const rawProviderServices = Array.isArray(providerServicesResults)
+        ? providerServicesResults
+        : [];
 
-      // NEW: Apply dynamic pricing to provider services results
       results.providerServices = await Promise.all(
-        providerServicesResults.map(async (psResult: any) => {
+        rawProviderServices.map(async (psResult) => {
+          const priceValue =
+            typeof (psResult as any)?.price === 'number'
+              ? (psResult as any).price
+              : 0;
           let dynamicPrice: DynamicPriceResult = {
-            originalPrice: psResult.price,
+            originalPrice: priceValue,
             surgeFactor: 1.0,
-            finalPrice: psResult.price,
+            finalPrice: priceValue,
             appliedRules: [],
           };
           if (latitude && longitude && date) {
             try {
               dynamicPrice = await this.pricingService.calculatePrice({
-                serviceId: psResult.serviceId,
-                providerId: psResult.providerId,
+                serviceId: (psResult as any)?.serviceId,
+                providerId: (psResult as any)?.providerId,
                 latitude,
                 longitude,
                 scheduledDate: date,
-                cityCode: psResult.provider?.address?.city,
-                categoryId: psResult.service?.categoryId,
+                cityCode: (psResult as any)?.provider?.address?.city,
+                categoryId: (psResult as any)?.service?.categoryId,
               });
-            } catch (e: any) {
-              // CORREÇÃO: Tipar 'e' como 'any'
+            } catch (e) {
+              const message = e instanceof Error ? e.message : String(e);
               this.logger.error(
-                `Error calculating dynamic price for providerService ${psResult.id}: ${e.message}`,
+                `Error calculating dynamic price for providerService ${(psResult as any)?.id}: ${message}`,
               );
             }
           }
           return {
-            ...psResult,
+            ...(psResult as ProviderServiceSearchResultDto),
             dynamicPrice,
-            // Include badges from provider if available in psResult.provider
             provider: {
-              ...psResult.provider,
-              badges: psResult.provider?.badges || [],
+              ...(psResult as any)?.provider,
+              badges: (psResult as any)?.provider?.badges || [],
             },
           };
         }),
       );
     }
 
-    // 2. Busca Complementar: Provedores (se o tipo de busca for explicitamente 'providers' ou 'all')
+    // 2. Providers
     if (type === SearchType.PROVIDERS || type === SearchType.ALL) {
-      // <--- CORREÇÃO: Comparação correta do enum
       const providers = await this.providersService.search({
         searchTerm: query,
-        location: location,
-        limit: limit,
-        offset: offset,
-        latitude: latitude,
-        longitude: longitude,
-        radius: radius,
-        sortBy: sortBy,
+        location,
+        limit,
+        offset,
+        latitude,
+        longitude,
+        radius,
+        sortBy,
       });
-      results.providers = providers.map(
-        (p) => new ProviderDetailsDto(p as any),
-      );
+      const providersArray = Array.isArray(providers) ? providers : [];
+      results.providers = providersArray.map((p) => new ProviderDetailsDto(p));
     }
 
-    // 3. Busca Complementar: Tipos de Serviço (se o tipo de busca for explicitamente 'services' ou 'all')
-    // O servicesService.search() deve ser implementado para fazer a filtragem no DB
+    // 3. Services
     if (type === SearchType.SERVICES || type === SearchType.ALL) {
-      // <--- CORREÇÃO: Comparação correta do enum
-      // Placeholder method for ServicesService.search
-      const services = await (this.servicesService as any).search(query); // <--- CORREÇÃO: Cast para 'any' para simular o método 'search'
-      results.services = services.map((s) => new ServiceDetailsDto(s));
+      const servicesSearchFn = (this.servicesService as ServicesSearcher)
+        .search;
+      const services =
+        (servicesSearchFn && (await servicesSearchFn(query))) || [];
+      const servicesArray = Array.isArray(services) ? services : [];
+      results.services = servicesArray.map((s) => new ServiceDetailsDto(s));
     }
 
-    // 4. Busca Complementar: Ofertas (se OffersService e OfferDetailsDto existirem)
+    // 4. Offers
     if (!type || type === SearchType.OFFERS || type === SearchType.ALL) {
-      // <--- CORREÇÃO: Comparação correta do enum
       const offers = await this.offersService.searchOffers(
         query,
         limit,
         offset,
       );
-      results.offers = offers; // Assuming offersService.searchOffers returns the correct DTO
+      results.offers = offers;
     }
 
     return results;
