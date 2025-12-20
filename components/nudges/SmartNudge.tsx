@@ -39,7 +39,7 @@ type SmartNudgeProps = {
   /** Aparição suave */
   delayMs?: number;           // default 3000
   throttleHours?: number;     // default 24
-  showOnRoutes?: string[];    // default ['/(client)/explore']
+  showOnRoutes?: string[];    // default ['/client/explore']
   bottomOffset?: number;      // default 20 (px) -- útil pra “empilhar” nudges
 
   /** Estilo/ícone */
@@ -71,7 +71,7 @@ const SmartNudge: React.FC<SmartNudgeProps> = ({
   onAction,
   delayMs = 3000,
   throttleHours = 24,
-  showOnRoutes = ['/(client)/explore'],
+  showOnRoutes = ['/client/explore'],
   bottomOffset = 20,
   icon = 'information-circle-outline',
   color = TOKENS.primary,
