@@ -1,5 +1,6 @@
 // src/services/entities/service.entity.ts
 import { Service as PrismaService, Prisma, PricingType } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export class ServiceEntity implements PrismaService {
   id: string;
@@ -16,9 +17,12 @@ export class ServiceEntity implements PrismaService {
   constructor(partial: Partial<ServiceEntity>) {
     Object.assign(this, partial);
 
+    const priceValue = partial.price;
     this.price =
-      partial.price !== undefined && partial.price !== null
-        ? new Prisma.Decimal(partial.price as any)
+      priceValue !== undefined && priceValue !== null
+        ? priceValue instanceof Decimal
+          ? priceValue
+          : new Decimal(priceValue)
         : null;
 
     // O Object.assign(this, partial) já deve lidar com defaultPricingType, createdAt e updatedAt
