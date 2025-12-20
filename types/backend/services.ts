@@ -16,7 +16,7 @@ export enum PricingType {
 export interface Service {
   id: string;
   name: string; // Mantido 'name' se o backend de serviços usa 'name'
-  icon: string; // Ex: nome do ícone para o frontend
+  icon?: string; // Ex: nome do ícone para o frontend (opcional agora)
   backgroundColor?: string | null; // Ex: cor para o card da categoria, permitir null
   description?: string | null; // Adicionar se existir no backend, permitir null
   price?: number | null; // Preço de referência da categoria de serviço (se existir no Service model) (CORREÇÃO: Decimal no Prisma é number aqui)
