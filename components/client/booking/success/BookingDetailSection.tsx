@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(client)/bookings/components/success/BookingDetailSection.tsx
+// LimpeJaApp/app/client/bookings/components/success/BookingDetailSection.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Animated, Easing, Platform } from 'react-native';
