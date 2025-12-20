@@ -8,7 +8,11 @@ import {
 import { PrismaService } from '../prisma/prisma.service'; // Assuming PrismaService exists
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
-import { SubscriptionFrequency, SubscriptionStatus } from '@prisma/client'; // Prisma enums
+import {
+  SubscriptionFrequency,
+  SubscriptionStatus,
+  UserRole,
+} from '@prisma/client'; // Prisma enums
 import { BookingsService } from '../bookings/bookings.service'; // Assuming BookingsService exists
 import { PaymentsService } from '../payments/payments.service'; // Assuming PaymentsService exists
 import { QueuesService } from '../queues/queues.service'; // Assuming QueuesService for BullMQ
@@ -75,7 +79,6 @@ export class SubscriptionsService {
     await this.scheduleNextBookingGeneration(
       subscription.id,
       initialNextGenerationDate,
-      frequency,
     );
 
     // TODO: Integrate with PaymentsService for initial recurring payment setup (e.g., tokenization)
@@ -95,9 +98,10 @@ export class SubscriptionsService {
   }
 
   async findAll(status?: string) {
+    const statusFilter = status as SubscriptionStatus | undefined;
     return this.prisma.subscription.findMany({
       where: {
-        ...(status ? { status: status as any } : {}),
+        ...(statusFilter ? { status: statusFilter } : {}),
       },
       include: {
         client: { select: { id: true, fullName: true } },
@@ -110,7 +114,7 @@ export class SubscriptionsService {
     });
   }
 
-  async getSubscriptionDetails(id: string, userId: string, userRole: string) {
+  async getSubscriptionDetails(id: string, userId: string, userRole: UserRole) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id },
       include: {
@@ -131,7 +135,8 @@ export class SubscriptionsService {
     }
 
     // Authorization check
-    if (userRole === 'CLIENT' && subscription.clientId !== userId) {
+    const isClientRole = userRole === 'CLIENT';
+    if (isClientRole && subscription.clientId !== userId) {
       throw new ForbiddenException(
         'You do not have permission to view this subscription.',
       );
@@ -144,7 +149,7 @@ export class SubscriptionsService {
     id: string,
     updateSubscriptionDto: UpdateSubscriptionDto,
     userId: string,
-    userRole: string,
+    userRole: UserRole,
   ) {
     const existingSubscription = await this.prisma.subscription.findUnique({
       where: { id },
@@ -155,16 +160,24 @@ export class SubscriptionsService {
     }
 
     // Authorization check
-    if (userRole === 'CLIENT' && existingSubscription.clientId !== userId) {
+    const isClientRole = userRole === 'CLIENT';
+    if (isClientRole && existingSubscription.clientId !== userId) {
       throw new ForbiddenException(
         'You do not have permission to update this subscription.',
       );
     }
 
+    const newStatus = updateSubscriptionDto.status as
+      | SubscriptionStatus
+      | undefined;
+    if (newStatus && !Object.values(SubscriptionStatus).includes(newStatus)) {
+      throw new BadRequestException('Invalid subscription status.');
+    }
+
     const updatedSubscription = await this.prisma.subscription.update({
       where: { id },
       data: {
-        status: updateSubscriptionDto.status,
+        status: newStatus,
         frequency: updateSubscriptionDto.frequency,
         endDate: updateSubscriptionDto.endDate
           ? new Date(updateSubscriptionDto.endDate)
@@ -175,21 +188,20 @@ export class SubscriptionsService {
 
     // If status changes to PAUSED or CANCELED, cancel future scheduled jobs and bookings
     if (
-      updateSubscriptionDto.status === SubscriptionStatus.PAUSED ||
-      updateSubscriptionDto.status === SubscriptionStatus.CANCELED
+      newStatus === SubscriptionStatus.PAUSED ||
+      newStatus === SubscriptionStatus.CANCELED
     ) {
       await this.cancelFutureRecurringBookings(id);
       // TODO: Notify payments service to pause/cancel recurring charges
       // await this.paymentsService.pauseRecurringPayment(id);
     } else if (
-      updateSubscriptionDto.status === SubscriptionStatus.ACTIVE &&
+      newStatus === SubscriptionStatus.ACTIVE &&
       existingSubscription.status !== SubscriptionStatus.ACTIVE
     ) {
       // If reactivated, reschedule future bookings
       await this.scheduleNextBookingGeneration(
         updatedSubscription.id,
         updatedSubscription.nextGenerationDate || new Date(), // Use next generation date or now
-        updatedSubscription.frequency,
       );
       // TODO: Notify payments service to resume recurring charges
       // await this.paymentsService.resumeRecurringPayment(id);
@@ -235,7 +247,7 @@ export class SubscriptionsService {
     ) {
       // 24 hours leeway
       console.warn(
-        `Booking for subscription ${subscriptionId} not due yet. Next generation: ${subscription.nextGenerationDate}`,
+        `Booking for subscription ${subscriptionId} not due yet. Next generation: ${subscription.nextGenerationDate.toISOString()}`,
       );
       return;
     }
@@ -276,11 +288,7 @@ export class SubscriptionsService {
     );
 
     // Re-schedule the job for the next generation
-    await this.scheduleNextBookingGeneration(
-      subscription.id,
-      nextDate,
-      subscription.frequency,
-    );
+    await this.scheduleNextBookingGeneration(subscription.id, nextDate);
 
     return newBooking;
   }
@@ -309,7 +317,6 @@ export class SubscriptionsService {
   private async scheduleNextBookingGeneration(
     subscriptionId: string,
     nextGenerationDate: Date,
-    frequency: SubscriptionFrequency,
   ) {
     // Remove any existing jobs for this subscription to prevent duplicates
     await this.queuesService.removeSubscriptionGenerationJob(subscriptionId); // CORREÇÃO: Usar o método específico
