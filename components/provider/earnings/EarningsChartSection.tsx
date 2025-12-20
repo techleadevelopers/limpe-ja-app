@@ -1,4 +1,4 @@
-// app/(provider)/earnings/components/EarningsChartSection.tsx
+// app/provider/earnings/components/EarningsChartSection.tsx
 import React from 'react';
 import { View, Text, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
