@@ -15,11 +15,18 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SupportService } from './support.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole, SupportTicketCategory } from '@prisma/client';
+import { Request as ExpressRequest } from 'express';
+
+type RequestWithUser = ExpressRequest & {
+  user?: {
+    userId?: string;
+    role?: UserRole;
+  };
+};
 
 @ApiTags('Support')
 @ApiBearerAuth()
@@ -32,7 +39,7 @@ export class SupportController {
   @ApiOperation({
     summary: 'Lista metadados de suporte (categorias e severidades)',
   })
-  async getMeta() {
+  getMeta() {
     const categories = Object.keys(SupportTicketCategory);
     const severities = ['LOW', 'MEDIUM', 'HIGH'];
     return { categories, severities };
@@ -40,9 +47,15 @@ export class SupportController {
 
   @Post('tickets')
   @ApiOperation({ summary: 'Abre um novo ticket de suporte' })
-  async createTicket(@Request() req, @Body() createTicketDto: CreateTicketDto) {
-    const userId = req.user.userId;
-    const userRole = req.user.role;
+  async createTicket(
+    @Request() req: RequestWithUser,
+    @Body() createTicketDto: CreateTicketDto,
+  ) {
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    if (!userId || !userRole) {
+      throw new NotFoundException('Dados de usuário ausentes na requisição.');
+    }
     return this.supportService.createTicket(userId, userRole, createTicketDto);
   }
 
@@ -51,13 +64,16 @@ export class SupportController {
     summary: 'Lista tickets de suporte (meus ou todos para admin)',
   })
   async getTickets(
-    @Request() req,
+    @Request() req: RequestWithUser,
     @Query('mine') mine: string,
     @Query('status') status?: string,
     @Query('category') category?: string,
   ) {
-    const userId = req.user.userId;
-    const userRole = req.user.role;
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    if (!userId || !userRole) {
+      throw new NotFoundException('Dados de usuário ausentes na requisição.');
+    }
     const showMine = mine === 'true';
 
     if (showMine || userRole !== UserRole.ADMIN) {
@@ -69,9 +85,15 @@ export class SupportController {
 
   @Get('tickets/:id')
   @ApiOperation({ summary: 'Obtém detalhes de um ticket de suporte' })
-  async getTicketDetails(@Request() req, @Param('id') ticketId: string) {
-    const userId = req.user.userId;
-    const userRole = req.user.role;
+  async getTicketDetails(
+    @Request() req: RequestWithUser,
+    @Param('id') ticketId: string,
+  ) {
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    if (!userId || !userRole) {
+      throw new NotFoundException('Dados de usuário ausentes na requisição.');
+    }
     const ticket = await this.supportService.findTicketById(ticketId);
 
     if (!ticket) {
@@ -88,12 +110,15 @@ export class SupportController {
   @Post('tickets/:id/messages')
   @ApiOperation({ summary: 'Adiciona uma mensagem a um ticket de suporte' })
   async addMessage(
-    @Request() req,
+    @Request() req: RequestWithUser,
     @Param('id') ticketId: string,
     @Body('body') body: string,
   ) {
-    const userId = req.user.userId;
-    const userRole = req.user.role;
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    if (!userId || !userRole) {
+      throw new NotFoundException('Dados de usuário ausentes na requisição.');
+    }
     return this.supportService.addMessageToTicket(
       ticketId,
       userId,
