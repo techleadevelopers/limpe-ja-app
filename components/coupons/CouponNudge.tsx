@@ -26,7 +26,7 @@ type Props = {
   // comportamento
   delayMs?: number;             // default 3000
   throttleHours?: number;       // não mostrar de novo antes desse tempo (default 24h)
-  showOnRoutes?: string[];      // default ['/(client)/explore']
+  showOnRoutes?: string[];      // default ['/client/explore']
   storageKey?: string;          // default `coupon_nudge_<code>`
 
   // callback quando o usuário tocar em "Usar agora" / side FAB
@@ -50,7 +50,7 @@ const CouponNudge: React.FC<Props> = ({
   logoUrl,
   delayMs = 3000,
   throttleHours = 24,
-  showOnRoutes = ['/(client)/explore'],
+  showOnRoutes = ['/client/explore'],
   storageKey,
   onApply,
   pointerEvents = 'box-none',
