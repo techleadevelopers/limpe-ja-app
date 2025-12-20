@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(client)/bookings/components/success/SuccessLoadingError.tsx
+// LimpeJaApp/app/client/bookings/components/success/SuccessLoadingError.tsx
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
