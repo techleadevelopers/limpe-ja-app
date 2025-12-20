@@ -1,0 +1,2400 @@
+{
+  "root": "C:/Users/Paulo/Desktop/relax-app/app",
+  "files_scanned": 108,
+  "pages": [
+    {
+      "route": "/",
+      "file": "index.tsx",
+      "segments": [],
+      "has_group": false
+    },
+    {
+      "route": "/auth/provider-register",
+      "file": "auth/provider-register/index.tsx",
+      "segments": [
+        "auth",
+        "provider-register"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/bookings",
+      "file": "client/bookings/index.tsx",
+      "segments": [
+        "client",
+        "bookings"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/coupons",
+      "file": "client/coupons/index.tsx",
+      "segments": [
+        "client",
+        "coupons"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/explore",
+      "file": "client/explore/index.tsx",
+      "segments": [
+        "client",
+        "explore"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/explore/menu",
+      "file": "client/explore/menu/index.tsx",
+      "segments": [
+        "client",
+        "explore",
+        "menu"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/explore/ranking",
+      "file": "client/explore/ranking/index.tsx",
+      "segments": [
+        "client",
+        "explore",
+        "ranking"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/explore/security",
+      "file": "client/explore/security/index.tsx",
+      "segments": [
+        "client",
+        "explore",
+        "security"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/messages",
+      "file": "client/messages/index.tsx",
+      "segments": [
+        "client",
+        "messages"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/metrics",
+      "file": "client/metrics/index.tsx",
+      "segments": [
+        "client",
+        "metrics"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/missions",
+      "file": "client/missions/index.tsx",
+      "segments": [
+        "client",
+        "missions"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/notifications",
+      "file": "client/notifications/index.tsx",
+      "segments": [
+        "client",
+        "notifications"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/profile",
+      "file": "client/profile/index.tsx",
+      "segments": [
+        "client",
+        "profile"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/ranking",
+      "file": "client/ranking/index.tsx",
+      "segments": [
+        "client",
+        "ranking"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/referrals",
+      "file": "client/referrals/index.tsx",
+      "segments": [
+        "client",
+        "referrals"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/subscriptions",
+      "file": "client/subscriptions/index.tsx",
+      "segments": [
+        "client",
+        "subscriptions"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/support",
+      "file": "client/support/index.tsx",
+      "segments": [
+        "client",
+        "support"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/common/feedback",
+      "file": "common/feedback/index.tsx",
+      "segments": [
+        "common",
+        "feedback"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/common/feedback/dispute",
+      "file": "common/feedback/dispute/index.tsx",
+      "segments": [
+        "common",
+        "feedback",
+        "dispute"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/common/safety",
+      "file": "common/safety/index.tsx",
+      "segments": [
+        "common",
+        "safety"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/common/support",
+      "file": "common/support/index.tsx",
+      "segments": [
+        "common",
+        "support"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider",
+      "file": "provider/index.tsx",
+      "segments": [
+        "provider"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/messages",
+      "file": "provider/messages/index.tsx",
+      "segments": [
+        "provider",
+        "messages"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/missions",
+      "file": "provider/missions/index.tsx",
+      "segments": [
+        "provider",
+        "missions"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/notifications",
+      "file": "provider/notifications/index.tsx",
+      "segments": [
+        "provider",
+        "notifications"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/profile",
+      "file": "provider/profile/index.tsx",
+      "segments": [
+        "provider",
+        "profile"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/reviews",
+      "file": "provider/reviews/index.tsx",
+      "segments": [
+        "provider",
+        "reviews"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/schedule",
+      "file": "provider/schedule/index.tsx",
+      "segments": [
+        "provider",
+        "schedule"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/services",
+      "file": "provider/services/index.tsx",
+      "segments": [
+        "provider",
+        "services"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/withdraw",
+      "file": "provider/withdraw/index.tsx",
+      "segments": [
+        "provider",
+        "withdraw"
+      ],
+      "has_group": false
+    }
+  ],
+  "layouts": [
+    {
+      "file": "_layout.tsx",
+      "segments": []
+    },
+    {
+      "file": "client/_layout.tsx",
+      "segments": [
+        "client"
+      ]
+    },
+    {
+      "file": "client/bookings/_layout.tsx",
+      "segments": [
+        "client",
+        "bookings"
+      ]
+    },
+    {
+      "file": "client/explore/_layout.tsx",
+      "segments": [
+        "client",
+        "explore"
+      ]
+    },
+    {
+      "file": "client/messages/_layout.tsx",
+      "segments": [
+        "client",
+        "messages"
+      ]
+    },
+    {
+      "file": "client/metrics/_layout.tsx",
+      "segments": [
+        "client",
+        "metrics"
+      ]
+    },
+    {
+      "file": "client/ofertas/_layout.tsx",
+      "segments": [
+        "client",
+        "ofertas"
+      ]
+    },
+    {
+      "file": "client/subscriptions/_layout.tsx",
+      "segments": [
+        "client",
+        "subscriptions"
+      ]
+    },
+    {
+      "file": "common/active-booking/_layout.tsx",
+      "segments": [
+        "common",
+        "active-booking"
+      ]
+    },
+    {
+      "file": "common/feedback/dispute/_layout.tsx",
+      "segments": [
+        "common",
+        "feedback",
+        "dispute"
+      ]
+    },
+    {
+      "file": "common/safety/_layout.tsx",
+      "segments": [
+        "common",
+        "safety"
+      ]
+    },
+    {
+      "file": "common/support/_layout.tsx",
+      "segments": [
+        "common",
+        "support"
+      ]
+    },
+    {
+      "file": "provider/_layout.tsx",
+      "segments": [
+        "provider"
+      ]
+    },
+    {
+      "file": "provider/active-booking/_layout.tsx",
+      "segments": [
+        "provider",
+        "active-booking"
+      ]
+    },
+    {
+      "file": "provider/messages/_layout.tsx",
+      "segments": [
+        "provider",
+        "messages"
+      ]
+    },
+    {
+      "file": "provider/services/_layout.tsx",
+      "segments": [
+        "provider",
+        "services"
+      ]
+    }
+  ],
+  "not_found_files": [
+    {
+      "file": "+not-found.tsx",
+      "segments": []
+    }
+  ],
+  "route_index": [
+    {
+      "route": "/",
+      "file": "index.tsx",
+      "segments": [],
+      "has_group": false
+    },
+    {
+      "route": "/auth/provider-register",
+      "file": "auth/provider-register/index.tsx",
+      "segments": [
+        "auth",
+        "provider-register"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/bookings",
+      "file": "client/bookings/index.tsx",
+      "segments": [
+        "client",
+        "bookings"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/coupons",
+      "file": "client/coupons/index.tsx",
+      "segments": [
+        "client",
+        "coupons"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/explore",
+      "file": "client/explore/index.tsx",
+      "segments": [
+        "client",
+        "explore"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/explore/menu",
+      "file": "client/explore/menu/index.tsx",
+      "segments": [
+        "client",
+        "explore",
+        "menu"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/explore/ranking",
+      "file": "client/explore/ranking/index.tsx",
+      "segments": [
+        "client",
+        "explore",
+        "ranking"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/explore/security",
+      "file": "client/explore/security/index.tsx",
+      "segments": [
+        "client",
+        "explore",
+        "security"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/messages",
+      "file": "client/messages/index.tsx",
+      "segments": [
+        "client",
+        "messages"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/metrics",
+      "file": "client/metrics/index.tsx",
+      "segments": [
+        "client",
+        "metrics"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/missions",
+      "file": "client/missions/index.tsx",
+      "segments": [
+        "client",
+        "missions"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/notifications",
+      "file": "client/notifications/index.tsx",
+      "segments": [
+        "client",
+        "notifications"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/profile",
+      "file": "client/profile/index.tsx",
+      "segments": [
+        "client",
+        "profile"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/ranking",
+      "file": "client/ranking/index.tsx",
+      "segments": [
+        "client",
+        "ranking"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/referrals",
+      "file": "client/referrals/index.tsx",
+      "segments": [
+        "client",
+        "referrals"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/subscriptions",
+      "file": "client/subscriptions/index.tsx",
+      "segments": [
+        "client",
+        "subscriptions"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/client/support",
+      "file": "client/support/index.tsx",
+      "segments": [
+        "client",
+        "support"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/common/feedback",
+      "file": "common/feedback/index.tsx",
+      "segments": [
+        "common",
+        "feedback"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/common/feedback/dispute",
+      "file": "common/feedback/dispute/index.tsx",
+      "segments": [
+        "common",
+        "feedback",
+        "dispute"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/common/safety",
+      "file": "common/safety/index.tsx",
+      "segments": [
+        "common",
+        "safety"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/common/support",
+      "file": "common/support/index.tsx",
+      "segments": [
+        "common",
+        "support"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider",
+      "file": "provider/index.tsx",
+      "segments": [
+        "provider"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/messages",
+      "file": "provider/messages/index.tsx",
+      "segments": [
+        "provider",
+        "messages"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/missions",
+      "file": "provider/missions/index.tsx",
+      "segments": [
+        "provider",
+        "missions"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/notifications",
+      "file": "provider/notifications/index.tsx",
+      "segments": [
+        "provider",
+        "notifications"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/profile",
+      "file": "provider/profile/index.tsx",
+      "segments": [
+        "provider",
+        "profile"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/reviews",
+      "file": "provider/reviews/index.tsx",
+      "segments": [
+        "provider",
+        "reviews"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/schedule",
+      "file": "provider/schedule/index.tsx",
+      "segments": [
+        "provider",
+        "schedule"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/services",
+      "file": "provider/services/index.tsx",
+      "segments": [
+        "provider",
+        "services"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/withdraw",
+      "file": "provider/withdraw/index.tsx",
+      "segments": [
+        "provider",
+        "withdraw"
+      ],
+      "has_group": false
+    }
+  ],
+  "duplicates": {},
+  "nav_calls": [
+    {
+      "rel": "welcome.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/auth/register-options' as any"
+        }
+      ]
+    },
+    {
+      "rel": "_layout.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "`/provider/active-booking/${booking.id}` as any"
+        },
+        {
+          "type": "expr",
+          "value": "/^http/"
+        },
+        {
+          "type": "expr",
+          "value": "'/auth/client-register' as any"
+        },
+        {
+          "type": "expr",
+          "value": "registerOptionsPath as any"
+        },
+        {
+          "type": "expr",
+          "value": "registerOptionsPath as any"
+        },
+        {
+          "type": "expr",
+          "value": "targetDashboardPath as any"
+        },
+        {
+          "type": "expr",
+          "value": "authServiceDetailsStep as any"
+        },
+        {
+          "type": "expr",
+          "value": "providerRegistrationVerifyAccountPath as any"
+        },
+        {
+          "type": "expr",
+          "value": "providerRegistrationVerifyAccountPath as any"
+        },
+        {
+          "type": "expr",
+          "value": "targetRoute as any"
+        }
+      ]
+    },
+    {
+      "rel": "auth/client-register.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "literal",
+          "value": "/client/explore"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        }
+      ]
+    },
+    {
+      "rel": "auth/login.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{\n                key: `b-${i}-${Date.now("
+        },
+        {
+          "type": "expr",
+          "value": "targetRoute as any"
+        }
+      ]
+    },
+    {
+      "rel": "auth/register-options.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/client/explore' as any"
+        },
+        {
+          "type": "literal",
+          "value": "/auth/provider-register"
+        }
+      ]
+    },
+    {
+      "rel": "auth/provider-register/coverage-availability.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{ start: '08:00'"
+        },
+        {
+          "type": "expr",
+          "value": "{ start: '14:00'"
+        },
+        {
+          "type": "expr",
+          "value": "nextPath as any"
+        }
+      ]
+    },
+    {
+      "rel": "auth/provider-register/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "literal",
+          "value": "/auth/provider-register/service-details"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        }
+      ]
+    },
+    {
+      "rel": "auth/provider-register/personal-details.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "literal",
+          "value": "/auth/provider-register/service-details"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        }
+      ]
+    },
+    {
+      "rel": "auth/provider-register/service-details.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/[\\u0300-\\u036f]/g"
+        },
+        {
+          "type": "expr",
+          "value": "/[\\s-]+/g"
+        },
+        {
+          "type": "expr",
+          "value": "/[^a-z0-9_]/g"
+        },
+        {
+          "type": "expr",
+          "value": "'"
+        },
+        {
+          "type": "literal",
+          "value": "/auth/provider-register"
+        },
+        {
+          "type": "expr",
+          "value": "'"
+        },
+        {
+          "type": "expr",
+          "value": "{ start: '08:00'"
+        },
+        {
+          "type": "expr",
+          "value": "{ start: '14:00'"
+        },
+        {
+          "type": "expr",
+          "value": "'/auth/provider-register/verify-account' as any"
+        },
+        {
+          "type": "expr",
+          "value": "/[^0-9]/g"
+        },
+        {
+          "type": "expr",
+          "value": "/[^0-9."
+        }
+      ]
+    },
+    {
+      "rel": "auth/provider-register/verify-account.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.DASHBOARD"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.DASHBOARD"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.DASHBOARD"
+        },
+        {
+          "type": "literal",
+          "value": "/help"
+        }
+      ]
+    },
+    {
+      "rel": "auth/provider-register/verification/background-check-status.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        }
+      ]
+    },
+    {
+      "rel": "client/bookings/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/client/bookings' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore/todas-categorias' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore' as any"
+        }
+      ]
+    },
+    {
+      "rel": "client/bookings/schedule-service.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{ dateString"
+        },
+        {
+          "type": "expr",
+          "value": "availableTimes[i]"
+        },
+        {
+          "type": "expr",
+          "value": "{\n        pathname: '/client/bookings/success'"
+        },
+        {
+          "type": "literal",
+          "value": "/client/explore"
+        },
+        {
+          "type": "literal",
+          "value": "/client/explore"
+        },
+        {
+          "type": "literal",
+          "value": "/client/explore"
+        },
+        {
+          "type": "expr",
+          "value": "(async (dayOffset: number"
+        }
+      ]
+    },
+    {
+      "rel": "client/bookings/success.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/client/bookings?highlightNew=true' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/bookings?highlightNew=true' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore' as any"
+        },
+        {
+          "type": "expr",
+          "value": "{\n      pathname: '/client/messages/[chatId]'"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/missions' as any"
+        },
+        {
+          "type": "expr",
+          "value": "{\n        pathname: '/client/bookings/schedule-service'"
+        }
+      ]
+    },
+    {
+      "rel": "client/bookings/[bookingId].tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{\n                  pathname: '/common/feedback/[targetId]'"
+        },
+        {
+          "type": "expr",
+          "value": "{\n      pathname: '/client/messages'"
+        },
+        {
+          "type": "expr",
+          "value": "{\n      pathname: '/common/feedback/[targetId]'"
+        },
+        {
+          "type": "expr",
+          "value": "{\n      pathname: '/client/explore/[providerId]'"
+        },
+        {
+          "type": "expr",
+          "value": "{\n      pathname: '/client/bookings/schedule-service'"
+        }
+      ]
+    },
+    {
+      "rel": "client/category/[categoryId].tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{\n      pathname: '/client/explore/[providerId]'"
+        }
+      ]
+    },
+    {
+      "rel": "client/coupons/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{ pathname: '/client/bookings/schedule-service'"
+        }
+      ]
+    },
+    {
+      "rel": "client/explore/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "fallbackMessage"
+        },
+        {
+          "type": "expr",
+          "value": "runAndTrack<BookingDetails[]>(\n        'pending review'"
+        },
+        {
+          "type": "expr",
+          "value": "runAndTrack<UserProfile>(\n      'user profile'"
+        },
+        {
+          "type": "expr",
+          "value": "runAndTrack<Service[]>(\n      'service categories'"
+        },
+        {
+          "type": "expr",
+          "value": "recommendedTask"
+        },
+        {
+          "type": "expr",
+          "value": "recommendedTask"
+        },
+        {
+          "type": "expr",
+          "value": "{\n      pathname: '/common/feedback/[targetId]'"
+        },
+        {
+          "type": "expr",
+          "value": "{\n        pathname: CLIENT_ROUTES.PROVIDER_DETAILS(provider.id"
+        },
+        {
+          "type": "expr",
+          "value": "it"
+        },
+        {
+          "type": "expr",
+          "value": "{\n        pathname: CLIENT_ROUTES.SCHEDULE_SERVICE"
+        },
+        {
+          "type": "literal",
+          "value": "/dev-panel"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore/todas-categorias' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore/todas-categorias' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore/todos-recomendacoes' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore/todos-prestadores-proximos' as any"
+        }
+      ]
+    },
+    {
+      "rel": "client/explore/resultados-busca.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{\n      pathname: '/client/explore/[providerId]'"
+        }
+      ]
+    },
+    {
+      "rel": "client/explore/search-results.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "/client/explore/${item.id}"
+        }
+      ]
+    },
+    {
+      "rel": "client/explore/servicos-por-categoria.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{\n    pathname: '/client/category/[categoryId]'"
+        }
+      ]
+    },
+    {
+      "rel": "client/explore/todos-prestadores-proximos.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{\n      pathname: '/client/explore/[providerId]'"
+        }
+      ]
+    },
+    {
+      "rel": "client/explore/[providerId].tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/auth/client-register' as any"
+        },
+        {
+          "type": "expr",
+          "value": "...args"
+        },
+        {
+          "type": "expr",
+          "value": "{\n        pathname: '/client/messages/[chatId]'"
+        },
+        {
+          "type": "literal",
+          "value": "."
+        },
+        {
+          "type": "expr",
+          "value": "{\n        pathname: '/common/feedback/[targetId]'"
+        },
+        {
+          "type": "literal",
+          "value": "/h"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore/security' as any"
+        }
+      ]
+    },
+    {
+      "rel": "client/explore/menu/index.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "#"
+        },
+        {
+          "type": "expr",
+          "value": "item.route as any"
+        }
+      ]
+    },
+    {
+      "rel": "client/explore/security/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/common/safety' as any"
+        }
+      ]
+    },
+    {
+      "rel": "client/messages/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{\n      pathname: '/client/messages/[chatId]'"
+        }
+      ]
+    },
+    {
+      "rel": "client/messages/[chatId].tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "http"
+        }
+      ]
+    },
+    {
+      "rel": "client/metrics/index.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "#"
+        },
+        {
+          "type": "expr",
+          "value": "/_/g"
+        },
+        {
+          "type": "literal",
+          "value": "/client/explore"
+        },
+        {
+          "type": "literal",
+          "value": "/client/bookings"
+        },
+        {
+          "type": "literal",
+          "value": "/client/bookings"
+        },
+        {
+          "type": "literal",
+          "value": "/client/missions"
+        },
+        {
+          "type": "literal",
+          "value": "/client/coupons"
+        },
+        {
+          "type": "literal",
+          "value": "/client/bookings"
+        },
+        {
+          "type": "literal",
+          "value": "/client/wallet/cashback"
+        },
+        {
+          "type": "literal",
+          "value": "/client/missions"
+        },
+        {
+          "type": "literal",
+          "value": "/client/coupons"
+        }
+      ]
+    },
+    {
+      "rel": "client/missions/index.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "/client/explore"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore' as any"
+        }
+      ]
+    },
+    {
+      "rel": "client/missions/missions.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "#"
+        },
+        {
+          "type": "literal",
+          "value": "/client/explore"
+        }
+      ]
+    },
+    {
+      "rel": "client/ofertas/[ofertaId].tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "."
+        }
+      ]
+    },
+    {
+      "rel": "client/profile/edit.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "'/auth/forgot-password' as any"
+        }
+      ]
+    },
+    {
+      "rel": "client/profile/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/auth/login' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/auth/login' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/auth/login' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/profile/edit' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/notifications' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/profile/edit' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/help' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/termos' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/privacidade' as any"
+        }
+      ]
+    },
+    {
+      "rel": "client/ranking/index.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "#"
+        }
+      ]
+    },
+    {
+      "rel": "client/subscriptions/index.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "/subscriptions/${item.id}"
+        }
+      ]
+    },
+    {
+      "rel": "client/subscriptions/[subscriptionId].tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "/bookings/${booking.id}"
+        }
+      ]
+    },
+    {
+      "rel": "client/support/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/[^\\w]/g"
+        },
+        {
+          "type": "expr",
+          "value": "`/support/${item.id}` as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/safety/incident-report' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/messages' as any"
+        }
+      ]
+    },
+    {
+      "rel": "client/wallet/cashback.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/_/g"
+        },
+        {
+          "type": "literal",
+          "value": "/client/coupons"
+        },
+        {
+          "type": "literal",
+          "value": "/client/missions"
+        }
+      ]
+    },
+    {
+      "rel": "common/notifications.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "item.navigateTo as any"
+        }
+      ]
+    },
+    {
+      "rel": "common/referrals.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/\\s/g"
+        }
+      ]
+    },
+    {
+      "rel": "common/settings.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/client/profile/edit' as any"
+        }
+      ]
+    },
+    {
+      "rel": "common/feedback/[targetId].tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "home"
+        }
+      ]
+    },
+    {
+      "rel": "common/feedback/dispute/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/\\s/g"
+        },
+        {
+          "type": "literal",
+          "value": "/common/feedback/dispute/create"
+        },
+        {
+          "type": "literal",
+          "value": "/common/feedback/dispute/${item.bookingId}"
+        }
+      ]
+    },
+    {
+      "rel": "common/feedback/dispute/[bookingId].tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/\\s/g"
+        }
+      ]
+    },
+    {
+      "rel": "common/safety/defense.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "#"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/safety/panic' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/safety' as any"
+        }
+      ]
+    },
+    {
+      "rel": "common/safety/incident-report.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/_/g"
+        }
+      ]
+    },
+    {
+      "rel": "common/safety/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/common/safety/panic' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/safety/incident-report' as any"
+        }
+      ]
+    },
+    {
+      "rel": "common/support/create-ticket.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "/common/support"
+        }
+      ]
+    },
+    {
+      "rel": "common/support/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/common/support/create-ticket' as any"
+        },
+        {
+          "type": "expr",
+          "value": "`/common/support/${ticket.id}` as any"
+        }
+      ]
+    },
+    {
+      "rel": "provider/dashboard.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "."
+        },
+        {
+          "type": "literal",
+          "value": "."
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.SERVICES_LIST as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.MESSAGES_LIST as any"
+        },
+        {
+          "type": "expr",
+          "value": "(PROVIDER_ROUTES.SERVICES_LIST + '?filter=requests'"
+        },
+        {
+          "type": "expr",
+          "value": "(PROVIDER_ROUTES.SERVICES_LIST + '?filter=upcoming'"
+        },
+        {
+          "type": "expr",
+          "value": "(PROVIDER_ROUTES.SERVICES_LIST + '?filter=completed'"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/notifications' as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.REVIEWS as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.EARNINGS as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.WITHDRAW as any"
+        },
+        {
+          "type": "expr",
+          "value": "{ pathname: '/provider/messages/[chatId]'"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/profile' as any"
+        },
+        {
+          "type": "literal",
+          "value": "/dev-panel"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.EARNINGS as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule' as any"
+        },
+        {
+          "type": "expr",
+          "value": "`/provider/active-booking/${item.id}` as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule' as any"
+        },
+        {
+          "type": "expr",
+          "value": "`/provider/active-booking/${item.id}` as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/profile/edit-services' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/profile/edit-services' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=today-morning' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=today-morning' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=block-today' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=block-today' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=repeat-week' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=repeat-week' as any"
+        }
+      ]
+    },
+    {
+      "rel": "provider/earnings.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "date.toLocaleDateString('pt-BR'"
+        },
+        {
+          "type": "expr",
+          "value": "monthlyEarningsMap[monthKey] || 0"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/profile/bank-details' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/profile/bank-details' as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.SERVICES_LIST as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.REVIEWS as any"
+        }
+      ]
+    },
+    {
+      "rel": "provider/index.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "."
+        },
+        {
+          "type": "literal",
+          "value": "."
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.SERVICES_LIST as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.MESSAGES_LIST as any"
+        },
+        {
+          "type": "expr",
+          "value": "(PROVIDER_ROUTES.SERVICES_LIST + '?filter=requests'"
+        },
+        {
+          "type": "expr",
+          "value": "(PROVIDER_ROUTES.SERVICES_LIST + '?filter=upcoming'"
+        },
+        {
+          "type": "expr",
+          "value": "(PROVIDER_ROUTES.SERVICES_LIST + '?filter=completed'"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/notifications' as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.REVIEWS as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.EARNINGS as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.WITHDRAW as any"
+        },
+        {
+          "type": "expr",
+          "value": "{ pathname: '/provider/messages/[chatId]'"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/profile' as any"
+        },
+        {
+          "type": "literal",
+          "value": "/dev-panel"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.EARNINGS as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule' as any"
+        },
+        {
+          "type": "expr",
+          "value": "`/provider/active-booking/${item.id}` as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule' as any"
+        },
+        {
+          "type": "expr",
+          "value": "`/provider/active-booking/${item.id}` as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/profile/edit-services' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/profile/edit-services' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=today-morning' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=today-morning' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=block-today' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=block-today' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=repeat-week' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability?preset=repeat-week' as any"
+        }
+      ]
+    },
+    {
+      "rel": "provider/active-booking/[bookingId].tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/provider/messages' as any"
+        }
+      ]
+    },
+    {
+      "rel": "provider/messages/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{\n      pathname: '/provider/messages/[chatId]'"
+        }
+      ]
+    },
+    {
+      "rel": "provider/messages/[chatId].tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "http"
+        }
+      ]
+    },
+    {
+      "rel": "provider/notifications/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "link as any"
+        }
+      ]
+    },
+    {
+      "rel": "provider/profile/edit-services.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/[^\\d]/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\B(?=(\\d{3}"
+        },
+        {
+          "type": "literal",
+          "value": "."
+        },
+        {
+          "type": "literal",
+          "value": "."
+        },
+        {
+          "type": "literal",
+          "value": "."
+        },
+        {
+          "type": "literal",
+          "value": "."
+        }
+      ]
+    },
+    {
+      "rel": "provider/profile/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "'/auth/register-options' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/auth/register-options' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/auth/login' as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.PROFILE as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/profile/bank-details' as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.VERIFICATION as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.EDIT_SERVICES as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.MANAGE_AVAILABILITY as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.REVIEWS as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.EARNINGS as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/profile/metrics' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/settings/notifications' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/provider/profile/bank-details' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/help' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/termos' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/privacidade' as any"
+        }
+      ]
+    },
+    {
+      "rel": "provider/reviews/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "{ pathname: '/provider/active-booking/[bookingId]'"
+        },
+        {
+          "type": "expr",
+          "value": "{ pathname: '/provider/messages/[chatId]'"
+        }
+      ]
+    },
+    {
+      "rel": "provider/schedule/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.SERVICE_DETAILS(detailId"
+        },
+        {
+          "type": "expr",
+          "value": "`${PROVIDER_ROUTES.MANAGE_AVAILABILITY}?preset=${presetParam}` as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.MANAGE_AVAILABILITY as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.MANAGE_AVAILABILITY as any"
+        },
+        {
+          "type": "expr",
+          "value": "`${PROVIDER_ROUTES.MANAGE_AVAILABILITY}?preset=tomorrow-afternoon` as any"
+        }
+      ]
+    },
+    {
+      "rel": "provider/schedule/manage-availability.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "${hour}:${minute}"
+        },
+        {
+          "type": "expr",
+          "value": "minutesToSlot(nextMinutes"
+        },
+        {
+          "type": "literal",
+          "value": "${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}"
+        },
+        {
+          "type": "expr",
+          "value": "{\n          startTime: currentBlockStart"
+        },
+        {
+          "type": "expr",
+          "value": "{\n            startTime: currentBlockStart"
+        },
+        {
+          "type": "literal",
+          "value": "${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}"
+        },
+        {
+          "type": "expr",
+          "value": "{\n              dayOfWeek: day.dayOfWeek"
+        },
+        {
+          "type": "literal",
+          "value": "${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}"
+        },
+        {
+          "type": "literal",
+          "value": "-feira"
+        },
+        {
+          "type": "literal",
+          "value": "-feira"
+        }
+      ]
+    },
+    {
+      "rel": "provider/services/index.tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "."
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.SERVICE_DETAILS(item.id"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.EDIT_SERVICES as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.EDIT_SERVICES as any"
+        },
+        {
+          "type": "expr",
+          "value": "PROVIDER_ROUTES.MANAGE_AVAILABILITY as any"
+        }
+      ]
+    },
+    {
+      "rel": "provider/services/[serviceId].tsx",
+      "calls": [
+        {
+          "type": "literal",
+          "value": "."
+        }
+      ]
+    },
+    {
+      "rel": "provider/withdraw/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "/[^0-9."
+        },
+        {
+          "type": "expr",
+          "value": "'"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/[^\\d+\\s("
+        },
+        {
+          "type": "literal",
+          "value": "."
+        },
+        {
+          "type": "expr",
+          "value": "'"
+        },
+        {
+          "type": "expr",
+          "value": "'"
+        },
+        {
+          "type": "literal",
+          "value": "/earnings"
+        },
+        {
+          "type": "literal",
+          "value": "/services"
+        },
+        {
+          "type": "expr",
+          "value": "'"
+        }
+      ]
+    }
+  ],
+  "nav_literal_targets": {
+    "#": [
+      "client/explore/menu/index.tsx",
+      "client/metrics/index.tsx",
+      "client/missions/missions.tsx",
+      "client/ranking/index.tsx",
+      "common/safety/defense.tsx"
+    ],
+    "${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}": [
+      "provider/schedule/manage-availability.tsx",
+      "provider/schedule/manage-availability.tsx",
+      "provider/schedule/manage-availability.tsx"
+    ],
+    "${hour}:${minute}": [
+      "provider/schedule/manage-availability.tsx"
+    ],
+    "-feira": [
+      "provider/schedule/manage-availability.tsx",
+      "provider/schedule/manage-availability.tsx"
+    ],
+    ".": [
+      "client/explore/[providerId].tsx",
+      "client/ofertas/[ofertaId].tsx",
+      "provider/dashboard.tsx",
+      "provider/dashboard.tsx",
+      "provider/index.tsx",
+      "provider/index.tsx",
+      "provider/profile/edit-services.tsx",
+      "provider/profile/edit-services.tsx",
+      "provider/profile/edit-services.tsx",
+      "provider/profile/edit-services.tsx",
+      "provider/services/index.tsx",
+      "provider/services/[serviceId].tsx",
+      "provider/withdraw/index.tsx"
+    ],
+    "/auth/provider-register": [
+      "auth/register-options.tsx",
+      "auth/provider-register/service-details.tsx"
+    ],
+    "/auth/provider-register/service-details": [
+      "auth/provider-register/index.tsx",
+      "auth/provider-register/personal-details.tsx"
+    ],
+    "/bookings/${booking.id}": [
+      "client/subscriptions/[subscriptionId].tsx"
+    ],
+    "/client/bookings": [
+      "client/metrics/index.tsx",
+      "client/metrics/index.tsx",
+      "client/metrics/index.tsx"
+    ],
+    "/client/coupons": [
+      "client/metrics/index.tsx",
+      "client/metrics/index.tsx",
+      "client/wallet/cashback.tsx"
+    ],
+    "/client/explore": [
+      "auth/client-register.tsx",
+      "client/bookings/schedule-service.tsx",
+      "client/bookings/schedule-service.tsx",
+      "client/bookings/schedule-service.tsx",
+      "client/metrics/index.tsx",
+      "client/missions/index.tsx",
+      "client/missions/missions.tsx"
+    ],
+    "/client/explore/${item.id}": [
+      "client/explore/search-results.tsx"
+    ],
+    "/client/missions": [
+      "client/metrics/index.tsx",
+      "client/metrics/index.tsx",
+      "client/wallet/cashback.tsx"
+    ],
+    "/client/wallet/cashback": [
+      "client/metrics/index.tsx"
+    ],
+    "/common/feedback/dispute/${item.bookingId}": [
+      "common/feedback/dispute/index.tsx"
+    ],
+    "/common/feedback/dispute/create": [
+      "common/feedback/dispute/index.tsx"
+    ],
+    "/common/support": [
+      "common/support/create-ticket.tsx"
+    ],
+    "/dev-panel": [
+      "client/explore/index.tsx",
+      "provider/dashboard.tsx",
+      "provider/index.tsx"
+    ],
+    "/earnings": [
+      "provider/withdraw/index.tsx"
+    ],
+    "/h": [
+      "client/explore/[providerId].tsx"
+    ],
+    "/help": [
+      "auth/provider-register/verify-account.tsx"
+    ],
+    "/services": [
+      "provider/withdraw/index.tsx"
+    ],
+    "/subscriptions/${item.id}": [
+      "client/subscriptions/index.tsx"
+    ],
+    "home": [
+      "common/feedback/[targetId].tsx"
+    ],
+    "http": [
+      "client/messages/[chatId].tsx",
+      "provider/messages/[chatId].tsx"
+    ]
+  }
+}
