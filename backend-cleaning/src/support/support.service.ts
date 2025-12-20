@@ -11,6 +11,7 @@ import {
   SupportTicketStatus,
   SupportTicketCategory,
   UserRole,
+  Prisma,
 } from '@prisma/client'; // Assumindo enums do Prisma
 import { NotificationsService } from '../notifications/notifications.service';
 import { SupportSlaPolicy } from './policies/sla.policy';
@@ -90,29 +91,23 @@ export class SupportService {
   }
 
   async findTickets(userId?: string, status?: string, category?: string) {
-    const where: any = {};
+    const where: Prisma.SupportTicketWhereInput = {};
     if (userId) {
       where.userId = userId;
     }
     if (status) {
-      if (
-        !Object.values(SupportTicketStatus).includes(
-          status as SupportTicketStatus,
-        )
-      ) {
+      const statusEnum = status as SupportTicketStatus;
+      if (!Object.values(SupportTicketStatus).includes(statusEnum)) {
         throw new BadRequestException(`Status inválido: ${status}`);
       }
-      where.status = status;
+      where.status = statusEnum;
     }
     if (category) {
-      if (
-        !Object.values(SupportTicketCategory).includes(
-          category as SupportTicketCategory,
-        )
-      ) {
+      const categoryEnum = category as SupportTicketCategory;
+      if (!Object.values(SupportTicketCategory).includes(categoryEnum)) {
         throw new BadRequestException(`Categoria inválida: ${category}`);
       }
-      where.category = category;
+      where.category = categoryEnum;
     }
 
     return this.prisma.supportTicket.findMany({
