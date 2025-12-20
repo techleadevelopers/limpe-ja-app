@@ -1,4 +1,4 @@
-// app/(provider)/components/dashboard/AnimatedQuickActionButton.tsx
+// app/provider/components/dashboard/AnimatedQuickActionButton.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
