@@ -11,6 +11,6 @@ declare module 'multer' {
   // when importing `import { Multer } from 'multer'`.
   export namespace Multer {
     // Mirror the Express.Multer.File shape
-    export interface File extends Express.Multer.File {}
+    export type File = Express.Multer.File;
   }
 }
