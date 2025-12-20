@@ -6,6 +6,7 @@ import {
   OfferTarget,
   Prisma,
 } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 
 /**
  * DTO de resposta padronizada para ofertas.
@@ -52,18 +53,39 @@ export class OfferDetailsDto {
   imageUrl?: string | null;
 
   constructor(o: PrismaOffer) {
+    const record: Record<string, unknown> = o;
+    const getString = (value: unknown): string | null =>
+      typeof value === 'string' ? value : null;
+    const getDate = (value: unknown): Date | null => {
+      if (value instanceof Date) return value;
+      if (typeof value === 'string') {
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      }
+      return null;
+    };
+    const getDecimal = (value: unknown): Prisma.Decimal | null =>
+      value instanceof Decimal
+        ? value
+        : typeof value === 'number'
+          ? new Decimal(value)
+          : null;
+    const getNumber = (value: unknown): number | null =>
+      typeof value === 'number' ? value : null;
+
     this.id = o.id;
-    this.title = (o as any).title ?? (o as any).name ?? ''; // compat
-    this.description = (o as any).description ?? null;
+    const nameFallback = getString(record['name']) || '';
+    this.title = getString(o.title) || nameFallback;
+    this.description = getString(record['description']);
     this.status = o.status;
     this.target = o.target;
-    this.targetId = (o as any).targetId ?? null;
+    this.targetId = getString(record['targetId']);
     this.createdAt = o.createdAt;
     this.updatedAt = o.updatedAt;
-    this.validFrom = 'validFrom' in o ? (o as any).validFrom : null;
-    this.validUntil = (o as any).validUntil;
-    this.discountPercentage = (o as any).discountPercentage ?? null;
-    this.fixedDiscountAmount = (o as any).fixedDiscountAmount ?? null;
-    this.imageUrl = (o as any).imageUrl ?? null;
+    this.validFrom = getDate(record['validFrom']);
+    this.validUntil = getDate(record['validUntil']) ?? o.validUntil;
+    this.discountPercentage = getNumber(record['discountPercentage']);
+    this.fixedDiscountAmount = getDecimal(record['fixedDiscountAmount']);
+    this.imageUrl = getString(record['imageUrl']);
   }
 }
