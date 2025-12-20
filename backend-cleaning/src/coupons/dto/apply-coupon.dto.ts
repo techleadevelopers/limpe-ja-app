@@ -42,9 +42,10 @@ export class ApplyCouponDto {
   @IsNotEmpty()
   code!: string;
 
+  @IsOptional()
   @ValidateNested()
   @Type(() => BookingDataForCouponDto)
-  bookingData!: BookingDataForCouponDto;
+  bookingData?: BookingDataForCouponDto;
 }
 
 /**
