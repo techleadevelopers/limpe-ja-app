@@ -1,4 +1,4 @@
-// app/(provider)/components/dashboard/DashboardLoadingIndicator.tsx
+// app/provider/components/dashboard/DashboardLoadingIndicator.tsx
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Animated, Platform } from 'react-native';
 import { Stack } from 'expo-router';
