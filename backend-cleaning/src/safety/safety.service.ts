@@ -13,6 +13,7 @@ import { EmailService } from '../email/email.service';
 import { SmsService } from '../sms/sms.service';
 import { QueuesService } from '../queues/queues.service';
 import { Decimal } from '@prisma/client/runtime/library'; // Importação correta para Decimal
+import { IncidentStatus } from './entities/incident.entity';
 
 @Injectable()
 export class SafetyService {
@@ -85,8 +86,7 @@ export class SafetyService {
     reporterId: string,
     reportIncidentDto: ReportIncidentDto,
   ) {
-    const { type, description, bookingId, involvedUsers, attachments } =
-      reportIncidentDto;
+    const { type, description, bookingId, attachments } = reportIncidentDto;
 
     if (bookingId) {
       const booking = await this.prisma.booking.findUnique({
@@ -158,9 +158,13 @@ export class SafetyService {
         status: updateIncidentDto.status,
         resolution: updateIncidentDto.resolution,
         resolvedBy:
-          updateIncidentDto.status === 'RESOLVED' ? adminId : undefined,
+          updateIncidentDto.status === IncidentStatus.RESOLVED
+            ? adminId
+            : undefined,
         resolvedAt:
-          updateIncidentDto.status === 'RESOLVED' ? new Date() : undefined,
+          updateIncidentDto.status === IncidentStatus.RESOLVED
+            ? new Date()
+            : undefined,
       },
     });
 
@@ -170,7 +174,7 @@ export class SafetyService {
       `Seu incidente (${updatedIncident.type}) foi atualizado para: ${updatedIncident.status}.`,
       { type: 'incident_update', incidentId: updatedIncident.id },
     );
-    this.emailService.sendIncidentStatusUpdateEmail(updatedIncident);
+    await this.emailService.sendIncidentStatusUpdateEmail(updatedIncident);
 
     return updatedIncident;
   }
