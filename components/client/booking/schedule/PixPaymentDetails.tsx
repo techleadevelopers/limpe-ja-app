@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(client)/bookings/components/schedule/PixPaymentDetails.tsx
+// LimpeJaApp/app/client/bookings/components/schedule/PixPaymentDetails.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
