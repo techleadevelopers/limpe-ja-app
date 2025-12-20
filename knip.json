@@ -1,0 +1,11 @@
+{
+  "workspaces": ["apps/*", "packages/*"],
+  "ignore": [
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/*.stories.*",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**"
+  ]
+}
