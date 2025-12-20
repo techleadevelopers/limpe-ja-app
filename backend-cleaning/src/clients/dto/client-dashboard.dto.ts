@@ -1,11 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsString,
-  IsInt,
-  IsNumber,
-  IsArray,
-  IsOptional,
-} from 'class-validator';
 import { BookingEntity } from '../../bookings/entities/booking.entity'; // Assumindo que você terá esta entidade
 import { ReviewEntity } from '../../reviews/entities/review.entity'; // Assumindo que você terá esta entidade
 
