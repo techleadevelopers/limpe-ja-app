@@ -459,7 +459,7 @@ export class BookingDetailsDto {
       this.providerAvatarUrl = data.provider.user?.avatarUrl;
     }
     if (data.providerService) {
-      const svcPrice = data.providerService.service.price as any;
+      const svcPrice = data.providerService.service.price;
       this.serviceName = data.providerService.service.name;
       this.servicePrice = isDecimal(svcPrice)
         ? svcPrice.toNumber()
@@ -479,7 +479,7 @@ export class BookingDetailsDto {
     // Review mapping
     if (data.review) {
       this.reviewId = data.review.id;
-      const ratingVal = data.review.rating as any;
+      const ratingVal = data.review.rating;
       this.reviewRating = isDecimal(ratingVal)
         ? ratingVal.toNumber()
         : ratingVal;
