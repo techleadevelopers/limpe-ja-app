@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(client)/bookings/components/success/DateTimeCards.tsx
+// LimpeJaApp/app/client/bookings/components/success/DateTimeCards.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ColorValue, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
