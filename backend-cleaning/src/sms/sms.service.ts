@@ -13,6 +13,26 @@ export class SmsService {
   private readonly twilioVerifyServiceSid: string;
   private readonly logger = new Logger(SmsService.name);
 
+  private formatError(err: unknown): string {
+    if (err instanceof Error) return err.message;
+    if (typeof err === 'string') return err;
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return 'Unknown error';
+    }
+  }
+
+  private getErrorCode(err: unknown): string | undefined {
+    if (typeof err === 'object' && err !== null && 'code' in err) {
+      const code = (err as { code?: unknown }).code;
+      if (typeof code === 'string' || typeof code === 'number') {
+        return String(code);
+      }
+    }
+    return undefined;
+  }
+
   constructor(private configService: ConfigService) {
     const accountSid = this.configService.get<string>('sms.twilioAccountSid');
     const authToken = this.configService.get<string>('sms.twilioAuthToken');
@@ -68,13 +88,12 @@ export class SmsService {
       this.logger.log(`SMS sent to ${to}: "${message}"`);
     } catch (error) {
       this.logger.error(
-        `Failed to send SMS to ${to}: ${error.message}`,
-        error.stack,
+        `Failed to send SMS to ${to}: ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
-      if (error.code) {
-        this.logger.error(
-          `[SmsService] Código de erro do Twilio: ${error.code}`,
-        );
+      const code = this.getErrorCode(error);
+      if (code) {
+        this.logger.error(`[SmsService] Código de erro do Twilio: ${code}`);
       }
       throw new InternalServerErrorException(
         'Falha ao enviar SMS. Por favor, tente novamente mais tarde.',
@@ -111,12 +130,15 @@ export class SmsService {
       );
     } catch (error) {
       this.logger.error(
-        `[SmsService][ALERTA DE PÂNICO] Falha ao enviar SMS de alerta para ${to}: ${error.message}`,
-        error.stack,
+        `[SmsService][ALERTA DE PÂNICO] Falha ao enviar SMS de alerta para ${to}: ${this.formatError(
+          error,
+        )}`,
+        error instanceof Error ? error.stack : undefined,
       );
-      if (error.code) {
+      const code = this.getErrorCode(error);
+      if (code) {
         this.logger.error(
-          `[SmsService][ALERTA DE PÂNICO] Código de erro do Twilio: ${error.code}`,
+          `[SmsService][ALERTA DE PÂNICO] Código de erro do Twilio: ${code}`,
         );
       }
       throw new InternalServerErrorException(
@@ -141,13 +163,12 @@ export class SmsService {
       );
     } catch (error) {
       this.logger.error(
-        `Failed to start verification for ${to}: ${error.message}`,
-        error.stack,
+        `Failed to start verification for ${to}: ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
-      if (error.code) {
-        this.logger.error(
-          `[SmsService] Código de erro do Twilio: ${error.code}`,
-        );
+      const code = this.getErrorCode(error);
+      if (code) {
+        this.logger.error(`[SmsService] Código de erro do Twilio: ${code}`);
       }
       throw new InternalServerErrorException(
         'Falha ao iniciar verificação. Por favor, tente novamente mais tarde.',
@@ -179,13 +200,12 @@ export class SmsService {
       }
     } catch (error) {
       this.logger.error(
-        `Failed to check verification for ${to}: ${error.message}`,
-        error.stack,
+        `Failed to check verification for ${to}: ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
-      if (error.code) {
-        this.logger.error(
-          `[SmsService] Código de erro do Twilio: ${error.code}`,
-        );
+      const code = this.getErrorCode(error);
+      if (code) {
+        this.logger.error(`[SmsService] Código de erro do Twilio: ${code}`);
       }
       throw new InternalServerErrorException(
         'Falha ao verificar código. Por favor, tente novamente mais tarde.',
