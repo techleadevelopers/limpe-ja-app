@@ -21,7 +21,7 @@ import {
 import { QueuesService } from '../queues/queues.service';
 import { RedisLockService } from '../common/locks/redis-lock.service';
 import { ConfigService } from '@nestjs/config';
-import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
+import { randomUUID } from 'crypto';
 import axios from 'axios';
 import { ConnectService } from '../connect/connect.service';
 import * as fs from 'fs';
@@ -32,6 +32,11 @@ interface GatewayUpdateInput {
   status: string | PayoutStatus;
   gatewayTxnId?: string;
 }
+
+const isPayoutStatus = (value?: string): value is PayoutStatus => {
+  if (!value) return false;
+  return Object.values(PayoutStatus).includes(value as PayoutStatus);
+};
 
 @Injectable()
 export class PayoutsService {
@@ -140,17 +145,19 @@ export class PayoutsService {
     sortBy?: string,
     sortDir?: 'asc' | 'desc',
   ) {
-    const where: Prisma.PayoutWhereInput = {};
-    if (status) (where as any).status = status as any;
-    else (where as any).status = PayoutStatus.PENDING;
-    if (userId) (where as any).userId = userId;
-    if (email && email.trim())
-      (where as any).user = {
-        email: { contains: email.trim(), mode: 'insensitive' },
-      } as any;
+    const where: Prisma.PayoutWhereInput = {
+      status: isPayoutStatus(status) ? status : PayoutStatus.PENDING,
+    };
+    if (userId) where.userId = userId;
+    if (email && email.trim()) {
+      const emailTrim = email.trim();
+      where.user = {
+        email: { contains: emailTrim, mode: 'insensitive' },
+      };
+    }
 
     // Filtro por intervalo de datas em requestedAt
-    const dateFilter: any = {};
+    const dateFilter: Prisma.DateTimeFilter = {};
     if (from) {
       const d = new Date(from);
       if (!isNaN(d.getTime())) dateFilter.gte = d;
@@ -159,8 +166,9 @@ export class PayoutsService {
       const d = new Date(to);
       if (!isNaN(d.getTime())) dateFilter.lte = d;
     }
-    if (Object.keys(dateFilter).length > 0)
-      (where as any).requestedAt = dateFilter as Prisma.DateTimeFilter;
+    if (Object.keys(dateFilter).length > 0) {
+      where.requestedAt = dateFilter;
+    }
 
     // Ordenação segura
     const allowedSorts = new Set(['requestedAt', 'amount', 'status']);
@@ -171,19 +179,17 @@ export class PayoutsService {
 
     const items = await this.prisma.payout.findMany({
       where,
-      orderBy: { [field]: dir } as any,
+      orderBy: { [field]: dir } as Prisma.PayoutOrderByWithRelationInput,
       include: { user: true },
     });
     return items.map((p) => ({
       id: p.id,
       userId: p.userId,
-      userEmail: (p as any).user?.email ?? undefined,
+      userEmail: p.user?.email ?? undefined,
       amount: Number(p.amount),
       status: p.status,
-      requestedAt: (p.requestedAt as any as Date).toISOString(),
-      processedAt: p.processedAt
-        ? (p.processedAt as any as Date).toISOString()
-        : null,
+      requestedAt: p.requestedAt.toISOString(),
+      processedAt: p.processedAt ? p.processedAt.toISOString() : null,
       gatewayTxnId: p.gatewayTxnId ?? null,
     }));
   }
@@ -404,8 +410,13 @@ export class PayoutsService {
             'Missing PIX key. Configure your PIX key first.',
           );
         }
+        const providerPixKeyType = (
+          provider as {
+            pixKeyType?: PixKeyType;
+          }
+        ).pixKeyType;
         const effectivePixKeyType: PixKeyType | undefined =
-          dto.pixKeyType as any;
+          dto.pixKeyType ?? providerPixKeyType ?? undefined;
 
         // Fees
         const percentFee = amount.mul(this.withdrawalPercentFee);
@@ -566,8 +577,15 @@ export class PayoutsService {
    * A validação de segurança HMAC (signature/secret) foi removida.
    */
   async handleGatewayWebhook(signature: string, eventId: string, payload: any) {
+    const eventType = payload?.type ?? null;
+    const eventName = payload?.event ?? null;
     this.logger.log(
-      `[PayoutsService] Webhook recebido - Evento: ${payload.event}, Tipo: ${payload.type}`,
+      JSON.stringify({
+        event: 'pspWebhookReceived',
+        eventId: eventId ?? null,
+        type: eventType,
+        name: eventName,
+      }),
     );
 
     // 1. Lógica de validação (APENAS ANTI-REPLAY)
@@ -582,7 +600,10 @@ export class PayoutsService {
     });
     if (exists) {
       this.logger.debug(
-        `handleGatewayWebhook: replay event ${eventId} ignored.`,
+        JSON.stringify({
+          event: 'pspWebhookReplay',
+          eventId,
+        }),
       );
       return { ok: true, replay: true };
     }
@@ -597,7 +618,11 @@ export class PayoutsService {
     if (eventType === 'ORDER' || payload.event?.startsWith('order.')) {
       // Se for um evento de Pagamento PIX/Cartão, DELEGAR para o PaymentsService
       this.logger.log(
-        `[PayoutsService] Delegando evento '${eventType}' para PaymentsService.handlePixPaymentWebhook.`,
+        JSON.stringify({
+          event: 'pspWebhookDelegatedToPayments',
+          eventId,
+          type: eventType,
+        }),
       );
       // Passa 'undefined' para os argumentos de segurança (signature/rawBody) que não são mais usados.
       await this.paymentsService.handlePixWebhook(
@@ -609,7 +634,10 @@ export class PayoutsService {
 
     // 3. CONTINUAÇÃO DA LÓGICA DE REPASSE (Sua lógica existente)
     this.logger.log(
-      '[PayoutsService] Processando como Webhook de Repasse/Saque (Payout).',
+      JSON.stringify({
+        event: 'pspWebhookProcessingPayout',
+        eventId,
+      }),
     );
     // O restante da sua lógica original de Payout segue aqui.
     const { payoutId, status, gatewayTxnId } = payload ?? {};
@@ -633,7 +661,13 @@ export class PayoutsService {
       normalized !== PayoutStatus.PAID
     ) {
       this.logger.warn(
-        `handleGatewayWebhook: ignoring transition from PAID to ${normalized} for payout ${payoutId}`,
+        JSON.stringify({
+          event: 'pspWebhookIgnoredTransition',
+          eventId,
+          payoutId,
+          currentStatus: payout.status,
+          requestedStatus: normalized,
+        }),
       );
       return { ok: true, ignored: true };
     }
@@ -643,7 +677,13 @@ export class PayoutsService {
       payout.gatewayTxnId !== gatewayTxnId
     ) {
       this.logger.warn(
-        `handleGatewayWebhook: gatewayTxnId mismatch for payout ${payoutId}`,
+        JSON.stringify({
+          event: 'pspWebhookGatewayTxnMismatch',
+          eventId,
+          payoutId,
+          expectedGatewayTxnId: payout.gatewayTxnId,
+          incomingGatewayTxnId: gatewayTxnId,
+        }),
       );
       throw new ForbiddenException('gatewayTxnId mismatch');
     }
@@ -858,25 +898,6 @@ export class PayoutsService {
   }
 
   // Método de verificação de assinatura foi mantido, mas não é mais chamado no Webhook
-  private verifySignature(
-    signature: string,
-    payload: string,
-    secret: string,
-  ): boolean {
-    const computed = createHmac('sha256', secret).update(payload).digest('hex');
-    const incoming = signature.startsWith('sha256=')
-      ? signature.slice(7)
-      : signature;
-    try {
-      return timingSafeEqual(
-        Buffer.from(incoming, 'hex'),
-        Buffer.from(computed, 'hex'),
-      );
-    } catch {
-      return false;
-    }
-  }
-
   private async tryAcquireLock(
     key: string,
     value: string,
