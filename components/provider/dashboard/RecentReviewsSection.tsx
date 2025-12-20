@@ -1,4 +1,4 @@
-// app/(provider)/components/dashboard/RecentReviewsSection.tsx
+// app/provider/components/dashboard/RecentReviewsSection.tsx
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Image, FlatList } from 'react-native'; // Import FlatList
 import { Ionicons } from '@expo/vector-icons';
