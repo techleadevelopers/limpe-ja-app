@@ -1,4 +1,4 @@
-// app/(provider)/schedule/components/BlockDateSection.tsx
+// app/provider/schedule/components/BlockDateSection.tsx
 import React, { useRef, useEffect } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
