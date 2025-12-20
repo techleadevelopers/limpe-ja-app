@@ -1,4 +1,4 @@
-// app/(provider)/components/dashboard/UpcomingServiceItem.tsx
+// app/provider/components/dashboard/UpcomingServiceItem.tsx
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Alert } from 'react-native';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings'; // CORRIGIDO: Importação e uso de BookingDetails e BookingStatus
