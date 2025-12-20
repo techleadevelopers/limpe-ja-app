@@ -1,4 +1,4 @@
-// app/(client)/services/category/components/CategoryProviderCard.tsx
+// app/client/services/category/components/CategoryProviderCard.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
