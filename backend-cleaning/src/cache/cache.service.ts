@@ -2,12 +2,17 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 // Importe CACHE_MANAGER e Cache de '@nestjs/cache-manager'
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
+import type { RedisClientType } from '@redis/client';
 
 @Injectable()
 export class CacheService {
   private readonly logger = new Logger(CacheService.name);
+  private readonly redisClient?: RedisClientType;
 
-  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {
+    const store = (cacheManager as any)?.store;
+    this.redisClient = store?.client as RedisClientType | undefined;
+  }
 
   /**
    * Obtém um valor do cache.
@@ -60,6 +65,38 @@ export class CacheService {
         `Erro ao deletar do cache para a chave ${key}: ${error.message}`,
       );
     }
+  }
+
+  async setIfNotExists<T>(key: string, value: T, ttl?: number): Promise<boolean> {
+    if (this.redisClient?.isOpen) {
+      try {
+        const rawValue =
+          typeof value === 'string'
+            ? value
+            : JSON.stringify(value === undefined ? true : value);
+        const ttlMs = ttl !== undefined ? ttl * 1000 : undefined;
+        const options: { NX: true; PX?: number } = { NX: true };
+        if (ttlMs !== undefined) {
+          options.PX = ttlMs;
+        }
+        const result = await this.redisClient.set(key, rawValue, options);
+        return result === 'OK';
+      } catch (error) {
+        this.logger.error(
+          `Erro ao tentar setIfNotExists para ${key}: ${
+            (error as Error).message ?? error
+          }`,
+        );
+      }
+    }
+
+    const existing = await this.get(key);
+    if (existing !== undefined) {
+      return false;
+    }
+
+    await this.set(key, value, ttl);
+    return true;
   }
 
   /**
