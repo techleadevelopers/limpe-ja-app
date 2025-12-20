@@ -26,6 +26,13 @@ import {
 import { Request as ExpressRequest } from 'express'; // Importa Request do Express para tipagem explícita
 import { ClientEntity } from './entities/client.entity';
 
+type RequestWithUser = ExpressRequest & {
+  user?: {
+    userId?: string;
+    role?: UserRole;
+  };
+};
+
 @ApiTags('clients')
 @Controller('clients')
 export class ClientsController {
@@ -48,9 +55,12 @@ export class ClientsController {
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Cliente não encontrado.' })
   async getClientDashboard(
-    @Req() req: ExpressRequest,
+    @Req() req: RequestWithUser,
   ): Promise<ClientDashboardDto> {
-    const userId = req.user['userId']; // ID do User do JWT
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário não encontrados no token.');
+    }
     this.logger.log(
       `[ClientsController] getClientDashboard: Buscando dashboard para userId: ${userId}`,
     );
@@ -86,10 +96,13 @@ export class ClientsController {
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Cliente não encontrado.' })
   async updateMyProfile(
-    @Req() req: ExpressRequest,
+    @Req() req: RequestWithUser,
     @Body() updateClientProfileDto: UpdateClientProfileDto,
   ): Promise<ClientEntity> {
-    const userId = req.user['userId'];
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário não encontrados no token.');
+    }
     this.logger.log(
       `[ClientsController] updateMyProfile: Iniciando atualização para userId: ${userId}`,
     );
