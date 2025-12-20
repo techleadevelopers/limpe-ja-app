@@ -1,4 +1,4 @@
-// app/(provider)/schedule/components/AnimatedTimeSlot.tsx
+// app/provider/schedule/components/AnimatedTimeSlot.tsx
 import React, { useRef, useEffect, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
