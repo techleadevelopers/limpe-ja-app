@@ -16,7 +16,7 @@ type Props = {
 const SecurityNudge: React.FC<Props> = ({
   delayMs = 3500,
   throttleHours = 24,
-  showOnRoutes = ['/(client)/explore'],
+  showOnRoutes = ['/client/explore'],
   bottomOffset = 20,
   message = 'Ative o SOS e configure contatos de confiança para maior segurança.',
   actionLabel = 'Ver segurança',
@@ -31,7 +31,7 @@ const SecurityNudge: React.FC<Props> = ({
       title="Segurança primeiro"
       message={message}
       actionLabel={actionLabel}
-      onAction={() => router.push('/(common)/safety' as any)}
+      onAction={() => router.push('/common/safety' as any)}
       delayMs={delayMs}
       throttleHours={throttleHours}
       showOnRoutes={showOnRoutes}
