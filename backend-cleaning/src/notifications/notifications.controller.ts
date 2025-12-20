@@ -12,6 +12,7 @@ import {
   HttpStatus,
   Post,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { MarkAsReadDto } from './dto/mark-as-read.dto';
@@ -31,6 +32,19 @@ import { Request } from 'express';
 import { NotificationEntity } from './entities/notification.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+
+type RequestWithUser = Request & {
+  user?: {
+    userId?: string;
+    id?: string;
+    role?: UserRole;
+  };
+};
+
+const QA_PANEL_ENABLED =
+  process.env.EXPO_PUBLIC_ENABLE_QA_PANEL === 'true' ||
+  process.env.QA_PANEL_ENABLED === 'true' ||
+  process.env.ENABLE_QA_PANEL === 'true';
 
 class RegisterTokenDto {
   @IsString()
@@ -88,10 +102,13 @@ export class NotificationsController {
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   async getUserNotifications(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Query('includeRead') includeRead: string = 'false',
   ): Promise<NotificationEntity[]> {
-    const userId = req.user['userId'];
+    const userId = req.user?.userId ?? req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     const shouldIncludeRead = includeRead.toLowerCase() === 'true';
     const notifications = await this.notificationsService.getUserNotifications(
       userId,
@@ -111,10 +128,13 @@ export class NotificationsController {
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   async markNotificationsAsRead(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Body() markAsReadDto: MarkAsReadDto,
   ): Promise<{ count: number }> {
-    const userId = req.user['userId'];
+    const userId = req.user?.userId ?? req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     return this.notificationsService.markNotificationsAsRead(
       userId,
       markAsReadDto,
@@ -134,10 +154,13 @@ export class NotificationsController {
     description: 'Notificação não encontrada ou acesso negado.',
   })
   async markNotificationByIdAsRead(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('id') notificationId: string,
   ): Promise<NotificationEntity> {
-    const userId = req.user['userId'];
+    const userId = req.user?.userId ?? req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     const updatedNotification =
       await this.notificationsService.markNotificationByIdAsRead(
         notificationId,
@@ -158,10 +181,13 @@ export class NotificationsController {
     description: 'Notificação não encontrada ou acesso negado.',
   })
   async deleteNotification(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('id') notificationId: string,
   ): Promise<void> {
-    const userId = req.user['userId'];
+    const userId = req.user?.userId ?? req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     await this.notificationsService.deleteNotification(notificationId, userId);
   }
 
@@ -174,17 +200,36 @@ export class NotificationsController {
     return this.notificationsService.createNotification(dto);
   }
 
+  @Post('qa/send')
+  @ApiOperation({
+    summary: 'Enviar notificação de QA para o usuário autenticado (dev/painel QA)',
+  })
+  async sendQaNotification(
+    @Req() req: RequestWithUser,
+    @Body() dto: CreateNotificationDto,
+  ) {
+    if (!QA_PANEL_ENABLED) {
+      throw new ForbiddenException('Painel QA desativado');
+    }
+
+    const resolvedUserId = dto.userId || req.user?.userId || req.user?.id;
+    if (!resolvedUserId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    return this.notificationsService.createNotification({
+      ...dto,
+      userId: resolvedUserId,
+    });
+  }
+
   // Agendar notificação (simples: aceita scheduleAt, por ora apenas cria registro/log)
   @Post('schedule')
   @Roles(UserRole.ADMIN)
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Agendar notificação (apenas admin)' })
-  async schedule(@Body() body: any) {
-    // scheduleAt opcional; por ora, cria a notificação imediatamente e retorna
-    const { scheduleAt, ...rest } = body || {};
-    return this.notificationsService.createNotification(
-      rest as CreateNotificationDto,
-    );
+  async schedule(@Body() body: CreateNotificationDto) {
+    return this.notificationsService.createNotification(body);
   }
   @Get('suggestions')
   @ApiOperation({
@@ -196,7 +241,7 @@ export class NotificationsController {
     type: [String],
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  async getSuggestions(@Query('context') context: string): Promise<string[]> {
+  getSuggestions(@Query('context') context: string): string[] {
     return this.notificationsService.getSmartSuggestions(context);
   }
 
@@ -225,7 +270,7 @@ export class NotificationsController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   async executeQuickAction(
     @Param('action') action: string,
-    @Body() data: any,
+    @Body() data: Record<string, unknown>,
   ): Promise<void> {
     await this.notificationsService.executeQuickAction(action, data);
   }
@@ -236,10 +281,10 @@ export class NotificationsController {
       'Registrar/atualizar o token de push do dispositivo para o usuário atual',
   })
   async registerToken(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Body() body: RegisterTokenDto,
   ): Promise<{ ok: true }> {
-    const userId = req.user?.['userId'];
+    const userId = req.user?.userId ?? req.user?.id;
 
     if (!userId) {
       throw new UnauthorizedException('User not authenticated');
