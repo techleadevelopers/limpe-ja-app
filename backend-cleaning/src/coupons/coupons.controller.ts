@@ -10,20 +10,28 @@ import {
   Post,
   Body,
   BadRequestException,
+  Headers,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { CouponsService } from './coupons.service';
-import { CouponApplicationResult } from './dto/apply-coupon.dto';
-import { CouponEntity } from './entities/coupon.entity'; // Assumindo que você tem uma entidade de cupom
+import {
+  ApplyCouponDto,
+  CouponApplicationResult,
+} from './dto/apply-coupon.dto';
+import { CouponEntity } from './entities/coupon.entity';
+import { CreateCouponDto } from './dto/create-coupon.dto';
+import { UpdateCouponDto } from './dto/update-coupon.dto';
 
 @ApiTags('coupons')
 @Controller('coupons')
@@ -97,6 +105,66 @@ export class CouponsController {
     return this.couponsService.getMyCoupons(req.user.userId);
   }
 
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cria um cupom (apenas para administradores)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Cupom criado com sucesso.',
+    type: CouponEntity,
+  })
+  async createCoupon(@Body() dto: CreateCouponDto, @Req() req) {
+    const issuer = req.user?.userId ?? 'SYSTEM';
+    return this.couponsService.create({ ...dto, issuedBy: issuer });
+  }
+
+  @Get(':code')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Busca um cupom pelo código (admin)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Cupom encontrado.',
+    type: CouponEntity,
+  })
+  async findByCode(@Param('code') code: string) {
+    return this.couponsService.findByCode(code);
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lista todos os cupons (admin)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de cupons.',
+    type: [CouponEntity],
+  })
+  async findAll() {
+    return this.couponsService.findAll();
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Atualiza um cupom existente (admin)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Cupom atualizado.',
+    type: CouponEntity,
+  })
+  async updateCoupon(
+    @Param('id') id: string,
+    @Body() dto: UpdateCouponDto,
+  ) {
+    return this.couponsService.update(id, dto);
+  }
+
   @Post('apply')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CLIENT)
@@ -131,43 +199,4 @@ export class CouponsController {
     return this.couponsService.applyCoupon(code, req.user.userId, bookingData);
   }
 
-  // --- Métodos CRUD básicos (exemplo, se não existirem) ---
-  // @Post()
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles(UserRole.ADMIN)
-  // @ApiBearerAuth()
-  // @ApiOperation({ summary: 'Cria um novo cupom (apenas para administradores)' })
-  // @ApiResponse({ status: 201, description: 'Cupom criado com sucesso.', type: CouponEntity })
-  // async createCoupon(@Body() createCouponDto: CreateCouponDto) {
-  //   return this.couponsService.create(createCouponDto);
-  // }
-
-  // @Get(':code')
-  // @ApiOperation({ summary: 'Busca um cupom pelo código' })
-  // @ApiResponse({ status: 200, description: 'Detalhes do cupom.', type: CouponEntity })
-  // @ApiResponse({ status: 404, description: 'Cupom não encontrado.' })
-  // async findByCode(@Param('code') code: string) {
-  //   return this.couponsService.findByCode(code);
-  // }
-
-  // @Get()
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles(UserRole.ADMIN)
-  // @ApiBearerAuth()
-  // @ApiOperation({ summary: 'Lista todos os cupons (apenas para administradores)' })
-  // @ApiResponse({ status: 200, description: 'Lista de todos os cupons.', type: [CouponEntity] })
-  // async findAllCoupons() {
-  //   return this.couponsService.findAll();
-  // }
-
-  // @Patch(':id')
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles(UserRole.ADMIN)
-  // @ApiBearerAuth()
-  // @ApiOperation({ summary: 'Atualiza um cupom existente (apenas para administradores)' })
-  // @ApiResponse({ status: 200, description: 'Cupom atualizado com sucesso.', type: CouponEntity })
-  // @ApiResponse({ status: 404, description: 'Cupom não encontrado.' })
-  // async updateCoupon(@Param('id') id: string, @Body() updateCouponDto: UpdateCouponDto) {
-  //   return this.couponsService.update(id, updateCouponDto);
-  // }
 }
