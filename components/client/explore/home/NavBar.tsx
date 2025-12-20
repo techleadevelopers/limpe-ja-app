@@ -32,11 +32,11 @@ const NavBar: React.FC<NavBarProps> = ({
   const theme: any = (Colors as any)[scheme] || (Colors as any).light;
 
   const navItems = [
-    { name: 'Início', icon: 'home', route: '/explore' },
-    { name: 'Cupons', icon: 'pricetag', route: '/coupons' },
-    { name: 'Reservas', icon: 'calendar', route: '/bookings' },
-    { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/support' },
-    { name: 'Perfil', icon: 'person', route: '/profile' },
+    { name: 'Início', icon: 'home', route: '/client/explore' },
+    { name: 'Cupons', icon: 'pricetag', route: '/client/coupons' },
+    { name: 'Reservas', icon: 'calendar', route: '/client/bookings' },
+    { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/common/support' },
+    { name: 'Perfil', icon: 'person', route: '/client/profile' },
   ];
 
   const navItemAnims = useRef(navItems.map(() => new Animated.Value(1))).current;
