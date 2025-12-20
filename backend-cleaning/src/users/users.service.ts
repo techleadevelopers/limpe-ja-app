@@ -7,23 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import {
-  User,
-  Prisma,
-  UserRole,
-  Client,
-  Provider,
-  Loyalty,
-  Referral,
-  Address,
-  ProviderService,
-  Service,
-  Review,
-  Booking,
-  BookingStatus,
-  VerificationStatus,
-  Availability,
-} from '@prisma/client';
+import { User, Prisma, UserRole } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { QueuesService } from '../queues/queues.service';
 import { CreateNotificationDto } from '../notifications/dto/create-notification.dto';
@@ -103,6 +87,16 @@ export class UsersService {
     private queuesService: QueuesService,
   ) {}
 
+  private formatError(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'string') return error;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown error';
+    }
+  }
+
   async findOne(id: string): Promise<UserWithIncludes | null> {
     this.logger.log(`[UsersService] findOne: Buscando usuário por ID: ${id}`);
     try {
@@ -179,9 +173,10 @@ export class UsersService {
         );
       }
       return user;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = this.formatError(error);
       this.logger.error(
-        `[UsersService] findOne: Erro na query Prisma para ID ${id}: ${error.message}`,
+        `[UsersService] findOne: Erro na query Prisma para ID ${id}: ${message}`,
       );
       // Fallback: Query simples sem includes se falhar (ex: relação inexistente ou erro de include)
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -259,9 +254,10 @@ export class UsersService {
         );
       }
       return user;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = this.formatError(error);
       this.logger.error(
-        `[UsersService] findByEmail: Erro na query: ${error.message}`,
+        `[UsersService] findByEmail: Erro na query: ${message}`,
       );
       throw error;
     }
@@ -344,9 +340,10 @@ export class UsersService {
         `[UsersService] findAllUsers: Retornando ${users.length} usuários.`,
       );
       return users;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = this.formatError(error);
       this.logger.error(
-        `[UsersService] findAllUsers: Erro ao listar usuários: ${error.message}`,
+        `[UsersService] findAllUsers: Erro ao listar usuários: ${message}`,
       );
       throw error;
     }
@@ -438,7 +435,8 @@ export class UsersService {
         );
       }
       return fullUpdatedUser;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = this.formatError(error);
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2025'
@@ -446,7 +444,7 @@ export class UsersService {
         throw new NotFoundException(`Usuário com ID "${id}" não encontrado.`);
       }
       this.logger.error(
-        `[UsersService] update: Erro ao atualizar usuário com ID "${id}": ${error.message}`,
+        `[UsersService] update: Erro ao atualizar usuário com ID "${id}": ${message}`,
       );
       throw error;
     }
@@ -474,7 +472,8 @@ export class UsersService {
         `[UsersService] remove: Usuário com ID "${id}" marcado para exclusão (soft delete).`,
       );
       this.logger.log(`[TELEMETRY] user_removed: { userId: ${id} }`);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = this.formatError(error);
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2025'
@@ -482,7 +481,7 @@ export class UsersService {
         throw new NotFoundException(`Usuário com ID "${id}" não encontrado.`);
       }
       this.logger.error(
-        `[UsersService] remove: Erro ao marcar usuário com ID "${id}" para exclusão: ${error.message}`,
+        `[UsersService] remove: Erro ao marcar usuário com ID "${id}" para exclusão: ${message}`,
       );
       throw error;
     }
@@ -517,9 +516,10 @@ export class UsersService {
       this.logger.log(
         `[TELEMETRY] data_export_requested: { userId: ${userId} }`,
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = this.formatError(error);
       this.logger.error(
-        `[UsersService] requestDataExport: Erro ao solicitar exportação de dados: ${error.message}`,
+        `[UsersService] requestDataExport: Erro ao solicitar exportação de dados: ${message}`,
       );
       throw error;
     }
@@ -556,9 +556,10 @@ export class UsersService {
       this.logger.log(
         `[TELEMETRY] account_deletion_requested: { userId: ${userId} }`,
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = this.formatError(error);
       this.logger.error(
-        `[UsersService] requestAccountDeletion: Erro ao solicitar exclusão de conta: ${error.message}`,
+        `[UsersService] requestAccountDeletion: Erro ao solicitar exclusão de conta: ${message}`,
       );
       throw error;
     }
