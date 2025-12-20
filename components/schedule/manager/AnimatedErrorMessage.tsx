@@ -1,4 +1,4 @@
-// app/(provider)/schedule/components/AnimatedErrorMessage.tsx
+// app/provider/schedule/components/AnimatedErrorMessage.tsx
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet } from 'react-native';
 
