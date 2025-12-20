@@ -17,7 +17,10 @@ import { PricingScope, PricingRule } from '@prisma/client';
 import { BookingsService } from '../bookings/bookings.service';
 import { CacheService } from '../cache/cache.service';
 import { Decimal } from '@prisma/client/runtime/library';
-import { SettingsService } from '../settings/settings.service';
+import {
+  PricingAuditEvent,
+  SettingsService,
+} from '../settings/settings.service';
 
 const MULTIPLIER_MIN = 0.8;
 const MULTIPLIER_MAX = 1.8;
@@ -111,7 +114,7 @@ export class PricingService {
       categoryId: dto.categoryId,
     };
 
-    const rules = await this.fetchCandidateRules(context, scheduledDateTime);
+    const rules = await this.fetchCandidateRules(context);
     const demandCount = await this.getDemandForContext(
       rules,
       providerService?.id,
@@ -183,13 +186,14 @@ export class PricingService {
         maxMultiplier: maxMultiplier ? new Decimal(maxMultiplier) : null,
       },
     });
-    await this.settings.appendPricingAudit({
+    const audit: PricingAuditEvent = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       at: new Date().toISOString(),
-      actorUserId: actorUserId || 'unknown',
+      actorUserId: actorUserId ?? 'unknown',
       action: 'create',
       ruleAfter: created,
-    });
+    };
+    await this.settings.appendPricingAudit(audit);
     return created;
   }
 
@@ -223,14 +227,15 @@ export class PricingService {
           maxMultiplier !== undefined ? new Decimal(maxMultiplier) : undefined,
       },
     });
-    await this.settings.appendPricingAudit({
+    const audit: PricingAuditEvent = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       at: new Date().toISOString(),
-      actorUserId: actorUserId || 'unknown',
+      actorUserId: actorUserId ?? 'unknown',
       action: 'update',
       ruleBefore: existingRule,
       ruleAfter: updated,
-    });
+    };
+    await this.settings.appendPricingAudit(audit);
     return updated;
   }
 
@@ -242,14 +247,15 @@ export class PricingService {
       throw new NotFoundException(`Pricing rule with ID ${id} not found.`);
     }
     const deleted = await this.prisma.pricingRule.delete({ where: { id } });
-    await this.settings.appendPricingAudit({
+    const audit: PricingAuditEvent = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       at: new Date().toISOString(),
-      actorUserId: actorUserId || 'unknown',
+      actorUserId: actorUserId ?? 'unknown',
       action: 'delete',
       ruleBefore: existingRule,
       ruleAfter: null,
-    } as any);
+    };
+    await this.settings.appendPricingAudit(audit);
     return deleted;
   }
 
@@ -287,7 +293,6 @@ export class PricingService {
 
   private async fetchCandidateRules(
     context: PricingContext,
-    scheduledDateTime: Date,
   ): Promise<PricingRule[]> {
     const orFilters: any[] = [{ scope: null }, { scope: PricingScope.GLOBAL }];
 
@@ -411,7 +416,7 @@ export class PricingService {
         timeZone: timezone,
       });
       return new Date(localeString);
-    } catch (error) {
+    } catch {
       return base;
     }
   }
