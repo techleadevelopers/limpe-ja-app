@@ -8,6 +8,7 @@ import {
   Body,
   UseGuards,
   Req,
+  NotFoundException,
 } from '@nestjs/common';
 import { SafetyService } from './safety.service';
 import { ReportPanicDto } from './dto/report-panic.dto';
@@ -23,6 +24,14 @@ import {
   ApiTags,
   ApiResponse,
 } from '@nestjs/swagger'; // Importações adicionadas para Swagger
+import { Request as ExpressRequest } from 'express';
+
+type RequestWithUser = ExpressRequest & {
+  user?: {
+    id?: string;
+    role?: UserRole;
+  };
+};
 
 @ApiBearerAuth() // Adiciona o cabeçalho de autenticação Bearer para Swagger
 @ApiTags('safety') // Agrupa endpoints sob a tag 'safety' no Swagger
@@ -38,8 +47,15 @@ export class SafetyController {
     status: 201,
     description: 'Incidente de pânico reportado com sucesso.',
   })
-  async reportPanic(@Body() reportPanicDto: ReportPanicDto, @Req() req) {
-    return this.safetyService.reportPanic(req.user.id, reportPanicDto);
+  async reportPanic(
+    @Body() reportPanicDto: ReportPanicDto,
+    @Req() req: RequestWithUser,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário ausentes na requisição.');
+    }
+    return this.safetyService.reportPanic(userId, reportPanicDto);
   }
 
   @Post('incident')
@@ -51,9 +67,13 @@ export class SafetyController {
   })
   async reportIncident(
     @Body() reportIncidentDto: ReportIncidentDto,
-    @Req() req,
+    @Req() req: RequestWithUser,
   ) {
-    return this.safetyService.reportIncident(req.user.id, reportIncidentDto);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário ausentes na requisição.');
+    }
+    return this.safetyService.reportIncident(userId, reportIncidentDto);
   }
 
   @Get('me/incidents')
@@ -65,8 +85,12 @@ export class SafetyController {
     status: 200,
     description: 'Lista de incidentes do usuário retornada com sucesso.',
   })
-  async getIncidentsForUser(@Req() req) {
-    return this.safetyService.getIncidentsForUser(req.user.id);
+  async getIncidentsForUser(@Req() req: RequestWithUser) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário ausentes na requisição.');
+    }
+    return this.safetyService.getIncidentsForUser(userId);
   }
 
   // NOVO ENDPOINT: Para administradores listarem todos os incidentes
@@ -98,12 +122,16 @@ export class SafetyController {
   async updateIncidentStatus(
     @Param('id') id: string,
     @Body() updateIncidentDto: UpdateIncidentDto,
-    @Req() req,
+    @Req() req: RequestWithUser,
   ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário ausentes na requisição.');
+    }
     return this.safetyService.updateIncidentStatus(
       id,
       updateIncidentDto,
-      req.user.id,
+      userId,
     );
   }
 
@@ -114,8 +142,9 @@ export class SafetyController {
     summary: 'Lista todos os alertas de pânico (apenas administradores)',
   })
   @ApiResponse({ status: 200, description: 'Lista de alertas de pânico.' })
-  async listPanicAlerts(@Req() req) {
-    const status = req.query?.status as string | undefined;
+  async listPanicAlerts(@Req() req: RequestWithUser) {
+    const rawStatus = req.query?.status;
+    const status = typeof rawStatus === 'string' ? rawStatus : undefined;
     return this.safetyService.listPanicAlerts(status);
   }
 
