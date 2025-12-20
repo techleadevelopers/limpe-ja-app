@@ -174,8 +174,12 @@ export class ProviderServicesService {
       }
 
       const effectivePricing = pricingType ?? existingService.pricingType;
-      const ensurePositive = (value?: number | null) =>
-        value === null || value === undefined ? null : value > 0 ? value : NaN;
+      const ensurePositive = (value?: unknown) => {
+        if (value === null || value === undefined) return null;
+        const num = typeof value === 'number' ? value : Number(value);
+        if (!Number.isFinite(num) || num <= 0) return NaN;
+        return num;
+      };
 
       switch (effectivePricing) {
         case 'HOURLY': {
@@ -183,7 +187,7 @@ export class ProviderServicesService {
             durationMinutes ?? existingService.durationMinutes,
           );
           const pph = ensurePositive(
-            pricePerHour ?? (existingService.pricePerHour as any),
+            pricePerHour ?? existingService.pricePerHour,
           );
           if (!dur || !pph) {
             throw new BadRequestException(
@@ -200,10 +204,10 @@ export class ProviderServicesService {
         }
         case 'BY_SIZE': {
           const psm = ensurePositive(
-            pricePerSquareMeter ?? (existingService.pricePerSquareMeter as any),
+            pricePerSquareMeter ?? existingService.pricePerSquareMeter,
           );
           const pr = ensurePositive(
-            pricePerRoom ?? (existingService.pricePerRoom as any),
+            pricePerRoom ?? existingService.pricePerRoom,
           );
           if (!psm && !pr) {
             throw new BadRequestException(
@@ -216,7 +220,7 @@ export class ProviderServicesService {
         }
         case 'FIXED_PRICE':
         default: {
-          const p = ensurePositive(price ?? (existingService.price as any));
+          const p = ensurePositive(price ?? existingService.price);
           if (!p) {
             throw new BadRequestException('Para FIXED_PRICE, defina price>0.');
           }
