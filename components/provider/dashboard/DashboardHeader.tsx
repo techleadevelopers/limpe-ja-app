@@ -1,4 +1,4 @@
-// app/(provider)/components/dashboard/DashboardHeader.tsx
+// app/provider/components/dashboard/DashboardHeader.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
