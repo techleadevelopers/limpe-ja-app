@@ -7,7 +7,6 @@ import {
   Param,
   Body,
   UseGuards,
-  Query,
   Delete,
   Req,
 } from '@nestjs/common';
@@ -19,6 +18,13 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { Request } from 'express';
+
+type RequestWithUser = Request & {
+  user?: {
+    userId?: string;
+  };
+};
 
 @Controller('pricing')
 export class PricingController {
@@ -34,10 +40,10 @@ export class PricingController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN) // Only admins can create pricing rules
   async createRule(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Body() createPricingRuleDto: CreatePricingRuleDto,
   ) {
-    const actorUserId = req?.user?.userId || 'unknown';
+    const actorUserId = req.user?.userId ?? 'unknown';
     return this.pricingService.createRule(createPricingRuleDto, actorUserId);
   }
 
@@ -52,11 +58,11 @@ export class PricingController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN) // Only admins can update pricing rules
   async updateRule(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id') id: string,
     @Body() updatePricingRuleDto: UpdatePricingRuleDto,
   ) {
-    const actorUserId = req?.user?.userId || 'unknown';
+    const actorUserId = req.user?.userId ?? 'unknown';
     return this.pricingService.updateRule(
       id,
       updatePricingRuleDto,
@@ -68,8 +74,8 @@ export class PricingController {
   @Delete('rules/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  async deleteRule(@Req() req: any, @Param('id') id: string) {
-    const actorUserId = req?.user?.userId || 'unknown';
+  async deleteRule(@Req() req: RequestWithUser, @Param('id') id: string) {
+    const actorUserId = req.user?.userId ?? 'unknown';
     return this.pricingService.deleteRule(id, actorUserId);
   }
 }
