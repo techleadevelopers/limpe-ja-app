@@ -10,12 +10,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitReviewDto } from './dto/submit-review.dto';
 import { GetReviewsDto } from './dto/get-reviews.dto';
-import {
-  Review,
-  BookingStatus,
-  PaymentIntentStatus,
-  Prisma,
-} from '@prisma/client';
+import { Review, BookingStatus, Prisma } from '@prisma/client';
 import { ProvidersService } from '../providers/providers.service';
 
 // Loyalty
@@ -124,34 +119,39 @@ export class ReviewsService {
     private missionsService: MissionsService,
   ) {}
 
-  private computeExpectedEnd(booking: any): Date {
-    const base =
-      booking.startedAt ||
-      booking.scheduledStart ||
-      (() => {
-        const d = new Date(booking.scheduledDate);
-        const [hh, mm] = String(booking.scheduledTime || '00:00')
-          .split(':')
-          .map((n: any) => parseInt(n, 10));
-        d.setHours(hh || 0, mm || 0, 0, 0);
-        return d;
-      })();
-    const dur =
+  private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
+    const baseDate = new Date(booking.scheduledDate);
+    const [hourStr = '0', minuteStr = '0'] = (booking.scheduledTime ?? '00:00')
+      .split(':')
+      .map((value) => value.trim());
+    const hour = Number.parseInt(hourStr, 10) || 0;
+    const minute = Number.parseInt(minuteStr, 10) || 0;
+    baseDate.setHours(hour, minute, 0, 0);
+    return baseDate;
+  }
+
+  private computeExpectedEnd(booking: BookingWithRelationsForReview): Date {
+    const startTime =
+      booking.startedAt ??
+      booking.scheduledStart ??
+      this.buildScheduledStart(booking);
+    const durationMinutes =
       booking.durationMinutes ?? booking.providerService?.durationMinutes ?? 60;
-    return new Date(base.getTime() + dur * 60000);
+    return new Date(startTime.getTime() + durationMinutes * 60000);
   }
 
   async canReview(bookingId: string, userId: string) {
-    const booking = (await this.prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: {
-        client: true,
-        provider: { include: { user: true } },
-        paymentIntent: true,
-        review: true,
-        providerService: true,
-      },
-    })) as BookingWithRelationsForReview | null; // 👈 CORREÇÃO AQUI
+    const booking: BookingWithRelationsForReview | null =
+      await this.prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          client: true,
+          provider: { include: { user: true } },
+          paymentIntent: true,
+          review: true,
+          providerService: true,
+        },
+      }); // 👈 CORREÇÃO AQUI
     if (!booking) return { canReview: false, reason: 'not_found' };
 
     // CORREÇÃO IMPLÍCITA: Os erros 2551/2339 para .client, .review e .paymentIntent
@@ -321,9 +321,10 @@ export class ReviewsService {
         this.logger.log(
           `[ReviewsService] Evento de missão 'review.created' disparado para o cliente ${booking.client.userId}.`,
         );
-      } catch (e) {
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : JSON.stringify(err);
         this.logger.warn(
-          `[ReviewsService] submitReview: falha ao trackear missão review.created: ${e?.message || e}`,
+          `[ReviewsService] submitReview: falha ao trackear miss?o review.created: ${reason}`,
         );
       }
 
@@ -333,7 +334,7 @@ export class ReviewsService {
       );
 
       return review;
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2002'
