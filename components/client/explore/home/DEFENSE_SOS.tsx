@@ -62,7 +62,7 @@ const DEFENSE_SOS: React.FC<DefenseSOSProps> = ({ bottomOffset = 20 }) => {
 
   const handlePress = () => {
     // Navega para a tela de defesa/segurança
-    router.push('/(client)/messages/limpeja' as any); 
+    router.push('/client/messages/limpeja' as any); 
   };
 
   // Interpolação para a opacidade do glow - EXATAMENTE A MESMA DO FAB_SOS
