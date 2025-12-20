@@ -1,5 +1,5 @@
 // src/verification/dto/upload-document.dto.ts
-import { IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsOptional, IsEnum } from 'class-validator';
 
 // Define um enum para o tipo de foto do documento (frente/verso)
 export enum DocumentPhotoType {
