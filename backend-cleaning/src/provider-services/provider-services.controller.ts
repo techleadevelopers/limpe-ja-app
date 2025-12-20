@@ -27,6 +27,12 @@ import { Request } from 'express';
 import { ProviderServiceEntity } from './entities/provider-service.entity'; // ADICIONE esta linha
 import { ProvidersService } from '../providers/providers.service';
 
+type RequestWithUser = Request & {
+  user?: {
+    userId?: string;
+  };
+};
+
 @ApiTags('provider-services')
 @Controller('providers/:providerId/services')
 export class ProviderServicesController {
@@ -36,10 +42,13 @@ export class ProviderServicesController {
   ) {}
 
   private async validateProviderOwnership(
-    req: Request,
+    req: RequestWithUser,
     providerId: string,
   ): Promise<void> {
-    const userId = req.user['userId'];
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new ForbiddenException('Dados de usuário ausentes no token.');
+    }
     const provider = await this.providersService.findByUserId(userId);
     if (!provider || provider.id !== providerId) {
       throw new ForbiddenException(
@@ -67,7 +76,7 @@ export class ProviderServicesController {
     description: 'Provedor ou tipo de serviço não encontrado.',
   })
   async create(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('providerId') providerId: string,
     @Body() createProviderServiceDto: CreateProviderServiceDto,
   ): Promise<ProviderServiceEntity> {
@@ -117,7 +126,7 @@ export class ProviderServicesController {
     description: 'Serviço oferecido não encontrado.',
   })
   async update(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('providerId') providerId: string,
     @Param('id') id: string,
     @Body() updateProviderServiceDto: UpdateProviderServiceDto,
@@ -152,7 +161,7 @@ export class ProviderServicesController {
     description: 'Serviço oferecido não encontrado.',
   })
   async remove(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Param('providerId') providerId: string,
     @Param('id') id: string,
   ): Promise<void> {
