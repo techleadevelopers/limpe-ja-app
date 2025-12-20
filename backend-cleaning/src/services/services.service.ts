@@ -16,8 +16,7 @@ export class ServicesService {
   ) {}
 
   async create(createServiceDto: CreateServiceDto): Promise<Service> {
-    const { name, description, icon, defaultPricingType } =
-      createServiceDto as any;
+    const { name, description, icon, defaultPricingType } = createServiceDto;
     const newService = await this.prisma.service.create({
       data: {
         name,
@@ -55,8 +54,7 @@ export class ServicesService {
     updateServiceDto: UpdateServiceDto,
   ): Promise<Service | null> {
     try {
-      const { name, description, icon, defaultPricingType } =
-        updateServiceDto as any;
+      const { name, description, icon, defaultPricingType } = updateServiceDto;
       const data: Prisma.ServiceUpdateInput = {};
       if (name !== undefined) data.name = name;
       if (description !== undefined) data.description = description;
@@ -68,8 +66,11 @@ export class ServicesService {
       await this.cacheService.del(this.SERVICES_CACHE_KEY);
       await this.cacheService.del(`${this.SERVICES_CACHE_KEY}:${id}`);
       return updated;
-    } catch (error: any) {
-      if (error.code === 'P2025') {
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException(
           `Tipo de serviço com ID "${id}" não encontrado.`,
         );
@@ -83,13 +84,19 @@ export class ServicesService {
       await this.prisma.service.delete({ where: { id } });
       await this.cacheService.del(this.SERVICES_CACHE_KEY);
       await this.cacheService.del(`${this.SERVICES_CACHE_KEY}:${id}`);
-    } catch (error: any) {
-      if (error.code === 'P2025') {
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException(
           `Tipo de serviço com ID "${id}" não encontrado.`,
         );
       }
-      if (error.code === 'P2003') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
         throw new Error(
           `Não é possível deletar o tipo de serviço com ID "${id}" porque ele está associado a serviços de provedores.`,
         );
