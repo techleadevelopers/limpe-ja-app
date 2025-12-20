@@ -1,4 +1,4 @@
-// app/(client)/explore/components/home/SecaoPrestadores.tsx
+// app/client/explore/components/home/SecaoPrestadores.tsx
 
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useRef } from 'react';
