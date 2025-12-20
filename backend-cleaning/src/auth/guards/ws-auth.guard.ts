@@ -6,7 +6,6 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
 import { Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt'; // Para verificar o token JWT manualmente
@@ -39,17 +38,29 @@ export class WsAuthGuard implements CanActivate {
       const token =
         (authToken as string).split(' ')[1] || (authToken as string); // Remove 'Bearer ' se presente
       const secret = this.configService.get<string>('JWT_SECRET'); // Certifique-se de que JWT_SECRET está configurado
-      const payload = this.jwtService.verify(token, { secret });
+      const payload = this.jwtService.verify<{
+        userId?: string;
+        role?: string;
+        [key: string]: unknown;
+      }>(token, {
+        secret,
+      });
 
       // Anexa o payload do usuário ao objeto socket para uso posterior
-      client.data.user = payload;
-      client.data.userId = payload.userId; // Ou qualquer campo que identifique o usuário
-      client.data.role = payload.role; // Papel do usuário
+      const currentData = (client.data ?? {}) as Record<string, unknown>;
+      currentData.user = payload as Record<string, unknown>;
+      currentData.userId = payload?.userId ?? null;
+      currentData.role = payload?.role ?? null;
+      client.data = currentData;
 
-      this.logger.log(`Usuário ${payload.userId} autenticado via WebSocket.`);
+      this.logger.log(
+        `Usuário ${payload.userId ?? 'desconhecido'} autenticado via WebSocket.`,
+      );
       return true;
-    } catch (error) {
-      this.logger.error(`Erro de autenticação WebSocket: ${error.message}`);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown WS auth error';
+      this.logger.error(`Erro de autenticação WebSocket: ${message}`);
       throw new UnauthorizedException('Token de autenticação inválido.');
     }
   }
