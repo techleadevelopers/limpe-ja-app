@@ -1,6 +1,6 @@
 // LimpeJaApp/app/welcome.tsx
 import React, { useEffect, useCallback } from 'react';
-import { View, StyleSheet, Image, Dimensions, Platform, Text } from 'react-native';
+import { View, StyleSheet, Image, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,8 +13,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-
-const { width, height } = Dimensions.get('window');
 
 const LOGO_IMAGE = require('../assets/images/logo2.png');
 
@@ -102,7 +100,7 @@ export default function WelcomeScreen() {
     const timer = setTimeout(async () => {
       // Sem login obrigatório na abertura: após a animação, ir para a HOME
       // Removido: redirecionamento automático para explore; welcome apenas anima.
-      router.replace('/(auth)/register-options' as any);
+      router.replace('/auth/register-options' as any);
     }, 4000);
 
     return () => {
