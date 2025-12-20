@@ -25,7 +25,7 @@ export default function DrawerMenu() {
   const handleLogout = async () => {
     try {
       await signOut();
-      router.push('/(auth)/login'); // Navegar para a tela de login após logout
+      router.push('/auth/login'); // Navegar para a tela de login após logout
     } catch (error) {
       console.error("DrawerMenu: Erro ao deslogar:", error);
     }
@@ -51,7 +51,7 @@ export default function DrawerMenu() {
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{user?.name || 'Visitante'}</Text>
             <Text style={styles.userJobTitle}>{userJobTitle}</Text>
-            <TouchableOpacity onPress={() => navigateTo('/(client)/profile')} style={styles.editIcon}>
+            <TouchableOpacity onPress={() => navigateTo('/client/profile')} style={styles.editIcon}>
               <Ionicons name="pencil-outline" size={20} color="#666" />
             </TouchableOpacity>
           </View>
@@ -99,27 +99,27 @@ export default function DrawerMenu() {
         </View>
 
         <View style={styles.menuOptions}>
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('/(client)/bookings')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('/client/bookings')}>
             <Ionicons name="bookmark-outline" size={22} color="#666" style={styles.menuIcon} />
             <Text style={styles.menuText}>Meus Agendamentos</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('/(client)/payments')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('/client/payments')}>
             <Ionicons name="card-outline" size={22} color="#666" style={styles.menuIcon} />
             <Text style={styles.menuText}>Formas de Pagamento</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('/(client)/refer-a-friend')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('/client/refer-a-friend')}>
             <Ionicons name="people-outline" size={22} color="#666" style={styles.menuIcon} />
             <Text style={styles.menuText}>Indique um Amigo</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('/(client)/promotions')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('/client/promotions')}>
             <Ionicons name="gift-outline" size={22} color="#666" style={styles.menuIcon} />
             <Text style={styles.menuText}>Promoções</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('/(client)/settings')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('/client/settings')}>
             <Ionicons name="settings-outline" size={22} color="#666" style={styles.menuIcon} />
             <Text style={styles.menuText}>Configurações</Text>
           </TouchableOpacity>
