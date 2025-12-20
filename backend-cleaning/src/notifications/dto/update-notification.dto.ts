@@ -1,6 +1,6 @@
 // src/notifications/dto/update-notification.dto.ts
 import { ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsBoolean, IsOptional } from 'class-validator';
 import { CreateNotificationDto } from './create-notification.dto';
 
 export class UpdateNotificationDto extends PartialType(CreateNotificationDto) {
