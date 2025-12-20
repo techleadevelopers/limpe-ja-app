@@ -27,6 +27,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchApi } from '../../services/api';
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
 import { SafeAreaView } from 'react-native-safe-area-context'; // Imported but not used directly in JSX
+import { CLIENT_ROUTES } from '../routes';
 
 import AnimatedReanimated, {
     Easing,
@@ -833,7 +834,7 @@ export default function ClientRegisterScreen() {
                     // Clear AsyncStorage after successful registration
                     await AsyncStorage.removeItem('clientRegisterFormData');
                     console.log("[ClientRegister] handleNext (Step 5 - final sub-step): signUpClient do AuthContext retornou sucesso. Redirecionando para explore autenticado.");
-                    router.replace('/client/explore'); // Após cadastro + login automático, leva o cliente direto para a HOME autenticada
+                    router.replace(CLIENT_ROUTES.EXPLORE); // Após cadastro + login automático, leva o cliente direto para a HOME autenticada
                 } catch (error: any) {
                     console.error("[ClientRegister] handleNext (Step 5 - final sub-step): Erro durante o registro inicial:", error.message, error);
                     setGeneralError(mapSignUpErrorMessage(error));
