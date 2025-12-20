@@ -8,11 +8,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReferralDto } from './dto/create-referral.dto';
-import {
-  Referral,
-  BookingStatus,
-  LoyaltyTransactionType,
-} from '@prisma/client';
+import { Referral, LoyaltyTransactionType } from '@prisma/client';
 
 // Fidelidade (pontos)
 import { LoyaltyService } from '../loyalty/loyalty.service';
@@ -26,6 +22,16 @@ import { CouponsService } from '../coupons/coupons.service';
 @Injectable()
 export class ReferralsService {
   private readonly logger = new Logger(ReferralsService.name);
+
+  private formatError(err: unknown): string {
+    if (err instanceof Error) return err.message;
+    if (typeof err === 'string') return err;
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return 'Unknown error';
+    }
+  }
 
   constructor(
     private prisma: PrismaService,
@@ -150,7 +156,7 @@ export class ReferralsService {
       );
     } catch (e) {
       this.logger.error(
-        `[ReferralsService] Falha ao emitir cupom REFERRAL_REFERRED para ${dto.referredUserId}: ${e?.message || e}`,
+        `[ReferralsService] Falha ao emitir cupom REFERRAL_REFERRED para ${dto.referredUserId}: ${this.formatError(e)}`,
       );
       // Não quebrar a criação da indicação se a emissão do cupom falhar
     }
@@ -236,7 +242,7 @@ export class ReferralsService {
       );
     } catch (e) {
       this.logger.error(
-        `[ReferralsService] Falha ao adicionar pontos para o indicado ${referredUserId} no primeiro booking: ${e?.message || e}`,
+        `[ReferralsService] Falha ao adicionar pontos para o indicado ${referredUserId} no primeiro booking: ${this.formatError(e)}`,
       );
     }
 
@@ -254,7 +260,7 @@ export class ReferralsService {
       );
     } catch (e) {
       this.logger.error(
-        `[ReferralsService] Falha ao trackear missão first_booking_completed para ${referredUserId}: ${e?.message || e}`,
+        `[ReferralsService] Falha ao trackear missão first_booking_completed para ${referredUserId}: ${this.formatError(e)}`,
       );
     }
 
@@ -276,7 +282,7 @@ export class ReferralsService {
         );
       } catch (e) {
         this.logger.error(
-          `[ReferralsService] Falha ao trackear missão referral.converted para ${referral.referrerUserId}: ${e?.message || e}`,
+          `[ReferralsService] Falha ao trackear missão referral.converted para ${referral.referrerUserId}: ${this.formatError(e)}`,
         );
       }
 
@@ -314,7 +320,7 @@ export class ReferralsService {
           );
         } catch (e) {
           this.logger.error(
-            `[ReferralsService] Falha ao emitir cupom REFERRAL_REFERRER para ${referral.referrerUserId}: ${e?.message || e}`,
+            `[ReferralsService] Falha ao emitir cupom REFERRAL_REFERRER para ${referral.referrerUserId}: ${this.formatError(e)}`,
           );
         }
       }
