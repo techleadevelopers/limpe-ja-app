@@ -1,4 +1,4 @@
-﻿// backend-cleaning/src/disputes/dispute.service.ts
+// backend-cleaning/src/disputes/dispute.service.ts
 
 import {
   Injectable,
@@ -14,7 +14,6 @@ import {
   BookingStatus,
   DisputeStatus,
   Prisma,
-  TransactionType,
   UserRole,
   SupportTicketCategory,
   SupportTicketStatus,
@@ -29,6 +28,16 @@ import * as Sentry from '@sentry/node'; // NEW: Import Sentry (conceptual, requi
 @Injectable()
 export class DisputeService {
   private readonly logger = new Logger(DisputeService.name);
+
+  private formatError(err: unknown): string {
+    if (err instanceof Error) return err.message;
+    if (typeof err === 'string') return err;
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return 'Unknown error';
+    }
+  }
 
   constructor(
     private readonly prisma: PrismaService,
@@ -138,7 +147,13 @@ export class DisputeService {
               },
             });
           }
-        } catch {}
+        } catch (ledgerError) {
+          this.logger.warn(
+            `Falha ao registrar HOLD para disputa ${booking.id}: ${this.formatError(
+              ledgerError,
+            )}`,
+          );
+        }
 
         // Send notification to admin
         await this.notificationsService.createNotification({
@@ -167,8 +182,8 @@ export class DisputeService {
       return newDispute;
     } catch (error) {
       this.logger.error(
-        `Erro ao criar disputa para booking ${createDisputeDto.bookingId}: ${error.message}`,
-        error.stack,
+        `Erro ao criar disputa para booking ${createDisputeDto.bookingId}: ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
       Sentry.captureException(error); // NEW: Capture exception with Sentry
       throw error;
@@ -355,8 +370,8 @@ export class DisputeService {
       return message;
     } catch (error) {
       this.logger.error(
-        `Erro ao adicionar mensagem à disputa ${disputeId}: ${error.message}`,
-        error.stack,
+        `Erro ao adicionar mensagem à disputa ${disputeId}: ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
       Sentry.captureException(error); // NEW: Capture exception with Sentry
       throw error;
@@ -466,7 +481,13 @@ export class DisputeService {
               });
             }
           }
-        } catch {}
+        } catch (ledgerError) {
+          this.logger.warn(
+            `Falha ao processar ledger para disputa ${disputeId}: ${this.formatError(
+              ledgerError,
+            )}`,
+          );
+        }
 
         if (updated.status === DisputeStatus.RESOLVED) {
           await this.bookingsService.updateStatus(
@@ -524,8 +545,8 @@ export class DisputeService {
       return updatedDispute;
     } catch (error) {
       this.logger.error(
-        `Erro ao atualizar status da disputa ${disputeId}: ${error.message}`,
-        error.stack,
+        `Erro ao atualizar status da disputa ${disputeId}: ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
       Sentry.captureException(error); // NEW: Capture exception with Sentry
       throw error;
