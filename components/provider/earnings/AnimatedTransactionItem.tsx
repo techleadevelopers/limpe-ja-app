@@ -1,4 +1,4 @@
-// app/(provider)/earnings/components/AnimatedTransactionItem.tsx
+// app/provider/earnings/components/AnimatedTransactionItem.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
