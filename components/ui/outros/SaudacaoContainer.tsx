@@ -13,7 +13,7 @@ const SaudacaoContainer: React.FC = () => {
     Keyboard.dismiss(); // Esconde o teclado
     if (busca.trim()) {
       router.push({
-        pathname: '/(client)/explore/search-results', // Rota de resultados da busca
+        pathname: '/client/explore/search-results', // Rota de resultados da busca
         params: { query: busca.trim() },
       } as any); // Adicionado 'as any' para tipo de rota
     } else {
@@ -24,7 +24,7 @@ const SaudacaoContainer: React.FC = () => {
 
   const handleFilterPress = () => {
     // TODO: Implementar navegação para uma tela de filtros se houver
-    // router.push('/(client)/explore/filtros-busca');
+    // router.push('/client/explore/filtros-busca');
     alert("Funcionalidade de Filtros em breve!");
   };
 
