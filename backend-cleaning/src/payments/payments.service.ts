@@ -17,6 +17,8 @@ import {
   UserRole,
   LedgerEntryType,
   TransactionStatus,
+  PayoutStatus,
+  PaymentIntent,
 } from '@prisma/client';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { createHmac, timingSafeEqual } from 'crypto';
@@ -45,32 +47,80 @@ type BookingWithUsers = Prisma.BookingGetPayload<{
   };
 }>;
 
-/**
- * Função auxiliar para parsear payloads que não são JSON (ex: URL-encoded).
- * @param payload O payload bruto, que pode ser string ou Buffer.
- * @returns Um objeto com os dados parseados.
- */
-function parsePixTextPayload(payload: string | Buffer): Record<string, any> {
-  let payloadString: string;
-  if (typeof payload !== 'string') {
-    payloadString = payload.toString('utf8');
-  } else {
-    payloadString = payload;
-  }
+type PagSeguroTransaction = {
+  status?: string;
+  reference_id?: string;
+  id?: string;
+};
 
-  // Tenta parsear como URL-encoded
-  try {
-    const params = new URLSearchParams(payloadString);
-    const result: Record<string, any> = {};
-    for (const [key, value] of params.entries()) {
-      result[key] = value;
-    }
-    return result;
-  } catch (e) {
-    // Se falhar, retorna o payload bruto em um objeto para inspeção
-    return { raw: payloadString };
-  }
-}
+type PagSeguroCharge = {
+  reference_id?: string;
+  status?: string;
+};
+
+type PagSeguroOrder = {
+  id?: string;
+};
+
+type PagSeguroData = {
+  id?: string;
+  reference_id?: string;
+  transaction?: PagSeguroTransaction;
+  charges?: PagSeguroCharge[];
+  charge?: { id?: string };
+  chargeId?: string;
+  charge_id?: string;
+  transaction_id?: string;
+  order_id?: string;
+  order?: PagSeguroOrder;
+  resource_id?: string;
+  status?: string;
+};
+
+type PagSeguroWebhookPayload = {
+  event?: string;
+  data?: PagSeguroData;
+  resource_id?: string;
+  transaction?: PagSeguroTransaction;
+  reference_id?: string;
+  charge?: { id?: string };
+  chargeId?: string;
+  id?: string;
+  charge_id?: string;
+  transaction_id?: string;
+  order_id?: string;
+  order?: PagSeguroOrder;
+  status?: string;
+};
+
+type PixWebhookPayload = {
+  reference_id?: string;
+  transaction?: PagSeguroTransaction;
+  charges?: PagSeguroCharge[];
+  status?: string;
+  charge?: { id?: string };
+  chargeId?: string;
+  id?: string;
+  charge_id?: string;
+  transaction_id?: string;
+  order_id?: string;
+  order?: PagSeguroOrder;
+  resource_id?: string;
+};
+
+type PagBankLink = { rel?: string; href?: string };
+
+type PagBankQrCode = {
+  id: string;
+  text?: string;
+  expiration_date?: string;
+  links?: PagBankLink[];
+};
+
+type PagBankOrderResponse = {
+  id: string;
+  qr_codes?: PagBankQrCode[];
+};
 
 @Injectable()
 export class PaymentsService {
@@ -127,8 +177,9 @@ export class PaymentsService {
         );
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
       this.logger.warn(
-        `PaymentsService: falha ao iniciar mTLS agent: ${err?.message}`,
+        `PaymentsService: falha ao iniciar mTLS agent: ${message}`,
       );
     }
 
@@ -150,10 +201,10 @@ export class PaymentsService {
    */
   async handlePaymentWebhook(
     signature: string,
-    payload: any,
+    payload: PagSeguroWebhookPayload,
   ): Promise<void | MessageResponseDto> {
     this.logger.log(
-      `[PaymentsService] Webhook recebido. Evento: ${payload.event}`,
+      `[PaymentsService] Webhook recebido. Evento: ${payload?.event}`,
     );
 
     // 1. Validação da Assinatura (HMAC)
@@ -179,7 +230,7 @@ export class PaymentsService {
       'TIMEOUT',
     ];
     let shouldNotifyPaymentConfirmed = false;
-    let bookingForNotification: any = null;
+    let bookingForNotification: BookingWithUsers | null = null;
 
     if (
       payload.event === 'charge.paid' ||
@@ -380,7 +431,7 @@ export class PaymentsService {
   }
 
   // Função de validação HMAC
-  private validateHmac(signature: string, payload: any): boolean {
+  private validateHmac(signature: string, payload: unknown): boolean {
     const secret = this.configService.get<string>('PIX_WEBHOOK_SECRET');
     if (!secret) {
       this.logger.error(
@@ -389,7 +440,7 @@ export class PaymentsService {
       return false; // Não pode validar sem o segredo
     }
     const computedSignature = createHmac('sha256', secret)
-      .update(JSON.stringify(payload))
+      .update(JSON.stringify(payload ?? {}))
       .digest('hex');
 
     // Usar timingSafeEqual para prevenir ataques de temporização
@@ -399,25 +450,29 @@ export class PaymentsService {
     );
   }
 
-  // A função handlePixWebhook corrigida e com a tipagem `BookingWithUsers`
-  // A função handlePixWebhook corrigida e funcional
-  async handlePixWebhook(rawBody: any, parsedBody: any) {
+  // A função handlePixWebhook corrigida e funcional com tipagem segura
+  async handlePixWebhook(
+    rawBody: unknown,
+    parsedBody: unknown,
+  ): Promise<Record<string, unknown>> {
     try {
-      let data: any = null;
+      let data: PixWebhookPayload | null = null;
 
       // 1. PRIORIDADE PARA O PARSED (se veio form-urlencoded)
       if (parsedBody && typeof parsedBody === 'object') {
-        data = parsedBody;
+        data = parsedBody as PixWebhookPayload;
       }
 
-      // 2. SE NÃO VEIO PARSED → tenta JSON puro
-      if (!data && rawBody) {
+      // 2. SE NÃO VEIO PARSED → tenta JSON puro (string ou Buffer)
+      if (!data && (typeof rawBody === 'string' || rawBody instanceof Buffer)) {
+        const rawString =
+          typeof rawBody === 'string' ? rawBody : rawBody.toString();
         try {
-          data = JSON.parse(rawBody.toString());
+          data = JSON.parse(rawString) as PixWebhookPayload;
           console.log('[Webhook PIX] JSON parseado com sucesso');
         } catch {
           console.warn('[Webhook PIX] JSON inválido → usando string bruta');
-          data = { raw: rawBody.toString() };
+          data = { resource_id: rawString };
         }
       }
 
@@ -452,7 +507,7 @@ export class PaymentsService {
         console.log('⚡ PAGAMENTO PIX CONFIRMADO ⚡');
         console.log('REFERENCE_ID:', referenceId);
 
-        await this.confirmPixPayment(referenceId);
+        await this.confirmPixPayment(referenceId || '');
 
         return { ok: true };
       }
@@ -612,9 +667,15 @@ export class PaymentsService {
 
   // Admin: listar saques (Payouts) com mapeamento simples
   async listWithdrawals(status?: string) {
-    const where: Prisma.PayoutWhereInput = status
-      ? { status: status as any }
-      : {};
+    const where: Prisma.PayoutWhereInput = {};
+    if (status) {
+      const normalizedStatus =
+        status.toUpperCase() as keyof typeof PayoutStatus;
+      if (!PayoutStatus[normalizedStatus]) {
+        throw new BadRequestException(`Status de saque invalido: ${status}`);
+      }
+      where.status = PayoutStatus[normalizedStatus];
+    }
     const payouts = await this.prisma.payout.findMany({
       where,
       orderBy: { requestedAt: 'desc' },
@@ -629,17 +690,17 @@ export class PaymentsService {
           : p.status === 'FAILED' || p.status === 'CANCELED'
             ? 'REJECTED'
             : 'PENDING',
-      requestedAt: (p.requestedAt as any as Date).toISOString(),
-      processedAt: p.processedAt
-        ? (p.processedAt as any as Date).toISOString()
-        : null,
+      requestedAt: p.requestedAt.toISOString(),
+      processedAt: p.processedAt ? p.processedAt.toISOString() : null,
     }));
   }
 
   /**
    * Registra webhook de PIX no PagBank (produção requer access_token + mTLS).
    */
-  async registerPixWebhook(targetUrl?: string) {
+  async registerPixWebhook(
+    targetUrl?: string,
+  ): Promise<Record<string, unknown>> {
     const accessToken = await this.connectService.getAccessToken();
     const url = `${this.pagseguroApiBaseUrl.replace(/\/$/, '')}/pix/v1/webhooks`;
     const body = {
@@ -647,23 +708,27 @@ export class PaymentsService {
         targetUrl ||
         `${this.configService.get<string>('API_BASE_URL') || ''}/payments/webhook/pix`,
     };
-    const headers: any = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     };
     try {
-      const res = await axios.post(url, body, {
+      const res = await axios.post<Record<string, unknown>>(url, body, {
         headers,
         httpsAgent: this.pagseguroHttpsAgent,
         timeout: 15000,
       });
       return res.data;
-    } catch (e: any) {
+    } catch (error) {
+      const axiosError = axios.isAxiosError<unknown>(error) ? error : undefined;
+      const status = axiosError?.response?.status ?? 'unknown';
+      const data = axiosError?.response?.data;
       this.logger.error(
-        `[PaymentsService] registerPixWebhook error: ${e?.response?.status} ${JSON.stringify(e?.response?.data || e.message)}`,
+        `[PaymentsService] registerPixWebhook error: ${status} ${JSON.stringify(data ?? axiosError?.message ?? String(error))}`,
       );
       throw new InternalServerErrorException(
-        e?.response?.data?.message || 'Falha ao registrar webhook de PIX.',
+        this.extractGatewayMessage(data) ||
+          'Falha ao registrar webhook de PIX.',
       );
     }
   }
@@ -671,7 +736,9 @@ export class PaymentsService {
   /**
    * Registra webhook de Payouts/Transferências.
    */
-  async registerPayoutsWebhook(targetUrl?: string) {
+  async registerPayoutsWebhook(
+    targetUrl?: string,
+  ): Promise<Record<string, unknown>> {
     const accessToken = await this.connectService.getAccessToken();
     const url = `${this.pagseguroApiBaseUrl.replace(/\/$/, '')}/payouts/v1/webhooks`;
     const body = {
@@ -679,23 +746,27 @@ export class PaymentsService {
         targetUrl ||
         `${this.configService.get<string>('API_BASE_URL') || ''}/payouts/webhook/gateway`,
     };
-    const headers: any = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     };
     try {
-      const res = await axios.post(url, body, {
+      const res = await axios.post<Record<string, unknown>>(url, body, {
         headers,
         httpsAgent: this.pagseguroHttpsAgent,
         timeout: 15000,
       });
       return res.data;
-    } catch (e: any) {
+    } catch (error) {
+      const axiosError = axios.isAxiosError<unknown>(error) ? error : undefined;
+      const status = axiosError?.response?.status ?? 'unknown';
+      const data = axiosError?.response?.data;
       this.logger.error(
-        `[PaymentsService] registerPayoutsWebhook error: ${e?.response?.status} ${JSON.stringify(e?.response?.data || e.message)}`,
+        `[PaymentsService] registerPayoutsWebhook error: ${status} ${JSON.stringify(data ?? axiosError?.message ?? String(error))}`,
       );
       throw new InternalServerErrorException(
-        e?.response?.data?.message || 'Falha ao registrar webhook de Payouts.',
+        this.extractGatewayMessage(data) ||
+          'Falha ao registrar webhook de Payouts.',
       );
     }
   }
@@ -703,7 +774,13 @@ export class PaymentsService {
   /**
    * Registra ambos os webhooks (PIX e Payouts). Retorna payloads de criação.
    */
-  async registerAllWebhooks(pixUrl?: string, payoutsUrl?: string) {
+  async registerAllWebhooks(
+    pixUrl?: string,
+    payoutsUrl?: string,
+  ): Promise<{
+    pix: Record<string, unknown>;
+    payouts: Record<string, unknown>;
+  }> {
     const pix = await this.registerPixWebhook(pixUrl);
     const payouts = await this.registerPayoutsWebhook(payoutsUrl);
     return { pix, payouts };
@@ -720,28 +797,27 @@ export class PaymentsService {
       providerId: undefined,
       amount: Number(payout.amount),
       status: 'APPROVED',
-      requestedAt: (payout.requestedAt as any as Date).toISOString(),
-      processedAt: payout.processedAt
-        ? (payout.processedAt as any as Date).toISOString()
-        : null,
+      requestedAt: payout.requestedAt.toISOString(),
+      processedAt: payout.processedAt ? payout.processedAt.toISOString() : null,
     };
   }
 
   // Admin: rejeitar saque (marca como FAILED)
-  async rejectWithdrawal(id: string, _reason?: string) {
+  async rejectWithdrawal(id: string, reason?: string) {
     const payout = await this.prisma.payout.update({
       where: { id },
       data: { status: 'FAILED', processedAt: new Date() },
     });
+    if (reason) {
+      this.logger.warn(`Withdrawal ${id} rejected: ${reason}`);
+    }
     return {
       id: payout.id,
       providerId: undefined,
       amount: Number(payout.amount),
       status: 'REJECTED',
-      requestedAt: (payout.requestedAt as any as Date).toISOString(),
-      processedAt: payout.processedAt
-        ? (payout.processedAt as any as Date).toISOString()
-        : null,
+      requestedAt: payout.requestedAt.toISOString(),
+      processedAt: payout.processedAt ? payout.processedAt.toISOString() : null,
     };
   }
 
@@ -776,7 +852,7 @@ export class PaymentsService {
       type: refund.type,
       status: refund.status,
       description: refund.description,
-      createdAt: (refund.createdAt as any as Date).toISOString(),
+      createdAt: refund.createdAt.toISOString(),
       bookingId: refund.bookingId || undefined,
       gatewayTransactionId: refund.gatewayTransactionId || undefined,
       qrCodeUrl: refund.qrCodeUrl || undefined,
@@ -875,52 +951,31 @@ export class PaymentsService {
       idempotencyKey: idemKey,
     });
 
-    const fetchFn: any = (global as any).fetch;
-    if (!fetchFn) {
-      throw new InternalServerErrorException(
-        'fetch indisponível no runtime do servidor.',
-      );
-    }
-
-    let respData: any;
+    let respData: PagBankOrderResponse;
     try {
-      const response = await fetchFn(url, {
-        method: 'POST',
+      const response = await axios.post<PagBankOrderResponse>(url, payload, {
         headers: {
           Authorization: `Bearer ${apiToken}`,
           'Content-Type': 'application/json',
           'idempotency-key': idemKey,
         },
-        body: JSON.stringify(payload),
-        // Node fetch aceita agent para mTLS/CA customizado
-        agent: this.pagseguroHttpsAgent,
+        httpsAgent: this.pagseguroHttpsAgent,
       });
-
-      const text = await response.text();
-      try {
-        respData = JSON.parse(text);
-      } catch {
-        this.logger.error({
-          msg: 'PagBank ORDER PIX ERROR - JSON parse',
-          response: text,
-        });
-        throw new InternalServerErrorException('Resposta inválida do PagBank.');
-      }
-
-      if (!response.ok) {
-        this.logger.error({
-          msg: 'PagBank ORDER PIX ERROR',
-          status: response.status,
-          response: respData,
-        });
-        throw new BadRequestException('Falha ao criar PIX no PagBank.');
-      }
-    } catch (err: any) {
+      respData = response.data;
+    } catch (error) {
+      const axiosError = axios.isAxiosError<PagBankOrderResponse>(error)
+        ? error
+        : undefined;
+      const status = axiosError?.response?.status ?? 'unknown';
+      const data = axiosError?.response?.data;
       this.logger.error({
         msg: 'PagBank ORDER PIX ERROR',
-        response: err?.response?.data ?? err?.message,
+        status,
+        response: data ?? axiosError?.message ?? String(error),
       });
-      throw new BadRequestException('Falha ao criar PIX no PagBank.');
+      throw new BadRequestException(
+        this.extractGatewayMessage(data) || 'Falha ao criar PIX no PagBank.',
+      );
     } // === 5. MAPEAR RESPOSTA REAL DO PAGBANK ===
 
     const orderId: string = respData.id;
@@ -936,11 +991,9 @@ export class PaymentsService {
     const status: PaymentIntentStatus = PaymentIntentStatus.PENDING;
     const qrCodeText: string = qr.text ?? ''; // pegar png oficial
 
-    let qrCodeImageUrl = '';
-    if (Array.isArray(qr.links)) {
-      const png = qr.links.find((l: any) => l.rel === 'QRCODE.PNG');
-      if (png) qrCodeImageUrl = png.href;
-    }
+    const qrCodeImageUrl = Array.isArray(qr.links)
+      ? (qr.links.find((l) => l.rel === 'QRCODE.PNG')?.href ?? '')
+      : '';
 
     // compat variable for DB column expected by Prisma
     const qrCodeUrl = qrCodeImageUrl;
@@ -1063,7 +1116,7 @@ export class PaymentsService {
     if (!provider) throw new NotFoundException('Provider not found');
     return this.payoutsService.requestWithdrawal(
       provider.userId,
-      dto as any,
+      dto,
       idempotencyKey,
     );
   }
@@ -1071,7 +1124,7 @@ export class PaymentsService {
   async handleWithdrawalWebhook(
     signature: string,
     eventId: string,
-    payload: any,
+    payload: Record<string, unknown>,
   ) {
     return this.payoutsService.handleGatewayWebhook(
       signature,
@@ -1080,39 +1133,34 @@ export class PaymentsService {
     );
   }
 
-  private mapPaymentIntent(
-    pi: Prisma.PaymentIntentUncheckedCreateInput & {
-      id: string;
-      createdAt?: any;
-      updatedAt?: any;
-    },
-  ): PaymentIntentResponseDto {
-    // Método auxiliar para mapear para DTO
-    const anyPi: any = pi;
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+  }
+
+  private extractGatewayMessage(payload: unknown): string | null {
+    if (this.isRecord(payload) && typeof payload.message === 'string') {
+      return payload.message;
+    }
+    return null;
+  }
+
+  private mapPaymentIntent(pi: PaymentIntent): PaymentIntentResponseDto {
     return {
-      id: anyPi.id,
-      bookingId: anyPi.bookingId,
-      amountCents: anyPi.amountCents,
-      amount: anyPi.amountCents / 100,
-      status: anyPi.status,
-      gateway: anyPi.gateway,
-      externalRef: anyPi.externalRef ?? null,
-      externalOrderId: anyPi.externalOrderId ?? null,
-      externalChargeId: anyPi.externalChargeId ?? null,
-      externalQrCodeId: anyPi.externalQrCodeId ?? null,
-      qrCodeUrl: anyPi.qrCodeUrl ?? null,
-      qrCodeText: anyPi.qrCodeText ?? null,
-      expiresAt: anyPi.expiresAt
-        ? new Date(anyPi.expiresAt).toISOString()
-        : null,
-      createdAt: (anyPi.createdAt instanceof Date
-        ? anyPi.createdAt
-        : new Date(anyPi.createdAt)
-      ).toISOString(),
-      updatedAt: (anyPi.updatedAt instanceof Date
-        ? anyPi.updatedAt
-        : new Date(anyPi.updatedAt)
-      ).toISOString(),
+      id: pi.id,
+      bookingId: pi.bookingId,
+      amountCents: pi.amountCents,
+      amount: pi.amountCents / 100,
+      status: pi.status,
+      gateway: pi.gateway,
+      externalRef: pi.externalRef ?? null,
+      externalOrderId: pi.externalOrderId ?? null,
+      externalChargeId: pi.externalChargeId ?? null,
+      externalQrCodeId: pi.externalQrCodeId ?? null,
+      qrCodeUrl: pi.qrCodeUrl ?? null,
+      qrCodeText: pi.qrCodeText ?? null,
+      expiresAt: pi.expiresAt ? pi.expiresAt.toISOString() : null,
+      createdAt: pi.createdAt.toISOString(),
+      updatedAt: pi.updatedAt.toISOString(),
     };
   }
 
