@@ -43,16 +43,20 @@ import { SortByOption } from '../search/dto/search-query.dto';
 // Importe os tipos auxiliares do service
 // ALTERADO: 'Offer' foi removido daqui. O tipo de retorno do serviço para ofertas agora será PrismaOffer[],
 // que é mapeado para OfferDetailsDto. Não precisamos de um tipo 'Offer' customizado no controller.
-import {
-  ProviderWithCalculatedRating,
-  ProviderMetrics,
-} from './providers.service';
+import { ProviderMetrics } from './providers.service';
 // Importe os novos DTOs
 import { OfferDetailsDto } from '../offers/dto/offer-details.dto'; // Verifique o caminho relativo!
 
 import { ProviderMetricsDto } from './dto/provider-metrics.dto';
 import { SettingsService } from '../settings/settings.service';
 import { ProviderSettingsDto } from './dto/provider-settings.dto';
+
+type RequestWithUser = ExpressRequest & {
+  user?: {
+    userId?: string;
+    role?: UserRole;
+  };
+};
 
 @ApiTags('providers')
 @Controller('providers')
@@ -314,8 +318,11 @@ export class ProvidersController {
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
-  async getMyProfile(@Req() req: ExpressRequest): Promise<ProviderDetailsDto> {
-    const userId = req.user['userId'];
+  async getMyProfile(@Req() req: RequestWithUser): Promise<ProviderDetailsDto> {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário não encontrados no token.');
+    }
     this.logger.log(
       `[ProvidersController] getMyProfile: Buscando perfil para userId: ${userId}`,
     );
@@ -349,10 +356,13 @@ export class ProvidersController {
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   async updateMyProfile(
-    @Req() req: ExpressRequest,
+    @Req() req: RequestWithUser,
     @Body() updateProviderProfileDto: UpdateProviderProfileDto,
   ): Promise<ProviderDetailsDto> {
-    const userId = req.user['userId'];
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário não encontrados no token.');
+    }
     this.logger.log(
       `[ProvidersController] updateMyProfile: Atualizando perfil para userId: ${userId}`,
     );
@@ -419,10 +429,13 @@ export class ProvidersController {
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   @UseInterceptors(FileInterceptor('file'))
   async uploadAvatar(
-    @Req() req: ExpressRequest,
+    @Req() req: RequestWithUser,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    const userId = req.user['userId'];
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário não encontrados no token.');
+    }
     if (!file) {
       throw new BadRequestException('Nenhum arquivo de imagem enviado.');
     }
@@ -489,10 +502,13 @@ export class ProvidersController {
   })
   @ApiResponse({ status: 200, description: 'Configurações salvas.' })
   async saveMySettings(
-    @Req() req: ExpressRequest,
+    @Req() req: RequestWithUser,
     @Body() body: ProviderSettingsDto,
   ) {
-    const userId = req.user['userId'];
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário não encontrados no token.');
+    }
     const me = await this.providersService.findByUserId(userId);
     if (!me) throw new NotFoundException('Provedor não encontrado.');
     if (typeof body.serviceRadiusKm === 'number') {
@@ -514,8 +530,11 @@ export class ProvidersController {
       'Obter configurações do provedor autenticado (raio de atendimento)',
   })
   @ApiResponse({ status: 200, description: 'Configurações atuais.' })
-  async getMySettings(@Req() req: ExpressRequest) {
-    const userId = req.user['userId'];
+  async getMySettings(@Req() req: RequestWithUser) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário não encontrados no token.');
+    }
     const me = await this.providersService.findByUserId(userId);
     if (!me) throw new NotFoundException('Provedor não encontrado.');
     const serviceRadiusKm = await this.settingsService.getProviderRadiusKm(
@@ -573,10 +592,7 @@ export class ProvidersController {
     type: ProviderDetailsDto,
   })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
-  async findOne(
-    @Param('id') id: string,
-    @Query('includeReviews') includeReviews?: boolean,
-  ): Promise<ProviderDetailsDto> {
+  async findOne(@Param('id') id: string): Promise<ProviderDetailsDto> {
     this.logger.log(
       `[ProvidersController] findOne: Buscando provedor por ID: ${id}`,
     );
