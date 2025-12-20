@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 
 import { AppColors } from '../../../constants/appStyles';
 import { saveProviderSettings, bulkSetAvailability, TimeRange } from '../../../services/providerSettingsService';
+import { AUTH_ROUTES } from '../../routes';
 
 const MIN_KM = 1;
 const MAX_KM = 60;
@@ -70,8 +71,9 @@ export default function CoverageAvailabilityStep() {
       Toast.show({ type: 'success', text1: 'Preferências salvas', text2: 'Você pode ajustar quando quiser nas configurações.' });
 
       // Próxima etapa do fluxo (padrão: VERIFY ACCOUNT)
-      const nextPath = (typeof params?.next === 'string' && params.next) ? params.next : '/auth/provider-register/verify-account';
-      router.push(nextPath as any);
+      const defaultNextPath = AUTH_ROUTES.PROVIDER_VERIFY_ACCOUNT;
+      const nextPath = typeof params?.next === 'string' && params.next ? params.next : defaultNextPath;
+      router.push(nextPath);
     } catch (err: any) {
       Toast.show({ type: 'error', text1: 'Erro', text2: err?.message || 'Não foi possível salvar suas preferências.' });
     }
