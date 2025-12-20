@@ -6,9 +6,11 @@ import { PayoutsController } from './payouts.controller';
 import { AdminWithdrawalsController } from './admin-withdrawals.controller';
 import { PayoutsWebhookController } from './payouts.webhook.controller';
 import { PayoutsService } from './payouts.service';
+import { PspWebhookGuard } from './guards/psp-webhook.guard';
 import { LocksModule } from '../common/locks/locks.module';
 import { ConfigModule } from '@nestjs/config';
 import { ConnectModule } from '../connect/connect.module';
+import { CacheModule } from '../cache/cache.module';
 
 // IMPORTAR PaymentsModule AQUI (Se estiver no mesmo nível, o path seria '../payments/payments.module')
 import { PaymentsModule } from '../payments/payments.module';
@@ -20,6 +22,7 @@ import { PaymentsModule } from '../payments/payments.module';
     LocksModule,
     forwardRef(() => QueuesModule),
     ConnectModule,
+    CacheModule,
     // <<<<<<<<<<<< ESTA LINHA É A CORREÇÃO PRINCIPAL >>>>>>>>>>>>
     forwardRef(() => PaymentsModule), // Adicione este import para resolver a dependência circular.
     // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -29,7 +32,7 @@ import { PaymentsModule } from '../payments/payments.module';
     PayoutsWebhookController,
     AdminWithdrawalsController,
   ],
-  providers: [PayoutsService],
-  exports: [PayoutsService],
+  providers: [PayoutsService, PspWebhookGuard],
+  exports: [PayoutsService, PspWebhookGuard],
 })
 export class PayoutsModule {}
