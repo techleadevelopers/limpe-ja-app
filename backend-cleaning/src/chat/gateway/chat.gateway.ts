@@ -142,7 +142,7 @@ export class ChatGateway {
       // mas por enquanto, getMessagesByChatId serve para validar o acesso.
       await this.chatService.getMessagesByChatId(chatId, 0, 1); // Busca 1 mensagem para validar acesso
 
-      client.join(chatId);
+      await client.join(chatId);
       this.logger.log(
         `[WebSocket] Cliente ${client.id} (User: ${userId}) entrou na sala de chat: ${chatId}`,
       );
