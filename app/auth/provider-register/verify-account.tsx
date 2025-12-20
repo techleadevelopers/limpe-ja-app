@@ -20,7 +20,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import verificationService from '../../../services/verificationService';
 import { DocumentPhotoType } from '../../../types/backend/verification';
 import { VerificationStatus, UserRole } from '../../../types/backend/auth';
-import { PROVIDER_ROUTES } from '../../../constants/routes';
+import { PROVIDER_ROUTES } from '../../routes';
 
 const LOGO_IMAGE = require('../../../assets/images/logo.png');
 const HEADER_ICON_IMAGE = require('../../../assets/images/facer.png');
@@ -248,7 +248,7 @@ export default function VerifyAccountScreen() {
                             <Text style={styles.retryButtonText}>Tentar Novamente</Text>
                         </TouchableOpacity>
                         {/* Opcional: Botão para contato com suporte */}
-                        {/* <TouchableOpacity onPress={() => router.push('/help')}>
+                        {/* <TouchableOpacity onPress={() => router.push(COMMON_ROUTES.HELP)}>
                             <Text style={styles.contactSupportText}>Contatar Suporte</Text>
                         </TouchableOpacity> */}
                     </View>
