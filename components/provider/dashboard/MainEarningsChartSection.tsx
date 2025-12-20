@@ -1,4 +1,4 @@
-// app/(provider)/earnings/components/MainEarningsChartSection.tsx
+// app/provider/earnings/components/MainEarningsChartSection.tsx
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import CircularProgressChart from './CircularProgressChart';
