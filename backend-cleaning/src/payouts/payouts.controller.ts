@@ -53,19 +53,4 @@ export class PayoutsController {
     );
   }
 
-  // ⚠️ ENDPOINT PÚBLICO - NÃO TEM @UseGuards
-  @Post('webhook/gateway')
-  @HttpCode(200)
-  async handleGatewayWebhook(
-    @Headers('x-signature') signature: string,
-    @Headers('x-event-id') eventId: string,
-    @Body() payload: any,
-  ) {
-    // A delegação da segurança (ou a falta dela) é feita no Service.
-    return this.payoutsService.handleGatewayWebhook(
-      signature,
-      eventId,
-      payload,
-    );
-  }
 }
