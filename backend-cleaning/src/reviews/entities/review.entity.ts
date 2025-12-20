@@ -1,10 +1,5 @@
 // src/reviews/entities/review.entity.ts
-import {
-  Review as PrismaReview,
-  Booking,
-  Client,
-  Provider,
-} from '@prisma/client';
+import { Review as PrismaReview } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Importe as entidades/DTOs dos módulos correspondentes
@@ -107,9 +102,7 @@ export class ReviewEntity implements PrismaReview {
 
   // O construtor é o ponto chave para a compatibilidade de tipos.
   // Ele precisa aceitar um objeto que corresponda ao que o Prisma retorna.
-  constructor(partial: Partial<ReviewEntity> | any) {
-    // Use 'any' temporariamente para resolver o erro
-    // ou defina um tipo exato para o retorno do Prisma
+  constructor(partial: Partial<ReviewEntity>) {
     Object.assign(this, partial);
     // Para garantir que `updatedAt` seja uma Date, se for uma string do BD por algum motivo
     if (typeof this.createdAt === 'string')
