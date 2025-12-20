@@ -101,7 +101,7 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
   };
 
   const handleCardPress = () => {
-    router.push({ pathname: '/(client)/category/[categoryId]', params: { categoryId: item.id, categoryName: item.name } });
+    router.push({ pathname: '/client/category/[categoryId]', params: { categoryId: item.id, categoryName: item.name } });
   };
 
   const getIconSource = (iconFileName?: string) => {
@@ -255,8 +255,9 @@ const styles = StyleSheet.create({
     width:  48,
     height: 45 + 25,
     marginRight: 11,
-    right: 9,
+    right: 18,
     marginLeft: 4,
+    bottom: 2,
     borderRadius: 45,
     marginBottom: -14,
     marginTop: 14,
@@ -305,6 +306,7 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     textAlign: 'center',
     marginTop: 7,
+    
     marginBottom: 20,
   },
 });
