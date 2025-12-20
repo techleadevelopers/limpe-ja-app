@@ -22,12 +22,20 @@ import {
   ApiQuery,
   ApiHeader,
 } from '@nestjs/swagger'; // NEW: ApiHeader
+import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserRole } from '@prisma/client'; // Standardize UserRole from Prisma
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { DisputeStatus } from '@prisma/client';
 import { ThrottlerGuard } from '@nestjs/throttler'; // NEW: Import ThrottlerGuard
+
+type RequestWithUser = Request & {
+  user?: {
+    userId?: string;
+    role?: UserRole;
+  };
+};
 
 @ApiBearerAuth()
 @ApiTags('disputes')
@@ -51,9 +59,17 @@ export class DisputeController {
     status: 400,
     description: 'Dados inválidos ou disputa já existente.',
   })
-  async create(@Body() createDisputeDto: CreateDisputeDto, @Req() req: any) {
+  async create(
+    @Body() createDisputeDto: CreateDisputeDto,
+    @Req() req: RequestWithUser,
+  ) {
+    const userId = req.user?.userId;
+    const role = req.user?.role;
+    if (!userId || !role) {
+      throw new BadRequestException('Usuário não autenticado.');
+    }
     // NEW: Idempotency check (conceptual - requires a dedicated service/middleware for full implementation)
-    const idempotencyKey = req.headers['idempotency-key'] as string;
+    const idempotencyKey = req.headers['idempotency-key'] as string | undefined;
     if (idempotencyKey) {
       // In a real scenario, you'd check a cache or DB for this key
       // If found and completed, return previous result. If found and in progress, wait or error.
@@ -63,8 +79,8 @@ export class DisputeController {
       );
     }
 
-    const reporterUserId = req.user.userId; // Use userId from JWT payload
-    const reporterRole = req.user.role;
+    const reporterUserId = userId; // Use userId from JWT payload
+    const reporterRole = role;
     return this.disputeService.createDispute(
       createDisputeDto,
       reporterUserId,
@@ -128,7 +144,7 @@ export class DisputeController {
   @ApiResponse({ status: 404, description: 'Disputa não encontrada.' })
   async addMessage(
     @Param('id') id: string,
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Body('content') content: string,
   ) {
     if (!content || content.trim().length === 0) {
@@ -137,11 +153,11 @@ export class DisputeController {
         'O conteúdo da mensagem não pode ser vazio.',
       );
     }
-    return this.disputeService.addMessageToDispute(
-      id,
-      req.user.userId,
-      content,
-    ); // Use userId
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new BadRequestException('Usuário não autenticado.');
+    }
+    return this.disputeService.addMessageToDispute(id, userId, content); // Use userId
   }
 
   @Patch(':id/status')
@@ -165,10 +181,14 @@ export class DisputeController {
   async updateStatus(
     @Param('id') id: string,
     @Body() updateDisputeDto: UpdateDisputeDto,
-    @Req() req: any,
+    @Req() req: RequestWithUser,
   ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new BadRequestException('Usuário não autenticado.');
+    }
     // NEW: Idempotency check (conceptual)
-    const idempotencyKey = req.headers['idempotency-key'] as string;
+    const idempotencyKey = req.headers['idempotency-key'] as string | undefined;
     if (idempotencyKey) {
       this.disputeService['logger'].debug(
         `Idempotency-Key received for update dispute status: ${idempotencyKey}`,
@@ -177,7 +197,7 @@ export class DisputeController {
     return this.disputeService.updateDisputeStatus(
       id,
       updateDisputeDto,
-      req.user.userId,
+      userId,
     ); // Use userId
   }
 }
