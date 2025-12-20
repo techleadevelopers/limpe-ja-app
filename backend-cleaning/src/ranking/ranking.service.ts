@@ -38,10 +38,9 @@ export class RankingService {
       ? Math.min(provider.distance / 50, 1)
       : 0; // Normaliza distância (ex: até 50km)
     const acceptanceRate_norm = (provider.acceptanceRate || 0) / 100; // NOVO: Normaliza de 0 a 1 (padrão 0 se nulo)
+    const averageResponseTime = provider.averageResponseTime ?? 60;
     const avgResponseTime_norm =
-      provider.averageResponseTime || 60
-        ? Math.min((provider.averageResponseTime || 60) / 60, 1)
-        : 1; // NOVO: Normaliza tempo de resposta (padrão 60min se nulo)
+      averageResponseTime > 0 ? Math.min(averageResponseTime / 60, 1) : 1; // NOVO: Normaliza tempo de resposta (padrão 60min se nulo)
 
     // Boosts de gamificação (já incluído no provider.rankingBoostScore)
     const boosts_gamificacao = provider.rankingBoostScore || 0;
