@@ -1,4 +1,4 @@
-// app/(provider)/components/dashboard/LogoutSection.tsx
+// app/provider/components/dashboard/LogoutSection.tsx
 import React from 'react';
 import { Text, StyleSheet, TouchableOpacity, Animated, Platform, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
