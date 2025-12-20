@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import {
   Animated,
   FlatList,
@@ -37,15 +37,15 @@ interface GridItem {
 
 // Itens da grade da versÃ£o antiga
 const gridItems: GridItem[] = [
-  { key: "coupons", title: "Cupons", icon: Icons3D.ticket, route: "/(client)/coupons" },
-  { key: "cashback", title: "Cashback", icon: Icons3D.cashback, route: "/(client)/wallet/cashback" },
-  { key: "missions", title: "Missões", icon: Icons3D.missions, route: "/(client)/missions" },
-  { key: "referrals", title: "Ganhe", icon: Icons3D.referral, route: "/(client)/referrals" },
-  { key: "ranking", title: "Pontos", icon: Icons3D.champions2, route: "/(client)/explore/ranking" },
-  { key: "metrics", title: "Metricas", icon: Icons3D.metrics, route: "/(client)/metrics" },
-  { key: "support", title: "Suporte", icon: Icons3D.support, route: "/(common)/support" },
-  { key: "safety", title: "Segurança", icon: Icons3D.safety, route: "/(client)/explore/security" },
-  { key: "settings", title: "Ajustes", icon: Icons3D.privacy, route: "/(client)/profile" },
+  { key: "coupons", title: "Cupons", icon: Icons3D.ticket, route: "/client/coupons" },
+  { key: "cashback", title: "Cashback", icon: Icons3D.cashback, route: "/client/wallet/cashback" },
+  { key: "missions", title: "Missões", icon: Icons3D.missions, route: "/client/missions" },
+  { key: "referrals", title: "Ganhe", icon: Icons3D.referral, route: "/client/referrals" },
+  { key: "ranking", title: "Pontos", icon: Icons3D.champions2, route: "/client/explore/ranking" },
+  { key: "metrics", title: "Metricas", icon: Icons3D.metrics, route: "/client/metrics" },
+  { key: "support", title: "Suporte", icon: Icons3D.support, route: "/common/support" },
+  { key: "safety", title: "Segurança", icon: Icons3D.safety, route: "/client/explore/security" },
+  { key: "settings", title: "Ajustes", icon: Icons3D.privacy, route: "/client/profile" },
 ];
 
 export default function HorizontalMiniGrid() {
