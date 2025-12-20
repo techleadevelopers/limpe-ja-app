@@ -1,56 +1,56 @@
-Auth Module -- Módulo de Autenticação
-O módulo auth/ é responsável por gerenciar a autenticação e autorização de usuários no sistema LimpeJá. Ele fornece a infraestrutura necessária para registro, login, recuperação de senha e gestão de permissões, garantindo que apenas usuários autorizados possam acessar recursos protegidos.
+# Módulo Auth
 
-🎯 Objetivo
-Permitir que usuários se registrem como clientes ou provedores.
-Prover endpoints para login usando e-mail/senha e autenticação via telefone.
-Implementar a funcionalidade de recuperação de senha.
-Fornecer mecanismos de autenticação baseados em JWT para proteger rotas sensíveis.
-Gerenciar diferentes papéis de usuário e suas permissões.
-⚙️ Estrutura de Arquivos
-stylus
+O `AuthModule` é a fundação de segurança do backend Limpeja: expõe registro/login, gera JWTs, protege rotas com guardas e centraliza regras de negócios como geocoding de endereços, validação de CPF/telefone, envio de e-mail de reset e vinculação de indicações. Ele junta `PrismaModule`, `JwtModule` (configurado via `ConfigService`), `EmailModule`, `GeocodingModule` e `ReferralsModule` dentro do escopo de autenticação.
 
-Copiar
-auth/
-├── auth.module.ts                  # Módulo principal NestJS
-├── auth.controller.ts              # Endpoints REST para gerenciamento de autenticação
-├── auth.service.ts                 # Lógica de negócio principal
-├── guards/
-│   ├── local-auth.guard.ts         # Guardião de autenticação local
-│   ├── jwt-auth.guard.ts           # Guardião de autenticação JWT
-│   ├── roles.guard.ts              # Guardião para verificação de permissões de papéis
-│   └── ws-auth.guard.ts            # Guardião para autenticação via WebSocket
-├── strategies/
-│   ├── local.strategy.ts            # Estratégia de autenticação local
-│   └── jwt.strategy.ts              # Estratégia de autenticação JWT
-├── dto/
-│   ├── register-client.dto.ts      # DTO para registro de novo cliente
-│   ├── register-provider.dto.ts     # DTO para registro de novo provedor
-│   ├── login.dto.ts                 # DTO para login
-│   ├── forgot-password.dto.ts       # DTO para solicitação de redefinição de senha
-│   ├── phone-auth.dto.ts            # DTO para autenticação via telefone
-│   └── auth-response.dto.ts         # DTO para resposta de autenticação
-└── decorators/
-    ├── roles.decorator.ts           # Decorador para definir papéis de usuário
-🧱 Entidades ORM
-As entidades ORM não estão diretamente incluídas no módulo de autenticação, mas a autenticação interage com a entidade User do Prisma.
+## Arquitetura e dependências
 
-📥 DTOs
-register-client.dto.ts: Contém os dados necessários para registrar um novo cliente, como e-mail, senha, nome completo e endereço.
-register-provider.dto.ts: Contém os dados necessários para registrar um novo provedor, incluindo informações pessoais e endereço.
-login.dto.ts: Usado para realizar login, exige e-mail e senha.
-forgot-password.dto.ts: Usado para solicitar a redefinição de senha, requer um e-mail.
-phone-auth.dto.ts: Usado para login ou verificação via telefone.
-auth-response.dto.ts: Contém o token JWT e informações do perfil do usuário após autenticação.
-🌐 Endpoints -- auth.controller.ts
-Método	Rota	Descrição
-POST	/auth/register/client	Cria um novo cliente.
-POST	/auth/register/provider	Cria um novo provedor.
-POST	/auth/login	Realiza o login de um usuário (cliente/provedor).
-POST	/auth/forgot-password	Solicita a redefinição de senha.
-🔗 Integração com Outros Módulos
-users/: O módulo de autenticação interage com o módulo de usuários para gerenciar informações de perfis.
-notifications/: Notificações podem ser enviadas para usuários sobre eventos relacionados à autenticação, como redefinição de senha.
-providers/: Integração para gerenciar provedores e suas informações durante o registro e login.
-✅ Conclusão
-O módulo auth/ é crucial para a segurança e integridade do sistema LimpeJá. Ele garante que apenas usuários autenticados possam acessar funcionalidades sensíveis, além de proporcionar um fluxo seguro para registro e recuperação de contas. A implementação de autenticação baseada em JWT e a gestão de papéis contribuem para um sistema robusto e confiável, essencial para manter a confiança dos usuários na plataforma.
+- **auth.module.ts** – importa `PrismaModule`, `PassportModule`, `JwtModule.registerAsync(...)` (segredo `JWT_SECRET`, `JWT_EXPIRATION_TIME`), `forwardRef` para `UsersModule`, `ProvidersModule`, `ReferralsModule` e provê `EmailModule`/`GeocodingModule`. Registra os guardas (`LocalStrategy`, `JwtStrategy`, `WsAuthGuard`) e exporta `AuthService`, `JwtModule` e `WsAuthGuard`.
+- **auth.controller.ts** – define o prefixo `/auth`, usa `LocalAuthGuard` apenas no login e aplica `Logger` + Swagger (`ApiTags`, `ApiOperation`, `ApiResponse`). Expõe quatro endpoints principais (`register/client`, `register/provider`, `login`, `forgot-password`).
+- **auth.service.ts** – encapsula toda a validação e persistência (Prisma), hashing com `bcrypt`, geração de JWTs (`JwtService`), envio de e-mail (`EmailService`), geocoding de endereço (`GeocodingService`), criação de perfis (User/Client/Provider), e integrações de indicação (`ReferralsService`).
+- **Guards/Strategies/Decorators** – `local-auth.guard`, `jwt-auth.guard`, `roles.guard`, `ws-auth.guard`, `local.strategy`, `jwt.strategy`, `roles.decorator` (para endpoints administrativos). São reusados por outros módulos que dependem de autenticação.
+- **DTOs** – `register-client.dto`, `register-provider.dto`, `login.dto`, `forgot-password.dto`, `phone-auth.dto`, `auth-response.dto` tipam todas as entradas/saídas dos endpoints.
+
+## Endpoints principais (auth.controller.ts)
+
+| Método | Rota | Guardas | Responsabilidade |
+| --- | --- | --- | --- |
+| `POST /auth/register/client` | registro de cliente | `Jwt` guard *não* usado (acesso público) | Valida e-mail/telefone/CPF únicos, gera `User/Client/Address`, salva geolocalização via `GeocodingService`, loga telemetria (`client_registered`) e retorna JWT+perfil. |
+| `POST /auth/register/provider` | registro de provedor | público | Cria `User` → `Provider`, valida CPF/email/telefone, normaliza `latitude/longitude`, grava endereço com `location` geoespacial, define `VerificationStatus.PENDING_INITIAL_REVIEW`, logs para telemetria (`provider_registered`). |
+| `POST /auth/login` | login e-mail/senha | `@UseGuards(LocalAuthGuard)` via passport local | Gera JWT com payload `{ email, sub, role }`, inclui dados de `client`/`provider` (bookings, reviews, services, loyalty, referrals) para o DTO, captura telemetria `user_logged_in`. |
+| `POST /auth/forgot-password` | disparo de e-mail de reset | público (rate limiting opcional) | Gera token JWT com 1h de validade, monta `resetLink`, envia e-mail via `EmailService`, loga eventos `forgot_password_email_sent/failed`. |
+
+## Fluxos críticos do AuthService
+
+1. **Login** – usa `Prisma` para reconstruir o usuário (`client`, `provider`, `loyalty`, `referrals`), calcula `client.noShowCount/cancellationCount`, monta `UserProfileDto`, cria token com `JwtService` e telemetria.
+2. **Registro de clientes** – valida unicidade (email, phone, CPF), hash com `bcrypt`, cria `User`+`Client`+`Address`, aplica `ST_GeomFromText` para persistir `location`, e dispara `handleReferralCode` quando `referralCode` presente.
+3. **Registro de provedores** – valida `dateOfBirth`, dados obrigatórios e unicity, cria `User` simples primeiro, depois `Provider` e `Address`, ajusta `location` geoespacial, registra `VerificationStatus.PENDING_INITIAL_REVIEW`, e também chama `handleReferralCode`.
+4. **Reset de senha** – monta um JWT de 1 hora, usa `appBaseUrl` do config para gerar link de reset no front, e envia e-mail em HTML/text/plain. Falhas de envio são logadas mas não quebram a rota.
+5. **Indicações** – `handleReferralCode` resolve `myReferralCode`, protege o uso de códigos antigos (fallback apenas em dev via userId) e delega para `ReferralsService.createReferral`.
+
+## Validação, erros e telemetria
+
+- Usa `PrismaClientKnownRequestError` para mapear `P2002` (emails telefones/CPFs duplicados), `P2000` (dados inválidos), `P2025`/`P2021` e traduz para `ConflictException`, `BadRequestException`, `NotFoundException`.
+- `Logger` captura inputs sensíveis (no máximo sem senha) e metas, e adiciona eventos `TELEMETRY` nos fluxos de registro/login/reset.
+- `AuthController` prepara mensagens amigáveis (`UnauthorizedException` com log) e pode ser protegido por `ThrottlerGuard` no futuro para evitar brute force.
+
+## Segurança e JWT
+
+- `JwtModule` usa `JWT_SECRET` e `JWT_EXPIRATION_TIME` do `.env`.
+- `LocalStrategy` valida `email/password` e expõe `request.user`.
+- `JwtStrategy` verifica `Authorization: Bearer <token>` e preenche `req.user`.
+- `WsAuthGuard` garante que conexões WebSocket aproveitem o mesmo token e reúsese `JwtStrategy`.
+- Possível expansão: `RolesGuard` + `@Roles` podem restringir rotas sensíveis (ex: `admin`).
+
+## Integrações e utilitários
+
+- **PrismaService** – manipula `User`, `Client`, `Provider`, `Address`, `Booking`, `Review` e `Referral` com includes preparados (`loginProviderInclude`, `loginClientInclude`).
+- **GeocodingService** – transforma endereços em coordenadas e atualiza `Address.location` via SQL geoespacial (PostGIS `ST_GeomFromText`). Loga normalização de lat/lng e falhas.
+- **EmailService** – usado pelo `forgotPassword` para enviar e-mail text/html com link de reset e TTL visível (1h).
+- **ReferralsService** – registra vínculos de indicação com `createReferral`, respeitando `myReferralCode`; fallback para `userId` só em dev para compatibilidade.
+- **ConfigService** – fornece `jwt.expirationTime`, `appBaseUrl`, `NODE_ENV`.
+
+## Recomendações
+
+1. Proteja `/auth/login` e `/auth/forgot-password` com `ThrottlerGuard` ou rate limiting antes de expor ao público, evitando brute force.
+2. Valide `referralCode` no front-end priorizando `myReferralCode` (não userId) para manter a auditoria limpa.
+3. Documente os campos obrigatórios no DTO de registro (ex: `dateOfBirth` para provedores) para evitar `BadRequestException` no backend.
