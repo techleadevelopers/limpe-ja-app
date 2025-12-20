@@ -1,4 +1,4 @@
-// app/(provider)/earnings/components/RecentTransactionsSection.tsx
+// app/provider/earnings/components/RecentTransactionsSection.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -39,7 +39,7 @@ const RecentTransactionsSection: React.FC<RecentTransactionsSectionProps> = ({ t
             <Text style={styles.emptyTransactionsText}>Você ainda não tem transações recentes.</Text>
             <Text style={styles.emptyTransactionsSubText}>Comece a completar serviços para ver seus ganhos aqui!</Text>
             <TouchableOpacity
-                onPress={() => router.push('/(provider)/services' as any)}
+                onPress={() => router.push('/provider/services' as any)}
                 style={styles.emptyStateButton}
             >
                 <Ionicons name="briefcase-outline" size={20} color={WHITE} />
@@ -68,7 +68,7 @@ const RecentTransactionsSection: React.FC<RecentTransactionsSectionProps> = ({ t
                     />
                     {transactions.length > 5 && ( // Exibir "Ver todas" se houver mais de 5
                         <TouchableOpacity
-                            onPress={() => router.push('/(provider)/transactions' as any)} // Rota para o histórico completo
+                            onPress={() => router.push('/provider/transactions' as any)} // Rota para o histórico completo
                             style={styles.viewAllTransactionsButton}
                             accessibilityRole="link"
                             accessibilityLabel="Ver todas as transações"
