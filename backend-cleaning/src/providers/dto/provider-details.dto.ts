@@ -1,20 +1,14 @@
 // src/providers/dto/provider-details.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  Provider,
-  User,
-  Address,
-  ProviderService,
   Review,
-  Service,
-  UserRole,
   Client as PrismaClient,
   VerificationStatus,
+  User,
 } from '@prisma/client';
 import {
   IsString,
   IsInt,
-  IsBoolean,
   IsUrl,
   IsNumber,
   IsEmail,
