@@ -18,6 +18,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Credenciais inválidas.');
     }
     // Retorna o usuário sem a senha para segurança
+
     const { passwordHash, ...result } = user;
     return result;
   }
