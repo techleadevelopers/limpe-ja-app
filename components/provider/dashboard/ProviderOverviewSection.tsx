@@ -1,4 +1,4 @@
-// app/(provider)/components/dashboard/ProviderOverviewSection.tsx
+// app/provider/components/dashboard/ProviderOverviewSection.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useRef } from 'react';
 import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
