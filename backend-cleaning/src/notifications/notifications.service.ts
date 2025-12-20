@@ -11,11 +11,22 @@ import { MarkAsReadDto } from './dto/mark-as-read.dto';
 import { I18nService } from '../common/i18n/i18n.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import * as Sentry from '@sentry/node'; // NEW: Import Sentry (conceptual, requires setup)
+import type { SeverityLevel } from '@sentry/core';
 import axios from 'axios';
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+
+  private formatError(err: unknown): string {
+    if (err instanceof Error) return err.message;
+    if (typeof err === 'string') return err;
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return 'Unknown error';
+    }
+  }
 
   constructor(
     private prisma: PrismaService,
@@ -61,15 +72,17 @@ export class NotificationsService {
         ...actionButtons, // Pass action buttons data to push notification payload
       }).catch((e) =>
         this.logger.error(
-          `Failed to send push notification for ${notification.id}: ${e.message}`,
-          e.stack,
+          `Failed to send push notification for ${notification.id}: ${this.formatError(
+            e,
+          )}`,
+          e instanceof Error ? e.stack : undefined,
         ),
       );
       return notification;
     } catch (error) {
       this.logger.error(
-        `Erro ao criar notificação para userId ${userId}: ${error.message}`,
-        error.stack,
+        `Erro ao criar notificação para userId ${userId}: ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
       Sentry.captureException(error); // NEW: Capture exception with Sentry
       throw error;
@@ -96,8 +109,8 @@ export class NotificationsService {
       });
     } catch (error) {
       this.logger.error(
-        `Erro ao buscar notificações para userId ${userId}: ${error.message}`,
-        error.stack,
+        `Erro ao buscar notificações para userId ${userId}: ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
       Sentry.captureException(error);
       throw error;
@@ -144,8 +157,8 @@ export class NotificationsService {
       }
     } catch (error) {
       this.logger.error(
-        `Erro ao marcar notificações como lidas para userId ${userId}: ${error.message}`,
-        error.stack,
+        `Erro ao marcar notificações como lidas para userId ${userId}: ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
       Sentry.captureException(error);
       throw error;
@@ -183,8 +196,8 @@ export class NotificationsService {
       });
     } catch (error) {
       this.logger.error(
-        `Erro ao marcar notificação ${notificationId} como lida: ${error.message}`,
-        error.stack,
+        `Erro ao marcar notificação ${notificationId} como lida: ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
       Sentry.captureException(error);
       throw error;
@@ -203,22 +216,35 @@ export class NotificationsService {
     userId: string,
     title: string,
     body: string,
-    data?: Record<string, any>,
+    data?: Record<string, unknown>,
   ): Promise<void> {
     this.logger.log(
-      `Iniciando envio de notifica��o push para userId: ${userId}`,
+      `Iniciando envio de notificação push para userId: ${userId}`,
     );
     try {
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         select: { fcmToken: true },
       });
-      if (!user?.fcmToken) {
-        this.logger.warn(`Sem fcmToken para ${userId}`);
-        return;
-      }
+    if (!user?.fcmToken) {
+      this.logger.warn(`Sem fcmToken para ${userId}; push será simulado com notif DB.`);
+      Sentry.addBreadcrumb({
+        message: 'Token ausente ao enviar push',
+        data: { userId, hasToken: false },
+        level: 'warning' as SeverityLevel,
+      });
+      return;
+    }
       const token = user.fcmToken;
       const serverKey = process.env.FCM_SERVER_KEY;
+      const getStringField = (key: string, fallback: string) => {
+        const value = data?.[key];
+        return typeof value === 'string' ? value : fallback;
+      };
+      const isAxiosError = (
+        val: unknown,
+      ): val is { response?: { status?: number; data?: unknown } } =>
+        typeof val === 'object' && val !== null && 'response' in val;
       if (serverKey) {
         try {
           await axios.post(
@@ -229,8 +255,8 @@ export class NotificationsService {
               data: { ...(data || {}) },
               android: {
                 notification: {
-                  channel_id: (data as any)?.channelId || 'high-priority',
-                  priority: (data as any)?.priority || 'high',
+                  channel_id: getStringField('channelId', 'high-priority'),
+                  priority: getStringField('priority', 'high'),
                 },
               },
             },
@@ -244,21 +270,31 @@ export class NotificationsService {
           );
           this.logger.log(`Push FCM enviado para ${userId}.`);
           return;
-        } catch (e: any) {
-          this.logger.warn(
-            `Falha FCM ${userId}: ${e?.response?.status} ${e?.response?.data || e?.message}`,
-          );
+        } catch (e: unknown) {
+          const status =
+            isAxiosError(e) && typeof e.response?.status === 'number'
+              ? e.response.status
+              : 'unknown';
+          const payload =
+            isAxiosError(e) && e.response?.data !== undefined
+              ? e.response.data
+              : this.formatError(e);
+          const payloadStr =
+            typeof payload === 'string' ? payload : JSON.stringify(payload);
+          this.logger.warn(`Falha FCM ${userId}: ${status} ${payloadStr}`);
         }
       }
       this.logger.log(
         `[SIMULADO] Push para ${userId}: ${title} | ${body} | ${JSON.stringify(data)}`,
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Erro ao enviar push para ${userId}: ${error?.message}`,
-        error?.stack,
+        `Erro ao enviar push para ${userId}: ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
-      throw new Error(`Falha ao enviar notifica��o push: ${error?.message}`);
+      throw new Error(
+        `Falha ao enviar notificação push: ${this.formatError(error)}`,
+      );
     }
   }
 
@@ -282,7 +318,7 @@ export class NotificationsService {
   /**
    * Provides smart suggestions based on context.
    */
-  async getSmartSuggestions(context: string): Promise<string[]> {
+  getSmartSuggestions(context: string): string[] {
     const suggestions: Record<string, string[]> = {
       booking_flow: [
         'Responda em ate 30 minutos para melhor ranking',
@@ -311,41 +347,59 @@ export class NotificationsService {
   /**
    * Executes a quick action tied to a notification.
    */
-  async executeQuickAction(action: string, data: any): Promise<void> {
+  async executeQuickAction(
+    action: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const getString = (key: string): string | undefined => {
+      const value = data?.[key];
+      return typeof value === 'string' ? value : undefined;
+    };
     try {
       switch (action) {
-        case 'accept_booking':
+        case 'accept_booking': {
+          const bookingId = getString('bookingId');
+          if (!bookingId) {
+            throw new BadRequestException('bookingId ? obrigat?rio.');
+          }
           await this.prisma.booking.update({
-            where: { id: data.bookingId },
+            where: { id: bookingId },
             data: { status: 'CONFIRMED' },
           });
-          this.logger.log(`QuickAction: booking ${data.bookingId} accepted.`);
+          this.logger.log(`QuickAction: booking ${bookingId} accepted.`);
           break;
-        case 'view_booking':
-          this.logger.log(`QuickAction: view booking ${data.bookingId}.`);
+        }
+        case 'view_booking': {
+          const bookingId = getString('bookingId');
+          this.logger.log(`QuickAction: view booking ${bookingId}.`);
           break;
-        case 'respond_review':
+        }
+        case 'respond_review': {
           this.logger.log(
-            `QuickAction: respond review ${data.reviewId} with: "${data.responseContent}".`,
+            `QuickAction: respond review ${getString('reviewId')} with: "${getString('responseContent')}".`,
           );
           break;
-        case 'view_review':
-          this.logger.log(`QuickAction: view review ${data.reviewId}.`);
+        }
+        case 'view_review': {
+          this.logger.log(`QuickAction: view review ${getString('reviewId')}.`);
           break;
-        case 'view_dispute':
-          this.logger.log(`QuickAction: view dispute ${data.disputeId}.`);
+        }
+        case 'view_dispute': {
+          const disputeId = getString('disputeId');
+          this.logger.log(`QuickAction: view dispute ${disputeId}.`);
           break;
-        case 'view_dispute_message':
-          this.logger.log(
-            `QuickAction: view message in dispute ${data.disputeId}.`,
-          );
+        }
+        case 'view_dispute_message': {
+          const disputeId = getString('disputeId');
+          this.logger.log(`QuickAction: view message in dispute ${disputeId}.`);
           break;
-        case 'view_dispute_resolution':
-          this.logger.log(
-            `QuickAction: view dispute resolution ${data.disputeId}.`,
-          );
+        }
+        case 'view_dispute_resolution': {
+          const disputeId = getString('disputeId');
+          this.logger.log(`QuickAction: view dispute resolution ${disputeId}.`);
           break;
-        default:
+        }
+        default: {
           throw new BadRequestException(
             await this.i18n.translate(
               'notification.badRequest.unknownAction',
@@ -353,11 +407,12 @@ export class NotificationsService {
               { action },
             ),
           );
+        }
       }
     } catch (error) {
       this.logger.error(
-        `QuickAction error '${action}': ${error.message}`,
-        error.stack,
+        `QuickAction error '${action}': ${this.formatError(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
       Sentry.captureException(error);
       throw error;
@@ -377,7 +432,12 @@ export class NotificationsService {
         data: { fcmToken: token },
       });
       return { ok: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      this.logger.warn(
+        `registerDeviceToken: tentativa inicial falhou para ${userId}: ${this.formatError(
+          error,
+        )}`,
+      );
       // Se violar unique, limpa do outro usuário e aplica neste
       try {
         await this.prisma.user.updateMany({
@@ -391,7 +451,9 @@ export class NotificationsService {
         return { ok: true };
       } catch (e) {
         this.logger.error(
-          `registerDeviceToken: falha ao registrar token para ${userId}: ${e?.message}`,
+          `registerDeviceToken: falha ao registrar token para ${userId}: ${this.formatError(
+            e,
+          )}`,
         );
         throw e;
       }
