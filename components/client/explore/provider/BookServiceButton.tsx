@@ -58,7 +58,7 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
             text: 'Continuar',
             onPress: () => {
               try {
-                router.push('/(auth)/client-register' as any);
+                router.push('/auth/client-register' as any);
               } catch {}
             },
           },
@@ -68,7 +68,7 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
     }
 
     router.push({
-      pathname: '/(client)/bookings/schedule-service',
+      pathname: '/client/bookings/schedule-service',
       params: {
         providerId,
         serviceId,
