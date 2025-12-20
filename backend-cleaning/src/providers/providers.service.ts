@@ -311,9 +311,9 @@ export class ProvidersService {
               gte: new Date(dateStr + 'T00:00:00Z'),
               lte: new Date(dateStr + 'T23:59:59Z'),
             },
-            status: { in: [BookingStatus.CONFIRMED, BookingStatus.STARTED] }, // ✅ CORRIGIDO. Assumi que 'IN_PROGRESS' é 'STARTED' ou outro status do seu `booking.state-machine.ts` (ex: STARTED). Use o valor correto do seu enum do Prisma.
+            status: { in: [BookingStatus.CONFIRMED, BookingStatus.STARTED] },
           },
-          select: { scheduledTime: true },
+          select: { scheduledTime: true, scheduledEnd: true }, // ✅ aqui
         });
 
         // Encontrar primeiro slot livre
