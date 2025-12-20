@@ -1,7 +1,9 @@
-import { Body, Controller, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Headers, Post, UseGuards } from '@nestjs/common';
 import { PayoutsService } from './payouts.service';
+import { PspWebhookGuard } from './guards/psp-webhook.guard';
 
 @Controller('payouts/webhook')
+@UseGuards(PspWebhookGuard)
 export class PayoutsWebhookController {
   constructor(private readonly payoutsService: PayoutsService) {}
 
