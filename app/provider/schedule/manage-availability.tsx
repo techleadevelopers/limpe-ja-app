@@ -20,6 +20,7 @@ import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../../hooks/useAuth';
 import NotificationUIService from '../../../services/notificationUIService';
+import { getPricingConfig } from '../../../services/configService';
 
 // Importações de serviços e tipos do backend
 import {
@@ -176,8 +177,7 @@ const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: 
 const ALL_POSSIBLE_SLOTS = generateTimeSlots(4, 19, 60);
 
 const SLOT_STEP_MINUTES = 60;
-const MIN_HOURLY_MINUTES = 240;
-const MIN_HOURLY_SLOTS = MIN_HOURLY_MINUTES / SLOT_STEP_MINUTES;
+const DEFAULT_MIN_HOURLY_MINUTES = 240;
 
 const slotToMinutes = (slot: string) => {
   const [hours, minutes] = slot.split(':').map(Number);
@@ -188,14 +188,6 @@ const minutesToSlot = (value: number) => {
   const hours = Math.floor(value / 60);
   const minutes = value % 60;
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-};
-
-const buildForward4hBlock = (start: string) => {
-  const index = ALL_POSSIBLE_SLOTS.indexOf(start);
-  if (index === -1) return [];
-  const endIndex = index + MIN_HOURLY_SLOTS - 1;
-  if (endIndex >= ALL_POSSIBLE_SLOTS.length) return [];
-  return ALL_POSSIBLE_SLOTS.slice(index, endIndex + 1);
 };
 
 const getSelectedBlock = (target: string, slots: string[]) => {
@@ -587,6 +579,8 @@ export default function ManageAvailabilityScreen() {
   // Coverage radius state (moved inside component)
   const [radiusKm, setRadiusKm] = useState<number>(15);
   const [showRadiusEditor, setShowRadiusEditor] = useState<boolean>(false);
+  const [minHourlyMinutes, setMinHourlyMinutes] = useState(DEFAULT_MIN_HOURLY_MINUTES);
+  const minHourlySlots = Math.max(1, Math.ceil(minHourlyMinutes / SLOT_STEP_MINUTES));
 
   useEffect(() => {
     let mounted = true;
@@ -599,6 +593,24 @@ export default function ManageAvailabilityScreen() {
       } catch {}
     })();
     return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    getPricingConfig()
+      .then((cfg) => {
+        if (active && typeof cfg.minHourlyMinutes === 'number' && cfg.minHourlyMinutes > 0) {
+          setMinHourlyMinutes(cfg.minHourlyMinutes);
+        }
+      })
+      .catch((error) => {
+        if (__DEV__) {
+          console.warn('[ManageAvailability] Falha ao carregar config de pricing', error);
+        }
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const saveRadius = useCallback(async () => {
@@ -647,7 +659,7 @@ export default function ManageAvailabilityScreen() {
     setWeeklyAvailability(prev =>
       prev.map(day => (day.dayOfWeek === dayOfWeek ? { ...day, isEnabled } : day))
     );
-  }, []);
+  }, [buildForwardMinBlock, minHourlyMinutes]);
 
   const handleClearSlots = useCallback((dayOfWeek: number) => {
     setWeeklyAvailability(prev =>
@@ -959,6 +971,17 @@ export default function ManageAvailabilityScreen() {
     }
   }, [smartMode, smartScope, smartWeekdays, smartPreset, smartCustomSlots, smartDate, smartOverrideType, handleClearSlots, handleToggleDay, handleApplyPreset, applyCopyToTargets, handleDayPressOnCalendar, handleSetOverrideType]);
 
+  const buildForwardMinBlock = useCallback(
+    (start: string) => {
+      const index = ALL_POSSIBLE_SLOTS.indexOf(start);
+      if (index === -1) return [];
+      const endIndex = index + minHourlySlots - 1;
+      if (endIndex >= ALL_POSSIBLE_SLOTS.length) return [];
+      return ALL_POSSIBLE_SLOTS.slice(index, endIndex + 1);
+    },
+    [minHourlySlots],
+  );
+
   const handleToggleSlot = useCallback((dayOfWeek: number, slot: string) => {
     setWeeklyAvailability(prev =>
       prev.map(day => {
@@ -969,11 +992,15 @@ export default function ManageAvailabilityScreen() {
             return { ...day, selectedSlots: remaining };
           }
 
-          const block = buildForward4hBlock(slot);
+          const block = buildForwardMinBlock(slot);
           if (block.length === 0) {
+            const hoursLabel =
+              minHourlyMinutes >= 60
+                ? `${minHourlyMinutes / 60}h`
+                : `${minHourlyMinutes} min`;
             NotificationUIService.showError(
-              'Selecione um horário com no mínimo 4 horas contínuas.',
-              'Mínimo de 4h',
+              `Selecione um horário com duração mínima de ${hoursLabel}.`,
+              'Duração mínima',
             );
             return day;
           }
