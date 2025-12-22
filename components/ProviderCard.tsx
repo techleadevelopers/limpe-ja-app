@@ -9,6 +9,7 @@ import { formatDistance } from '../utils/formatters';
 interface ProviderCardProps {
   provider: ProviderDisplayInfo;
   onPress: (providerId: string) => void;
+  isVerified?: boolean; // TODO: backend should supply a canonical verified flag to avoid status checks here.
 }
 
 const formatNextAvailable = (iso?: string | null) => {
@@ -25,7 +26,7 @@ const formatNextAvailable = (iso?: string | null) => {
   }
 };
 
-const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress }) => {
+const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress, isVerified = false }) => {
   const { t } = useTranslation();
 
   const minPrice = provider.providerServices && provider.providerServices.length > 0
@@ -71,7 +72,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress }) => {
           {provider.bio || t('provider.no_description', { defaultValue: 'Nenhuma descrição disponível.' })}
         </Text>
         <View style={styles.metaRow}>
-          {provider.verificationStatus === 'APPROVED' && (
+          {isVerified && (
             <Ionicons name="shield-checkmark" size={12} color="#5da2ecff" />
           )}
           {typeof (provider as any).acceptanceRate === 'number' && (
@@ -207,4 +208,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProviderCard;
-
