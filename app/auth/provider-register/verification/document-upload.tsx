@@ -8,6 +8,7 @@ import AnimatedErrorMessage from '../../../../components/schedule/manager/Animat
 import colors from '../../../../constants/Colors';
 import { SIZES } from '../../../../constants/theme';
 import verificationService from '../../../../services/verificationService';
+import { showUserError } from '../../_shared/errors/userError';
 
 const PARTE_FRENTE_IMAGE = require('../../../../assets/images/partefrente.png');
 const PARTE_TRAS_IMAGE = require('../../../../assets/images/partetras.png');
@@ -138,8 +139,9 @@ export default function DocumentUploadScreen({
       onComplete({ documentPhotoFront, documentPhotoBack });
     } catch (error: any) {
       setSubmissionStatus('failed');
-      setFrontError(error.message || "Erro ao fazer upload dos documentos. Tente novamente.");
-      setBackError(error.message || "Erro ao fazer upload dos documentos. Tente novamente.");
+      const normalized = showUserError(error, 'Erro no cadastro');
+      setFrontError(normalized.message);
+      setBackError(normalized.message);
     }
   };
 
