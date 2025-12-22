@@ -20,6 +20,9 @@ interface InjectedDataProps {
   refetch: () => void;
 }
 
+const isProviderVerified = (provider: ProviderDisplayInfo) =>
+  provider.verificationStatus === 'APPROVED' || Boolean(provider.user?.isVerified);
+
 // Componente de Conteúdo que receberá as props injetadas pelo HOC
 const TodosPrestadoresProximosContent: React.FC<InjectedDataProps> = ({ data, loading, error, refetch }) => {
   const router = useRouter();
@@ -56,6 +59,7 @@ const TodosPrestadoresProximosContent: React.FC<InjectedDataProps> = ({ data, lo
           <ProviderCard
             provider={item}
             onPress={handleProviderPress} // Passa a função handleProviderPress
+            isVerified={isProviderVerified(item)}
           />
         )}
         contentContainerStyle={styles.listContentContainer}
