@@ -1,0 +1,165 @@
+{
+  "components_root": "C:/Users/Paulo/Desktop/relax-app/components",
+  "files_scanned": 272,
+  "navigation_calls": [
+    {
+      "file": "client/explore/home/CategoriaCard.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/DEFENSE_SOS.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/DrawerMenu.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/DrawerMenu.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/FAB_SOS.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/HorizontalMiniGrid.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/NavBar.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/NavBar2.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/NavBar2.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/NavBar2.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/NewHeader.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/NewHeader.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/NewHeader.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/NewHeader.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/RecomendacaoCard.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/home/ServiceCategoryCard.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/provider/ActionButtons.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/provider/BookServiceButton.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "client/explore/provider/BookServiceButton.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "nudges/IncentiveNudge.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "nudges/SecurityNudge.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "provider/ProviderNudgeContainer.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "provider/earnings/EarningsSummaryCard.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "provider/earnings/RecentTransactionsSection.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "provider/earnings/RecentTransactionsSection.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "ui/outros/ExternalLink.tsx",
+      "raw": "{href}",
+      "type": "expr"
+    },
+    {
+      "file": "ui/outros/SaudacaoContainer.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "ui/outros/SaudacaoContainer.tsx",
+      "raw": "push",
+      "type": "expr"
+    }
+  ],
+  "navigation_literal_targets": {},
+  "ui_business_rule_files": [
+    "ProviderCard.backup.tsx",
+    "ProviderCard.tsx",
+    "client/booking/schedule/ProviderBrief.tsx",
+    "client/explore/category/CategoryProviderCard.tsx",
+    "client/explore/home/DrawerMenu.tsx",
+    "client/explore/home/PrestadorCard.tsx",
+    "client/explore/home/RecomendacaoCard.tsx",
+    "client/explore/home/ServiceCategoryCard.tsx",
+    "client/explore/provider/DetailsContent.tsx",
+    "client/explore/provider/HeaderSection.tsx",
+    "client/explore/provider/OverviewContent.tsx",
+    "missions/MissionItem.tsx",
+    "provider/dashboard/ProviderOverviewSection.tsx",
+    "provider/dashboard/UpcomingServiceItem.tsx",
+    "provider/earnings/EarningsSummaryCard.tsx",
+    "provider/query-client-provider.tsx"
+  ]
+}
