@@ -15,7 +15,11 @@ import { useQuery } from '@tanstack/react-query';
 import { getCurrentPosition } from '../../../services/locationService';
 import { searchProviders } from '../../../services/providerService';
 import ProviderCard from '../../../components/ProviderCard';
+import { ProviderDisplayInfo } from '../../../types/backend/providers';
 import { API_QUERY_KEYS } from '../../../constants/queryKeys';
+
+const isProviderVerified = (provider: ProviderDisplayInfo) =>
+  provider.verificationStatus === 'APPROVED' || Boolean(provider.user?.isVerified);
 
 export default function SearchResultsScreen() {
   const router = useRouter();
@@ -111,6 +115,7 @@ export default function SearchResultsScreen() {
           <ProviderCard
             provider={item} // Agora espera ProviderDisplayInfo
             onPress={() => router.push(`/client/explore/${item.id}`)}
+            isVerified={isProviderVerified(item)}
           />
         )}
         contentContainerStyle={styles.listContainer}
