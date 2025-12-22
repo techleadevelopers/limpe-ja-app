@@ -32,6 +32,7 @@ import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
 // import { ProviderDashboard } from '../../types/backend/dashboard';
 import { ProviderDashboard } from '../../types/backend/providers'; // Usar a interface correta
 import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
+import ProviderNavBar from '../../components/provider/navigation/ProviderNavBar';
 // CORREÇÃO: Adicionar import para SafeAreaInsets (para alinhamento do header no iOS)
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -1333,6 +1334,7 @@ export default function ProviderDashboardScreen() {
         </Animated.View>
       </ScrollView>
       <ProviderNudgeContainer /> {/* Added ProviderNudgeContainer */}
+      <ProviderNavBar />
     </View>
   );
 }
