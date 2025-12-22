@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UpcomingServiceItem from './UpcomingServiceItem';
-import { BookingDetails } from '../../../types/backend/bookings'; // CORRIGIDO: Importação e uso de BookingDetails
+import { BookingDetails, BookingStatus } from '../../../types/backend/bookings'; // CORRIGIDO: Importação e uso de BookingDetails
 
 interface UpcomingServicesSectionProps {
   contentAnim: Animated.Value;
@@ -43,16 +43,26 @@ const UpcomingServicesSection: React.FC<UpcomingServicesSectionProps> = ({
     }).start();
   };
 
-  const renderUpcomingServiceItem = ({ item }: { item: BookingDetails }) => ( // CORRIGIDO: Usar BookingDetails
-    <UpcomingServiceItem
-      key={item.id}
-      booking={item}
-      onPress={onServicePress}
-      onAcceptPress={onAcceptService}
-      onRejectPress={onRejectService}
-      onContactClient={onContactClient}
-    />
-  );
+  const renderUpcomingServiceItem = ({ item }: { item: BookingDetails }) => {
+    const isPendingRequest = item.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION;
+    const isConfirmed = item.status === BookingStatus.CONFIRMED;
+    const badgeVariant = isPendingRequest ? 'pending' : 'confirmed';
+    const badgeLabel = isPendingRequest ? 'Nova Solicitação' : 'Confirmado';
+    return (
+      <UpcomingServiceItem
+        key={item.id}
+        booking={item}
+        onPress={onServicePress}
+        onAcceptPress={onAcceptService}
+        onRejectPress={onRejectService}
+        onContactClient={onContactClient}
+        showAcceptRejectActions={isPendingRequest}
+        showChatAction={isConfirmed}
+        statusBadgeLabel={badgeLabel}
+        statusBadgeVariant={badgeVariant}
+      />
+    );
+  };
 
   return (
     <Animated.View
