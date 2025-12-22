@@ -37,6 +37,7 @@ import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 import { CouponsService } from '../coupons/coupons.service';
 import { PayoutsService } from '../payouts/payouts.service';
 import { ConnectService } from '../connect/connect.service';
+import { PaymentIntentLocker } from './payment-intent-locker';
 
 // 1. Definição do Tipo (Recomendado para corrigir o Erro 2339)
 // Este tipo é usado para garantir a tipagem correta ao incluir relações aninhadas do Prisma.
@@ -54,6 +55,7 @@ type PagSeguroTransaction = {
 };
 
 type PagSeguroCharge = {
+  id?: string;
   reference_id?: string;
   status?: string;
 };
@@ -94,6 +96,7 @@ type PagSeguroWebhookPayload = {
 };
 
 type PixWebhookPayload = {
+  event?: string;
   reference_id?: string;
   transaction?: PagSeguroTransaction;
   charges?: PagSeguroCharge[];
@@ -130,7 +133,7 @@ export class PaymentsService {
   private appBaseUrl: string | undefined;
   private pagseguroHttpsAgent?: https.Agent;
 
-  @Inject(forwardRef(() => BookingsService))
+@Inject(forwardRef(() => BookingsService))
   private bookingsService!: BookingsService;
 
   constructor(
@@ -193,7 +196,10 @@ export class PaymentsService {
         'API_BASE_URL ausente. Webhooks de PSP podem não funcionar externamente.',
       );
     }
+    this.intentLocker = new PaymentIntentLocker(this.prisma);
   }
+
+  private readonly intentLocker: PaymentIntentLocker;
 
   /**
    * Processa o webhook de notificação de pagamento (compra do cliente) enviado pelo PSP.
@@ -469,16 +475,14 @@ export class PaymentsService {
           typeof rawBody === 'string' ? rawBody : rawBody.toString();
         try {
           data = JSON.parse(rawString) as PixWebhookPayload;
-          console.log('[Webhook PIX] JSON parseado com sucesso');
+          this.logger.debug('[PaymentsService] parsed PIX webhook payload as JSON');
         } catch {
-          console.warn('[Webhook PIX] JSON inválido → usando string bruta');
+          this.logger.warn('[PaymentsService] invalid PIX webhook JSON; falling back to raw string');
           data = { resource_id: rawString };
         }
       }
 
       if (!data) return { success: false, message: 'Webhook vazio' };
-
-      console.log('>>> WEBHOOK PARSED:', data);
 
       // ---------------------------------------------------------
       // EXTRAI O reference_id REAL do PagBank
@@ -498,14 +502,17 @@ export class PaymentsService {
         data?.charges?.[0]?.status?.toUpperCase() ||
         data?.status?.toUpperCase() ||
         null;
+      const webhookEvent = data?.event ?? data?.charges?.[0]?.id ?? 'unknown';
+      const eventReference = referenceId ?? data?.resource_id ?? 'unknown';
+      this.logger.log(
+        `[PaymentsService] PIX webhook received event=${webhookEvent} reference=${eventReference} status=${chargeStatus ?? 'unknown'}`,
+      );
 
       if (
         chargeStatus === 'PAID' ||
         chargeStatus === 'APPROVED' ||
         chargeStatus === 'COMPLETED'
       ) {
-        console.log('⚡ PAGAMENTO PIX CONFIRMADO ⚡');
-        console.log('REFERENCE_ID:', referenceId);
 
         await this.confirmPixPayment(referenceId || '');
 
@@ -915,6 +922,22 @@ export class PaymentsService {
     const apiToken = this.pagseguroApiToken;
     const idemKey = idempotencyKey ?? `pix-${bookingId}-${Date.now()}`;
 
+    const claim = await this.intentLocker.claimPaymentIntent(
+      bookingId,
+      amountCents,
+      referenceId,
+      idemKey,
+    );
+
+    if (!claim.shouldCreate) {
+      const readyIntent = await this.intentLocker.waitForIntentReady(
+        claim.intent.id,
+      );
+      return this.mapIntentToPixResponse(readyIntent, description, providerId);
+    }
+
+    const intentId = claim.intent.id;
+
     const payload = {
       reference_id: referenceId,
       customer: {
@@ -1004,73 +1027,68 @@ export class PaymentsService {
         ? new Date(expirationDateStr)
         : expiration; // fallback to requested expiration if API omits
 
-    const paymentIntentRecord = await this.prisma.paymentIntent.upsert({
-      where: { bookingId },
-      create: {
-        bookingId,
-        amountCents,
-        gateway: 'PAGBANK_PIX',
+    let paymentIntentRecord: PaymentIntent;
+    try {
+      paymentIntentRecord = await this.prisma.paymentIntent.update({
+        where: { id: intentId },
+        data: {
+          bookingId,
+          amountCents,
+          gateway: 'PAGBANK_PIX',
 
-        // 🔥 IDs reais do PagBank
-        externalOrderId: orderId,
-        externalChargeId: chargeId,
-        externalQrCodeId: qrCodeId,
+          // 🔥 IDs reais do PagBank
+          externalOrderId: orderId,
+          externalChargeId: chargeId,
+          externalQrCodeId: qrCodeId,
 
-        // 🔥 REFERÊNCIA DO PAGBANK (booking_xxxxx)
-        referenceId: referenceId,
-        externalRef: referenceId,
+          // 🔥 REFERÊNCIA DO PAGBANK (booking_xxxxx)
+          referenceId: referenceId,
+          externalRef: referenceId,
 
-        qrCodeText,
-        qrCodeUrl,
-        expiresAt,
+          qrCodeText,
+          qrCodeUrl,
+          expiresAt,
 
-        status,
-        idempotencyKey: idemKey,
-      },
-      update: {
-        amountCents,
-
-        externalOrderId: orderId,
-        externalChargeId: chargeId,
-        externalQrCodeId: qrCodeId,
-
-        // 🔥 GARANTE QUE ATUALIZA TAMBÉM
-        referenceId: referenceId,
-        externalRef: referenceId,
-
-        qrCodeText,
-        qrCodeUrl,
-        expiresAt,
-
-        status,
-        idempotencyKey: idemKey,
-      },
-    });
+          status,
+          idempotencyKey: idemKey,
+        },
+      });
+    } catch (error) {
+      await this.prisma.paymentIntent.update({
+        where: { id: intentId },
+        data: { status: PaymentIntentStatus.EXPIRED },
+      });
+      throw error;
+    }
     await this.prisma.booking.update({
       where: { id: bookingId },
-      data: {
-        // ❌ remover isso caso esteja aqui:
-        // paymentStatus: 'PAID'
-      },
+      data: {},
     });
     // === 7. RESPONDER AO APP NO NOVO FORMATO ===
 
-    return {
-      orderId,
-      chargeId,
-      status: 'PENDING',
-      qrCodeText,
-      qrCodeImageUrl,
-      expiresAt: expiresAt.toISOString(),
-      amount: Number(amountCents) / 100,
-      description,
-      bookingId,
-      providerId,
+    return this.mapIntentToPixResponse(paymentIntentRecord, description, providerId);
+  }
 
-      // === PROPRIEDADES FALTANTES CORRIGIDAS ===
-      id: paymentIntentRecord.id, // Adiciona o ID interno
-      amountCents: amountCents, // Adiciona o valor em centavos
-      // ==========================================
+  private mapIntentToPixResponse(
+    intent: PaymentIntent,
+    description: string | undefined,
+    providerId: string,
+  ): PixChargeResponseDto {
+    const expiresAt =
+      intent.expiresAt?.toISOString() ?? new Date().toISOString();
+    return {
+      orderId: intent.externalOrderId ?? '',
+      chargeId: intent.externalChargeId ?? '',
+      status: intent.status,
+      qrCodeText: intent.qrCodeText ?? '',
+      qrCodeImageUrl: intent.qrCodeUrl ?? '',
+      expiresAt,
+      amount: Number(intent.amountCents) / 100,
+      description,
+      bookingId: intent.bookingId,
+      providerId,
+      id: intent.id,
+      amountCents: intent.amountCents,
     } as PixChargeResponseDto;
   }
 
