@@ -14,13 +14,13 @@ const InfoChip: React.FC<InfoChipProps> = ({ iconName, text, compact }) => {
   const resolvedText = text == null ? '' : String(text);
 
   return (
-    <View style={[styles.infoChip, compact && { paddingVertical: 6, paddingHorizontal: 10 }]}>
-      <Ionicons name={iconName} size={16} color="#4A90E2" style={{ marginRight: 6 }} />
+    <View style={[styles.infoChip, compact && { paddingVertical: 6, paddingHorizontal: 10, bottom: 10, }]}>
+      <Ionicons name={iconName} size={22} color="#4A90E2" style={{ marginRight: 2 }} />
       <Text
         numberOfLines={1}
         style={[
           styles.infoChipText,
-          compact && { fontSize: 12, color: '#2F2F2F', fontWeight: '600' },
+          compact && { fontSize: 16, color: '#2F2F2F', fontWeight: '600' },
         ]}
       >
         {resolvedText}
