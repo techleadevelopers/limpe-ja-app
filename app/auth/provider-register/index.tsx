@@ -35,30 +35,25 @@ import AnimatedReanimated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-
-const mapSignUpErrorMessage = (error: any): string => {
-  const status = error?.response?.status;
-  const rawMsg = (error?.message || '').toString().toLowerCase();
-
-  if (status === 409 || /email.*exist|ja cadastrado|conflict|cpf.*exist/.test(rawMsg)) {
-    return 'Este e-mail ou CPF ja esta cadastrado. Faca login ou use outro e-mail/CPF.';
-  }
-  if (status === 400 || /validation|invalido|invalid/.test(rawMsg)) {
-    return 'Dados invalidos. Confira CPF, e-mail, data de nascimento e telefone.';
-  }
-  if (status === 429 || /too many|muitas tentativas/.test(rawMsg)) {
-    return 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.';
-  }
-  if (status && status >= 500) {
-    return 'Servico indisponivel no momento. Tente novamente em instantes.';
-  }
-  if (/network|timeout|conexao|internet|offline/.test(rawMsg)) {
-    return 'Nao foi possivel conectar. Verifique sua internet e tente novamente.';
-  }
-  return error?.message || 'Falha no registro. Tente novamente em instantes.';
-};
+import { AuthFieldErrorMap, showUserError } from '../../_shared/errors/userError';
 
 const LOGO_IMAGE = require('../../../assets/images/logo2.png');
+
+const devLog = (...args: unknown[]) => {
+  if (__DEV__) {
+    console.log(...args);
+  }
+};
+const devWarn = (...args: unknown[]) => {
+  if (__DEV__) {
+    console.warn(...args);
+  }
+};
+const devError = (...args: unknown[]) => {
+  if (__DEV__) {
+    console.error(...args);
+  }
+};
 
 export default function RegisterProviderScreen() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -100,6 +95,50 @@ export default function RegisterProviderScreen() {
   // Geocode helpers: cache + in-flight guard
   const geocodeCache = useRef(new Map<string, { latitude: number; longitude: number }>()).current;
   const isGeocodingRef = useRef(false);
+
+  const applyProviderFieldErrors = (fieldErrors?: AuthFieldErrorMap) => {
+    if (!fieldErrors) return;
+    const setterMap: Record<string, React.Dispatch<React.SetStateAction<string | null>>> = {
+      email: setEmailError,
+      username: setUsernameError,
+      fullname: setUsernameError,
+      full_name: setUsernameError,
+      fullName: setUsernameError,
+      cpf: setCpfError,
+      password: setPasswordError,
+      phone: setPhoneError,
+      phonenumber: setPhoneError,
+      dateofbirth: setDateOfBirthError,
+      dateOfBirth: setDateOfBirthError,
+      'address.cep': setCepInputError,
+      cep: setCepInputError,
+      'address.street': setStreetError,
+      street: setStreetError,
+      'address.number': setNumberError,
+      number: setNumberError,
+      'address.neighborhood': setNeighborhoodError,
+      neighborhood: setNeighborhoodError,
+      'address.city': setCityError,
+      city: setCityError,
+      'address.state': setStateError,
+      state: setStateError,
+      address: setAddressError,
+      'address.general': setAddressError,
+      general: setGeneralError,
+    };
+
+    for (const [rawKey, message] of Object.entries(fieldErrors)) {
+      if (!message) continue;
+      const key = rawKey.trim().toLowerCase();
+      const setter =
+        setterMap[key] ??
+        setterMap[key.replace('address.', '')] ??
+        setterMap[key.replace('_', '')];
+      if (setter) {
+        setter(message);
+      }
+    }
+  };
 
   const router = useRouter();
   const { signUpProvider } = useAuth();
@@ -163,7 +202,7 @@ export default function RegisterProviderScreen() {
         setCepInputError(null);
       }
     } catch (error) {
-      console.error("Erro ao buscar CEP:", error);
+      devError("Erro ao buscar CEP:", error);
       setCepInputError('Erro ao buscar CEP. Tente novamente.');
     } finally {
       setCepLoading(false);
@@ -244,9 +283,9 @@ export default function RegisterProviderScreen() {
           currentStep, subStepAddress
         };
         await AsyncStorage.setItem('providerRegisterFormData', JSON.stringify(formData));
-        console.log("Provider form data saved to AsyncStorage.");
+        devLog("Provider form data saved to AsyncStorage.");
       } catch (e) {
-        console.error("Failed to save provider form data to AsyncStorage", e);
+        devError("Failed to save provider form data to AsyncStorage", e);
       }
     };
     const handler = setTimeout(() => {
@@ -277,10 +316,10 @@ export default function RegisterProviderScreen() {
           setCurrentStep(formData.currentStep || 1);
           setSubStepAddress(formData.subStepAddress || 1);
           // Removida a mensagem de carregamento para nĂŁo exibir o erro vermelho
-          console.log("Provider form data loaded from AsyncStorage.");
+          devLog("Provider form data loaded from AsyncStorage.");
         }
       } catch (e) {
-        console.error("Failed to load provider form data from AsyncStorage", e);
+        devError("Failed to load provider form data from AsyncStorage", e);
       }
     };
     loadFormData();
@@ -505,7 +544,7 @@ export default function RegisterProviderScreen() {
   }, [state]);
 
   const handleNext = async () => {
-    console.log(`[RegisterProvider] handleNext: Tentando avanĂ§ar do Step ${currentStep}. SubStep: ${subStepAddress}`);
+    devLog(`[RegisterProvider] handleNext: Tentando avanĂ§ar do Step ${currentStep}. SubStep: ${subStepAddress}`);
     setGeneralError(null);
     setAddressError(null);
     // Simple guard to avoid double-taps triggering multiple geocode calls
@@ -519,41 +558,41 @@ export default function RegisterProviderScreen() {
         handleUsernameBlur();
         handleEmailBlur();
         setGeneralError('Por favor, preencha nome e e-mail corretamente.');
-        console.warn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 1 invĂˇlido.");
+        devWarn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 1 invĂˇlido.");
         return;
       }
       setCurrentStep(2);
-      console.log("[RegisterProvider] handleNext: AvanĂ§ando para o Step 2 (Telefone + CPF).");
+      devLog("[RegisterProvider] handleNext: AvanĂ§ando para o Step 2 (Telefone + CPF).");
     } else if (currentStep === 2) { // Step 2: Phone + CPF
       const isValid = checkStep2Validity();
       if (!isValid) {
         handlePhoneBlur();
         handleCpfBlur();
         setGeneralError('Por favor, preencha telefone e CPF corretamente.');
-        console.warn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 2 invĂˇlido.");
+        devWarn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 2 invĂˇlido.");
         return;
       }
       setCurrentStep(3);
-      console.log("[RegisterProvider] handleNext: AvanĂ§ando para o Step 3 (Data + Senha).");
+      devLog("[RegisterProvider] handleNext: AvanĂ§ando para o Step 3 (Data + Senha).");
     } else if (currentStep === 3) { // Step 3: DateOfBirth + Password
       const isValid = checkStep3Validity();
       if (!isValid) {
         handleDateOfBirthBlur();
         handlePasswordBlur();
         setGeneralError('Por favor, preencha data de nascimento e senha corretamente.');
-        console.warn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 3 invĂˇlido.");
+        devWarn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 3 invĂˇlido.");
         return;
       }
       setCurrentStep(4); // New Step 4 for Address
       setSubStepAddress(1);
-      console.log("[RegisterProvider] handleNext: AvanĂ§ando para o Step 4 (EndereĂ§o).");
+      devLog("[RegisterProvider] handleNext: AvanĂ§ando para o Step 4 (EndereĂ§o).");
     } else if (currentStep === 4) { // Step 4: Address
       if (subStepAddress === 1) {
         const isValid = checkAddressSubStep1Validity();
         if (!isValid) {
           handleCepBlur();
           setAddressError("CEP invĂˇlido. Digite os 8 dĂ­gitos.");
-          console.warn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Sub-step 1 (CEP) invĂˇlido.");
+          devWarn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Sub-step 1 (CEP) invĂˇlido.");
           return;
         }
         if (cepLoading) {
@@ -561,7 +600,7 @@ export default function RegisterProviderScreen() {
           return;
         }
         setSubStepAddress(2);
-        console.log("[RegisterProvider] handleNext: AvanĂ§ando para o Sub-step 2 (Detalhes do EndereĂ§o).");
+        devLog("[RegisterProvider] handleNext: AvanĂ§ando para o Sub-step 2 (Detalhes do EndereĂ§o).");
       } else if (subStepAddress === 2) {
         const isValid = checkAddressSubStep2Validity();
         if (!isValid) {
@@ -571,7 +610,7 @@ export default function RegisterProviderScreen() {
           handleCityBlur();
           handleStateBlur();
           setAddressError('Por favor, preencha todos os campos de endereĂ§o corretamente.');
-          console.warn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Sub-step 2 (Detalhes do EndereĂ§o) invĂˇlido.");
+          devWarn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Sub-step 2 (Detalhes do EndereĂ§o) invĂˇlido.");
           return;
         }
         setIsLoading(true);
@@ -584,13 +623,13 @@ export default function RegisterProviderScreen() {
           }
 
           const fullAddress = `${street.trim()}, ${number.trim()}, ${neighborhood.trim()}, ${city.trim()}, ${state.trim()}, ${cep.trim()}`;
-          console.log("[RegisterProvider] Geocodificando endereĂ§o:", fullAddress);
+          devLog("[RegisterProvider] Geocodificando endereĂ§o:", fullAddress);
 
           // Geocode with cache + bounded retries (rate-limit safe)
           const geocodeWithBackoff = async (address: string): Promise<{ latitude: number; longitude: number }> => {
             if (geocodeCache.has(address)) {
               const cached = geocodeCache.get(address)!;
-              console.log('[RegisterProvider] Geocode cache hit:', cached);
+              devLog('[RegisterProvider] Geocode cache hit:', cached);
               return cached;
             }
             if (isGeocodingRef.current) {
@@ -615,7 +654,7 @@ export default function RegisterProviderScreen() {
                 const msg = (e?.message || '').toLowerCase();
                 const isRate = msg.includes('rate limit') || msg.includes('too many');
                 const delay = isRate ? 1200 * attempt : 400 * attempt;
-                console.warn(`[RegisterProvider] Geocode attempt ${attempt} failed:`, e?.message || e);
+                devWarn(`[RegisterProvider] Geocode attempt ${attempt} failed:`, e?.message || e);
                 await new Promise(r => setTimeout(r, delay));
               }
             }
@@ -624,7 +663,7 @@ export default function RegisterProviderScreen() {
           };
 
           const { latitude, longitude } = await geocodeWithBackoff(fullAddress);
-          console.log(`[RegisterProvider] Coordenadas obtidas via expo-location: Latitude=${latitude}, Longitude=${longitude}`);
+          devLog(`[RegisterProvider] Coordenadas obtidas via expo-location: Latitude=${latitude}, Longitude=${longitude}`);
 
           const [day, month, year] = dateOfBirth.split('/').map(Number);
           const formattedDateOfBirth = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -648,7 +687,7 @@ export default function RegisterProviderScreen() {
               longitude,
             },
           };
-          console.log("[RegisterProvider] handleNext (Step 4 - final sub-step): Chamando signUpProvider do AuthContext para registro inicial.");
+          devLog("[RegisterProvider] handleNext (Step 4 - final sub-step): Chamando signUpProvider do AuthContext para registro inicial.");
           await signUpProvider(providerData);
 
           setContextPersonalDetails({
@@ -670,24 +709,30 @@ export default function RegisterProviderScreen() {
               longitude,
             },
           });
-          console.log("[RegisterProvider] handleNext (Step 4 - final sub-step): signUpProvider do AuthContext retornou sucesso. Redirecionando para Detalhes do ServiĂ§o.");
+          devLog("[RegisterProvider] handleNext (Step 4 - final sub-step): signUpProvider do AuthContext retornou sucesso. Redirecionando para Detalhes do ServiĂ§o.");
           // Clear AsyncStorage after successful registration
           await AsyncStorage.removeItem('providerRegisterFormData');
           router.replace(AUTH_ROUTES.PROVIDER_SERVICE_DETAILS);
         } catch (error: any) {
-          console.error("[RegisterProvider] handleNext (Step 4 - final sub-step): Erro durante o registro inicial:", error.message, error);
-          const msg = (error?.message || '').toLowerCase();
-          const isRate = msg.includes('rate limit') || msg.includes('too many');
-          if (isRate) {
-            setAddressError('Servico de mapas temporariamente indisponivel por excesso de tentativas. Aguarde alguns segundos e tente novamente.');
-          } else if (msg.includes('no results') || msg.includes('not find') || msg.includes('encontrar')) {
-            setAddressError('Nao foi possivel encontrar as coordenadas para este endereco. Verifique numero e CEP e tente novamente.');
-          } else if (msg.includes('geocod')) {
-            setAddressError('Servico de mapas indisponivel no momento. Tente novamente em instantes.');
+          devError("[RegisterProvider] handleNext (Step 4 - final sub-step): Erro durante o registro inicial:", error);
+          if (error?.response) {
+            const normalized = showUserError(error, 'Erro ao cadastrar');
+            setGeneralError(normalized.message);
+            applyProviderFieldErrors(normalized.fieldErrors);
           } else {
-            setGeneralError(mapSignUpErrorMessage(error));
+            const msg = (error?.message || '').toLowerCase();
+            const isRate = msg.includes('rate limit') || msg.includes('too many');
+            if (isRate) {
+              setAddressError('Servico de mapas temporariamente indisponivel por excesso de tentativas. Aguarde alguns segundos e tente novamente.');
+            } else if (msg.includes('no results') || msg.includes('not find') || msg.includes('encontrar')) {
+              setAddressError('Nao foi possivel encontrar as coordenadas para este endereco. Verifique numero e CEP e tente novamente.');
+            } else if (msg.includes('geocod')) {
+              setAddressError('Servico de mapas indisponivel no momento. Tente novamente em instantes.');
+            } else {
+              setGeneralError('Nao foi possivel continuar. Tente novamente.');
+            }
           }
-          console.log("[RegisterProvider] handleNext (Step 4 - final sub-step): isLoading definido como false.");
+          devLog("[RegisterProvider] handleNext (Step 4 - final sub-step): isLoading definido como false.");
         }
       }
     }
