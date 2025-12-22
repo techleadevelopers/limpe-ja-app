@@ -21,6 +21,7 @@ import { ChatModule } from './chat/chat.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OffersModule } from './offers/offers.module';
 import { PaymentsModule } from './payments/payments.module';
+import { ProviderPromotionsModule } from './provider-promotions/provider-promotions.module';
 import { SearchModule } from './search/search.module';
 import { VerificationModule } from './verification/verification.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -28,7 +29,7 @@ import { EarningsModule } from './earnings/earnings.module';
 import { FaqsModule } from './faqs/faqs.module';
 import { CacheModule } from './cache/cache.module';
 import { ReferralsModule } from './referrals/referrals.module';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { SafetyModule } from './safety/safety.module';
@@ -70,6 +71,8 @@ import { QueuesModule } from './queues/queues.module';
 import { HealthModule } from './health/health.module';
 import { HttpMetricsMiddleware } from './common/middleware/http-metrics.middleware';
 import { TracingInterceptor } from './common/interceptors/tracing.interceptor';
+import { ConfigController } from './config/config.controller';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -103,6 +106,7 @@ import { TracingInterceptor } from './common/interceptors/tracing.interceptor';
     AuthModule,
     UsersModule,
     forwardRef(() => ProvidersModule),
+    ProviderPromotionsModule,
     ClientsModule,
     ServicesModule,
     ProviderServicesModule,
@@ -141,8 +145,15 @@ import { TracingInterceptor } from './common/interceptors/tracing.interceptor';
     ConnectModule,
     HealthModule,
   ],
-  controllers: [AppController],
-  providers: [AppService, TracingInterceptor],
+  controllers: [AppController, ConfigController],
+  providers: [
+    AppService,
+    TracingInterceptor,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
