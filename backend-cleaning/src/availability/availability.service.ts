@@ -8,6 +8,11 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { GetAvailabilityDto } from './dto/get-availability.dto';
+import {
+  getSaoPauloDayRangeFromDateString,
+  getSaoPauloDayRangeFromTimestamp,
+  SAO_PAULO_TIMEZONE_OFFSET_MS,
+} from './timezone';
 import { Availability, BookingStatus } from '@prisma/client';
 
 // Garante que os horários configurados sejam sempre "cheios" (ex.: 09:00, 10:00)
@@ -61,15 +66,11 @@ export class AvailabilityService {
     // <<<< CORREÇÃO CRÍTICA AQUI >>>>
     // Crie a data usando UTC para garantir que o dia da semana seja sempre o correto,
     // independentemente do fuso horário do servidor.
-    const [year, month, day] = date.split('-').map(Number);
-    // month - 1 porque os meses em JavaScript são de 0 a 11.
-    const selectedDateObjUTC = new Date(Date.UTC(year, month - 1, day));
-    // <<<< FIM DA CORREÇÃO CRÍTICA >>>>
-
-    const actualDayOfWeek = selectedDateObjUTC.getUTCDay(); // <<<< Use getUTCDay() para obter o dia da semana em UTC (0=Dom, 1=Seg...)
+    const { start: rangeStart, end: rangeEnd, dayOfWeek: actualDayOfWeek } =
+      getSaoPauloDayRangeFromDateString(date);
 
     console.log(
-      `[AvailabilityService] Data selecionada (UTC): ${selectedDateObjUTC.toISOString().split('T')[0]}, Dia da Semana Calculado (UTC): ${actualDayOfWeek}`,
+      `[AvailabilityService] Data selecionada (UTC): ${rangeStart.toISOString().split('T')[0]}, Dia da Semana Calculado (UTC): ${actualDayOfWeek}`,
     ); // LOG 2
     console.log(
       `[AvailabilityService] Dia da semana esperado (Para 10 de junho de 2025, deve ser 2 - Terça-feira): ${actualDayOfWeek}`,
@@ -104,8 +105,8 @@ export class AvailabilityService {
         // A data agendada no Prisma também é tratada como um ponto no tempo.
         // Para comparar apenas a data, podemos usar gte e lte do início ao fim do dia em UTC.
         scheduledDate: {
-          gte: new Date(Date.UTC(year, month - 1, day, 0, 0, 0)), // Início do dia em UTC
-          lte: new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999)), // Fim do dia em UTC
+          gte: rangeStart,
+          lte: rangeEnd,
         },
         status: {
           in: [
@@ -144,9 +145,14 @@ export class AvailabilityService {
     }
 
     const updatedRecords: Availability[] = [];
-    const now = new Date();
-    const minutesNow = now.getHours() * 60 + now.getMinutes();
-    const todayDow = now.getDay();
+    const nowTimestamp = Date.now();
+    const currentDayRange = getSaoPauloDayRangeFromTimestamp(nowTimestamp);
+    const nowInTimeZone = new Date(
+      nowTimestamp + SAO_PAULO_TIMEZONE_OFFSET_MS,
+    );
+    const minutesNow =
+      nowInTimeZone.getUTCHours() * 60 + nowInTimeZone.getUTCMinutes();
+    const todayDow = currentDayRange.dayOfWeek;
 
     for (const dto of updateAvailabilityDtos) {
       const { id, dayOfWeek, startTime, endTime, isAvailable } = dto;
@@ -172,8 +178,7 @@ export class AvailabilityService {
       }
 
       // Verifica conflito com bookings futuros (PENDING/CONFIRMED/IN_PROGRESS/COMPLETED)
-      const nowStartDay = new Date();
-      nowStartDay.setHours(0, 0, 0, 0);
+      const nowStartDay = currentDayRange.start;
       const overlappingBooking = await this.prisma.booking.findFirst({
         where: {
           providerId,
@@ -193,9 +198,11 @@ export class AvailabilityService {
         },
       });
       if (overlappingBooking) {
-        const dow = new Date(overlappingBooking.scheduledDate).getDay();
+        const bookingDow = getSaoPauloDayRangeFromTimestamp(
+          overlappingBooking.scheduledDate.getTime(),
+        ).dayOfWeek;
         const bookMin = this.toMinutes(overlappingBooking.scheduledTime);
-        if (dow === dayOfWeek && bookMin < endMin && bookMin >= startMin) {
+        if (bookingDow === dayOfWeek && bookMin < endMin && bookMin >= startMin) {
           throw new ConflictException(
             'Conflito com agendamento existente neste horário.',
           );
@@ -299,9 +306,14 @@ export class AvailabilityService {
         `Intervalo inválido: ${startTime} deve ser menor que ${endTime}.`,
       );
     }
-    const now = new Date();
-    const minutesNow = now.getHours() * 60 + now.getMinutes();
-    if (dayOfWeek === now.getDay() && endMin <= minutesNow) {
+    const nowTimestamp = Date.now();
+    const dayRange = getSaoPauloDayRangeFromTimestamp(nowTimestamp);
+    const nowInTimeZone = new Date(
+      nowTimestamp + SAO_PAULO_TIMEZONE_OFFSET_MS,
+    );
+    const minutesNow =
+      nowInTimeZone.getUTCHours() * 60 + nowInTimeZone.getUTCMinutes();
+    if (dayOfWeek === dayRange.dayOfWeek && endMin <= minutesNow) {
       throw new BadRequestException('Não é permitido criar slot já passado.');
     }
 
@@ -316,8 +328,7 @@ export class AvailabilityService {
     }
 
     // Conflito com bookings futuros
-    const nowStart = new Date();
-    nowStart.setHours(0, 0, 0, 0);
+    const nowStart = dayRange.start;
     const overlappingBooking = await this.prisma.booking.findFirst({
       where: {
         providerId,
@@ -337,9 +348,11 @@ export class AvailabilityService {
       },
     });
     if (overlappingBooking) {
-      const dow = new Date(overlappingBooking.scheduledDate).getDay();
+      const bookingDow = getSaoPauloDayRangeFromTimestamp(
+        overlappingBooking.scheduledDate.getTime(),
+      ).dayOfWeek;
       const bookMin = this.toMinutes(overlappingBooking.scheduledTime);
-      if (dow === dayOfWeek && bookMin < endMin && bookMin >= startMin) {
+      if (bookingDow === dayOfWeek && bookMin < endMin && bookMin >= startMin) {
         throw new ConflictException(
           'Conflito com agendamento existente neste horário.',
         );
