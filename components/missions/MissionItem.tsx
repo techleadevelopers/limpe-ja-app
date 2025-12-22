@@ -12,7 +12,7 @@ import {
     useColorScheme, // Importado para theming
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { MissionItem as MissionItemType, MissionStatus } from '../../services/missionService';
+import { MissionItem as MissionItemType } from '../../services/missionService';
 import Colors from '../../constants/Colors'; // Importa o arquivo de cores
 
 // Hook para acessar as cores do tema atual
@@ -27,9 +27,10 @@ interface MissionItemProps {
     delay: number;
     onClaim: (missionId: string) => void;
     isClaiming: boolean;
+    isCompleted?: boolean; // TODO: backend should expose completion flags so the UI stops reading internal statuses.
 }
 
-const MissionItem: React.FC<MissionItemProps> = ({ mission, delay, onClaim, isClaiming }) => {
+const MissionItem: React.FC<MissionItemProps> = ({ mission, delay, onClaim, isClaiming, isCompleted = false }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
     const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -68,7 +69,6 @@ const MissionItem: React.FC<MissionItemProps> = ({ mission, delay, onClaim, isCl
     const onPressInButton = () => { Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true }).start(); };
     const onPressOutButton = () => { Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); };
 
-    const isCompleted = mission.progress?.status === MissionStatus.COMPLETED;
     const isClaimed = mission.isClaimed;
     const canClaim = mission.canClaim;
 
