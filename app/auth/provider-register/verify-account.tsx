@@ -18,6 +18,7 @@ import DocumentUploadScreen from './verification/document-upload';
 import ToastMessage from '../../../components/ui/ToastMessage';
 import { useAuth } from '../../../hooks/useAuth';
 import verificationService from '../../../services/verificationService';
+import { showUserError } from '../../_shared/errors/userError';
 import { DocumentPhotoType } from '../../../types/backend/verification';
 import { VerificationStatus, UserRole } from '../../../types/backend/auth';
 import { PROVIDER_ROUTES } from '../../routes';
@@ -182,7 +183,8 @@ export default function VerifyAccountScreen() {
         } catch (error: any) {
             console.error("Erro na verificação:", error);
             setIsSubmittingDocuments(false); // Certifique-se de desativar o loading em caso de erro
-            setToastMessage({ message: error.message || "Erro na verificação. Tente novamente.", type: "error" });
+            const normalized = showUserError(error, 'Erro no cadastro');
+            setToastMessage({ message: normalized.message, type: 'error' });
         } finally {
             setIsLoading(false);
         }
