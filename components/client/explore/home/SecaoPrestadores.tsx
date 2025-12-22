@@ -3,6 +3,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 
@@ -79,16 +80,32 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
         ) : null}
       </View>
 
-      <ScrollView horizontal={horizontal} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsScrollContainer}>
-        {safeData.length > 0 ? (
-          safeData.map((item, index) => {
-            const rendered = renderItem({ item, index });
-            return React.isValidElement(rendered) ? rendered : null;
-          })
-        ) : (
-          <Text style={styles.emptyText}>{noDataText}</Text>
-        )}
-      </ScrollView>
+      <View style={styles.carouselWrapper}>
+        <ScrollView horizontal={horizontal} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsScrollContainer}>
+          {safeData.length > 0 ? (
+            safeData.map((item, index) => {
+              const rendered = renderItem({ item, index });
+              return React.isValidElement(rendered) ? rendered : null;
+            })
+          ) : (
+            <Text style={styles.emptyText}>{noDataText}</Text>
+          )}
+        </ScrollView>
+        <LinearGradient
+          colors={['rgba(255,255,255,0)', '#F1F2F2']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.rightFade}
+          pointerEvents="none"
+        />
+        <LinearGradient
+          colors={['#F1F2F2', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.leftFade}
+          pointerEvents="none"
+        />
+      </View>
     </View>
   );
 };
@@ -97,6 +114,7 @@ const styles = StyleSheet.create({
   container: {
     marginTop: -2,
     marginBottom: 12,
+    paddingHorizontal: 3,
     backgroundColor: 'transparent',
   },
   header: {
@@ -125,8 +143,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   cardsScrollContainer: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 32,
     paddingBottom: 10,
+  },
+  carouselWrapper: {
+    position: 'relative',
+  },
+  rightFade: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 22,
+  },
+  leftFade: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 22,
   },
   emptyText: {
     flex: 1,
