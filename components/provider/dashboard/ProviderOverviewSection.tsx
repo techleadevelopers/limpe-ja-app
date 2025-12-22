@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Caminho correto para o seu tipo Booking, que é um sinônimo de BookingDetails
-import { BookingStatus, Booking as BookingType } from '../../../types/backend/bookings'; // <-- Importando BookingStatus também
+import { Booking as BookingType } from '../../../types/backend/bookings';
 
 // Hook para animação de toque (reutilizável)
 const useAnimatedTouch = () => {
@@ -28,7 +28,8 @@ const useAnimatedTouch = () => {
 
 interface ProviderOverviewSectionProps {
   contentAnim: Animated.Value;
-  upcomingServices: BookingType[];
+  pendingRequests: BookingType[];
+  confirmedUpcomingServices: BookingType[];
   onServicePress: (id: string) => void;
   onViewAllServicesPress: () => void;
   onViewAllMessagesPress: () => void;
@@ -216,7 +217,8 @@ const ConfirmedServiceItem: React.FC<{
 
 const ProviderOverviewSection: React.FC<ProviderOverviewSectionProps> = ({
   contentAnim,
-  upcomingServices,
+  pendingRequests,
+  confirmedUpcomingServices,
   onServicePress,
   onViewAllServicesPress,
   onViewAllMessagesPress,
@@ -225,32 +227,32 @@ const ProviderOverviewSection: React.FC<ProviderOverviewSectionProps> = ({
   onChatWithClient,
   unreadMessagesCount = 0,
 }) => {
-  // Corrigido: Usar os valores do enum BookingStatus
-  const pendingRequests = upcomingServices.filter(s => s.status === BookingStatus.PENDING);
-  const confirmedUpcomingServices = upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED);
-
   // Animações para itens da lista
   // Usamos um Map para gerenciar Animated.ValueXY por ID, o que é mais robusto para listas dinâmicas
   const animatedItemsMap = useRef(new Map<string, Animated.ValueXY>()).current;
+  const animatedItemsList = React.useMemo(
+    () => [...pendingRequests, ...confirmedUpcomingServices],
+    [pendingRequests, confirmedUpcomingServices]
+  );
 
   // Cleanup para animações quando o componente é desmontado ou a lista muda
   React.useEffect(() => {
     // Para cada item na lista atual, garante que tem um Animated.ValueXY
-    upcomingServices.forEach(item => {
+    animatedItemsList.forEach(item => {
       if (!animatedItemsMap.has(item.id)) {
         animatedItemsMap.set(item.id, new Animated.ValueXY({ x: 0, y: 50 }));
       }
     });
 
     // Remove Animated.ValueXY de itens que não estão mais na lista
-    const currentItemIds = new Set(upcomingServices.map(item => item.id));
+    const currentItemIds = new Set(animatedItemsList.map(item => item.id));
     animatedItemsMap.forEach((value, key) => {
       if (!currentItemIds.has(key)) {
         animatedItemsMap.delete(key);
       }
     });
 
-    const animations = upcomingServices.map((item, index) => {
+    const animations = animatedItemsList.map((item, index) => {
       const itemAnim = animatedItemsMap.get(item.id)!;
       return Animated.timing(itemAnim, {
         toValue: { x: 1, y: 0 },
@@ -270,7 +272,7 @@ const ProviderOverviewSection: React.FC<ProviderOverviewSectionProps> = ({
       animationSequence.stop();
       animatedItemsMap.forEach(anim => anim.stopAnimation()); // Garante que todas as animações são paradas
     };
-  }, [upcomingServices]); // Depende de upcomingServices para re-renderizar e re-animar
+  }, [animatedItemsList]); // Depende da lista combinada para re-renderizar e re-animar
 
   const messageLinkTouchAnimation = useAnimatedTouch();
 
