@@ -1,7 +1,7 @@
 // app/provider/components/dashboard/UpcomingServiceItem.tsx
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Alert } from 'react-native';
-import { BookingDetails, BookingStatus } from '../../../types/backend/bookings'; // CORRIGIDO: Importação e uso de BookingDetails e BookingStatus
+import { BookingDetails } from '../../../types/backend/bookings';
 import Toast from 'react-native-toast-message'; // Supondo a instalação de uma biblioteca de Toast
 import { Ionicons } from '@expo/vector-icons';
 
@@ -12,6 +12,10 @@ interface UpcomingServiceItemProps {
   onAcceptPress?: (bookingId: string) => void;
   onRejectPress?: (bookingId: string) => void;
   onContactClient: (clientId: string) => void;
+  showAcceptRejectActions?: boolean;
+  showChatAction?: boolean;
+  statusBadgeLabel?: string;
+  statusBadgeVariant?: 'pending' | 'confirmed';
 }
 
 const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
@@ -20,6 +24,10 @@ const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
   onAcceptPress,
   onRejectPress,
   onContactClient,
+  showAcceptRejectActions = false,
+  showChatAction = false,
+  statusBadgeLabel,
+  statusBadgeVariant,
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque
 
@@ -80,7 +88,7 @@ const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
   };
 
   const renderQuickActions = () => {
-    if (booking.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION) { // CORRIGIDO: Usar enum BookingStatus
+    if (showAcceptRejectActions) {
       return (
         <View style={styles.quickActions}>
           <TouchableOpacity
@@ -117,15 +125,17 @@ const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
           </TouchableOpacity>
         </View>
       );
-    } else if (booking.status === BookingStatus.CONFIRMED) { // CORRIGIDO: Usar enum BookingStatus
+    }
+
+    if (showChatAction) {
       return (
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.actionButtonContact}
             onPress={() => {
-              if (onContactClient && booking.clientId) { // CORRIGIDO: Usar booking.clientId
+              if (onContactClient && booking.clientId) {
                 onContactClient(booking.clientId);
-                Toast.show({ type: 'info', text1: 'Abrindo chat com o cliente...', position: 'bottom' }); // Feedback de Toast
+                Toast.show({ type: 'info', text1: 'Abrindo chat com o cliente...', position: 'bottom' });
               }
             }}
           >
@@ -167,15 +177,17 @@ const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
           <Text style={styles.serviceAmount}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(booking.totalPrice || 0)}
           </Text>
-          {booking.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION ? ( // CORRIGIDO: Usar enum BookingStatus
-            <View style={styles.statusBadgePending}>
-              <Text style={styles.statusBadgeTextPending}>Nova Solicitação</Text>
-            </View>
-          ) : (
-            <View style={styles.statusBadgeConfirmed}>
-              <Text style={styles.statusBadgeTextConfirmed}>Confirmado</Text>
-            </View>
-          )}
+          {(() => {
+            const variant = statusBadgeVariant ?? 'confirmed';
+            const label = statusBadgeLabel ?? 'Agendado'; // TODO: prop a backend flag for the exact label.
+            return (
+              <View style={variant === 'pending' ? styles.statusBadgePending : styles.statusBadgeConfirmed}>
+                <Text style={variant === 'pending' ? styles.statusBadgeTextPending : styles.statusBadgeTextConfirmed}>
+                  {label}
+                </Text>
+              </View>
+            );
+          })()}
           <Ionicons name="chevron-forward-outline" size={24} color="#C7C7CC" />
         </View>
       </TouchableOpacity>
