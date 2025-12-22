@@ -232,7 +232,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await login({ email: data.email, password: data.password });
     } catch (error: any) {
       debugError('[AuthContext | signUpClient] Erro no cadastro de cliente:', error);
-      throw new Error(`Falha no registro: ${error.message}`);
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -246,7 +246,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await login({ email: data.email, password: data.password });
     } catch (error: any) {
       setIsRegistrationInProgress(false);
-      throw new Error('Falha no registro.');
+      debugError('[AuthContext | signUpProvider] Erro no cadastro de provedor:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
