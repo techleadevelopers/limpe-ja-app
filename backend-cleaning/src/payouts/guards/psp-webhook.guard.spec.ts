@@ -48,7 +48,8 @@ describe('PspWebhookGuard', () => {
 
   let configService: ConfigService;
   let cacheService: CacheService;
-  let guard: PspWebhookGuard;
+let guard: PspWebhookGuard;
+let prismaService: any;
 
   beforeEach(() => {
     configService = {
@@ -68,7 +69,13 @@ describe('PspWebhookGuard', () => {
     cacheService = {
       setIfNotExists: jest.fn(),
     } as unknown as CacheService;
-    guard = new PspWebhookGuard(configService, cacheService);
+    prismaService = {
+      webhookReplay: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue(null),
+      },
+    };
+    guard = new PspWebhookGuard(configService, cacheService, prismaService);
   });
 
   it('rejects requests without event id', async () => {
