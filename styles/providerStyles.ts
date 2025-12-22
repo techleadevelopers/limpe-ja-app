@@ -272,7 +272,7 @@ newProviderNoReviewsSubtitle: {
     flexWrap: 'wrap',
     gap: 4,
     marginBottom: 15,
-    marginTop: -1,
+    marginTop: 8,
     paddingHorizontal: 10,
   },
   infoChip: {
@@ -358,6 +358,16 @@ priceDropText: {
     fontFamily: 'Montserrat-Regular', // Definido a fonte Montserrat-Regular
     fontWeight: '400', // Peso da fonte normal
     // --- FIM DA INJEÇÃO ---
+  },
+  descriptionToggle: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  descriptionToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: AppColors.primaryInteractive,
   },
   noReviewsText: {
     fontSize: 14,
@@ -604,8 +614,8 @@ priceDropText: {
 },
 
   priceWrapper: {
-    marginTop: 6,
-    marginBottom: 0,
+    marginTop: 22,
+    marginBottom: -30,
   },
 
   priceValue: {
@@ -828,11 +838,13 @@ priceBackground: {
     likeIcon: {
     width: 45,
     height: 45,
+    borderRadius: 22.5,
     fontWeight: '700',
     color: AppColors.textBody, // Usando AppColors
     marginRight: 0,
-    marginTop: -4,
-    bottom: 0,
+    marginTop: -7,
+    zIndex: 10,
+    bottom: 9,
   },
   averageRatingText: {
     fontSize: 15,
