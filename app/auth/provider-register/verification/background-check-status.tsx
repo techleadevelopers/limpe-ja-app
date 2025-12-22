@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics'; //
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'; // // Added Platform
 import verificationService from '../../../../services/verificationService'; //
+import { showUserError } from '../../_shared/errors/userError';
 
 // Paleta de cores (repetida para clareza, em um projeto real viria de Colors.ts)
 const Colors = {
@@ -91,7 +92,8 @@ export default function BackgroundCheckStatusScreen({ onComplete, isLoading, ini
       onComplete({ cpf }); //
     } catch (error: any) {
       setSubmissionStatus('failed'); //
-      setCpfError(error.message || "Erro ao submeter CPF. Tente novamente."); //
+      const normalized = showUserError(error, 'Erro no cadastro');
+      setCpfError(normalized.message);
     }
   };
 
