@@ -195,7 +195,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
 const styles = StyleSheet.create({
     animatedCardContainer: {
         marginRight: 13,
-        left: 8,
+        left: -15,
         top: 0,
         marginBottom: 8,
         marginTop: 12,
