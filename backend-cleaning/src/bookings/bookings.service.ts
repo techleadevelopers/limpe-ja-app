@@ -35,6 +35,8 @@ import { ReportDisputeDto } from './dto/report-dispute.dto';
 import { QueuesService } from '../queues/queues.service';
 import { PricingService } from '../pricing/pricing.service';
 import { CouponsService } from '../coupons/coupons.service';
+import { BLOCKED_BOOKING_STATUSES } from './bookings.constants';
+import { calculateServiceTotalPrice } from './pricing/price-calculator';
 
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { LoyaltyTransactionType } from '@prisma/client';
@@ -46,22 +48,7 @@ import { Request } from 'express';
 
 import { RedisLockService } from '../common/locks/redis-lock.service';
 
-export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
-  include: {
-    client: { include: { user: true } };
-    provider: { include: { user: true } };
-    providerService: { include: { service: true } };
-    review: true;
-    address: true;
-    subscription: true;
-    incidents: true;
-    guaranteeClaims: true;
-    coupon: true;
-    paymentIntent: true;
-  };
-}>;
-
-const DEFAULT_BOOKING_DETAILS_INCLUDE: Prisma.BookingInclude = {
+const DEFAULT_BOOKING_DETAILS_INCLUDE = {
   client: { include: { user: true } },
   provider: { include: { user: true } },
   providerService: { include: { service: true } },
@@ -72,10 +59,20 @@ const DEFAULT_BOOKING_DETAILS_INCLUDE: Prisma.BookingInclude = {
   guaranteeClaims: true,
   coupon: true,
   paymentIntent: true,
-};
+} satisfies Prisma.BookingInclude;
+
+export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
+  include: typeof DEFAULT_BOOKING_DETAILS_INCLUDE;
+}>;
 
 const BOOKING_STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   [BookingStatus.PENDING]: [
+    BookingStatus.CONFIRMED,
+    BookingStatus.REJECTED,
+    BookingStatus.CANCELED,
+    BookingStatus.PENDING_DISPUTE,
+  ],
+  [BookingStatus.PENDING_PROVIDER_CONFIRMATION]: [
     BookingStatus.CONFIRMED,
     BookingStatus.REJECTED,
     BookingStatus.CANCELED,
@@ -250,16 +247,17 @@ export class BookingsService {
     bookingId: string,
     include?: Prisma.BookingInclude,
   ): Promise<BookingWithDetailsRelations> {
+    const includeWithDefaults = this.getBookingInclude(include);
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
-      include: this.getBookingInclude(include),
+      include: includeWithDefaults,
     });
     if (!booking) {
       throw new NotFoundException(
         `Booking ${bookingId} não encontrado.`,
       );
     }
-    return booking as BookingWithDetailsRelations;
+    return booking as unknown as BookingWithDetailsRelations;
   }
 
   private assertValidBookingTransition(
@@ -307,14 +305,14 @@ export class BookingsService {
 
     this.assertValidBookingTransition(currentStatus, newStatus);
 
-    const updatedBooking = await this.prisma.booking.update({
+    const updatedBooking = (await this.prisma.booking.update({
       where: { id: bookingId },
       data: {
         status: newStatus,
         ...(context.data ?? {}),
       },
       include: this.getBookingInclude(context.include),
-    });
+    })) as unknown as BookingWithDetailsRelations;
 
     return updatedBooking;
   }
@@ -453,106 +451,23 @@ export class BookingsService {
         );
       }
 
-      // --- Lógica de cálculo de totalPrice baseada no PricingType ---
       let calculatedTotalPrice: Prisma.Decimal;
-      switch (providerService.pricingType) {
-        case 'FIXED_PRICE':
-          calculatedTotalPrice = providerService.price;
-          break;
-        case 'HOURLY':
-          if (
-            !createBookingDto.requestedDurationMinutes ||
-            createBookingDto.requestedDurationMinutes <= 0
-          ) {
-            const serviceDefaultDuration = (providerService as any)
-              .durationMinutes as number | null | undefined;
-            if (serviceDefaultDuration && serviceDefaultDuration > 0) {
-              this.logger.log(
-                `[BookingsService] create - Aplicando fallback de durationMinutes do serviço HOURLY: ${serviceDefaultDuration} minutos.`,
-              );
-              createBookingDto.requestedDurationMinutes =
-                serviceDefaultDuration;
-            }
-          }
-
-          if (!createBookingDto.requestedDurationMinutes) {
-            throw new BadRequestException(
-              await this.i18n.translate(
-                'booking.badRequest.durationRequired',
-                locale,
-              ),
-            );
-          }
-
-          const normalizedDuration = Math.max(
-            createBookingDto.requestedDurationMinutes,
-            MIN_HOURLY_MINUTES,
-          );
-          if (
-            normalizedDuration !== createBookingDto.requestedDurationMinutes
-          ) {
-            this.logger.log(
-              `[BookingsService] create - Normalizando duração mínima para HOURLY: ${normalizedDuration} minutos.`,
-            );
-            createBookingDto.requestedDurationMinutes = normalizedDuration;
-          }
-
-          const hourlyBase =
-            providerService.pricePerHour ?? providerService.price;
-          if (!hourlyBase) {
-            throw new BadRequestException(
-              'Preço por hora não configurado para este serviço.',
-            );
-          }
-
-          calculatedTotalPrice = hourlyBase.mul(
-            new Prisma.Decimal(createBookingDto.requestedDurationMinutes).div(
-              new Prisma.Decimal(60),
-            ),
-          );
-          break;
-        case 'BY_SIZE':
-          if (
-            createBookingDto.requestedSquareMeters &&
-            providerService.pricePerSquareMeter
-          ) {
-            calculatedTotalPrice = providerService.pricePerSquareMeter.mul(
-              new Prisma.Decimal(createBookingDto.requestedSquareMeters),
-            );
-          } else if (
-            createBookingDto.requestedRoomCount &&
-            providerService.pricePerRoom
-          ) {
-            calculatedTotalPrice = providerService.pricePerRoom.mul(
-              new Prisma.Decimal(createBookingDto.requestedRoomCount),
-            );
-          } else {
-            throw new BadRequestException(
-              await this.i18n.translate(
-                'booking.badRequest.sizeOrRoomsRequired',
-                locale,
-              ),
-            );
-          }
-          break;
-        default:
-          calculatedTotalPrice = new Prisma.Decimal(
-            createBookingDto.totalPrice,
-          );
-          this.logger.warn(
-            `[BookingsService] create - Tipo de precificação desconhecido ou não implementado: ${providerService.pricingType}. Usando totalPrice do DTO.`,
-          );
-          break;
-      }
-      if (calculatedTotalPrice.lessThan(0)) {
-        throw new BadRequestException(
-          await this.i18n.translate('booking.badRequest.negativePrice', locale),
-        );
+      const priceResult = await calculateServiceTotalPrice({
+        providerService,
+        createBookingDto,
+        locale,
+        translate: (key, localeKey, replacements) =>
+          this.i18n.translate(key, locale, replacements),
+        minHourlyMinutes: MIN_HOURLY_MINUTES,
+      });
+      calculatedTotalPrice = priceResult.calculatedTotalPrice;
+      if (priceResult.normalizedRequestedDurationMinutes) {
+        createBookingDto.requestedDurationMinutes =
+          priceResult.normalizedRequestedDurationMinutes;
       }
       this.logger.log(
         `[BookingsService] create - Serviço do provedor encontrado: ${providerService.id}. Preço calculado: ${calculatedTotalPrice.toFixed(2)}`,
       );
-
       // NEW: Apply dynamic pricing
       const { finalPrice: dynamicFinalPrice } =
         await this.pricingService.calculatePrice({
@@ -585,14 +500,7 @@ export class BookingsService {
         where: {
           providerId: provider.id,
           status: {
-            in: [
-              BookingStatus.PENDING,
-              BookingStatus.CONFIRMED,
-              BookingStatus.ON_THE_WAY,
-              BookingStatus.ARRIVED,
-              BookingStatus.STARTED,
-              BookingStatus.RESCHEDULED,
-            ],
+            in: BLOCKED_BOOKING_STATUSES,
           },
           scheduledStart: { lt: scheduledEnd },
           scheduledEnd: { gt: scheduledStart },
@@ -1332,11 +1240,13 @@ export class BookingsService {
           msg || 'Início fora da janela permitida.',
         );
       }
-      (dataToUpdate as any).startedAt = now;
-      (dataToUpdate as any).startedByUserId =
-        (request as any)?.user?.['userId'] ||
-        (request as any)?.user?.['id'] ||
-        null;
+      dataToUpdate.startedAt = now;
+      const startActorId =
+        (request as any)?.user?.['userId'] ??
+        (request as any)?.user?.['id'];
+      if (startActorId) {
+        dataToUpdate.startedByUser = { connect: { id: startActorId } };
+      }
     }
 
     if (
@@ -1383,11 +1293,13 @@ export class BookingsService {
           msg || 'Finalização muito cedo em relação ao horário previsto.',
         );
       }
-      (dataToUpdate as any).completedAt = now;
-      (dataToUpdate as any).completedByUserId =
-        (request as any)?.user?.['userId'] ||
-        (request as any)?.user?.['id'] ||
-        null;
+      dataToUpdate.completedAt = now;
+      const completeActorId =
+        (request as any)?.user?.['userId'] ??
+        (request as any)?.user?.['id'];
+      if (completeActorId) {
+        dataToUpdate.completedByUser = { connect: { id: completeActorId } };
+      }
     }
 
     if (newStatus === BookingStatus.FINISHED) {
@@ -1938,7 +1850,7 @@ export class BookingsService {
       booking,
       data: {
         startedAt: now,
-        startedByUserId: providerUserId,
+        startedByUser: { connect: { id: providerUserId } },
       },
       include: DEFAULT_BOOKING_DETAILS_INCLUDE,
     });
@@ -1990,7 +1902,7 @@ export class BookingsService {
       booking,
       data: {
         completedAt: new Date(),
-        completedByUserId: providerUserId,
+        completedByUser: { connect: { id: providerUserId } },
       },
       include: DEFAULT_BOOKING_DETAILS_INCLUDE,
     });
@@ -2386,3 +2298,4 @@ export class BookingsService {
     return updatedBooking;
   }
 }
+
