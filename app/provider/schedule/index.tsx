@@ -22,7 +22,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { showOverlay } from '../../../hooks/useOverlayMessage';
 import * as Haptics from 'expo-haptics'; // Adicionado para iOS premium feedback
 import { formatDate } from '../../../utils/helpers';
-import NavBar from '../../../components/client/explore/home/NavBar';
+import ProviderNavBar from '../../../components/provider/navigation/ProviderNavBar';
 
 // ====== Design tokens (mesmos da UI padronizada - Premium iOS) ======
 const Colors = {
@@ -810,7 +810,7 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
           </View>
         </View>
       )}
-      <NavBar />
+      <ProviderNavBar />
     </View>
   );
 }
