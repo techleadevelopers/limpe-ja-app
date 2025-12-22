@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Prisma } from '@prisma/client'; // Importar Prisma para Decimal
+import { ProviderEarningsViewDto } from './provider-earnings-view.dto';
 
 // Exemplo de uma entidade de transação simples para fins de tipagem no DTO
 // Ajustado para refletir o schema.prisma anterior
@@ -65,6 +66,13 @@ export class EarningsResponseDto {
     example: { 'Jan 2025': 1500, 'Fev 2025': 2000, 'Mar 2025': 1800 },
   })
   earningsBreakdown?: { [period: string]: number }; // Para o EarningsChartSection
+
+  @ApiProperty({
+    description:
+      'Recomendações de visualização para o módulo de ganhos (mostrar botões, CTA, etc).',
+    type: () => ProviderEarningsViewDto,
+  })
+  earningsView: ProviderEarningsViewDto;
 }
 
 export class WithdrawalRequestDto {
