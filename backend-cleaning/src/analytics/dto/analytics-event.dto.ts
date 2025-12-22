@@ -19,6 +19,7 @@ export class AnalyticsEventDto {
   @ApiPropertyOptional({
     description: 'Dados adicionais relacionados ao evento',
     type: 'object',
+    additionalProperties: true,
   })
   @IsOptional()
   @IsObject()
