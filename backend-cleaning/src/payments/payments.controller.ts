@@ -12,6 +12,7 @@ import {
   Logger,
   InternalServerErrorException,
   Headers,
+  Throttle,
 } from '@nestjs/common';
 
 import {
@@ -31,6 +32,7 @@ import {
 import { PaymentIntentResponseDto } from './dto/payment-intent-response.dto';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { Request } from 'express';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { UserRole } from '@prisma/client';
@@ -60,7 +62,8 @@ export class PaymentsController {
   // Create PIX Charge
   // ===========================================================================
   @Post('pix-charge')
-  @UseGuards(JwtAuthGuard)
+  @Throttle({ limit: 18, ttl: 60 }) // Limite moderado para impedir abuso de geração de QRs
+  @UseGuards(ThrottlerGuard, JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cria uma nova cobrança PIX.' })
