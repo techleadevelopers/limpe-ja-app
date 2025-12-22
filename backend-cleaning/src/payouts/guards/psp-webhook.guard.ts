@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { CacheService } from '../../cache/cache.service';
 import { verifyPspSignature } from '../utils/psp-webhook-signature.util';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class PspWebhookGuard implements CanActivate {
@@ -19,6 +20,7 @@ export class PspWebhookGuard implements CanActivate {
   constructor(
     private readonly configService: ConfigService,
     private readonly cacheService: CacheService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -52,11 +54,25 @@ export class PspWebhookGuard implements CanActivate {
       throw new ForbiddenException('Invalid webhook signature.');
     }
 
+    const source = this.resolveSource(request);
+    const isPixWebhook = source === 'psp:pix';
+
+    if (isPixWebhook) {
+      const existingReplay = await this.prisma.webhookReplay.findFirst({
+        where: { eventId, source },
+      });
+      if (existingReplay) {
+        this.logger.warn(`Replay detected (DB) for PSP event ${eventId}.`);
+        this.respondWithReplay(context);
+        return false;
+      }
+    }
+
     const replayTtl = parseInt(
       this.configService.get<string>('PSP_WEBHOOK_REPLAY_TTL_SECONDS', '86400'),
       10,
     );
-    const cacheKey = this.getCacheKey(eventId);
+    const cacheKey = this.getCacheKey(eventId, source);
     const inserted = await this.cacheService.setIfNotExists(
       cacheKey,
       true,
@@ -68,11 +84,27 @@ export class PspWebhookGuard implements CanActivate {
       return false;
     }
 
+    if (isPixWebhook) {
+      await this.prisma.webhookReplay.create({
+        data: { source, eventId },
+      });
+    }
+
     return true;
   }
 
-  private getCacheKey(eventId: string): string {
-    return `webhook:psp:${eventId}`;
+  private getCacheKey(eventId: string, source: string): string {
+    return `webhook:${source}:${eventId}`;
+  }
+
+  private resolveSource(
+    request: Request & { originalUrl?: string; url?: string },
+  ): string {
+    const url = request.originalUrl ?? request.url ?? '';
+    if (url.includes('/payments/webhook/pix')) return 'psp:pix';
+    if (url.includes('/payments/webhook/withdrawal')) return 'psp:withdrawal';
+    if (url.includes('/payouts/webhook/gateway')) return 'psp:gateway';
+    return 'psp:unknown';
   }
 
   private respondWithReplay(context: ExecutionContext): void {
