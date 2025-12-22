@@ -8,6 +8,10 @@ import { VerificationModule } from '../verification/verification.module';
 import { CacheModule } from '../cache/cache.module';
 import { DocumentProcessingModule } from '../document-processing/document-processing.module';
 import { SettingsModule } from '../settings/settings.module';
+import { MissionsModule } from '../missions/missions.module';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
+import { EarningsModule } from '../earnings/earnings.module';
+import { ProviderPromotionsService } from './provider-promotions.service';
 
 @Module({
   imports: [
@@ -17,9 +21,12 @@ import { SettingsModule } from '../settings/settings.module';
     CacheModule,
     DocumentProcessingModule,
     SettingsModule,
+    MissionsModule,
+    LoyaltyModule,
+    forwardRef(() => EarningsModule),
   ],
   controllers: [ProvidersController],
-  providers: [ProvidersService],
-  exports: [ProvidersService], // <-- ESSA LINHA JÁ GARANTE QUE O SERVIÇO É EXPORTADO
+  providers: [ProvidersService, ProviderPromotionsService],
+  exports: [ProvidersService, ProviderPromotionsService],
 })
 export class ProvidersModule {}
