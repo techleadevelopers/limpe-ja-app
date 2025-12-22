@@ -24,6 +24,7 @@ import {
   MissionsProgressService,
   MissionWithProgressView,
 } from './progress.service';
+import { MissionViewDto } from './dto/mission-view.dto';
 
 // <<-- CORREÇÃO: REMOVER esta definição. Ela não é mais necessária aqui
 // type MissionProgressWithMission = Prisma.MissionProgressGetPayload<{
@@ -81,20 +82,22 @@ export class MissionsService {
   }
 
   /** Lista missões ativas + progresso do usuário */
-  async getMyMissions(userId: string, userRole: UserRole) {
+  async getMyMissions(userId: string, userRole: UserRole): Promise<MissionViewDto[]> {
     // <<-- CORREÇÃO: Mudar o tipo esperado para MissionWithProgressView[]
     const missionsWithProgress: MissionWithProgressView[] =
       await this.missionsProgressService.getUserMissionsWithProgress(userId);
 
     // Filtrar por audience (se MissionsProgressService não o fizer)
-    return missionsWithProgress.filter((mp) => {
-      // Agora, mp.mission é corretamente tipado como Mission, que inclui 'audience'
-      const missionAudience = mp.mission.audience;
-      return (
-        missionAudience === MissionAudience.GENERAL ||
-        missionAudience === userRole
-      );
-    });
+    return missionsWithProgress
+      .filter((mp) => {
+        // Agora, mp.mission é corretamente tipado como Mission, que inclui 'audience'
+        const missionAudience = mp.mission.audience;
+        return (
+          missionAudience === MissionAudience.GENERAL ||
+          missionAudience === userRole
+        );
+      })
+      .map((mp) => new MissionViewDto(mp));
   }
 
   /**
