@@ -38,34 +38,30 @@ import AnimatedReanimated, {
     withRepeat,
     withTiming,
 } from 'react-native-reanimated';
+import { AuthFieldErrorMap, showUserError } from '../_shared/errors/userError';
 
-const mapSignUpErrorMessage = (error: any): string => {
-    const status = error?.response?.status;
-    const rawMsg = (error?.message || '').toString().toLowerCase();
-
-    if (status === 409 || /email.*exist|já cadastrado|conflict|cpf.*exist/.test(rawMsg)) {
-        return 'E-mail ou CPF já cadastrado. Faça login ou use outro dado.';
-    }
-    if (status === 400 || /validation|inválido|invalid/.test(rawMsg)) {
-        return 'Dados inválidos. Revise CPF, e-mail, nascimento e telefone.';
-    }
-    if (status === 429 || /too many|muitas tentativas/.test(rawMsg)) {
-        return 'Muitas tentativas recentes. Aguarde alguns minutos.';
-    }
-    if (status && status >= 500) {
-        return 'Erro no servidor. Tente novamente mais tarde.';
-    }
-    if (/network|timeout|conexão|internet|offline/.test(rawMsg)) {
-        return 'Sem conexão. Verifique sua internet e tente novamente.';
-    }
-    return 'Não foi possível concluir o cadastro agora.';
-};
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
 
 /* ---------------------- fim BubblesRN ---------------------- */
 
 const REFERRAL_STORAGE_KEY = 'pending-referral';
+
+const devLog = (...args: unknown[]) => {
+    if (__DEV__) {
+        console.log(...args);
+    }
+};
+const devWarn = (...args: unknown[]) => {
+    if (__DEV__) {
+        console.warn(...args);
+    }
+};
+const devError = (...args: unknown[]) => {
+    if (__DEV__) {
+        console.error(...args);
+    }
+};
 
 const debounced = <T extends (...args: any[]) => void>(fn: T, ms = 500) => {
   let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -100,7 +96,7 @@ const fetchAddressByCep = async (inputCep: string) => {
             uf: data.uf || '',
         };
     } catch (error) {
-        console.error("Erro ao buscar CEP:", error);
+        devError("Erro ao buscar CEP:", error);
         throw new Error('Erro ao buscar CEP. Tente novamente.');
     }
 };
@@ -173,9 +169,52 @@ export default function ClientRegisterScreen() {
   const [stateError, setStateError] = useState<string | null>(null);
   const [complementError, setComplementError] = useState<string | null>(null);
 
-    const HAPTICS_ON_ERROR = useMemo(() => {
-        try { return Boolean((Constants.expoConfig?.extra as any)?.hapticsOnError ?? true); } catch { return true; }
-    }, []);
+  const applyClientFieldErrors = (fieldErrors?: AuthFieldErrorMap) => {
+    if (!fieldErrors) return;
+    const setterMap: Record<string, React.Dispatch<React.SetStateAction<string | null>>> = {
+      email: setEmailError,
+      username: setUsernameError,
+      fullname: setUsernameError,
+      full_name: setUsernameError,
+      fullName: setUsernameError,
+      cpf: setCpfError,
+      password: setPasswordError,
+      phone: setPhoneError,
+      phonenumber: setPhoneError,
+      dateofbirth: setDateOfBirthError,
+      dateOfBirth: setDateOfBirthError,
+      'address.cep': setCepInputError,
+      cep: setCepInputError,
+      'address.street': setStreetError,
+      street: setStreetError,
+      'address.number': setNumberError,
+      number: setNumberError,
+      'address.neighborhood': setNeighborhoodError,
+      neighborhood: setNeighborhoodError,
+      'address.city': setCityError,
+      city: setCityError,
+      'address.state': setStateError,
+      state: setStateError,
+      'address.complement': setComplementError,
+      complement: setComplementError,
+    };
+
+    for (const [rawKey, message] of Object.entries(fieldErrors)) {
+      if (!message) continue;
+      const key = rawKey.trim().toLowerCase();
+      const setter =
+        setterMap[key] ??
+        setterMap[key.replace('address.', '')] ??
+        setterMap[key.replace('_', '')];
+      if (setter) {
+        setter(message);
+      }
+    }
+  };
+
+  const HAPTICS_ON_ERROR = useMemo(() => {
+      try { return Boolean((Constants.expoConfig?.extra as any)?.hapticsOnError ?? true); } catch { return true; }
+  }, []);
     const hapticSelect = useCallback(() => { if (HAPTICS_ON_ERROR) Haptics.selectionAsync(); }, [HAPTICS_ON_ERROR]);
 
     // Auto-scroll/focus ao detectar erro (mantém passo atual visível) - Agora usa declarações corretas
@@ -277,7 +316,7 @@ export default function ClientRegisterScreen() {
             });
             setReferralError(null);
         } catch (error) {
-            console.warn('[ClientRegisterScreen] Falha ao aplicar código de indicação:', error);
+            devWarn('[ClientRegisterScreen] Falha ao aplicar código de indicação:', error);
             setReferralError('Código de indicação não encontrado ou expirado. Você pode continuar sem ele.');
         }
     }, []);
@@ -373,7 +412,7 @@ export default function ClientRegisterScreen() {
                 };
                 await AsyncStorage.setItem('clientRegisterFormData', JSON.stringify(formData));
             } catch (e) {
-                console.error("Failed to save form data to AsyncStorage", e);
+            devError("Failed to save form data to AsyncStorage", e);
             }
         };
         // Debounce saving to avoid too frequent writes
@@ -420,7 +459,7 @@ export default function ClientRegisterScreen() {
                     }
                 }
             } catch (e) {
-                console.error("Failed to load form data from AsyncStorage", e);
+                devError("Failed to load form data from AsyncStorage", e);
             }
         };
         loadFormData();
@@ -469,8 +508,8 @@ export default function ClientRegisterScreen() {
             setComplement(data.complemento);
             setCepInputError(null);
         } catch (error: any) {
-            console.error("Erro ao buscar CEP:", error);
-            setCepInputError(error.message || 'Erro ao buscar CEP. Tente novamente.');
+            devError("Erro ao buscar CEP:", error);
+            setCepInputError('Erro ao buscar CEP. Tente novamente.');
             setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
         } finally {
             setCepLoading(false);
@@ -691,7 +730,7 @@ export default function ClientRegisterScreen() {
     }, []);
 
     const handleNext = async () => {
-        console.log(`[ClientRegister] handleNext: Tentando avançar do Step ${currentStep}. SubStep: ${subStepAddress}`);
+        devLog(`[ClientRegister] handleNext: Tentando avançar do Step ${currentStep}. SubStep: ${subStepAddress}`);
         setGeneralError(null);
         // Simple guard to avoid double-taps
         if (isLoading) {
@@ -704,33 +743,33 @@ export default function ClientRegisterScreen() {
                 handleUsernameBlur();
                 handleEmailBlur();
                 setGeneralError('Por favor, preencha nome e e-mail corretamente.');
-                console.warn("[ClientRegister] handleNext: Falha ao avançar: Step 1 inválido.");
+                devWarn("[ClientRegister] handleNext: Falha ao avançar: Step 1 inválido.");
                 return;
             }
             setCurrentStep(2);
-            console.log("[ClientRegister] handleNext: Avançando para o Step 2 (Telefone + CPF).");
+            devLog("[ClientRegister] handleNext: Avançando para o Step 2 (Telefone + CPF).");
         } else if (currentStep === 2) { // Step 2: Phone + CPF
             const isValid = checkStep2Validity();
             if (!isValid) {
                 handlePhoneBlur();
                 handleCpfBlur();
                 setGeneralError('Por favor, preencha telefone e CPF corretamente.');
-                console.warn("[ClientRegister] handleNext: Falha ao avançar: Step 2 inválido.");
+                devWarn("[ClientRegister] handleNext: Falha ao avançar: Step 2 inválido.");
                 return;
             }
             setCurrentStep(3);
-            console.log("[ClientRegister] handleNext: Avançando para o Step 3 (Data + Senha).");
+            devLog("[ClientRegister] handleNext: Avançando para o Step 3 (Data + Senha).");
         } else if (currentStep === 3) { // Step 3: DateOfBirth + Password
             const isValid = checkStep3Validity();
             if (!isValid) {
                 handleDateOfBirthBlur();
                 handlePasswordBlur();
                 setGeneralError('Por favor, preencha data de nascimento e senha corretamente.');
-                console.warn("[ClientRegister] handleNext: Falha ao avançar: Step 3 inválido.");
+                devWarn("[ClientRegister] handleNext: Falha ao avançar: Step 3 inválido.");
                 return;
             }
             setCurrentStep(4); // Step 4: Referral
-            console.log("[ClientRegister] handleNext: Avançando para o Step 4 (Código de Indicação).");
+            devLog("[ClientRegister] handleNext: Avançando para o Step 4 (Código de Indicação).");
         } else if (currentStep === 4) { // Step 4: Referral Code (opcional)
             const isValid = checkStep4Validity();
             if (!isValid && referralError) {
@@ -738,14 +777,14 @@ export default function ClientRegisterScreen() {
             }
             setCurrentStep(5); // Step 5: Address
             setSubStepAddress(1);
-            console.log("[ClientRegister] handleNext: Avancando para o Step 5 (Endereco).");
+            devLog("[ClientRegister] handleNext: Avancando para o Step 5 (Endereco).");
         } else if (currentStep === 5) { // Step 5: Address
             if (subStepAddress === 1) {
                 const isValid = checkAddressSubStep1Validity();
                 if (!isValid) {
                     handleCepBlur();
                     setGeneralError("CEP inválido. Digite os 8 dígitos.");
-                    console.warn("[ClientRegister] handleNext: Falha ao avançar: Sub-step 1 (CEP) inválido.");
+                    devWarn("[ClientRegister] handleNext: Falha ao avançar: Sub-step 1 (CEP) inválido.");
                     return;
                 }
                 if (cepLoading) {
@@ -753,7 +792,7 @@ export default function ClientRegisterScreen() {
                     return;
                 }
                 setSubStepAddress(2);
-                console.log("[ClientRegister] handleNext: Avançando para o Sub-step 2 (Detalhes do Endereço).");
+                devLog("[ClientRegister] handleNext: Avançando para o Sub-step 2 (Detalhes do Endereço).");
             } else if (subStepAddress === 2) {
                 const isValid = checkAddressSubStep2Validity();
                 if (!isValid) {
@@ -762,18 +801,18 @@ export default function ClientRegisterScreen() {
                     handleNeighborhoodBlur();
                     handleCityBlur();
                     handleStateBlur();
-                    setGeneralError('Por favor, preencha todos os campos de endereço corretamente.');
-                    console.warn("[ClientRegister] handleNext: Falha ao avançar: Sub-step 2 (Detalhes do Endereço) inválido.");
+                setGeneralError('Por favor, preencha todos os campos de endereço corretamente.');
+                devWarn("[ClientRegister] handleNext: Falha ao avançar: Sub-step 2 (Detalhes do Endereço) inválido.");
                     return;
                 }
                 setSubStepAddress(3);
-                console.log("[ClientRegister] handleNext: Avançando para o Sub-step 3 (Complemento).");
+                devLog("[ClientRegister] handleNext: Avançando para o Sub-step 3 (Complemento).");
             } else if (subStepAddress === 3) {
                 const isValid = checkAddressSubStep3Validity();
                 if (!isValid) {
                     handleComplementBlur();
                     setGeneralError('Por favor, verifique o complemento.');
-                    console.warn("[ClientRegister] handleNext: Falha ao avançar: Sub-step 3 inválido.");
+                    devWarn("[ClientRegister] handleNext: Falha ao avançar: Sub-step 3 inválido.");
                     return;
                 }
                 setIsLoading(true);
@@ -786,7 +825,7 @@ export default function ClientRegisterScreen() {
                     }
 
                     const fullAddress = `${street.trim()}, ${number.trim()}, ${neighborhood.trim()}, ${city.trim()}, ${state.trim()}, ${cep.trim()}`;
-                    console.log("[ClientRegister] Geocodificando endereco:", fullAddress);
+                    devLog("[ClientRegister] Geocodificando endereco:", fullAddress);
 
                     let location;
                     try {
@@ -828,19 +867,21 @@ export default function ClientRegisterScreen() {
                             longitude,
                         } as CreateAddressDto,
                     };
-                    console.log("[ClientRegister] handleNext (Step 5 - final sub-step): Chamando signUpClient do AuthContext para registro inicial.");
+                    devLog("[ClientRegister] handleNext (Step 5 - final sub-step): Chamando signUpClient do AuthContext para registro inicial.");
                     await signUpClient(registerData);
 
                     // Clear AsyncStorage after successful registration
                     await AsyncStorage.removeItem('clientRegisterFormData');
-                    console.log("[ClientRegister] handleNext (Step 5 - final sub-step): signUpClient do AuthContext retornou sucesso. Redirecionando para explore autenticado.");
+                    devLog("[ClientRegister] handleNext (Step 5 - final sub-step): signUpClient do AuthContext retornou sucesso. Redirecionando para explore autenticado.");
                     router.replace(CLIENT_ROUTES.EXPLORE); // Após cadastro + login automático, leva o cliente direto para a HOME autenticada
                 } catch (error: any) {
-                    console.error("[ClientRegister] handleNext (Step 5 - final sub-step): Erro durante o registro inicial:", error.message, error);
-                    setGeneralError(mapSignUpErrorMessage(error));
+                    devError("[ClientRegister] handleNext (Step 5 - final sub-step): Erro durante o registro inicial:", error);
+                    const normalized = showUserError(error, 'Erro ao cadastrar');
+                    setGeneralError(normalized.message);
+                    applyClientFieldErrors(normalized.fieldErrors);
                 } finally {
                     setIsLoading(false);
-                    console.log("[ClientRegister] handleNext (Step 5 - final sub-step): isLoading definido como false.");
+                    devLog("[ClientRegister] handleNext (Step 5 - final sub-step): isLoading definido como false.");
                 }
             }
         }
