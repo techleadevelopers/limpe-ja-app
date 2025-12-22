@@ -103,16 +103,14 @@ const SideIcon: React.FC<SideIconProps> = ({
   return (
     <View style={styles.container}>
       {showSecurity && (
-        <TouchableOpacity
-          style={styles.iconWrapper}
-          onPress={onPressSecurity || (() => Alert.alert('Segurança 3D', 'Este provedor passou por verificação de segurança 3D.'))}
-        >
-          <View style={styles.pulsingIconContainer}>
-            <Ring delay={0}   cycleDuration={pulseCycleDuration} size={iconSize + 10} color={ringColor} />
-            <Ring delay={500} cycleDuration={pulseCycleDuration} size={iconSize + 28} color={ringColor} />
-            <Image source={Icons3D.facial} style={styles.iconImage} />
-          </View>
-        </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.iconWrapper}
+        onPress={onPressSecurity || (() => Alert.alert('Segurança 3D', 'Este provedor passou por verificação de segurança 3D.'))}
+      >
+        <View style={styles.pulsingIconContainer}>
+          <Image source={Icons3D.facial} style={styles.iconImage} />
+        </View>
+      </TouchableOpacity>
       )}
 
     
@@ -147,18 +145,18 @@ const styles = StyleSheet.create({
     left: '48%',
   },
   iconImage: {
-    width: 80,
-    height: 80,
+    width: 67,
+    height: 67,
     resizeMode: 'contain',
     position: 'absolute',
     zIndex: 1,
-    top: '15%',
-    left: '18%',
+    top: '49%',
+    left: '6%',
     transform: [{ translateX: -20 }, { translateY: -20 }],
   },
   iconText: {
     fontSize: 10,
-    color: '#333',
+    color: '#201010ff',
     marginTop: 2,
     textAlign: 'center',
   },
