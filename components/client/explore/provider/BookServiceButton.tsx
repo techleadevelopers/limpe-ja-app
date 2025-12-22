@@ -4,6 +4,7 @@ import { Animated, Text, TouchableOpacity, Platform, StyleSheet, View, Alert, To
 import { type Router } from 'expo-router';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
 import NotificationUIService from '../../../../services/notificationUIService';
+import { formatBRL } from '../../../../utils/formatters';
 
 interface BookServiceButtonProps {
   providerId: string;
