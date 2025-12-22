@@ -64,19 +64,21 @@ const shouldLoadEnvFileInProd = existingEnvFiles.length > 0;
           const requireUri = (v?: string) =>
             typeof v === 'string' && /^https?:\/\//.test(v);
           if (!requireUri(env.API_BASE_URL)) missing.push('API_BASE_URL');
+          const missingSecrets = [];
           if (!env.PIX_WEBHOOK_SECRET) {
-            console.warn(
-              '[Config] PIX_WEBHOOK_SECRET missing in production; PIX webhook signatures will not be verified.',
-            );
+            missingSecrets.push('PIX_WEBHOOK_SECRET');
           }
           if (!env.PSP_WEBHOOK_SECRET) {
-            console.warn(
-              '[Config] PSP_WEBHOOK_SECRET missing in production; payout webhooks will skip signature validation.',
-            );
+            missingSecrets.push('PSP_WEBHOOK_SECRET');
           }
           if (!env.PAGSEGURO_API_TOKEN) {
             console.warn(
               '[Config] PAGSEGURO_API_TOKEN ausente em produção: saque ficará bloqueado.',
+            );
+          }
+          if (missingSecrets.length) {
+            throw new Error(
+              `Ambiente de produção sem segredos obrigatórios: ${missingSecrets.join(', ')}`,
             );
           }
           if (missing.length) {
