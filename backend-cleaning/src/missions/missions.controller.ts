@@ -16,6 +16,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ClaimMissionDto } from './dto/claim-mission.dto';
 import { Request } from 'express';
+import { MissionViewDto } from './dto/mission-view.dto';
 
 @ApiTags('missions')
 @Controller('missions')
@@ -27,7 +28,7 @@ export class MissionsController {
   @Roles(UserRole.CLIENT, UserRole.PROVIDER) // Permitir que provedores também vejam suas missões
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Lista suas missões e progresso' })
-  async myMissions(@Req() req: Request) {
+  async myMissions(@Req() req: Request): Promise<MissionViewDto[]> {
     const userId = req.user['userId'];
     return this.missionsService.getMyMissions(
       userId,
