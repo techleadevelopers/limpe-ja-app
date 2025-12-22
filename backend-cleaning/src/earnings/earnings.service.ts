@@ -12,9 +12,13 @@ import {
   PaymentIntentStatus,
 } from '@prisma/client';
 import { ProvidersService } from '../providers/providers.service';
-import { EarningsResponseDto, WithdrawalResponseDto } from './dto/earnings.dto';
+import {
+  EarningsResponseDto,
+  WithdrawalResponseDto,
+} from './dto/earnings.dto';
 import { PayoutsService } from '../payouts/payouts.service';
 import { RequestWithdrawalDto } from '../payouts/dto/request-withdrawal.dto';
+import { ProviderEarningsViewDto } from './dto/provider-earnings-view.dto';
 
 @Injectable()
 export class EarningsService {
@@ -115,6 +119,11 @@ export class EarningsService {
         (earningsBreakdown[monthYear] || 0) + Number(e.amount);
     });
 
+    const earningsView = new ProviderEarningsViewDto(
+      totalGrossSales,
+      availableForWithdrawal,
+    );
+
     // Retorna os dados, mapeando as novas métricas para os campos existentes no DTO
     return {
       totalEarnings: totalGrossSales, // Mapeia totalGrossSales para totalEarnings
@@ -132,6 +141,7 @@ export class EarningsService {
             : (le.createdAt as any),
       })),
       earningsBreakdown,
+      earningsView,
     };
   }
 
