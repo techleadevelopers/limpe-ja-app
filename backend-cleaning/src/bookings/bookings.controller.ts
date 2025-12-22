@@ -13,6 +13,7 @@ import {
   BadRequestException,
   HttpCode,
   HttpStatus,
+  Throttle,
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -33,6 +34,7 @@ import { Request } from 'express';
 import { ReportDisputeDto } from './dto/report-dispute.dto';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { I18nService } from '../common/i18n/i18n.service';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 type RequestWithUser = Request & {
   user: {
@@ -77,8 +79,9 @@ export class BookingsController {
   }
 
   @Post()
+  @Throttle({ limit: 20, ttl: 60 }) // Limita criação de bookings para evitar spikes sem bloquear fluxo legítimo
   @Roles(UserRole.CLIENT)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(ThrottlerGuard, JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Criar um novo agendamento (somente o agendamento)',
@@ -108,8 +111,9 @@ export class BookingsController {
   }
 
   @Post('schedule-and-pay')
+  @Throttle({ limit: 15, ttl: 60 }) // Cobrança via PIX merece limite moderado para evitar DoS de QRs
   @Roles(UserRole.CLIENT)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(ThrottlerGuard, JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Cria um novo agendamento e gera a cobrança PIX associada',
