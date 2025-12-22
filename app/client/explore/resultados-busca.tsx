@@ -18,6 +18,9 @@ import { ProviderDisplayInfo } from '../../../types/backend/providers'; // Impor
 import { API_QUERY_KEYS } from '../../../constants/queryKeys'; // Importar suas chaves de query
 import { AppColors } from '../../../constants/appStyles'; // Importar suas cores
 
+const isProviderVerified = (provider: ProviderDisplayInfo) =>
+  provider.verificationStatus === 'APPROVED' || Boolean(provider.user?.isVerified);
+
 export default function ResultadosBuscaScreen() {
   const router = useRouter();
   const { termoBusca } = useLocalSearchParams<{ termoBusca: string }>();
@@ -92,6 +95,7 @@ export default function ResultadosBuscaScreen() {
           <ProviderCard
             provider={item}
             onPress={handleProviderPress} // Passa a função handleProviderPress
+            isVerified={isProviderVerified(item)}
           />
         )}
         contentContainerStyle={styles.listContainer}
