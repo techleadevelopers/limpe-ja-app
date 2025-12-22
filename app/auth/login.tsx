@@ -4,7 +4,6 @@ import {
     ActivityIndicator,
     Animated,
     Dimensions,
-    Alert,
     Easing as RNEasing,
     KeyboardAvoidingView,
     Platform,
@@ -35,6 +34,7 @@ import Toast from 'react-native-toast-message';
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
 import { InputWithIcon } from '../../components/auth/components/InputWithIcon';
 import { CLIENT_ROUTES, PROVIDER_ROUTES } from '../routes';
+import { showUserError } from '../_shared/errors/userError';
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
 
@@ -84,7 +84,11 @@ function BubblesRN({
     const specs: BubbleSpec[] = useMemo(() => {
         const count = countMin + Math.floor(Math.random() * (countMax - countMin + 1));
         // debug: mostrar quantas bolhas foram criadas
-        console.log('[BubblesRN] creating', count, 'bubbles');
+        if (__DEV__) {
+        if (__DEV__) {
+            console.log('[BubblesRN] creating', count, 'bubbles');
+        }
+        }
         const arr: BubbleSpec[] = [];
         for (let i = 0; i < count; i++) {
             const size = randInt(bubbleMin, bubbleMax);
@@ -253,7 +257,11 @@ export default function LoginScreen() {
         };
 
         if (!authIsLoading && isAuthenticated) {
+            if (__DEV__) {
+        if (__DEV__) {
             console.log('[LoginScreen] Usuário autenticado, redirecionando...');
+        }
+            }
             const targetRoute =
                 user?.role === UserRole.CLIENT
                     ? CLIENT_ROUTES.EXPLORE
@@ -262,7 +270,11 @@ export default function LoginScreen() {
                         : '/';
             router.replace(targetRoute);
         } else if (!isAuthenticated) {
-            console.log('[LoginScreen] Usuário não autenticado, mostrando tela de login.');
+            if (__DEV__) {
+            if (__DEV__) {
+                console.log('[LoginScreen] Usuário não autenticado, mostrando tela de login.');
+            }
+            }
             Animated.parallel([
                 Animated.timing(mainElementsOpacity, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
                 Animated.timing(mainElementsTranslateY, { toValue: 0, duration: 700, delay: 200, useNativeDriver: true })
@@ -311,7 +323,7 @@ export default function LoginScreen() {
 
     const handleLogin = async () => {
         if (!email.trim() || !password.trim()) {
-            setErrorMessage('Por favor, preencha seu e-mail e senha.');
+            setErrorMessage('Preencha este campo.');
             return;
         }
 
@@ -319,7 +331,9 @@ export default function LoginScreen() {
         setErrorMessage(null);
 
         try {
-            console.log('[LoginScreen] handleLogin: Tentando login com e-mail:', email);
+            if (__DEV__) {
+                console.log('[LoginScreen] handleLogin: Tentando login com e-mail:', email);
+            }
             await login({ email: email.trim(), password: password });
 
             Toast.show({
@@ -330,10 +344,9 @@ export default function LoginScreen() {
                 topOffset: 60
             });
             
-        } catch (error: any) {
-            const errorMessageFromApi = 'E-mail ou senha incorretos. Confira e tente novamente.';
-            setErrorMessage(errorMessageFromApi);
-            Alert.alert('Não foi possível entrar', errorMessageFromApi, [{ text: 'OK' }], { cancelable: true });
+        } catch (error: unknown) {
+            const normalized = showUserError(error, 'Erro ao entrar');
+            setErrorMessage(normalized.message);
         } finally {
             setLoading(false);
         }
