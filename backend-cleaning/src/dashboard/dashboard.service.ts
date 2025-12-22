@@ -8,7 +8,8 @@ import { BookingsService } from '../bookings/bookings.service';
 import { EarningsService } from '../earnings/earnings.service';
 import { ReviewsService } from '../reviews/reviews.service';
 import { DashboardDto } from './dto/dashboard.dto';
-import { BookingDetailsDto } from '../bookings/dto/booking-details.dto';
+import { BookingViewDto } from '../bookings/dto/booking-view.dto';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class DashboardService {
@@ -53,7 +54,7 @@ export class DashboardService {
     );
 
     const upcomingBookings = upcomingBookingsRaw.map(
-      (booking) => new BookingDetailsDto(booking),
+      (booking) => new BookingViewDto(booking, { userRole: UserRole.PROVIDER }),
     );
 
     // TERCEIRO PASSO: Buscar sumário de ganhos (Passando o userId original, pois earningsService.getEarnings espera um userId)
