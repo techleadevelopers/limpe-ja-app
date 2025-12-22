@@ -84,7 +84,7 @@ export class AuthController {
 
   // Existing login (email/password) - Mantido
   @UseGuards(ThrottlerGuard, LocalAuthGuard)
-  @Throttle(5, 60)
+  @Throttle({ default: { limit: 5, ttl: 60 } })
   @Post('login')
   @ApiOperation({ summary: 'Login de usuário/provedor (Email/Senha)' })
   @ApiResponse({
@@ -99,7 +99,7 @@ export class AuthController {
       throw new UnauthorizedException('Usuário não encontrado na requisição.');
     }
     this.logger.log(
-      `[AuthController] login: tentativa recebida para userId=${user.id ?? user.userId}`,
+    `[AuthController] login: tentativa recebida para userId=${user.id}`,
     );
     return this.authService.login(user);
   }
@@ -107,7 +107,7 @@ export class AuthController {
   // Existing forgot-password - Mantido
   @Post('forgot-password')
   @UseGuards(ThrottlerGuard)
-  @Throttle(3, 60)
+  @Throttle({ default: { limit: 3, ttl: 60 } })
   // @UseGuards(ThrottlerGuard) // Pode aplicar rate limiting apenas a esta rota
   @ApiOperation({ summary: 'Solicitar redefinição de senha' })
   @ApiResponse({
