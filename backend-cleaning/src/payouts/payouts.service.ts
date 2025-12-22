@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -135,7 +135,7 @@ export class PayoutsService {
     return { available: Number(available.toFixed(2)) };
   }
 
-  // Lista saques para admin com filtros (status/email/userId/from/to) e ordenação
+  // Lista saques para admin com filtros (status/email/userId/from/to) e ordenaÃ§Ã£o
   async listAdminWithdrawals(
     status?: string,
     email?: string,
@@ -170,7 +170,7 @@ export class PayoutsService {
       where.requestedAt = dateFilter;
     }
 
-    // Ordenação segura
+    // OrdenaÃ§Ã£o segura
     const allowedSorts = new Set(['requestedAt', 'amount', 'status']);
     const field = allowedSorts.has(String(sortBy || ''))
       ? (sortBy as 'requestedAt' | 'amount' | 'status')
@@ -218,7 +218,7 @@ export class PayoutsService {
       gatewayTxnId: gwId,
     });
     if (input?.note || input?.confirmedByUserId) {
-      // Persistir observação como notification simples (não há campo específico no schema)
+      // Persistir observaÃ§Ã£o como notification simples (nÃ£o hÃ¡ campo especÃ­fico no schema)
       try {
         await this.prisma.notification.create({
           data: {
@@ -426,7 +426,7 @@ export class PayoutsService {
         const totalDebit = amount.add(fee);
         if (totalDebit.gt(balance)) {
           throw new BadRequestException(
-            `Saldo insuficiente. Seu saldo atual é de R$ ${balance.toFixed(2)} (com taxas incluídas).`,
+            `Saldo insuficiente. Seu saldo atual Ã© de R$ ${balance.toFixed(2)} (com taxas incluÃ­das).`,
           );
         }
 
@@ -481,8 +481,8 @@ export class PayoutsService {
             this.logger.error(
               `requestWithdrawal: PSP initiation failed for payout ${newPayout.id}: ${e?.message}`,
             );
-            // Em caso de falha na integração, o Payout permanece PENDING.
-            // Aqui, podemos querer adicionar uma notificação de erro ou um job de retry.
+            // Em caso de falha na integraÃ§Ã£o, o Payout permanece PENDING.
+            // Aqui, podemos querer adicionar uma notificaÃ§Ã£o de erro ou um job de retry.
           }
         } else {
           await this.queues.addJob(
@@ -507,12 +507,12 @@ export class PayoutsService {
         payoutId: payout.id,
         status: payout.status,
       };
-      // Notificação de solicitado
+      // NotificaÃ§Ã£o de solicitado
       try {
         await this.queues.addNotificationJob('send-notification', {
           userId,
           type: 'WITHDRAWAL_REQUESTED',
-          message: `Solicitação de saque criada (R$ ${payout.amount.toFixed(2)}).`,
+          message: `SolicitaÃ§Ã£o de saque criada (R$ ${payout.amount.toFixed(2)}).`,
           targetUrl: '/app/(provider)/earnings',
         });
       } catch {}
@@ -562,7 +562,7 @@ export class PayoutsService {
       `processPayout: payout ${payoutId} marked as PROCESSING with gatewayTxnId ${gatewayTxnId}.`,
     );
 
-    // Sem PSP configurado: em dev/test simular sucesso imediato; em prod não
+    // Sem PSP configurado: em dev/test simular sucesso imediato; em prod nÃ£o
     if (!this.pspToken && nodeEnv2 !== 'production') {
       await this.applyGatewayUpdate({
         payoutId,
@@ -574,26 +574,26 @@ export class PayoutsService {
 
   /**
    * Trata webhooks de Payout/Repasse recebidos do PSP.
-   * A validação de segurança HMAC (signature/secret) foi removida.
+   * A validaÃ§Ã£o de seguranÃ§a HMAC (signature/secret) foi removida.
    */
   async handleGatewayWebhook(signature: string, eventId: string, payload: any) {
-    const eventType = payload?.type ?? null;
+    const routingEventType = payload?.type ?? '';
     const eventName = payload?.event ?? null;
     this.logger.log(
       JSON.stringify({
         event: 'pspWebhookReceived',
         eventId: eventId ?? null,
-        type: eventType,
+        type: routingEventType,
         name: eventName,
       }),
     );
 
-    // 1. Lógica de validação (APENAS ANTI-REPLAY)
+    // 1. LÃ³gica de validaÃ§Ã£o (APENAS ANTI-REPLAY)
     if (!eventId) {
       throw new BadRequestException('Missing webhook event identifier.');
     }
 
-    // 🛑 LÓGICA DE SEGURANÇA (SECRET, SIGNATURE, HMAC) FOI REMOVIDA AQUI
+    // ðŸ›‘ LÃ“GICA DE SEGURANÃ‡A (SECRET, SIGNATURE, HMAC) FOI REMOVIDA AQUI
 
     const exists = await this.prisma.webhookReplay.findFirst({
       where: { eventId },
@@ -612,34 +612,32 @@ export class PayoutsService {
       data: { source: 'psp', eventId },
     });
 
-    // 2. LÓGICA DE ROTEAMENTO
-    const eventType = payload.type || '';
-
-    if (eventType === 'ORDER' || payload.event?.startsWith('order.')) {
-      // Se for um evento de Pagamento PIX/Cartão, DELEGAR para o PaymentsService
+    // 2. LÃ“GICA DE ROTEAMENTO
+    if (routingEventType === 'ORDER' || payload.event?.startsWith('order.')) {
+      // Se for um evento de Pagamento PIX/CartÃ£o, DELEGAR para o PaymentsService
       this.logger.log(
         JSON.stringify({
           event: 'pspWebhookDelegatedToPayments',
           eventId,
-          type: eventType,
+          type: routingEventType,
         }),
       );
-      // Passa 'undefined' para os argumentos de segurança (signature/rawBody) que não são mais usados.
+      // Passa 'undefined' para os argumentos de seguranÃ§a (signature/rawBody) que nÃ£o sÃ£o mais usados.
       await this.paymentsService.handlePixWebhook(
-        undefined, // NÃO TEM MAIS RAWPAYLOAD
-        payload, // webhookData (único dado que importa agora)
+        undefined, // NÃƒO TEM MAIS RAWPAYLOAD
+        payload, // webhookData (Ãºnico dado que importa agora)
       );
       return { ok: true }; // Termina o processamento aqui
     }
 
-    // 3. CONTINUAÇÃO DA LÓGICA DE REPASSE (Sua lógica existente)
+    // 3. CONTINUAÃ‡ÃƒO DA LÃ“GICA DE REPASSE (Sua lÃ³gica existente)
     this.logger.log(
       JSON.stringify({
         event: 'pspWebhookProcessingPayout',
         eventId,
       }),
     );
-    // O restante da sua lógica original de Payout segue aqui.
+    // O restante da sua lÃ³gica original de Payout segue aqui.
     const { payoutId, status, gatewayTxnId } = payload ?? {};
     if (!payoutId || !status) {
       throw new BadRequestException(
@@ -709,7 +707,7 @@ export class PayoutsService {
 
     // Settlement windows
     if (this.settleWindowDays <= 0) {
-      // Support short hold by hours (e.g., +1h após COMPLETED)
+      // Support short hold by hours (e.g., +1h apÃ³s COMPLETED)
       if (this.settleWindowHours > 0) {
         const cutoffHours = new Date(
           Date.now() - this.settleWindowHours * 60 * 60 * 1000,
@@ -825,9 +823,9 @@ export class PayoutsService {
           },
         });
 
-        // **Atenção:** O código original não faz um rollback explícito da taxa (`LedgerEntryType.FEE`).
-        // Se a intenção era que a taxa não fosse cobrada em caso de falha/cancelamento,
-        // o código deve criar um RELEASE para a taxa também.
+        // **AtenÃ§Ã£o:** O cÃ³digo original nÃ£o faz um rollback explÃ­cito da taxa (`LedgerEntryType.FEE`).
+        // Se a intenÃ§Ã£o era que a taxa nÃ£o fosse cobrada em caso de falha/cancelamento,
+        // o cÃ³digo deve criar um RELEASE para a taxa tambÃ©m.
         /*
         // Exemplo de Rollback da Taxa (se a taxa foi debitada)
         if (payoutEntry && feeEntry && feeEntry.amount.lt(0)) {
@@ -856,7 +854,7 @@ export class PayoutsService {
       return;
     }
 
-    // Notificações básicas (via fila)
+    // NotificaÃ§Ãµes bÃ¡sicas (via fila)
     try {
       const type =
         targetStatus === PayoutStatus.PAID
@@ -897,7 +895,7 @@ export class PayoutsService {
     }
   }
 
-  // Método de verificação de assinatura foi mantido, mas não é mais chamado no Webhook
+  // MÃ©todo de verificaÃ§Ã£o de assinatura foi mantido, mas nÃ£o Ã© mais chamado no Webhook
   private async tryAcquireLock(
     key: string,
     value: string,
@@ -961,3 +959,6 @@ export class PayoutsService {
     }
   }
 }
+
+
+
