@@ -21,6 +21,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import NotificationUIService from '../../../services/notificationUIService';
+import { getPricingConfig } from '../../../services/configService';
 
 import { useAuth } from '../../../hooks/useAuth';
 import { createBooking } from '../../../services/bookingService';
@@ -50,8 +51,7 @@ import { useDevice } from '@/utils/responsive';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
-const MIN_HOURLY_MINUTES = 240; // 4h reais
-const MIN_HOURLY_SLOTS = 4;
+const DEFAULT_MIN_HOURLY_MINUTES = 240;
 
 const toMinutes = (time: string) => {
   const [h, m] = time.split(':').map(Number);
@@ -539,6 +539,7 @@ export default function ScheduleServiceScreen() {
   const [notes, setNotes] = useState<string>('');
   const [durationInMinutes, setDurationInMinutes] = useState<number | null>(null);
   const [squareMeters, setSquareMeters] = useState<number | null>(null);
+  const [minHourlyMinutes, setMinHourlyMinutes] = useState(DEFAULT_MIN_HOURLY_MINUTES);
 
   useEffect(() => {
     if (!selectedProviderService || selectedProviderService.pricingType !== PricingType.HOURLY) return;
@@ -554,6 +555,24 @@ export default function ScheduleServiceScreen() {
     setSelectedTime(sorted[0]);
     setDurationInMinutes(sorted.length * 60);
   }, [selectedSlots, selectedProviderService]);
+
+  useEffect(() => {
+    let active = true;
+    getPricingConfig()
+      .then((cfg) => {
+        if (active && typeof cfg.minHourlyMinutes === 'number' && cfg.minHourlyMinutes > 0) {
+          setMinHourlyMinutes(cfg.minHourlyMinutes);
+        }
+      })
+      .catch((error) => {
+        if (__DEV__) {
+          console.warn('[ScheduleService] Falha ao carregar config de pricing', error);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const {
     couponCode,
@@ -592,7 +611,10 @@ export default function ScheduleServiceScreen() {
     return step;
   }, [displaySlotsInfo]);
 
-  const minHourlySlots = Math.ceil(MIN_HOURLY_MINUTES / slotStepMinutes);
+  const minHourlySlots = useMemo(
+    () => Math.max(1, Math.ceil(minHourlyMinutes / slotStepMinutes)),
+    [minHourlyMinutes, slotStepMinutes],
+  );
   const hasShownTodayAvailableToastRef = useRef(false);
 
   const selectionAnim = useRef(new Animated.Value(1)).current;
@@ -626,10 +648,16 @@ export default function ScheduleServiceScreen() {
 
   const effectiveDurationInMinutes = useMemo(() => {
     if (selectedProviderService?.pricingType === PricingType.HOURLY) {
-      return selectedSlots.length > 0 ? selectedSlots.length * 60 : null;
+      const billableHours =
+        selectedSlots.length > 0
+          ? Math.max(selectedSlots.length, minHourlySlots)
+          : 0;
+
+      return billableHours > 0 ? billableHours * 60 : null;
     }
+
     return durationInMinutes;
-  }, [selectedProviderService?.pricingType, selectedSlots, durationInMinutes]);
+  }, [selectedProviderService?.pricingType, selectedSlots.length, durationInMinutes]);
 
   const { calculatedSubtotal, finalCalculatedPrice } = useBookingPricing({
     selectedProviderService,
@@ -640,12 +668,27 @@ export default function ScheduleServiceScreen() {
   });
 
   const totalHours = useMemo(() => {
-    if (selectedProviderService?.pricingType === PricingType.HOURLY) return selectedSlots.length;
-    return null;
+    if (selectedProviderService?.pricingType !== PricingType.HOURLY) return null;
+
+    const selectedHours = selectedSlots.length;
+    if (selectedHours <= 0) return null;
+
+    return Math.max(selectedHours, minHourlySlots);
   }, [selectedProviderService?.pricingType, selectedSlots.length]);
 
   const hourlyBasePrice = useMemo(() => {
     return selectedProviderService?.price ?? (paramServicePrice ? Number(paramServicePrice) : 0);
+  }, [selectedProviderService?.price, paramServicePrice]);
+
+  const resolvedServicePrice = useMemo(() => {
+    if (selectedProviderService?.price != null && selectedProviderService?.price > 0) {
+      return selectedProviderService.price;
+    }
+    if (paramServicePrice) {
+      const parsed = Number(paramServicePrice);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+    }
+    return undefined;
   }, [selectedProviderService?.price, paramServicePrice]);
 
   const hourlyTotalPrice = useMemo(() => {
@@ -1087,19 +1130,10 @@ export default function ScheduleServiceScreen() {
       };
 
       if (selectedProviderService?.pricingType === PricingType.HOURLY) {
-        setSelectedSlots((prev) => {
-          const current = prev ?? [];
-          const alreadySelected = current.includes(time);
-
-          if (alreadySelected) {
-            setSelectedTime(null);
-            setDurationInMinutes(null);
-            return [];
-          }
-
+        setSelectedSlots(() => {
           const next = expandToMinSlots(time);
 
-          if (next.length < MIN_HOURLY_SLOTS) {
+          if (next.length < minHourlySlots) {
             NotificationUIService.showError(
               t('schedule_service.min_hourly_block', {
                 defaultValue:
@@ -1120,49 +1154,16 @@ export default function ScheduleServiceScreen() {
         return;
       }
 
-      if (selectedProviderService) {
-        setSelectedSlots((prev) => {
-          if (!prev || prev.length === 0) {
-            setSelectedTime(time);
-            setDurationInMinutes(60);
-            return [time];
-          }
-
-          if (prev.includes(time)) {
-            const next = prev.filter((t0) => t0 !== time).sort();
-            if (next.length === 0) {
-              setSelectedTime(null);
-              setDurationInMinutes(null);
-            } else {
-              setSelectedTime(next[0]);
-              setDurationInMinutes(next.length * 60);
-            }
-            return next;
-          }
-
-          const sorted = [...prev].sort();
-          const first = sorted[0];
-          const last = sorted[sorted.length - 1];
-
-          const m = toMinutes(time);
-          const firstM = toMinutes(first);
-          const lastM = toMinutes(last);
-
-          let next: string[];
-
-          if (m === lastM + 60) next = [...sorted, time];
-          else if (m === firstM - 60) next = [time, ...sorted];
-          else next = [time];
-
-          next = next.sort();
-          setSelectedTime(next[0]);
-          setDurationInMinutes(next.length * 60);
-          return next;
-        });
-      } else {
-        setSelectedSlots([]);
+      setSelectedSlots(() => {
+        if (selectedSlots.includes(time)) {
+          setSelectedTime(null);
+          setDurationInMinutes(null);
+          return [];
+        }
         setSelectedTime(time);
-      }
+        setDurationInMinutes(60);
+        return [time];
+      });
     },
     [displaySlotsInfo, selectionAnim, t, selectedProviderService, minHourlySlots, slotStepMinutes],
   );
@@ -1745,7 +1746,8 @@ export default function ScheduleServiceScreen() {
 
   const isNextButtonDisabled = useMemo(() => {
     if (currentStep === 1) {
-      const needMinSlots = selectedProviderService?.pricingType === PricingType.HOURLY && selectedSlots.length < MIN_HOURLY_SLOTS;
+      const needMinSlots =
+        selectedProviderService?.pricingType === PricingType.HOURLY && selectedSlots.length < minHourlySlots;
 
       return (
         selectedSlots.length === 0 ||
@@ -1773,7 +1775,7 @@ export default function ScheduleServiceScreen() {
       isBooking;
 
     if (selectedProviderService.pricingType === PricingType.HOURLY) {
-      return baseDisabled || selectedSlots.length < MIN_HOURLY_SLOTS || !durationInMinutes || durationInMinutes <= 0;
+      return baseDisabled || selectedSlots.length < minHourlySlots || !durationInMinutes || durationInMinutes <= 0;
     }
 
     if (selectedProviderService.pricingType === PricingType.BY_SIZE) {
@@ -1790,27 +1792,67 @@ export default function ScheduleServiceScreen() {
     return null;
   }, [selectedProviderService?.pricingType, totalHours]);
 
+  const selectedSlotRange = useMemo(() => {
+    if (!selectedTime) {
+      return null;
+    }
+
+    const startMinutes = toMinutes(selectedTime);
+    const endMinutes = startMinutes + minHourlyMinutes;
+    const formatHourLabel = (minutes: number) => {
+      const normalized = minutes % (24 * 60);
+      const hour = Math.floor(normalized / 60);
+      return `${hour.toString().padStart(2, '0')}h`;
+    };
+
+    return {
+      label: `${formatHourLabel(startMinutes)} – ${formatHourLabel(endMinutes)}`,
+      hours: Math.max(minHourlyMinutes / 60, 1),
+    };
+  }, [selectedTime, selectedProviderService?.pricingType]);
+
+  const hourlyBlockHours = useMemo<number>(() => {
+    if (selectedProviderService?.pricingType !== PricingType.HOURLY || selectedSlots.length === 0) {
+      return 0;
+    }
+    return Math.max(selectedSlots.length, minHourlySlots);
+  }, [selectedProviderService?.pricingType, selectedSlots.length]);
+
+  const hourlyBlockPrice = useMemo(() => {
+    if (hourlyBlockHours <= 0) return null;
+    return hourlyBasePrice * hourlyBlockHours;
+  }, [hourlyBlockHours, hourlyBasePrice]);
+
+  const shouldShowConfirmText = useMemo(
+    () =>
+      Boolean(
+        selectedTime &&
+          (finalCalculatedPrice > 0 ||
+            hourlyBlockHours > 0 ||
+            hourlyBlockPrice !== null ||
+            (resolvedServicePrice != null && resolvedServicePrice > 0)),
+      ),
+    [selectedTime, finalCalculatedPrice, hourlyBlockHours, hourlyBlockPrice, resolvedServicePrice],
+  );
+
   const confirmButtonText = useMemo(() => {
     const isHourly = selectedProviderService?.pricingType === PricingType.HOURLY;
-    const hasHours = isHourly && totalHours && totalHours > 0;
 
-    const priceForDisplay = hasHours
-      ? finalCalculatedPrice > 0
-        ? finalCalculatedPrice
-        : hourlyTotalPrice ?? finalCalculatedPrice
-      : finalCalculatedPrice;
-
-    if (hasHours && priceForDisplay > 0) {
-      const hoursLabel = selectedHoursLabel ?? `${totalHours} ${totalHours === 1 ? 'hora' : 'horas'}`;
-      return `Agendar ${hoursLabel} • ${formatBRL(priceForDisplay)}/h`;
+    if (isHourly && hourlyBlockHours && hourlyBlockPrice !== null) {
+      const displayPrice =
+        finalCalculatedPrice > 0 ? Math.max(finalCalculatedPrice, hourlyBlockPrice) : hourlyBlockPrice;
+      const hoursLabel = hourlyBlockHours === 1 ? '1 hora' : `${hourlyBlockHours} horas`;
+      if (displayPrice > 0) {
+        return `Agendar ${hoursLabel} • ${formatBRL(displayPrice)}`;
+      }
     }
 
     if (finalCalculatedPrice > 0) {
-      return isHourly ? `${formatBRL(finalCalculatedPrice)}/h` : formatBRL(finalCalculatedPrice);
+      return `Agendar • ${formatBRL(finalCalculatedPrice)}`;
     }
 
     return t('schedule_service.select_date_time_address', { defaultValue: 'Selecione Data, Hora e Endereco' });
-  }, [selectedProviderService?.pricingType, totalHours, hourlyTotalPrice, finalCalculatedPrice, selectedHoursLabel, t]);
+  }, [selectedProviderService?.pricingType, finalCalculatedPrice, hourlyBlockHours, hourlyBlockPrice, t]);
 
   const slotBadgeVisible =
     currentStep === 1 && selectedProviderService?.pricingType === PricingType.HOURLY && selectedSlots.length > 0;
@@ -1923,10 +1965,20 @@ export default function ScheduleServiceScreen() {
 
               <Animated.View ref={timeSlotsRef} style={{ transform: [{ scale: scaleAnim }], opacity: fadeAnim }}>
                 <View style={styles.timeSlotsHelperContainer}>
-                  <Text style={styles.timeSlotsHelperText}>(cada horário = 1h de serviço).</Text>
-                  <Text style={styles.timeSlotsHelperSubText}>
-                    Você pode escolher mais de um horário para aumentar a duração.
-                  </Text>
+                  <View style={styles.timeSlotsHelperTexts}>
+                    <Text style={styles.timeSlotsHelperText}>(cada horário = 1h de serviço).</Text>
+                    <Text style={styles.timeSlotsHelperSubText}>
+                      Você pode escolher mais de um horário para aumentar a duração.
+                    </Text>
+                  </View>
+                  {selectedSlotRange && (
+                    <View style={styles.durationBadgeContainer}>
+                      <View style={styles.durationBadgeCircle}>
+                        <Text style={styles.durationBadgeCircleText}>{`${selectedSlotRange.hours}h`}</Text>
+                      </View>
+                      <Text style={styles.durationBadgeLabel}>{selectedSlotRange.label}</Text>
+                    </View>
+                  )}
                 </View>
 
                 <TimeSlotsSection
@@ -2002,25 +2054,27 @@ export default function ScheduleServiceScreen() {
               <Text style={styles.nextStepButtonText}>
                 {(() => {
                   const isHourly = selectedProviderService?.pricingType === PricingType.HOURLY;
-                  const hours = totalHours ?? 0;
-                  const basePrice = selectedProviderService?.price ?? (paramServicePrice ? Number(paramServicePrice) : 0);
+                  const effectiveHours = isHourly ? hourlyBlockHours : 0;
+                  const basePrice =
+                    selectedProviderService?.price ??
+                    (paramServicePrice ? Number(paramServicePrice) : 0);
 
                   const priceForDisplay =
-                    isHourly && hours > 0
+                    isHourly && effectiveHours > 0
                       ? finalCalculatedPrice > 0
-                        ? finalCalculatedPrice
-                        : hourlyTotalPrice ?? basePrice * hours
+                        ? Math.max(finalCalculatedPrice, hourlyBlockPrice ?? hourlyBasePrice * effectiveHours)
+                        : hourlyBlockPrice ?? hourlyBasePrice * effectiveHours
                       : finalCalculatedPrice > 0
                       ? finalCalculatedPrice
                       : basePrice;
 
-                  if (isHourly && hours > 0) {
-                    const hoursLabel = hours === 1 ? 'hora' : 'horas';
-                    return `Agendar ${hours} ${hoursLabel} • ${formatBRL(priceForDisplay)}`;
+                  if (isHourly && effectiveHours > 0 && priceForDisplay > 0) {
+                    const hoursLabel = effectiveHours === 1 ? 'hora' : 'horas';
+                    return `Agendar ${effectiveHours} ${hoursLabel} – ${formatBRL(priceForDisplay)}`;
                   }
 
                   if (priceForDisplay > 0) {
-                    return `Agendar • ${formatBRL(priceForDisplay)}${isHourly ? '/h' : ''}`;
+                    return `Agendar – ${formatBRL(priceForDisplay)}${isHourly ? '/h' : ''}`;
                   }
 
                   return 'Agendar';
@@ -2040,14 +2094,14 @@ export default function ScheduleServiceScreen() {
 
         {currentStep === 2 && (
           <Animated.View style={confirmButtonAnimatedStyle}>
-            <ConfirmBookingButton
-              isButtonDisabled={isConfirmButtonDisabled}
-              onConfirmBooking={handleConfirmBooking}
-              isBooking={isBooking}
-              confirmButtonText={confirmButtonText}
-              selectedTime={selectedTime}
-              hasSelectedServicePrice={!!selectedProviderService?.price}
-            />
+        <ConfirmBookingButton
+          isButtonDisabled={isConfirmButtonDisabled}
+          onConfirmBooking={handleConfirmBooking}
+          isBooking={isBooking}
+          confirmButtonText={confirmButtonText}
+          selectedTime={selectedTime}
+          shouldShowConfirmText={shouldShowConfirmText}
+        />
           </Animated.View>
         )}
 
@@ -2372,6 +2426,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 40,
     marginTop: 1,
     marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   timeSlotsHelperText: {
     fontSize: 14,
@@ -2384,6 +2441,46 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#6B7280',
     marginTop: 2,
+  },
+  timeSlotsHelperTexts: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  durationBadgeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 70,
+  },
+  durationBadgeCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: AppColors.primaryInteractive,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0d3b91',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  durationBadgeCircleText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  durationBadgeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1f2a44',
+    textAlign: 'center',
   },
   timeSummaryInline: {
     paddingHorizontal: 20,
