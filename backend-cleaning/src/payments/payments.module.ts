@@ -12,15 +12,17 @@ import { EmailModule } from '../email/email.module';
 import { QueuesModule } from '../queues/queues.module';
 import { PayoutsModule } from '../payouts/payouts.module';
 import { ConnectModule } from '../connect/connect.module';
+import { CacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
     PrismaModule,
-    ProvidersModule,
+    forwardRef(() => ProvidersModule),
     forwardRef(() => BookingsModule),
     CouponsModule,
     NotificationsModule,
     EmailModule,
+    CacheModule,
     forwardRef(() => QueuesModule),
     forwardRef(() => PayoutsModule),
     ConnectModule,
