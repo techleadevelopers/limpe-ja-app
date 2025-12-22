@@ -420,6 +420,7 @@ model Provider {
   reviewsReceived         Review[]           @relation("ProviderReviews")
   availability            Availability[]
   transactions            Transaction[]
+  promotions              ProviderPromotion[]
   // Back-relations requeridos
   subscriptions           Subscription[]
   guaranteeClaims         GuaranteeClaim[]
@@ -428,6 +429,21 @@ model Provider {
   updatedAt               DateTime           @updatedAt
 
   @@index([verificationStatus, yearsOfExperience])
+}
+
+model ProviderPromotion {
+  id          String           @id @default(uuid())
+  providerId  String
+  provider    Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  title       String?
+  percentOff  Int
+  validFrom   DateTime         @default(now())
+  validUntil  DateTime
+  isActive    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([providerId])
 }
 
 model ProviderService {
