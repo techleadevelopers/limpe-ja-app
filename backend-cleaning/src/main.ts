@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, BadRequestException } from '@nestjs/common';
+import { Logger, ValidationPipe, BadRequestException } from '@nestjs/common';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -44,6 +44,7 @@ async function bootstrap() {
   const sentryDsn = configService.get<string>('SENTRY_DSN');
   const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
   const isProd = nodeEnv === 'production';
+  const webhookLogger = new Logger('WebhookParser');
 
   // ===== SENTRY =====
   if (sentryDsn) {
@@ -79,10 +80,10 @@ async function bootstrap() {
 
         try {
           req.body = JSON.parse(data);
-          console.log('[Webhook PIX] JSON parseado com sucesso');
+          webhookLogger.debug('[Webhook PIX] raw payload parsed');
         } catch (err) {
           req.body = data;
-          console.error('[Webhook PIX] JSON inválido → usando string bruta');
+          webhookLogger.error('[Webhook PIX] invalid JSON payload, using raw string', typeof err === 'object' && err !== null ? err.toString() : 'unknown error');
         }
 
         return next();
@@ -109,10 +110,10 @@ async function bootstrap() {
 
         try {
           req.body = JSON.parse(data);
-          console.log('[Webhook PSP] JSON parseado com sucesso');
+          webhookLogger.debug('[Webhook PSP] raw payload parsed');
         } catch (err) {
           req.body = data;
-          console.error('[Webhook PSP] JSON inválido → usando string bruta');
+          webhookLogger.error('[Webhook PSP] invalid JSON payload, using raw string', typeof err === 'object' && err !== null ? err.toString() : 'unknown error');
         }
 
         return next();
