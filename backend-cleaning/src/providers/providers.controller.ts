@@ -22,6 +22,7 @@ import { ProvidersService } from './providers.service';
 import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 import { ProviderDetailsDto } from './dto/provider-details.dto';
 import { ProviderSearchDto } from './dto/provider-search.dto';
+import { ProviderViewDto } from './dto/provider-view.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -50,6 +51,8 @@ import { OfferDetailsDto } from '../offers/dto/offer-details.dto'; // Verifique 
 import { ProviderMetricsDto } from './dto/provider-metrics.dto';
 import { SettingsService } from '../settings/settings.service';
 import { ProviderSettingsDto } from './dto/provider-settings.dto';
+import { ProviderPromotionsService } from './provider-promotions.service';
+import { ProviderPromotionsCenterViewDto } from './dto/provider-promotions-center.dto';
 
 type RequestWithUser = ExpressRequest & {
   user?: {
@@ -66,6 +69,7 @@ export class ProvidersController {
   constructor(
     private readonly providersService: ProvidersService,
     private readonly settingsService: SettingsService,
+    private readonly promotionsService: ProviderPromotionsService,
   ) {}
 
   // =================================================================================================
@@ -90,12 +94,12 @@ export class ProvidersController {
   @ApiResponse({
     status: 200,
     description: 'Lista de provedores recomendados.',
-    type: [ProviderDetailsDto],
+    type: [ProviderViewDto],
   })
   async findRecommendedProviders(
     @Query('latitude') latitude?: number,
     @Query('longitude') longitude?: number,
-  ): Promise<ProviderDetailsDto[]> {
+  ): Promise<ProviderViewDto[]> {
     this.logger.log(
       '[ProvidersController] findRecommendedProviders: Chamando serviço.',
     );
@@ -124,7 +128,7 @@ export class ProvidersController {
       this.logger.log(
         `[ProvidersController] findRecommendedProviders: Retornando ${providers.length} provedores.`,
       );
-      return providers.map((provider) => new ProviderDetailsDto(provider));
+      return providers.map((provider) => new ProviderViewDto(provider));
     } catch (err: any) {
       // Fallback hardening: nunca retornar 500 para recomendações
       this.logger.error(
@@ -133,7 +137,7 @@ export class ProvidersController {
       const fallback = await this.providersService.findAllProviders({
         limit: 50,
       });
-      return fallback.map((p) => new ProviderDetailsDto(p));
+      return fallback.map((p) => new ProviderViewDto(p));
     }
   }
 
@@ -166,14 +170,14 @@ export class ProvidersController {
   @ApiResponse({
     status: 200,
     description: 'Lista de provedores próximos (ou ativos).',
-    type: [ProviderDetailsDto],
+    type: [ProviderViewDto],
   })
   async findNearbyProviders(
     @Query('latitude') latitude?: number,
     @Query('longitude') longitude?: number,
     @Query('radius') radius?: number,
     @Query('sortBy') sortBy?: SortByOption,
-  ): Promise<ProviderDetailsDto[]> {
+  ): Promise<ProviderViewDto[]> {
     this.logger.log(
       '[ProvidersController] findNearbyProviders: Chamando serviço.',
     );
@@ -216,7 +220,7 @@ export class ProvidersController {
       `[ProvidersController] findNearbyProviders: Retornando ${providers.length} provedores.`,
     );
     // NOVO: Mapeamento inclui novos campos opcionais (ex.: nextAvailable, acceptanceRate)
-    return providers.map((provider) => new ProviderDetailsDto(provider));
+    return providers.map((provider) => new ProviderViewDto(provider));
   }
 
   @Get()
@@ -286,11 +290,11 @@ export class ProvidersController {
   @ApiResponse({
     status: 200,
     description: 'Lista de provedores com filtros aplicados.',
-    type: [ProviderDetailsDto],
+    type: [ProviderViewDto],
   })
   async search(
     @Query() searchDto: ProviderSearchDto,
-  ): Promise<ProviderDetailsDto[]> {
+  ): Promise<ProviderViewDto[]> {
     this.logger.log(
       `[ProvidersController] search: Chamando serviço com DTO de busca: ${JSON.stringify(searchDto)}`,
     );
@@ -299,7 +303,7 @@ export class ProvidersController {
       `[ProvidersController] search: Retornando ${providers.length} provedores.`,
     );
     // NOVO: Mapeamento inclui novos campos opcionais para cards (ex.: nextAvailable calculado no service)
-    return providers.map((provider) => new ProviderDetailsDto(provider));
+    return providers.map((provider) => new ProviderViewDto(provider));
   }
 
   // =================================================================================================
@@ -542,6 +546,26 @@ export class ProvidersController {
       15,
     );
     return { serviceRadiusKm };
+  }
+
+  @Get('promotions-center')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Centro de promoções e fidelidade para o provedor autenticado',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Dados agregados de cupons, missões, loyalty e ganhos.',
+    type: ProviderPromotionsCenterViewDto,
+  })
+  async getPromotionsCenter(@Req() req: RequestWithUser) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new BadRequestException('Usuário não autenticado.');
+    }
+    return this.promotionsService.getPromotionsCenter(userId);
   }
 
   // ADMIN: Atualizar perfil de um provedor por ID
