@@ -2,7 +2,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, Alert, RefreshControl, ScrollView, useColorScheme } from 'react-native';
 import MissionItem from './MissionItem';
-import { MissionItem as MissionItemType, MissionStatus } from '../../services/missionService';
+import { MissionItem as MissionItemType } from '../../services/missionService';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/Colors'; // Importa o arquivo de cores
 
@@ -25,6 +25,7 @@ interface MissionListProps {
 const MissionList: React.FC<MissionListProps> = ({ missions, onClaimMission, claimingMissionId, onRefresh, isRefreshing, asStaticList }) => {
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme(); // Usa o hook de tema
+  const isMissionCompleted = (mission: MissionItemType) => Boolean(mission.progress?.completedAt);
 
   if (error) {
     if (asStaticList) {
@@ -84,6 +85,7 @@ const MissionList: React.FC<MissionListProps> = ({ missions, onClaimMission, cla
             delay={index * 100}
             onClaim={onClaimMission}
             isClaiming={claimingMissionId === item.mission.id}
+            isCompleted={isMissionCompleted(item)}
           />
         ))}
       </View>
@@ -100,6 +102,7 @@ const MissionList: React.FC<MissionListProps> = ({ missions, onClaimMission, cla
           delay={index * 100}
           onClaim={onClaimMission}
           isClaiming={claimingMissionId === item.mission.id}
+          isCompleted={isMissionCompleted(item)}
         />
       )}
       contentContainerStyle={[styles.listContainer, { backgroundColor: theme.background }]} // Usa a cor de fundo do tema
