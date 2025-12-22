@@ -37,6 +37,7 @@ import verificationService from '../../../services/verificationService';
 import axios, { isAxiosError } from 'axios';
 import ServiceDetailsStep5Premium from '../../../components/auth/ServiceDetailsStep5Premium';
 import { AUTH_ROUTES } from '../../routes';
+import { showUserError } from '../../_shared/errors/userError';
 
 const SERVICE_OPTIONS = [
   { id: 'residencial', label: 'Residencial', icon: 'home', set: 'ion' },
@@ -578,20 +579,11 @@ if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
       router.push(AUTH_ROUTES.PROVIDER_VERIFY_ACCOUNT);
 
     } catch (error: any) {
-      console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message);
-      let errorMessage = 'Ocorreu um erro ao salvar seus dados. Tente novamente.';
-
-      if (isAxiosError(error) && error.response) {
-          if (error.response.status !== 401) {
-              errorMessage = error.response.data.message || `Erro do servidor com status ${error.response.status}`;
-              setGeneralError(errorMessage);
-          }
-      } else if (error.message) {
-          errorMessage = error.message;
-          setGeneralError(errorMessage);
-      } else {
-          setGeneralError('Ocorreu um erro desconhecido ao salvar seus dados. Tente novamente.');
+      if (__DEV__) {
+        console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message);
       }
+      const normalized = showUserError(error, 'Erro no cadastro');
+      setGeneralError(normalized.message);
     } finally {
       setIsUploading(false);
     }
