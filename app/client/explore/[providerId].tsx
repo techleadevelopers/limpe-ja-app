@@ -292,6 +292,7 @@ export default function ProviderDetailsScreen() {
   const [activeBookingId, setActiveBookingId] = useState<string | undefined>(undefined);
   // Local state for retry (to force useEffect)
   const [tempProviderId, setTempProviderId] = useState<string | undefined>(providerId as string);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   const mainContentAnim = useRef(new Animated.Value(0)).current;
   const bookNowButtonAnim = useRef(new Animated.Value(0)).current;
@@ -579,6 +580,10 @@ if (isAuthenticated && user?.id) {
     mainContentAnim,
   ]); // Depend on tempProviderId
 
+  useEffect(() => {
+    setDescriptionExpanded(false);
+  }, [provider?.bio]);
+
   const requireAuthOrRedirect = useCallback(
     (actionName?: string) => {
       if (isAuthenticated) {
@@ -710,7 +715,7 @@ if (isAuthenticated && user?.id) {
     };
 
   const handleViewAllReviews = () => {
-    if provider {
+    if (provider) {
       router.push({
         pathname: '/common/feedback/[targetId]',
         params: { targetId: provider.id, targetType: 'provider' },
@@ -900,9 +905,9 @@ if (isAuthenticated && user?.id) {
             },
           ]}
         >
-          <View style={styles.providerInfoWhiteCard}>
-            <View style={styles.providerNameRow}>
-              <Text style={styles.providerNameWhiteCard}>{provider.fullName}</Text>
+            <View style={styles.providerInfoWhiteCard}>
+              <View style={styles.providerNameRow}>
+                <Text style={styles.providerNameWhiteCard}>{provider.fullName}</Text>
 {provider.reviewCount && provider.reviewCount > 0 ? (
   <View style={styles.compactRatingBadge}>
     {/* ⬅️ NOVO: View para forçar o recorte do ícone */}
@@ -911,7 +916,7 @@ if (isAuthenticated && user?.id) {
         name="star" 
         size={18} 
         color={'#307ff5ff'} 
-        style={{ margin: 0, padding: 0 }} // Garante que o ícone é renderizado sem margem
+        style={{ margin: 0, padding: 0,  }} // Garante que o ícone é renderizado sem margem
       />
     </View>
     <Text style={styles.compactRatingText}>
@@ -946,9 +951,35 @@ if (isAuthenticated && user?.id) {
               </Text>
             </View>
 
-            <Text style={styles.descriptionText}>
-              {provider.bio || t('provider_details.no_description')}
-            </Text>
+            {(() => {
+              const providerBio = (provider?.bio ?? '').trim();
+              const descriptionText = providerBio || t('provider_details.no_description');
+              const hasLongDescription = providerBio.length > 240;
+              return (
+                <>
+                  <Text
+                    style={styles.descriptionText}
+                    numberOfLines={descriptionExpanded ? undefined : 3}
+                    ellipsizeMode="tail"
+                  >
+                    {descriptionText}
+                  </Text>
+                  {hasLongDescription && (
+                    <TouchableOpacity
+                      style={styles.descriptionToggle}
+                      onPress={() => setDescriptionExpanded((prev) => !prev)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Text style={styles.descriptionToggleText}>
+                        {descriptionExpanded
+                          ? t('provider_details.show_less', { defaultValue: 'Mostrar menos' })
+                          : t('provider_details.show_more', { defaultValue: 'Mostrar mais' })}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              );
+            })()}
 
             <View style={styles.priceBackgroundWrapper}>
               <View style={styles.priceWrapper}>
@@ -989,8 +1020,6 @@ if (isAuthenticated && user?.id) {
               {provider.verificationStatus === VerificationStatus.APPROVED && (
                 <InfoChip iconName="shield-checkmark-outline" text={t('provider_details.verified')} />
               )}
-              {/* Garantia LimpeJá */}
-              <InfoChip iconName="shield-checkmark" text={t('guarantee.badge', 'Garantia LimpeJá')} />
             </Animated.View>
 
             <SecurityBanner
