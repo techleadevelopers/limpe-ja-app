@@ -61,7 +61,7 @@ export const styles = StyleSheet.create({
   // --- Estilos para a Imagem do Provedor e o Card Principal (inspirado no Print 2) ---
   providerImageContainer: {
     width: SCREEN_WIDTH, // Ocupa a largura total para a imagem principal
-    height: IMAGE_HEIGHT,
+    height: Platform.OS === 'android' ? 310 : 380,
     overflow: 'hidden',
     marginTop: 0,
     marginBottom: 0,
@@ -79,7 +79,7 @@ export const styles = StyleSheet.create({
     backgroundColor: AppColors.white, // Usando AppColors
     borderRadius: 30,
     padding: 10,
-    ...AppShadows.small, // Usando AppShadows
+    
   },
 
   // Content Area Styles (REVERTIDO PARA O FUNDO BRANCO SÓLIDO)
@@ -91,7 +91,6 @@ export const styles = StyleSheet.create({
     marginTop: -30,
     minHeight: Dimensions.get('window').height * 0.5,
     paddingBottom: 20,
-   
   },
 
   // Botões de navegação (header)
@@ -104,12 +103,12 @@ export const styles = StyleSheet.create({
     width: 45,
     height: 45,
     
+    
   },
 
   // --- NOVOS ESTILOS PARA O CABEÇALHO (HEADER) ---
   headerContainer: {
     backgroundColor: AppColors.white, // Usando AppColors
-    ...AppShadows.medium, // Usando AppShadows
     
   },
   headerTitle: {
@@ -213,14 +212,14 @@ newProviderNoReviewsSubtitle: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: Platform.OS === 'android' ? 1 : 5,
     marginTop: 10,
     left: 10,
   },
   providerNameWhiteCard: {
-    fontSize: 23,
+    fontSize: Platform.OS === 'android' ? 20.5 : 23,
     fontWeight: '700',
-    color: AppColors.textBody, // Usando AppColors
+    color: Platform.OS === 'android' ? '#5a5a5aff' : AppColors.textBody, // Usando AppColors
     flexShrink: 1,
     fontFamily: PROVIDER_NAME_FONT_FAMILY,
     marginRight: 10,
@@ -230,11 +229,12 @@ newProviderNoReviewsSubtitle: {
     alignItems: 'center',
     marginBottom: 10,
     
+    
   },
   locationTextWhiteCard: {
-    fontSize: 16.5,
+    fontSize: Platform.OS === 'android' ? 15 : 16.5,
     color: AppColors.textAuxiliary, // Usando AppColors
-    marginLeft: 5,
+    marginLeft: Platform.OS === 'android' ? 2 : 5,
   },
   priceTextWhiteCard: {
     fontSize: 21,
@@ -270,10 +270,12 @@ newProviderNoReviewsSubtitle: {
   infoChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
-    marginBottom: 15,
-    marginTop: 8,
-    paddingHorizontal: 10,
+    marginBottom: 0,
+    marginTop: 0,
+    paddingHorizontal: 0,
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
   },
   infoChip: {
     flexDirection: 'row',
@@ -281,6 +283,7 @@ newProviderNoReviewsSubtitle: {
     paddingVertical: 9,
     paddingHorizontal: 8,
     borderRadius: 20,
+    marginRight: 6,
 
   },
   priceDropContainer: {
@@ -344,18 +347,19 @@ priceDropText: {
       fontWeight: '700',
       color: AppColors.textBody, // Usando AppColors
       
-      marginBottom: 10,
-     marginTop: 25,
+     marginBottom: Platform.OS === 'android' ? -14 : 10,
+     marginTop: Platform.OS === 'android' ? 24 : 25,
   },
   descriptionText: {
-    fontSize: 15,
-    lineHeight: 18,
+    fontSize: Platform.OS === 'android' ? 14 : 15,
+    lineHeight: Platform.OS === 'android' ? 17 : 18,
     color: AppColors.textAuxiliary, // Usando AppColors
     textAlign: 'left',
-    marginBottom: 15,
+    marginTop: Platform.OS === 'android' ? 2 : 0,
+    marginBottom: Platform.OS === 'android' ? 15 : 15,
     // --- INJETADO: Estilos para a descrição do provedor ---
     paddingHorizontal: 10, // Adicionado padding horizontal de 10px
-    fontFamily: 'Montserrat-Regular', // Definido a fonte Montserrat-Regular
+    fontFamily: Platform.OS === 'android' ? 'Montserrat-Regular' :'Montserrat-Regular', // Definido a fonte Montserrat-Regular
     fontWeight: '400', // Peso da fonte normal
     // --- FIM DA INJEÇÃO ---
   },
@@ -423,7 +427,7 @@ priceDropText: {
     height: 60,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
   },
   actionButtonText: {
     fontSize: 10,
@@ -446,7 +450,7 @@ priceDropText: {
     marginBottom: 15,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
     
   },
   reviewHeader: {
@@ -523,7 +527,7 @@ priceDropText: {
     marginBottom: 10,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
   },
   serviceName: {
     fontSize: 16,
@@ -554,7 +558,7 @@ priceDropText: {
     backgroundColor: AppColors.white, // Usando AppColors
     borderTopWidth: 1,
     borderTopColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.medium, // Usando AppColors
+    
   },
   bookServiceButtonGradient: {
     borderRadius: 15,
@@ -582,7 +586,7 @@ priceDropText: {
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: AppColors.warningYellow + '50', // Usando AppColors
-    elevation: 5,
+    elevation: 0,
   },
   noServicesMessageText: {
     color: AppColors.textBody, // Usando AppColors
@@ -606,16 +610,20 @@ priceDropText: {
     bottom: 20,
   },
   priceBackgroundWrapper: {
-  alignSelf: 'flex-start',
-  marginTop: 4,
-  marginBottom: 6,
-  left: 10,
-  bottom: 10,
-},
+    alignSelf: 'stretch',
+    marginTop: 4,
+    marginBottom: 6,
+    left: 10,
+    bottom: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
 
   priceWrapper: {
-    marginTop: 22,
-    marginBottom: -30,
+    marginTop: Platform.OS === 'android' ? 6 : 18,
+    marginBottom: Platform.OS === 'android' ? -35 : -30,
+    alignItems: 'flex-end',
   },
 
   priceValue: {
@@ -660,7 +668,7 @@ priceBackground: {
       shadowRadius: 4,
     },
     android: {
-      elevation: 3,
+      elevation: 0,
     },
   }),
 },
@@ -696,7 +704,7 @@ priceBackground: {
     marginRight: 7,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
   },
   thumbnailImage: {
     width: '100%',
@@ -842,9 +850,9 @@ priceBackground: {
     fontWeight: '700',
     color: AppColors.textBody, // Usando AppColors
     marginRight: 0,
-    marginTop: -7,
+    marginTop: Platform.OS === 'android' ? -7 : -7,
     zIndex: 10,
-    bottom: 9,
+    bottom: Platform.OS === 'android' ? -3 : 9,
   },
   averageRatingText: {
     fontSize: 15,
@@ -869,7 +877,7 @@ priceBackground: {
     marginTop: 10,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
   },
   viewAllReviewsButtonText: {
     color: AppColors.primaryInteractive, // Usando AppColors
