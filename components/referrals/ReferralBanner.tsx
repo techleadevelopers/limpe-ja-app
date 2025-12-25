@@ -1,6 +1,6 @@
 // components/referrals/ReferralBanner.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, useColorScheme } from 'react-native'; // Adicionado Pressable e useColorScheme
+import { Pressable, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'; // Adicionado Pressable e useColorScheme
 import Colors from '../../constants/Colors';
 import Button from '../common/Button'; // Assuming you have a Button component
 
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3,
+        elevation: 0,
         position: 'relative', // Necessário para o posicionamento absoluto do botão de fechar
         width: '100%', // Ocupa toda a largura do pai (BottomSlideInCard)
         maxWidth: 400, // Largura máxima para o conteúdo do card
