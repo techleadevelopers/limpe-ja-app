@@ -77,9 +77,16 @@ const DEFENSE_SOS: React.FC<DefenseSOSProps> = ({ bottomOffset = 20 }) => {
     outputRange: [1, 1.2],
   });
 
+  const isAndroid = Platform.OS === 'android';
+  const containerStyle = [
+    styles.fabContainer,
+    isAndroid ? { right: '12%',  } : undefined,
+    { bottom: bottomOffset + (Platform.OS === 'ios' ? 30 : 30) },
+    isAndroid ? { transform: [{ scale: 0.9 }] } : undefined,
+  ];
   return (
     <TouchableOpacity
-      style={[styles.fabContainer, { bottom: bottomOffset + (Platform.OS === 'ios' ? 30 : 50) }]}
+      style={containerStyle}
       onPress={handlePress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
@@ -136,11 +143,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#97c2ee5d', // azul principal (iOS-like)
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 8,
+   
     // borda sutil para contraste em fundos claros
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
