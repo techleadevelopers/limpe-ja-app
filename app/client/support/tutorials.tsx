@@ -1,18 +1,18 @@
 // app/client/support/tutorials.tsx
 // Central leve de tutoriais sob demanda (cards + modal).
 
-import React, { useState } from 'react';
-import {
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import { useState } from 'react';
+import {
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppColors, AppShadows } from '../../../constants/appStyles';
 
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: AppColors.white,
     marginBottom: 10,
-    ...AppShadows.small,
+    
   },
   cardIconCircle: {
     width: 34,
