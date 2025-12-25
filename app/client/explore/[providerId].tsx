@@ -32,7 +32,7 @@ import { ProviderServiceOffering } from '../../../types/backend/provider-service
 import { Offer, ProviderDisplayInfo, ProviderReview } from '../../../types/backend/providers';
 import { PricingType } from '../../../types/backend/services';
 
-import { AppColors, AppShadows } from '../../../constants/appStyles';
+import { AppColors } from '../../../constants/appStyles';
 import { Icons3D } from '../../../constants/icons3d';
 import { useAuth } from '../../../hooks/useAuth';
 import { checkActiveChatBooking } from '../../../services/bookingService';
@@ -55,33 +55,31 @@ function RecommendationsSection({ reviews }: { reviews?: ProviderReview[] }) {
 
   const renderAvatarContent = (review: ProviderReview) => {
     const avatarUrl = review.client?.user?.avatarUrl;
-    const name = review.client?.fullName || review.client?.user?.name || 'Cliente';
-    const initial = name.trim().charAt(0).toUpperCase();
-    if (avatarUrl) {
-      return <Image source={{ uri: avatarUrl }} style={recommendationStyles.avatarImg} />;
+    if (!avatarUrl) {
+      return null;
     }
-    return (
-      <View style={recommendationStyles.avatarInitial}>
-        <Text style={recommendationStyles.avatarInitialText}>{initial || 'C'}</Text>
-      </View>
-    );
+    return <Image source={{ uri: avatarUrl }} style={recommendationStyles.avatarImg} />;
   };
 
   return (
     <View style={recommendationStyles.avatarsRow}>
       {hasReviews ? (
         <>
-          {displayed.map((review, i) => (
-            <View
-              key={review.id || i}
-              style={[
-                recommendationStyles.avatarWrapper,
-                { marginLeft: i === 0 ? 0 : -12 },
-              ]}
-            >
-              {renderAvatarContent(review)}
-            </View>
-          ))}
+          {displayed.map((review, i) => {
+            const content = renderAvatarContent(review);
+            if (!content) return null;
+            return (
+              <View
+                key={review.id || i}
+                style={[
+                  recommendationStyles.avatarWrapper,
+                  { marginLeft: i === 0 ? 0 : -12 },
+                ]}
+              >
+                {content}
+              </View>
+            );
+          })}
           {remainingCount > 0 && (
             <View style={[recommendationStyles.moreBadge, { marginLeft: -12 }]}>
               <Text style={recommendationStyles.moreBadgeTxt}>+{remainingCount}</Text>
@@ -116,7 +114,7 @@ const recommendationStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 10,
-    marginBottom: 20,
+    marginBottom: 10,
     paddingHorizontal: 11,
     left: 5,
   },
@@ -124,27 +122,17 @@ const recommendationStyles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 44,
-    borderWidth: 1,
-    borderColor: AppColors.borderNeutral,
+    //bordas redundantes com o fundo já arredondado e sombra
+    // borderWidth: 1,
+    // borderColor: AppColors.borderNeutral,
     overflow: 'hidden',
   },
   avatarImg: {
     width: 42,
     height: 42,
     borderRadius: 44,
-    borderWidth: 1,
-    borderColor: AppColors.borderNeutral,
-  },
-  avatarInitial: {
-    flex: 1,
-    backgroundColor: '#E5ECF5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitialText: {
-    color: '#1E293B',
-    fontSize: 15,
-    fontWeight: '700',
+    // borderWidth: 1,
+    // borderColor: AppColors.borderNeutral,
   },
   moreBadge: {
     width: 42,
@@ -164,8 +152,9 @@ const recommendationStyles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 44,
-    borderWidth: 1,
-    borderColor: AppColors.borderNeutral,
+    // borda comentada porque o fundo já cria contraste e evita o duplo traço
+    // borderWidth: 1,
+    // borderColor: AppColors.borderNeutral,
   },
   placeholderBadge: {
     backgroundColor: '#0f172a',
@@ -204,7 +193,7 @@ const securityBannerStyles = StyleSheet.create({
     width: SCREEN_WIDTH - 40,
     height: 90,
     alignSelf: 'center',
-    marginTop: 12,
+    marginTop: Platform.OS === 'android' ? 2 : 12,
     marginBottom: 16,
   },
   card: {
@@ -215,7 +204,7 @@ const securityBannerStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    ...AppShadows.medium,
+    
   },
   leftSection: {
     flexDirection: 'row',
@@ -239,7 +228,7 @@ const securityBannerStyles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
@@ -829,20 +818,27 @@ if (isAuthenticated && user?.id) {
           backgroundColor: AppColors.white,
           borderBottomWidth: 1,
           borderBottomColor: AppColors.backgroundNeutral,
-          paddingTop: Platform.OS === 'ios' ? insets.top + 14 : 14,
+          paddingTop: Platform.OS === 'ios'
+  ? insets.top + 14 : Math.max(insets.top, 0) + 12, // Android: sobe/encaixa igual
         }}
       >
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color={AppColors.textBody} />
+          <Ionicons
+            name="arrow-back"
+            size={20}
+            color={AppColors.textBody}
+            style={{ top: Platform.OS === 'ios' ? 0 : 6 }}
+          />
         </TouchableOpacity>
         <Text
           style={{
             flex: 1,
             textAlign: 'center',
-            fontSize: 17,
+            fontSize: Platform.OS === 'ios' ? 17 : 16,
             left: 4,
+            top: Platform.OS === 'ios' ? 0 : 4,
             fontFamily: 'Montserrat-Regular',
-            fontWeight: '800',
+            fontWeight: Platform.OS === 'ios' ? '800' :'700',
             color: AppColors.textBody,
             marginRight: 24,
           }}
@@ -935,7 +931,7 @@ if (isAuthenticated && user?.id) {
             <View style={styles.locationContainerWhiteCard}>
               <Ionicons
                 name="location-sharp"
-                size={18}
+                size={Platform.OS === 'android' ? 16 : 18}
                 color='#45474bff'
                 backgroundColor='transparent'
                 borderRadius={9}
@@ -982,6 +978,34 @@ if (isAuthenticated && user?.id) {
             })()}
 
             <View style={styles.priceBackgroundWrapper}>
+              <Animated.View
+                style={[
+                  styles.infoChipsContainer,
+                  {
+                    opacity: infoChipAnim,
+                    transform: [
+                      {
+                        translateY: infoChipAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [20, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                {provider.yearsOfExperience !== undefined && provider.yearsOfExperience !== null && (
+                  <InfoChip
+                    iconName="hourglass-outline"
+                    text={t('provider_details.years_experience', {
+                      count: provider.yearsOfExperience,
+                    })}
+                  />
+                )}
+                {provider.verificationStatus === VerificationStatus.APPROVED && (
+                  <InfoChip iconName="shield-checkmark-outline" text={t('provider_details.verified')} />
+                )}
+              </Animated.View>
               <View style={styles.priceWrapper}>
                 <Text style={styles.priceValue}>{firstServicePrice}</Text>
                 <Text style={styles.priceSubLabel}>(Preço por Hora)</Text>
@@ -993,34 +1017,6 @@ if (isAuthenticated && user?.id) {
           </View>
 
           <View style={styles.tabContentContainer}>
-            <Animated.View
-              style={[
-                styles.infoChipsContainer,
-                {
-                  opacity: infoChipAnim,
-                  transform: [
-                    {
-                      translateY: infoChipAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [20, 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              {provider.yearsOfExperience !== undefined && provider.yearsOfExperience !== null && (
-                <InfoChip
-                  iconName="hourglass-outline"
-                  text={t('provider_details.years_experience', {
-                    count: provider.yearsOfExperience,
-                  })}
-                />
-              )}
-              {provider.verificationStatus === VerificationStatus.APPROVED && (
-                <InfoChip iconName="shield-checkmark-outline" text={t('provider_details.verified')} />
-              )}
-            </Animated.View>
 
             <SecurityBanner
               onPress={() => router.push('/client/explore/security' as any)}
@@ -1213,7 +1209,7 @@ if (isAuthenticated && user?.id) {
         bookNowButtonAnim={bookNowButtonAnim}
         servicePrice={firstProviderService?.price}
         sticky
-        safeBottomInset={insets.bottom}
+        safeBottomInset={Platform.OS === 'ios' ? insets.bottom : 35}
         isAuthenticated={isAuthenticated}
         requireAuthOrRedirect={requireAuthOrRedirect}
       />
