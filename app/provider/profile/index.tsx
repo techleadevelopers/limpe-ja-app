@@ -1,27 +1,28 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Platform,
-  useColorScheme,
-  Modal,
-  TextInput,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useColorScheme,
+    View,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { PROVIDER_ROUTES } from '../../../constants/routes';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import Colors from '../../../constants/Colors';
+import { PROVIDER_ROUTES } from '../../../constants/routes';
 import { useAuth } from '../../../hooks/useAuth';
+import { acceptProviderTerms, updateMyProviderProfile } from '../../../services/providerService';
 import userService from '../../../services/userService';
-import { updateMyProviderProfile, acceptProviderTerms } from '../../../services/providerService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 const AppLogo = require('../../../assets/images/logo2.png');
 
@@ -166,7 +167,7 @@ export default function ProviderProfileScreen() {
       setShowEditNameModal(false);
     } catch (error: any) {
       // Corrigido: NÃ£o -> Não | possÃ­vel -> possível
-      Alert.alert('Erro', error?.message || 'Não foi possível atualizar o nome.');
+      alertUserError(error, 'Erro ao atualizar o nome');
     } finally {
       setSavingName(false);
     }
@@ -183,7 +184,7 @@ export default function ProviderProfileScreen() {
       Alert.alert('Termos aceitos', 'Obrigado por aceitar os termos e condições.');
     } catch (e: any) {
       // Corrigido: Nao -> Não | possivel -> possível | concordancia -> concordância
-      Alert.alert('Erro', e?.message || 'Não foi possível registrar sua concordância agora.');
+      alertUserError(e, 'Erro ao registrar a concordância');
     }
   };
 
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 6 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   paymentTitle: { fontSize: 16, color: '#111', fontWeight: '600' },
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 6 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   row: {
@@ -423,7 +424,7 @@ const styles = StyleSheet.create({
     padding: 16,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8 },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
   modalTitle: { fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 12 },
