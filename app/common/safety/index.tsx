@@ -1,8 +1,8 @@
 // LimpeJaApp/app/common/safety/index.tsx
-import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Animated, Easing, Image } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // ============ Ícones 3D (injeção leve) ============
 const Icons3D = {
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 8,
             },
             android: {
-                elevation: 6,
+                elevation: 0,
             },
         }),
     },
