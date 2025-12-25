@@ -11,10 +11,10 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { useAuth } from '../../../../contexts/AuthContext'; // Importar useAuth para acessar o contexto
+import { useAuth } from '../../../../../contexts/AuthContext'; // Importar useAuth para acessar o contexto
 
 // Importa a interface UserProfile completa para tipar o 'user' do AuthContext
-import { UserProfile } from '../../../../types/backend/users'; // AJUSTE O CAMINHO CONFORME A ESTRUTURA REAL DO SEU PROJETO
+import { UserProfile } from '../../../../../types/backend/users'; // AJUSTE O CAMINHO CONFORME A ESTRUTURA REAL DO SEU PROJETO
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
