@@ -1,8 +1,8 @@
 // LimpeJaApp/components/SaudacaoContainer.tsx
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 // import { BlurView } from 'expo-blur'; // Descomente se quiser um blur real no input da busca
 
 const SaudacaoContainer: React.FC = () => {
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
         shadowColor: 'rgba(0,0,0,0.08)',
       },
     }),
@@ -130,10 +130,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 6,
+    elevation: 0,
     ...Platform.select({
       android: {
-        elevation: 3,
+        elevation: 0,
         shadowColor: 'rgba(0,0,0,0.08)',
       },
       default: {},
