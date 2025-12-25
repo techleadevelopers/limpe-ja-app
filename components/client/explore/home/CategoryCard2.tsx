@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: 'transparent',
     borderWidth: 0,
-    ...AppShadows.small,
+    ,
   },
   howItWorksTitle: {
     fontSize: 16,
