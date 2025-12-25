@@ -48,7 +48,18 @@ export class NotificationsService {
       imageUrl,
       actionButtons,
       category,
-    } = dto; // NEW: Added category
+      idempotencyKey,
+      scheduledAt,
+    } = dto;
+    if (idempotencyKey) {
+      const existing = await this.prisma.notification.findUnique({
+        where: { idempotencyKey },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
+    const scheduledAtDate = scheduledAt ? new Date(scheduledAt) : undefined;
     try {
       const notification = await this.prisma.notification.create({
         data: {
@@ -59,7 +70,9 @@ export class NotificationsService {
           title,
           imageUrl,
           actionButtons,
-          category, // NEW: Storing category in DB
+          category,
+          idempotencyKey,
+          scheduledAt: scheduledAtDate,
           isRead: false,
         },
       });
