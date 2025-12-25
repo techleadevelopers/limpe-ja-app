@@ -1,18 +1,17 @@
-import React from "react";
-import {
-  Animated,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  Image,
-  ImageSourcePropType,
-  Platform,
-} from "react-native";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
+import {
+    Animated,
+    FlatList,
+    Image,
+    ImageSourcePropType,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 // Ãcones 3D da versÃ£o antiga
 const Icons3D = {
@@ -140,7 +139,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4, // Raio ligeiramente maior para suavidade
       },
       android: {
-        elevation: 4, // ElevaÃ§Ã£o moderada para profundidade sem exageros
+        elevation: 0, // ElevaÃ§Ã£o moderada para profundidade sem exageros
       },
     }),
   },
