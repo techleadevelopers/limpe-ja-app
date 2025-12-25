@@ -1,8 +1,8 @@
 // LimpeJaApp/app/common/support/index.tsx
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, usePathname, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { supportService } from '../../../services/supportService';
 import { SupportTicket } from '../../../types/backend/support'; // <<-- Este é o arquivo onde TicketStatus é definido
 
@@ -12,6 +12,8 @@ import { SupportTicket } from '../../../types/backend/support'; // <<-- Este é 
  */
 export default function SupportTicketsScreen() {
     const router = useRouter();
+    const pathname = usePathname();
+    const isProviderRoute = pathname?.startsWith('/provider');
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -97,6 +99,15 @@ export default function SupportTicketsScreen() {
                     <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
                     <Text style={styles.createTicketButtonText}>Abrir Novo Ticket</Text>
                 </TouchableOpacity>
+                {isProviderRoute && (
+                    <TouchableOpacity
+                        style={styles.chatSupportButton}
+                        onPress={() => router.push('/provider/messages?filter=support' as any)}
+                    >
+                        <Ionicons name="chatbubbles-outline" size={22} color="#4A90E2" />
+                        <Text style={styles.chatSupportButtonText}>Falar com o Suporte</Text>
+                    </TouchableOpacity>
+                )}
 
                 {/* Display empty state if no tickets, otherwise list tickets */}
                 {tickets.length === 0 ? (
@@ -213,7 +224,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 5,
             },
             android: {
-                elevation: 5,
+                elevation: 0,
             },
         }),
     },
@@ -222,6 +233,23 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         marginLeft: 10,
+    },
+    chatSupportButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#4A90E2',
+        backgroundColor: '#FFFFFF',
+        paddingVertical: 14,
+        marginBottom: 10,
+        gap: 8,
+    },
+    chatSupportButtonText: {
+        color: '#4A90E2',
+        fontSize: 17,
+        fontWeight: '700',
     },
     ticketCard: {
         backgroundColor: '#FFFFFF',
@@ -236,7 +264,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 8,
             },
             android: {
-                elevation: 6,
+                elevation: 0,
             },
         }),
     },
