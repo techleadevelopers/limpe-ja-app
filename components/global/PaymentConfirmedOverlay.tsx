@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from "react";
-import { Animated, View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useRef } from "react";
+import { Animated, StyleSheet, Text } from "react-native";
 
 export default function PaymentConfirmedOverlay({ visible }: { visible: boolean }) {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     padding: 25,
     borderRadius: 20,
     alignItems: "center",
-    elevation: 10,
+    elevation: 0,
   },
   text: {
     marginTop: 12,
