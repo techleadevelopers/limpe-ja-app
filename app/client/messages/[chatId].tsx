@@ -24,6 +24,8 @@ import { getBookingDetails } from '../../../services/bookingService';
 import { getChatMessages, sendMessage as sendChatMessage } from '../../../services/chatService';
 import { BookingStatus } from '../../../types/backend/bookings';
 import { Message, SendMessageDto } from '../../../types/backend/chat';
+import { alertUserError, getUserMessage } from '../../_shared/errors/uiFeedback';
+import { shadow, textFix, inputFix, pressableFix } from '../../_shared/ui/parity';
 
 
 const SOCKET_URL = appConfig.apiUrl.replace('http', 'ws');
@@ -116,11 +118,12 @@ export default function ChatScreen() {
         }
       } catch (error: any) {
         console.error('Erro ao carregar mensagens ou verificar agendamento:', error);
+        const normalized = getUserMessage(error);
         if (
           error.message.includes('Não é possível acessar esta conversa') ||
           error.message.includes('Não é possível enviar mensagens')
         ) {
-          setChatBlockedMessage(error.message);
+          setChatBlockedMessage(normalized);
         } else {
           Alert.alert('Erro', 'Não foi possível carregar as mensagens do chat.');
           setChatBlockedMessage('Não foi possível carregar as mensagens.');
@@ -209,10 +212,11 @@ export default function ChatScreen() {
       setInputText('');
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (error: any) {
+      const normalized = getUserMessage(error);
       if (error.message.includes('Não é possível enviar mensagens')) {
-        setChatBlockedMessage(error.message);
+        setChatBlockedMessage(normalized);
       } else {
-        Alert.alert('Erro', error.message || 'Não foi possível enviar a mensagem.');
+        alertUserError(error, 'Erro ao enviar mensagem');
       }
     }
   }, [inputText, user, chatId, recipientId, chatBlockedMessage]);
@@ -369,20 +373,17 @@ const chatStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF', // Branco como na category
-       borderBottomEndRadius: 32,
+    borderBottomEndRadius: 32,
     borderBottomStartRadius: 32,
     paddingHorizontal: 15,
     paddingVertical: Platform.OS === 'ios' ? 40 : 20,
     paddingTop: Platform.OS === 'ios' ? 40 : 20,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 8,
+    ...shadow(2),
   },
   headerButton: {
+    ...pressableFix(),
     padding: 5,
     top: 20,
   },
@@ -402,13 +403,12 @@ const chatStyles = StyleSheet.create({
     borderColor: '#FFF',
   },
   headerRecipientName: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...textFix({ fontSize: 18, fontWeight: '600' }),
     color: '#4d85a5ff',
   },
   headerRecipientStatus: {
-    fontSize: 12,
-   color: '#4d85a5ff',
+    ...textFix({ fontSize: 12 }),
+    color: '#4d85a5ff',
   },
   headerActions: {
     flexDirection: 'row',
@@ -451,17 +451,7 @@ const chatStyles = StyleSheet.create({
     flexDirection: 'column',
   },
   messageShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    ...shadow(1),
   },
   myMessage: {
     alignSelf: 'flex-end',
@@ -482,10 +472,10 @@ const chatStyles = StyleSheet.create({
   },
   // theirMessageTail: { }, // Removido
   messageContent: {
-    fontSize: 15,
+    ...textFix({ fontSize: 15 }),
   },
   messageTime: {
-    fontSize: 10,
+    ...textFix({ fontSize: 10 }),
     alignSelf: 'flex-end',
     marginTop: 5,
   },
@@ -499,17 +489,7 @@ const chatStyles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 25 : 10,
   },
   inputContainerShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
+    ...shadow(2),
   },
   inputIcon: {
     padding: 8,
@@ -527,12 +507,14 @@ const chatStyles = StyleSheet.create({
     minHeight: 45,
     borderColor: '#E9ECEF',
     borderWidth: 1,
+    ...inputFix(),
   },
   disabledInput: {
     backgroundColor: '#E9ECEF',
     color: '#ADB5BD',
   },
   sendButton: {
+    ...pressableFix(),
     backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
     borderRadius: 25,
     width: 50,
