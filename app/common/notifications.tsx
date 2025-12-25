@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
   },
   headerTitle: {
     fontSize: 20,
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
         ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
     }),
   },
   notificationItem: {
