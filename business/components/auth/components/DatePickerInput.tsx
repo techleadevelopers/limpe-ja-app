@@ -1,13 +1,13 @@
-import React from 'react';
-import {
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  Animated,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import React from 'react';
+import {
+    Animated,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+} from 'react-native';
 
 interface DatePickerInputProps {
   label: string;
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
