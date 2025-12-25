@@ -1,11 +1,11 @@
 // DEV PANEL — QA ONLY — DO NOT SHIP TO PRODUCTION
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Colors from '../constants/Colors';
-import { acceptBooking, startBooking, completeBooking, getBookingDetails } from '../services/bookingService';
-import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+import { api } from '../services/api';
+import { acceptBooking, completeBooking, getBookingDetails, startBooking } from '../services/bookingService';
 
 const QA_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_ENABLE_QA_PANEL === 'true';
 
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     shadowColor: '#111',
     shadowOpacity: 0.06,
     shadowRadius: 12,
-    elevation: 2,
+    elevation: 0,
   },
   livePreviewActive: {
     borderColor: '#2563eb',
