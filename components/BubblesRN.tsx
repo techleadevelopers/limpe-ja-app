@@ -46,6 +46,13 @@ export default function BubblesRN({
   pointerEvents?: any;
 }) {
   // generate specs only once per mount
+  const isAndroid = Platform.OS === 'android';
+  const effectiveBubbleColor =
+    isAndroid && bubbleColor === 'transparent' ? 'transparent' : bubbleColor;
+  const effectiveBubbleBorderColor =
+    isAndroid && bubbleBorderColor === 'rgba(29, 93, 242, 0.18)'
+      ? 'rgba(255,100,100,0.9)'
+      : bubbleBorderColor;
   const specs: BubbleSpec[] = useMemo(() => {
     const count = countMin + Math.floor(Math.random() * (countMax - countMin + 1));
     const arr: BubbleSpec[] = [];
@@ -74,13 +81,13 @@ export default function BubblesRN({
   return (
     <View style={[styles.container, style]} pointerEvents={pointerEvents}>
       {specs.map((s) => (
-        <Bubble
-          key={s.key}
-          spec={s}
-          color={bubbleColor}
-          borderColor={bubbleBorderColor}
-          borderWidth={bubbleBorderWidth}
-        />
+      <Bubble
+        key={s.key}
+        spec={s}
+        color={effectiveBubbleColor}
+        borderColor={effectiveBubbleBorderColor}
+        borderWidth={bubbleBorderWidth}
+      />
       ))}
     </View>
   );
@@ -99,9 +106,10 @@ function Bubble({
 }) {
   const translateY = useMemo(() => new Animated.Value(0), []);
   const wobble = useMemo(() => new Animated.Value(0), []);
+
   useEffect(() => {
     // translateY: 0 -> -screen height - size (start from bottom)
-    const toValue = - (SCREEN_HEIGHT + spec.size + 40);
+    const toValue = -(SCREEN_HEIGHT + spec.size + 40);
     const anim = Animated.sequence([
       Animated.delay(spec.delay),
       Animated.loop(
@@ -112,7 +120,7 @@ function Bubble({
           useNativeDriver: true,
         }),
         { iterations: -1 }
-      )
+      ),
     ]);
     anim.start();
 
@@ -156,6 +164,19 @@ function Bubble({
     ],
   } as any;
 
+  // ✅ Android-only tuning (não altera o que já tá 100% no iOS)
+  const isAndroid = Platform.OS === 'android';
+
+  // Android costuma “pesar” a borda + sombra. Ajuste fino só no Android:
+  const effectiveBorderColor = isAndroid ? 'rgba(255, 120, 130, 0.95)' : borderColor;
+  const effectiveBorderWidth = isAndroid ? Math.max(1, borderWidth) : borderWidth;
+
+  // Remover halo escuro do elevation (principal causa da bolha ficar mais escura no Android)
+  const androidElevation = 0;
+
+  // Mantém opacidade plena para evitar fundo acinzentado no Android quando o preenchimento é transparente
+  const effectiveOpacity = 1;
+
   // Use shadow/blur for iOS/Android
   const bubbleStyle: any = {
     position: 'absolute',
@@ -165,8 +186,12 @@ function Bubble({
     height: spec.size,
     borderRadius: spec.size / 2,
     backgroundColor: color,
-    borderColor: borderColor,
-    borderWidth: borderWidth,
+
+    // 👇 apply platform-only adjustments
+    borderColor: effectiveBorderColor,
+    borderWidth: effectiveBorderWidth,
+    opacity: effectiveOpacity,
+
     ...Platform.select({
       ios: {
         shadowColor: borderColor,
@@ -175,14 +200,15 @@ function Bubble({
         shadowRadius: spec.blurRadius + 1.5,
       },
       android: {
-        elevation: Math.max(0, spec.blurRadius + 1),
+        elevation: androidElevation,
+        shadowColor: 'transparent',
+        shadowRadius: 0,
+        shadowOpacity: 0,
       },
     }),
   };
 
-  return (
-    <Animated.View style={[bubbleStyle, animatedStyle]} />
-  );
+  return <Animated.View style={[bubbleStyle, animatedStyle]} />;
 }
 
 const styles = StyleSheet.create({
