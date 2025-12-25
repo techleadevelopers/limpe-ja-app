@@ -14,11 +14,11 @@ import {
     View,
 } from 'react-native';
 
-// Import NotificationUIService
-import NotificationUIService from '../../services/notificationUIService'; // Added
+import { toastUserError } from '../_shared/errors/uiFeedback';
 
-import { getMyProviderEarnings } from '../../services/earningService';
 import { PROVIDER_ROUTES } from '../../constants/routes';
+import { getMyProviderEarnings } from '../../services/earningService';
+import { subscribeToProviderNotifications } from '../../services/notificationBus';
 import { getMyProviderDashboard } from '../../services/providerService';
 
 import { EarningsResponseDto, ProviderDashboard, ProviderTransaction } from '../../types/backend/providers';
@@ -26,8 +26,8 @@ import { EarningsResponseDto, ProviderDashboard, ProviderTransaction } from '../
 import MainEarningsChartSection from '../../components/provider/dashboard/MainEarningsChartSection';
 import EarningsChartSection from '../../components/provider/earnings/EarningsChartSection';
 import EarningsSummaryCard from '../../components/provider/earnings/EarningsSummaryCard';
-import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
 import RecentTransactionsSection from '../../components/provider/earnings/RecentTransactionsSection';
+import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
 
 const WHITE = '#FFFFFF';
 const BACKGROUND_ALT = '#F8F9FD';
@@ -127,7 +127,7 @@ export default function ProviderEarningsScreen() {
     } catch (err: any) {
       console.error("[ProviderEarningsScreen] Erro ao buscar dados de ganhos:", err.response?.data || err.message, err);
       if (isMounted.current) {
-        NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar seus dados de ganhos. Tente novamente mais tarde.", "Erro");
+        toastUserError(err, 'Erro ao carregar seus ganhos');
       }
     } finally {
       if (isMounted.current) {
@@ -160,6 +160,15 @@ export default function ProviderEarningsScreen() {
       }
     };
   }, [fetchData, headerAnim, summaryAnim, mainChartAnim, chartSectionAnim, transactionsSectionAnim]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToProviderNotifications((kind) => {
+      if (kind === 'bookingConfirmed' || kind === 'paymentConfirmed') {
+        fetchData();
+      }
+    });
+    return unsubscribe;
+  }, [fetchData]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -206,6 +215,7 @@ export default function ProviderEarningsScreen() {
       >
         <EarningsSummaryCard
           dashboardData={dashboardData}
+          earningsData={earningsData}
           animation={summaryAnim}
           // REMOVIDO: onWithdrawalRequest={handleWithdrawalRequest}
         />
@@ -295,7 +305,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 12,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   headerBackButton: {
@@ -336,7 +346,7 @@ const styles = StyleSheet.create({
     // iOS Premium Shadow
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   summaryGrid: {
@@ -357,7 +367,7 @@ const styles = StyleSheet.create({
     // iOS clean shadow
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   summaryCardTitle: {
@@ -392,7 +402,7 @@ const styles = StyleSheet.create({
     // iOS Premium Shadow
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 8 },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   withdrawalButtonDisabled: {
@@ -416,7 +426,7 @@ const styles = StyleSheet.create({
     // iOS Premium Shadow
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   chartContainerPlaceholder: {
@@ -511,7 +521,7 @@ const styles = StyleSheet.create({
     // iOS Premium Shadow
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 6 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   quickLinkText: {
