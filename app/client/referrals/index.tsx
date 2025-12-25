@@ -1,13 +1,14 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Image, ImageSourcePropType, Share, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, Image, ImageSourcePropType, Platform, RefreshControl, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import Toast from '../../../components/Toast';
 import Colors from '../../../constants/Colors';
 import { getReferralInfo, type ReferralInfo } from '../../../services/referralService';
-import Toast from '../../../components/Toast';
+import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 // Assets (3D icons)
 const Icons3D = {
@@ -115,7 +116,7 @@ export default function ClientReferralScreen() {
         Alert.alert('Sucesso!', 'Código compartilhado!');
       }
     } catch (error: any) {
-      Alert.alert('Erro ao compartilhar', error?.message || 'Tente novamente.');
+      alertUserError(error, 'Erro ao compartilhar');
     }
   }, [referralInfo]);
 
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
 
   // Cards
   card: { borderRadius: 16, padding: 26, alignItems: 'center', marginBottom: 14 },
-  shadowCard: { ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12 }, android: { elevation: 4 } }) },
+  shadowCard: { ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12 }, android: { elevation: 0 } }) },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   cardTitle: { fontSize: 16, fontWeight: '700' },
   cardSubtitle: { fontSize: 12, alignItems: 'center' },
@@ -190,7 +191,6 @@ const styles = StyleSheet.create({
   howItem: { flexDirection: 'row',  gap: 12, marginBottom: 5 },
   howText: { fontSize: 14, flex: 1, left: 20, },
 
-  termsButton: { marginTop: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4 }, android: { elevation: 2 } }) },
+  termsButton: { marginTop: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4 }, android: { elevation: 0 } }) },
   termsButtonText: { fontSize: 14, fontWeight: '600' },
 });
-
