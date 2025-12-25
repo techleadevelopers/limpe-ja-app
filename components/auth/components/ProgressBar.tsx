@@ -1,6 +1,5 @@
 // components/ProgressBar.tsx
-import React from 'react';
-import { View, StyleSheet, Animated, Dimensions, Text } from 'react-native';
+import { Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -41,7 +40,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 0,
   },
   progressInner: {
     height: 30,
