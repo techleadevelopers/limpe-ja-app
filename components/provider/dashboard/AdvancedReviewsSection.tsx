@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 // Tipagens do projeto
 import { ProviderReview } from '../../../types/backend/providers';
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     padding: 16,
     ...Platform.select({
       ios:    { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 6 },
-      android:{ elevation: 4 },
+      android:{ elevation: 0 },
     }),
   },
 
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   breakdownBox: {
     backgroundColor: CARD_BG,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: Platform.OS === 'android' ? 0 : 1,
     borderColor: BORDER,
     padding: 12,
     marginBottom: 12,
