@@ -4,11 +4,11 @@ import {
   View, Text, Image, TouchableOpacity, StyleSheet, Platform, Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ProviderDisplayInfo } from '../../../../types/backend/providers';
-import { PricingType } from '../../../../types/backend/services';
-import { formatDistance } from '../../../../utils/formatters';
-import { getFormattedServicePrice } from '../../../../utils/service-helpers';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import { ProviderDisplayInfo } from '../../../../../types/backend/providers';
+import { PricingType } from '../../../../../types/backend/services';
+import { formatDistance } from '../../../../../utils/formatters';
+import { getFormattedServicePrice } from '../../../../../utils/service-helpers';
+import { AppColors, AppShadows } from '../../../../../constants/appStyles';
 
 type Props = {
   item: ProviderDisplayInfo;
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginHorizontal: 12,
     marginVertical: 8,
-    ...AppShadows.medium,
+    ,
   },
   avatarWrap: {
     width: 74,
