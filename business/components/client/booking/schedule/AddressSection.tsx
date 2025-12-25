@@ -12,9 +12,9 @@ import {
   View,
   Easing
 } from 'react-native';
-import { BookingAddress } from '../../../../types/backend/bookings';
-import { Icons3D } from '../../../../constants/icons3d'; // << ícones 3D (docCheck)
-import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
+import { BookingAddress } from '../../../../../types/backend/bookings';
+import { Icons3D } from '../../../../../constants/icons3d'; // << ícones 3D (docCheck)
+import { AppColors, AppShadows } from '../../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -209,7 +209,7 @@ const s = StyleSheet.create({
     padding: 12,
     marginTop: 16,
     overflow: 'hidden',
-    ...AppShadows.small, // Adicionando sombra
+    
     
   },
 
@@ -294,7 +294,7 @@ const s = StyleSheet.create({
   skeletonIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: AppColors.borderNeutral, marginRight: 12 }, // Usando AppColors
   skeletonLine: { height: 12, width: '70%', backgroundColor: AppColors.borderNeutral, borderRadius: 6 }, // Usando AppColors
 
-  inputCard: { backgroundColor: AppColors.white, padding: 16, marginHorizontal: 16, borderRadius: 18, marginTop: 10, ...AppShadows.small }, // Usando AppColors e AppShadows
+  inputCard: { backgroundColor: AppColors.white, padding: 16, marginHorizontal: 16, borderRadius: 18, marginTop: 10,  }, // Usando AppColors e AppShadows
   inputTitle: { fontSize: 16, fontWeight: '700', color: AppColors.textBody, textAlign: 'center', marginBottom: 14 }, // Usando AppColors
   inputRow: {
     flexDirection: 'row',
