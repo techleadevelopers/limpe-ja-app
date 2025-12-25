@@ -1,9 +1,9 @@
 // LimpeJaApp/app/client/bookings/components/success/DateTimeCards.tsx
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ColorValue, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { AppColors } from '../../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface DateTimeCardsProps {
   formattedBookingDate: string;
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     minHeight: 80, // Touch target confortável
     overflow: 'hidden',
     position: 'relative',
-    ...AppShadows.medium, // Usando AppShadows
+    
   },
   gradientBackground: {
     ...StyleSheet.absoluteFillObject,
