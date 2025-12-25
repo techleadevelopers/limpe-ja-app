@@ -1,34 +1,35 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Platform,
-  TouchableOpacity,
-  Animated,
-  Easing,
-  useColorScheme,
-  RefreshControl,
-  AccessibilityInfo,
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    AccessibilityInfo,
+    ActivityIndicator,
+    Animated,
+    Easing,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useColorScheme,
+    View,
+} from 'react-native';
 // Chart removed: rendering monthly bookings as summary grid
 import { useTranslation } from 'react-i18next';
 
 import { useQuery } from '@tanstack/react-query';
-import { metricsService } from '../../../services/metricsService';
-import { getLoyaltyRewards } from '../../../services/loyaltyService';
-import { claimMission } from '../../../services/missionService';
-import { ClientMetrics } from '../../../types/backend/metrics';
-import NotificationUIService from '../../../services/notificationUIService';
 import { AnalyticsService } from '../../../services/analyticsService';
+import { getLoyaltyRewards } from '../../../services/loyaltyService';
+import { metricsService } from '../../../services/metricsService';
+import { claimMission } from '../../../services/missionService';
+import NotificationUIService from '../../../services/notificationUIService';
+import { ClientMetrics } from '../../../types/backend/metrics';
+import { toastUserError } from '../../_shared/errors/uiFeedback';
 
+import { EmptyState } from '../../../components/EmptyState';
 import { KPIValue } from '../../../components/KPIValue';
 import { Skeleton } from '../../../components/Skeleton';
-import { EmptyState } from '../../../components/EmptyState';
 import Toast from '../../../components/Toast';
 import Colors from '../../../constants/Colors';
 
@@ -434,18 +435,18 @@ export default function ClientMetricsScreen() {
                       </View>
                       {m?.canClaim && (
                         <TouchableOpacity
-                          onPress={async () => {
-                            try {
-                              await claimMission(m?.mission?.id);
-                              NotificationUIService.showSuccess(
-                                t('missions.claim_success', { defaultValue: 'Recompensa resgatada!' }),
-                                t('common.success', { defaultValue: 'Sucesso' })
-                              );
-                              refetch();
-                            } catch (err: any) {
-                              NotificationUIService.showError(err?.message || t('common.error', { defaultValue: 'Erro' }));
-                            }
-                          }}
+                            onPress={async () => {
+                              try {
+                                await claimMission(m?.mission?.id);
+                                NotificationUIService.showSuccess(
+                                  t('missions.claim_success', { defaultValue: 'Recompensa resgatada!' }),
+                                  t('common.success', { defaultValue: 'Sucesso' })
+                                );
+                                refetch();
+                              } catch (err: any) {
+                                toastUserError(err, 'Erro ao resgatar missão');
+                              }
+                            }}
                           style={{ marginTop: 8, backgroundColor: theme.primary, paddingVertical: 8, borderRadius: 8, alignItems: 'center' }}
                           accessibilityLabel={t('missions.claim', { defaultValue: 'Resgatar' })}
                         >
@@ -554,7 +555,7 @@ const styles = StyleSheet.create({
     padding: 30,
     marginHorizontal: 15,
     borderRadius: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   errorText: { marginTop: 10, fontSize: 16, textAlign: 'center' },
   retryButton: { marginTop: 20, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
@@ -567,7 +568,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFF',
     padding: 20, // Padding maior para premium feel
-    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 6,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 0,
   },
   cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 }, // Fonte maior
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
@@ -578,7 +579,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 0,
   },
   summaryValue: { fontSize: 24, fontWeight: 'bold' }, // Fonte maior para premium
   summaryLabel: { fontSize: 14, textAlign: 'center', marginTop: 6 }, // Ajustado
