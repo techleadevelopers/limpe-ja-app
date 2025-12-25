@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: 16,
     marginBottom: 16,
-    ...AppShadows.medium,
+    
     minHeight: Platform.OS === 'ios' ? 220 : 230,
   },
   gradientBackground: {
