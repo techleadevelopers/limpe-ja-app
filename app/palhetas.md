@@ -55,7 +55,7 @@ Exemplo de Sombra de Card: shadowColor: '#000', shadowOffset: { width: 0, height
 
 Exemplo de Sombra de Botão: shadowColor: '#007BFF', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 8.
 
-A propriedade elevation do Android é usada para replicar o efeito de sombra (elevation: 8 ou 5).
+A propriedade elevation do Android é usada para replicar o efeito de sombra (elevation: 0 ou 5).
 
 Bordas:
 
