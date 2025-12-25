@@ -14,9 +14,9 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
-import NotificationUIService from '../../../../services/notificationUIService';
-import { fetchApi } from '../../../../services/api';
+import { AppColors, AppShadows } from '../../../../../constants/appStyles';
+import NotificationUIService from '../../../../../services/notificationUIService';
+import { fetchApi } from '../../../../../services/api';
 
 interface SecurityInfoSectionProps {
   successColor: string;
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
-    ...AppShadows.medium,
+    
     paddingBottom: 20,
   },
   securityImage: {
