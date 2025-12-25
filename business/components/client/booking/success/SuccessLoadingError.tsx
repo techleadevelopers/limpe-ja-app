@@ -3,8 +3,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
-import { AppColors } from '../../../../constants/appStyles';
-import { sanitizeText } from '../../../../utils/formatters';
+import { AppColors } from '../../../../../constants/appStyles';
+import { sanitizeText } from '../../../../../utils/formatters';
 
 interface SuccessLoadingErrorProps {
   isLoading: boolean;
