@@ -1,14 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, Text, Animated, Easing, ActivityIndicator, Platform } from 'react-native';
-import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Stack } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  getMyMissions,
-  claimMission,
-  MissionItem as MissionItemType,
+    claimMission,
+    getMyMissions,
+    MissionItem as MissionItemType,
 } from '../../../services/missionService';
 
 import MissionList from '../../../components/missions/MissionList';
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    elevation: 6,
+    elevation: 0,
   },
   fabText: { color: '#FFF', fontWeight: '700' },
 });
