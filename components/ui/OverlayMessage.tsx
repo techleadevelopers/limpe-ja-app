@@ -1,16 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import {
-  Animated,
-  Platform,
-  StyleSheet,
-  Text,
-  View,
-  TouchableWithoutFeedback,
-  TouchableOpacity,
-  Image,
-  StatusBar,
+    Animated,
+    Image,
+    Platform,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '../../constants/appStyles';
 
 type Variant = 'success' | 'info' | 'warning' | 'error';
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 0,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 0,
   },
   successIconBadge: {
     width: 38,
