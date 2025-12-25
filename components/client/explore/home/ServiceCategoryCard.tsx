@@ -4,8 +4,8 @@ import { useRouter } from 'expo-router';
 import React, { useRef } from 'react'; // Adicionado useRef aqui
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { ProviderDisplayInfo } from '../../../../types/backend/providers'; // Assumindo que este tipo está correto
 import { CLIENT_ROUTES } from '../../../../constants/routes'; // Importação adicionada
+import { ProviderDisplayInfo } from '../../../../types/backend/providers'; // Assumindo que este tipo está correto
 
 interface ServiceCategoryCardProps {
     item: ProviderDisplayInfo;
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3,
+        elevation: 0,
     },
     cardContentWrapper: {
         width: '100%',
