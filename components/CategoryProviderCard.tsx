@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { ProviderDisplayInfo, ProviderServiceOffering } from '../types/backend/providers';
+import { ProviderDisplayInfo } from '../types/backend/providers';
 import { PricingType } from '../types/backend/services';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 8,
             },
             android: {
-                elevation: 5,
+                elevation: 0,
             },
         }),
     },
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 3,
             },
             android: {
-                elevation: 4,
+                elevation: 0,
             },
         }),
     },
