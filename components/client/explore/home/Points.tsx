@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 10,
             },
             android: {
-                elevation: 12,
+                elevation: 0,
             },
         }),
     },
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 5,
             },
             android: {
-                elevation: 4,
+                elevation: 0,
             },
         }),
         borderWidth: 1,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 5,
             },
             android: {
-                elevation: 4,
+                elevation: 0,
             },
         }),
     },
