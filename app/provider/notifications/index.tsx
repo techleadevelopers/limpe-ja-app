@@ -1,8 +1,9 @@
 // LimpeJaApp/app/provider/notifications/index.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
+import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next'; // Importar i18n
 import {
     ActivityIndicator,
     Animated,
@@ -16,15 +17,14 @@ import {
 } from 'react-native';
 import { useAuth } from '../../../hooks/useAuth';
 import { showOverlay } from '../../../hooks/useOverlayMessage';
-import { useTranslation } from 'react-i18next'; // Importar i18n
 
 // <--- ADICIONADO: Importar serviços e tipagens reais
+import type { AppNotification } from '../../../services/notificationService';
 import {
     getNotifications,
     markAllNotificationsAsRead,
     markNotificationAsRead,
 } from '../../../services/notificationService';
-import type { AppNotification } from '../../../services/notificationService';
 
 // Helper simples para formatar timestamp de forma relativa ou absoluta
 const formatNotificationTimestamp = (isoTimestamp: string, t: any): string => {
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 0,
   },
   headerTitle: {
     fontSize: 18,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
         ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
     }),
   },
   notificationItem: {
