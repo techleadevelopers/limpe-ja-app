@@ -1,11 +1,14 @@
 // LimpeJaApp/app/provider/dashboard.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics'; // CORREÇÃO: Import separado e correto para Haptics
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Alert,
   Animated,
+  Easing,
   Image,
   Platform,
   RefreshControl,
@@ -14,14 +17,13 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Easing, // CORREÇÃO: Import explícito para Easing
-  AccessibilityInfo, // CORREÇÃO: Import explícito para AccessibilityInfo
 } from 'react-native';
-import * as Haptics from 'expo-haptics'; // CORREÇÃO: Import separado e correto para Haptics
-import { useAuth } from '../../hooks/useAuth';
 import { PROVIDER_ROUTES } from '../../constants/routes'; // Importar PROVIDER_ROUTES
+import { useAuth } from '../../hooks/useAuth';
 // Import NotificationUIService
+import { subscribeToProviderNotifications } from '../../services/notificationBus';
 import NotificationUIService from '../../services/notificationUIService'; // Added
+import { toastUserError } from '../_shared/errors/uiFeedback';
 // Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/dashboardService';
@@ -30,8 +32,8 @@ import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
 // CORREÇÃO: Usar a interface ProviderDashboard do arquivo de provedores,
 // que é mais completa e usada na lógica do componente.
 // import { ProviderDashboard } from '../../types/backend/dashboard';
-import { ProviderDashboard } from '../../types/backend/providers'; // Usar a interface correta
 import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
+import { ProviderDashboard } from '../../types/backend/providers'; // Usar a interface correta
 // CORREÇÃO: Adicionar import para SafeAreaInsets (para alinhamento do header no iOS)
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -183,7 +185,7 @@ const headerStyles = StyleSheet.create({
         shadowOpacity: 0.1, // Suavizado para iOS clean
         shadowRadius: 6
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
     marginBottom: Spacing.lg,
   },
@@ -366,7 +368,7 @@ const summaryStyles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 10,
       },
-      android: { elevation: 10 },
+      android: { elevation: 0 },
     }),
   },
 
@@ -548,11 +550,11 @@ const quickActionStyles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 6,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: Platform.OS === 'android' ? 15 : 20,
     fontWeight: 'bold',
     color: TEXT_DARK,
     marginBottom: Spacing.md,
@@ -585,7 +587,7 @@ const quickActionStyles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 3,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   quickChipTitle: {
@@ -617,7 +619,7 @@ const quickActionStyles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 3,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   gridItemText: {
@@ -871,6 +873,7 @@ export default function ProviderDashboardScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [updatingIds, setUpdatingIds] = useState<Record<string, boolean>>({});
+  const [hasNewUpdates, setHasNewUpdates] = useState(false);
   // Animated Values (otimizados para reduced motion)
   const financialSummaryAnim = useRef(new Animated.Value(0)).current;
   const quickActionsAnim = useRef(new Animated.Value(0)).current;
@@ -883,6 +886,34 @@ export default function ProviderDashboardScreen() {
   // Ref para armazenar a animação composta do stagger
   const staggerAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
   const isReducedMotionEnabled = useReducedMotion(); // Global reduced motion
+  const newUpdatesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastServiceToastRef = useRef<number>(0);
+  const NEW_UPDATE_DURATION_MS = 10 * 60 * 1000;
+  const TOAST_DEBOUNCE_MS = 30 * 1000;
+  const markNewUpdates = useCallback(() => {
+    setHasNewUpdates(true);
+    if (newUpdatesTimerRef.current) {
+      clearTimeout(newUpdatesTimerRef.current);
+    }
+    newUpdatesTimerRef.current = setTimeout(() => {
+      setHasNewUpdates(false);
+      newUpdatesTimerRef.current = null;
+    }, NEW_UPDATE_DURATION_MS);
+  }, []);
+  const clearNewUpdates = useCallback(() => {
+    if (newUpdatesTimerRef.current) {
+      clearTimeout(newUpdatesTimerRef.current);
+      newUpdatesTimerRef.current = null;
+    }
+    setHasNewUpdates(false);
+  }, []);
+  const showNewServiceToast = useCallback(() => {
+    const now = Date.now();
+    if (now - lastServiceToastRef.current >= TOAST_DEBOUNCE_MS) {
+      NotificationUIService.showInfo('Novo serviço confirmado', 'Atualização');
+      lastServiceToastRef.current = now;
+    }
+  }, []);
   const fetchData = useCallback(async () => {
     console.log("[DashboardScreen] fetchData: Iniciando busca de dados.");
     if (isMounted.current) {
@@ -928,7 +959,7 @@ export default function ProviderDashboardScreen() {
     } catch (err: any) {
       console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
       if (isMounted.current) {
-        NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar os dados do dashboard.", "Erro");
+        toastUserError(err, 'Erro ao carregar os dados do dashboard');
       }
     } finally {
       if (isMounted.current) {
@@ -958,6 +989,25 @@ export default function ProviderDashboardScreen() {
       }
     };
   }, [authLoading, user, fetchData]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToProviderNotifications((kind) => {
+      if (kind === 'bookingConfirmed' || kind === 'paymentConfirmed') {
+        fetchData();
+        markNewUpdates();
+        showNewServiceToast();
+      }
+    });
+    return unsubscribe;
+  }, [fetchData, markNewUpdates, showNewServiceToast]);
+
+  useEffect(() => {
+    return () => {
+      if (newUpdatesTimerRef.current) {
+        clearTimeout(newUpdatesTimerRef.current);
+      }
+    };
+  }, []);
   // ===== Header data normalization (avatar + name) injected from provider/index.tsx logic =====
   const sanitizeUrl = (v: any) => (typeof v === 'string' && v.trim().length > 0 ? v.trim() : undefined);
   const headerAvatarUrl =
@@ -995,8 +1045,14 @@ export default function ProviderDashboardScreen() {
     router.push(PROVIDER_ROUTES.MESSAGES_LIST as any);
   };
   // Handlers de navegação para Ações Rápidas novas
-  const goRequests = () => router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=requests') as any);
-  const goUpcoming = () => router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=upcoming') as any);
+  const goRequests = () => {
+    clearNewUpdates();
+    router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=requests') as any);
+  };
+  const goUpcoming = () => {
+    clearNewUpdates();
+    router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=upcoming') as any);
+  };
   const goCompleted = () => router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=completed') as any);
   const goNotifications = () => router.push('/provider/notifications' as any);
   const goReviews = () => router.push(PROVIDER_ROUTES.REVIEWS as any); // CORRIGIDO: Usar a constante da rota
@@ -1022,15 +1078,12 @@ export default function ProviderDashboardScreen() {
                 console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
                 fetchData();
               }
-            } catch (error: any) {
-              console.error('[DashboardScreen] Erro ao aceitar agendamento:', error.response?.data || error.message, error);
-              if (isMounted.current) {
-                NotificationUIService.showError(
-                  error.response?.data?.message || 'Não foi possível aceitar o agendamento.',
-                  'Erro'
-                );
-              }
-            } finally {
+              } catch (error: any) {
+                console.error('[DashboardScreen] Erro ao aceitar agendamento:', error.response?.data || error.message, error);
+                if (isMounted.current) {
+                  toastUserError(error, 'Erro ao aceitar o agendamento');
+                }
+              } finally {
               if (isMounted.current) {
                 setUpdatingIds(prev => { const clone = { ...prev }; delete clone[bookingId]; return clone; });
               }
@@ -1060,15 +1113,12 @@ export default function ProviderDashboardScreen() {
                 console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
                 fetchData();
               }
-            } catch (error: any) {
-              console.error('[DashboardScreen] Erro ao rejeitar agendamento:', error.response?.data || error.message, error);
-              if (isMounted.current) {
-                NotificationUIService.showError(
-                  error.response?.data?.message || 'Não foi possível rejeitar o agendamento.',
-                  'Erro'
-                );
-              }
-            } finally {
+              } catch (error: any) {
+                console.error('[DashboardScreen] Erro ao rejeitar agendamento:', error.response?.data || error.message, error);
+                if (isMounted.current) {
+                  toastUserError(error, 'Erro ao rejeitar o agendamento');
+                }
+              } finally {
               if (isMounted.current) {
                 setUpdatingIds(prev => { const clone = { ...prev }; delete clone[bookingId]; return clone; });
               }
@@ -1192,13 +1242,21 @@ export default function ProviderDashboardScreen() {
           }
         ]}>
           <View style={styles.subsectionHeader}>
-            <Text style={styles.subsectionTitle}>
-              <Ionicons name="hourglass-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}Novas Solicitações
-            </Text>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.subsectionTitle}>
+                <Ionicons name="hourglass-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}Novas Solicitações
+              </Text>
+              {hasNewUpdates && (
+                <View style={styles.newBadge}>
+                  <Text style={styles.newBadgeText}>Novo</Text>
+                </View>
+              )}
+            </View>
             {pendingRequests.length > 2 && (
               <TouchableOpacity
                 onPress={() => {
                   if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  clearNewUpdates();
                   router.push('/provider/schedule' as any);
                 }}
                 accessibilityRole="button"
@@ -1236,13 +1294,21 @@ export default function ProviderDashboardScreen() {
           }
         ]}>
           <View style={styles.subsectionHeader}>
-            <Text style={styles.subsectionTitle}>
-              <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}Próximos Serviços
-            </Text>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.subsectionTitle}>
+                <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}Próximos Serviços
+              </Text>
+              {hasNewUpdates && (
+                <View style={styles.newBadge}>
+                  <Text style={styles.newBadgeText}>Novo</Text>
+                </View>
+              )}
+            </View>
             {upcomingServices.length > 2 && (
               <TouchableOpacity
                 onPress={() => {
                   if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  clearNewUpdates();
                   router.push('/provider/schedule' as any);
                 }}
                 accessibilityRole="button"
@@ -1273,7 +1339,7 @@ export default function ProviderDashboardScreen() {
             transform: [{ translateY: reviewsSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
           }
         ]}>
-          <View style={{ backgroundColor: WHITE, borderRadius: Radii.md, padding: Spacing.md, ...Platform.select({ ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 }, android: { elevation: 4 } }) }}>
+          <View style={{ backgroundColor: WHITE, borderRadius: Radii.md, padding: Spacing.md, ...Platform.select({ ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 }, android: { elevation: 0 } }) }}>
             <Text style={{ fontSize: 18, fontWeight: '600', color: TEXT_DARK, marginBottom: Spacing.md }}>Meus Serviços</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <TouchableOpacity
@@ -1370,7 +1436,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   retryButtonText: {
@@ -1414,7 +1480,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08, // Suavizado para iOS clean
         shadowRadius: 5
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   subsectionHeader: {
@@ -1423,12 +1489,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.md,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Platform.OS === 'android' ? 0 : 0,
+    gap: 6,
+  },
   subsectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: Platform.OS === 'android' ? 17 : 18,
+    paddingHorizontal: Platform.OS === 'android' ? 0 : 0,
+    fontWeight: Platform.OS === 'android' ? '700' : '600',
     color: TEXT_DARK,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  newBadge: {
+    backgroundColor: '#ff5a5f',
+    borderRadius: Radii.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    alignSelf: 'flex-start',
+  },
+  newBadgeText: {
+    color: WHITE,
+    fontSize: 10,
+    fontWeight: '700',
   },
   viewAllText: {
     fontSize: 14,
@@ -1446,6 +1531,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: TEXT_MUTED,
     fontSize: 15,
+    paddingHorizontal: Platform.OS === 'android' ?  15 : 0,
     marginTop: Spacing.sm,
   },
   requestItem: {
@@ -1464,7 +1550,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 5
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   requestItemPendingIndicator: {
@@ -1645,7 +1731,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 4
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   serviceItemContent: {
@@ -1689,7 +1775,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 4
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   messageLinkContent: {
@@ -1772,7 +1858,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 4
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   earningsLinkText: {
@@ -1799,7 +1885,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   logoutButtonText: {
