@@ -1,5 +1,5 @@
 // src/theme/shadows.ts
-import { ViewStyle, Platform } from 'react-native';
+import { ViewStyle } from 'react-native';
 import { colors } from './colors';
 
 export const shadows = {
@@ -11,7 +11,7 @@ export const shadows = {
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 5, // Para Android
+    elevation: 0, // Para Android
   } as ViewStyle,
   button: {
     shadowColor: colors.primary,
@@ -21,7 +21,7 @@ export const shadows = {
     },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 8, // Para Android
+    elevation: 0, // Para Android
   } as ViewStyle,
   input: {
     shadowColor: colors.primaryLight,
@@ -31,6 +31,6 @@ export const shadows = {
     },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 3, // Para Android
+    elevation: 0, // Para Android
   } as ViewStyle,
 };
