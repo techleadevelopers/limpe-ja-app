@@ -1,20 +1,20 @@
-import React, { useCallback, useEffect, useRef, memo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Easing,
-  Alert,
-  Dimensions,
-  Platform,
-} from 'react-native';
-import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { memo, useCallback, useRef } from 'react';
+import {
+    Alert,
+    Animated,
+    Dimensions,
+    Easing,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
+import { AppColors } from '../../../../../constants/appStyles';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 1.05,
         shadowRadius: 9,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   calendarStyle: {
