@@ -1,14 +1,14 @@
-import React, { useRef, useEffect } from 'react';
-import { TouchableOpacity, StyleSheet, Animated, Easing, Platform, Image } from 'react-native';
-import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Image, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 
 // Importe o objeto Icons3D
 // Certifique-se de que o caminho para 'icons3d' está correto em relação a este arquivo.
 // Ex: Se icons3d.ts está em 'LimpeJaApp/constants/icons3d.ts'
 // e DEFENSE_SOS.tsx está em 'LimpeJaApp/components/client/explore/home/DEFENSE_SOS.tsx',
 // o caminho relativo é '../../../../constants/icons3d'.
-import { Icons3D } from '../../../../constants/icons3d'; 
+import { Icons3D } from '../../../../../constants/icons3d';
 
 interface DefenseSOSProps {
   bottomOffset?: number; // distância do rodapé (px)
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
-    elevation: 8,
+    elevation: 0,
     // borda sutil para contraste em fundos claros
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
