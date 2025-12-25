@@ -1,8 +1,7 @@
 // LimpeJaApp/app/client/bookings/components/schedule/PixPaymentDetails.tsx
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { PixChargeResponseDto as GlobalPixChargeResponseDto } from '../../../../types/backend/payments';
+import { PixChargeResponseDto as GlobalPixChargeResponseDto } from '../../../../../types/backend/payments';
 
 interface PixPaymentDetailsProps {
   pixChargeDetails: GlobalPixChargeResponseDto | null;
@@ -77,7 +76,7 @@ const s = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     borderWidth: 1, borderColor: '#E9EDF0',
-    shadowColor: '#1E2A3B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+    shadowColor: '#1E2A3B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 0,
   },
   amountBox: { backgroundColor: '#E9F2FF', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, marginBottom: 12, alignItems: 'center' },
   amountLabel: { fontSize: 13, color: '#2A72E7', fontWeight: '600' },
