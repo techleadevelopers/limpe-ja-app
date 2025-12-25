@@ -1,12 +1,12 @@
-import React, { useEffect, useRef } from 'react';
-import { ActivityIndicator, Animated, Dimensions, Easing, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Svg, Rect } from 'react-native-svg';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Dimensions, Easing, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Rect, Svg } from 'react-native-svg';
 
-import { usePaymentIntent, usePixActions } from '../../../../utils/paymentIntentHooks';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
-import { sanitizeText } from '../../../../utils/formatters';
-import { PixChargeResponseDto } from '../../../../types/backend/payments';
+import { AppColors, AppShadows } from '../../../../../constants/appStyles';
+import { PixChargeResponseDto } from '../../../../../types/backend/payments';
+import { sanitizeText } from '../../../../../utils/formatters';
+import { usePaymentIntent, usePixActions } from '../../../../../utils/paymentIntentHooks';
 
 interface SuccessPixInfoProps {
   bookingId: string;
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
     backgroundColor: '#ffffff',
-    ...AppShadows.small,
+    
   },
   qrCodeContainer: {
     marginBottom: 10,
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 220,
     resizeMode: 'contain',
-    elevation: 3,
+    elevation: 0,
     shadowColor: AppColors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
