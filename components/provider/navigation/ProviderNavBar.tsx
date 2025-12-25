@@ -1,18 +1,18 @@
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import { usePathname, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  Animated,
-  LayoutChangeEvent,
-  Platform,
-  Pressable,
+    Animated,
+    LayoutChangeEvent,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter, usePathname } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '../../../constants/Colors';
 
 const ProviderNavBar: React.FC = () => {
@@ -26,7 +26,7 @@ const ProviderNavBar: React.FC = () => {
     { name: 'Início', icon: 'home', route: '/provider' },
     { name: 'Agenda', icon: 'calendar', route: '/provider/profile' },
     { name: 'Cupons', icon: 'pricetag', route: '/provider/promotions' },
-    { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/common/support' },
+    { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/provider/support' },
     { name: 'Perfil', icon: 'person', route: '/provider/profile' },
   ];
 
@@ -78,7 +78,7 @@ const ProviderNavBar: React.FC = () => {
     <View style={styles.navBar} onLayout={onLayout}>
       {/* BACKGROUND */}
       <BlurView
-        intensity={Platform.OS === 'ios' ? 40 : 45}
+        intensity={Platform.OS === 'ios' ? 40 : 5}
         tint="light"
         style={StyleSheet.absoluteFillObject}
       />
@@ -191,20 +191,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     height: 87,
+    top: Platform.OS === 'android' ? 5 : 0,
     borderTopLeftRadius: 38,
     borderTopRightRadius: 38,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 10,
+
   },
   navItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
+    gap: Platform.OS === 'android' ? -5 : 0,
     paddingHorizontal: 10,
     marginBottom: 5,
     position: 'relative',
@@ -227,7 +225,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(255, 255, 255, 1)',
     zIndex: -2,
   },
 });
