@@ -1,12 +1,11 @@
 import React from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Platform,
-  Animated,
-  TextInputProps,
+    Animated,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TextInputProps
 } from 'react-native';
 
 interface StandardInputProps extends TextInputProps {
@@ -89,7 +88,7 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
