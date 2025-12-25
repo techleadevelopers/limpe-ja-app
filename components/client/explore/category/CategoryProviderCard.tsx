@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginHorizontal: 12,
     marginVertical: 8,
-    ...AppShadows.medium,
+    
   },
   avatarWrap: {
     width: 74,
