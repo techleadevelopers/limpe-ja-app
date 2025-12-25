@@ -1,20 +1,20 @@
 // components/missions/MissionProgressSnack.tsx
 // ================================================
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  useColorScheme,
-  Animated,
-  Easing,
-  LayoutChangeEvent,
-  AccessibilityInfo,
+    AccessibilityInfo,
+    Animated,
+    Easing,
+    LayoutChangeEvent,
+    StyleSheet,
+    Text,
+    useColorScheme,
+    View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import Card from '../common/Card';
-import Button from '../common/Button';
 import Colors from '../../constants/Colors';
+import Button from '../common/Button';
+import Card from '../common/Card';
 
 // ---------- Theming ----------
 function useTheme() {
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   spark: {
     position: 'absolute', top: 1, width: 20, height: 20, borderRadius: 10,
     right: undefined,
-    shadowColor: '#000', shadowOpacity: 0.12, shadowOffset: { width: 0, height: 1 }, shadowRadius: 2, elevation: 2,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowOffset: { width: 0, height: 1 }, shadowRadius: 2, elevation: 0,
   },
 
   infoRow: { marginTop: 8, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
