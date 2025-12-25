@@ -1,9 +1,9 @@
 // LimpeJaApp/components/BannerOfertaIndividual.tsx
 // Este é o componente que renderiza UM ÚNICO BANNER
-import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform, ImageBackground, Dimensions } from 'react-native'; // Added Dimensions import
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useRef } from 'react';
+import { Animated, Dimensions, ImageBackground, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'; // Added Dimensions import
 
 // --- DEFINIÇÃO DA INTERFACE DE PROPS ATUALIZADA ---
 // Mantemos a mesma interface que você tinha para um único banner.
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 12,
             },
             android: {
-                elevation: 10,
+                elevation: 0,
             },
         }),
     },
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 4,
             },
             android: {
-                elevation: 3,
+                elevation: 0,
             },
         }),
     },
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 15,
             },
             android: {
-                elevation: 12,
+                elevation: 0,
             },
         }),
     },
