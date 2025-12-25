@@ -1,13 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  Platform,
-  StyleSheet,
-  View,
-} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePathname } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    Animated,
+    Easing,
+    Platform,
+    StyleSheet,
+    View,
+} from 'react-native';
 
 // seu card visual
 import HtmlCouponCard from './HtmlCouponCard';
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       ios:  { shadowColor: SHADOW, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
 });
