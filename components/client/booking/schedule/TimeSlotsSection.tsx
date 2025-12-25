@@ -1,18 +1,18 @@
 // TimeSlotsSection.tsx - seção de horários, agora suportando seleção múltipla (contígua) sem alterar o layout base
 import React from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  ActivityIndicator,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
 import { useTranslation } from 'react-i18next';
-import TimeSlotButton from './TimeSlotButton';
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { AppColors } from '../../../../constants/appStyles';
+import TimeSlotButton from './TimeSlotButton';
 
 interface SlotItem {
   time: string;
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingBottom: 20,
     marginBottom: 39,
-    borderWidth: 0.9,
+    borderWidth: Platform.OS === 'android' ? 0 : 0.9,
     borderColor: 'rgba(24, 79, 230, 0.09)',
     ...Platform.select({
       ios: {
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 1.05,
         shadowRadius: 9,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   title: {
