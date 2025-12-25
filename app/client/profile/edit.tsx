@@ -2,42 +2,43 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Easing,
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
-  View,
-  Easing,
-  Pressable,
-  useColorScheme,
-  StyleProp,
-  ViewStyle,
   TextStyle,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+  ViewStyle,
 } from 'react-native';
 import { useAuth } from '../../../hooks/useAuth'; // Ajuste o path se necessário
 
 import { updateClientProfile } from '../../../services/clientService';
+import { FilePurpose, uploadImageToCloud } from '../../../services/uploadService';
 import { BookingAddress } from '../../../types/backend/bookings';
 import { UpdateClientProfileDto } from '../../../types/backend/clients';
 import { UploadResponseDto } from '../../../types/backend/upload';
-import { uploadImageToCloud, FilePurpose } from '../../../services/uploadService';
 import { UserProfile } from '../../../types/backend/users';
 import { formatPhoneNumber, isValidPhoneNumber } from '../../../utils/helpers';
 
-import Toast from '../../../components/Toast';
-import { Sheet } from '../../../components/Sheet';
-import { EmptyState } from '../../../components/EmptyState';
-import Colors from '../../../constants/Colors';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { EmptyState } from '../../../components/EmptyState';
+import { Sheet } from '../../../components/Sheet';
+import Toast from '../../../components/Toast';
+import Colors from '../../../constants/Colors';
+import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 /* Animated error message (kept) */
 const AnimatedErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
@@ -168,7 +169,7 @@ const buttonStyles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   buttonPressed: { opacity: 0.9 },
@@ -445,11 +446,7 @@ export default function EditClientProfileScreen() {
       router.back();
     } catch (error: any) {
       console.error("[EditProfile] Erro ao salvar alterações:", error);
-      Toast.show({
-        type: 'error',
-        text1: 'Erro',
-        text2: error.message || "Não foi possível atualizar o perfil. Tente novamente.",
-      });
+      toastUserError(error, 'Erro ao atualizar o perfil');
     } finally {
       setIsLoading(false);
     }
@@ -750,7 +747,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 4,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   headerBlur: { ...StyleSheet.absoluteFillObject },
@@ -781,7 +778,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 4,
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   avatarContainer: {
@@ -802,7 +799,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 8,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   dashedBorder: {
@@ -855,7 +852,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 4,
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   label: {
@@ -882,7 +879,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.02,
         shadowRadius: 2,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   inputField: {
@@ -902,7 +899,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.02,
         shadowRadius: 2,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   inputIcon: {
@@ -958,7 +955,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.14,
         shadowRadius: 6,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   saveButtonDisabled: {
