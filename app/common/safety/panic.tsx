@@ -1,13 +1,13 @@
 // LimpeJaApp/app/common/safety/panic.tsx
-import React, { useState, useEffect, useRef, useCallback } from 'react'; // Adicionado useCallback
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Animated, Easing } from 'react-native';
-import type * as Location from 'expo-location';
-import { ensureLocationPermission, getCurrentPosition } from '../../../services/locationService';
 import { useMutation } from '@tanstack/react-query';
-import { reportPanic } from '../../../services/safetyService';
-import { ReportPanicDto, PanicType } from '../../../types/backend/safety';
+import type * as Location from 'expo-location';
 import { router } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react'; // Adicionado useCallback
 import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ensureLocationPermission, getCurrentPosition } from '../../../services/locationService';
+import { reportPanic } from '../../../services/safetyService';
+import { PanicType, ReportPanicDto } from '../../../types/backend/safety';
 
 export default function PanicScreen() {
   const [countdown, setCountdown] = useState(5);
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 10,
+    elevation: 0,
   },
   panicButton: {
     backgroundColor: '#dc3545',
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 10,
+    elevation: 0,
   },
   countdownText: {
     fontSize: 80,
