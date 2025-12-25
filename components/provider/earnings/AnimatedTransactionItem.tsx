@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         ...Platform.select({
             ios: { shadowColor: 'rgba(0,0,0,0.07)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-            android: { elevation: 2 },
+            android: { elevation: 0 },
         }),
     },
     transactionItem: {
