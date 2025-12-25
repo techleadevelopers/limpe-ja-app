@@ -2,21 +2,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  FlatList,
-  Image,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Easing
+    ActivityIndicator,
+    Animated,
+    Easing,
+    FlatList,
+    Image,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { formatDate } from '../../../utils/helpers';
 
 import { useAuth } from '../../../hooks/useAuth';
-import { getChatListForUser, ConversationItem } from '../../../services/chatService';
+import { ConversationItem, getChatListForUser } from '../../../services/chatService';
 
 const AnimatedConversationItem: React.FC<{
   item: ConversationItem;
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 4,
+    elevation: 0,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.16,
         shadowRadius: 12,
       },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
   conversationCardInner: {
