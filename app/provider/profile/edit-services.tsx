@@ -1,37 +1,37 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
+  AccessibilityInfo,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Easing,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
-  StyleSheet,
-  Alert,
   TouchableOpacity,
-  Platform,
-  Animated,
-  KeyboardAvoidingView,
-  ActivityIndicator,
-  Easing,
-  AccessibilityInfo,
-  ScrollView,
+  View,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import { Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
-import { Ionicons } from '@expo/vector-icons';
 import { showOverlay } from '../../../hooks/useOverlayMessage';
-import * as Haptics from 'expo-haptics';
 
 // Types
-import { PricingType, Service } from '../../../types/backend/services';
+import { getServiceCategories } from '../../../services/commonServiceCatalog';
 import {
-  getProviderServicesOffered,
   addProviderServiceOffering,
-  updateProviderServiceOffering,
   deleteProviderServiceOffering,
+  getProviderServicesOffered,
+  updateProviderServiceOffering,
 } from '../../../services/providerService';
 import { ProviderServiceOffering as ProviderServiceType } from '../../../types/backend/provider-service';
 import { CreateProviderServiceData, UpdateProviderServiceData } from '../../../types/backend/providers';
-import { getServiceCategories } from '../../../services/commonServiceCatalog';
+import { PricingType, Service } from '../../../types/backend/services';
+import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 // ===== Catálogo fallback (garante opções como Residencial/Comercial se backend ainda não responder) =====
 const FALLBACK_SERVICES: Service[] = [
@@ -429,7 +429,7 @@ export default function EditProviderServicesScreen() {
         }
       } catch (error: any) {
         console.error('[EditProviderServicesScreen] Erro ao carregar dados:', error);
-        Alert.alert('Erro', error?.message || 'Não foi possível carregar seus serviços ou o catálogo de serviços.');
+        alertUserError(error, 'Erro ao carregar serviços');
       } finally {
         setIsLoading(false);
         const staggerDelay = isReducedMotionEnabled ? 0 : 160;
@@ -466,7 +466,7 @@ export default function EditProviderServicesScreen() {
         setSelectedBaseServiceId(fetchedBaseServices[0].id);
       }
     } catch (error: any) {
-      Alert.alert('Erro', error?.message || 'Não foi possível recarregar o catálogo de serviços.');
+      alertUserError(error, 'Erro ao recarregar o catálogo de serviços');
     } finally {
       setIsReloadingCatalog(false);
     }
@@ -1250,7 +1250,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: Radii.xl,
     padding: Spacing.lg,
-    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 18 }, android: { elevation: 12 } }),
+    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 18 }, android: { elevation: 0 } }),
   },
   modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 6 },
   stepTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 8 },
@@ -1273,7 +1273,7 @@ const styles = StyleSheet.create({
   scrollViewContent: { paddingBottom: 50, paddingHorizontal: Spacing.sm },
 
   customHeader: {
-    paddingTop: 28,
+    paddingTop:  Platform.OS === 'android' ? 20 : 28,
     paddingHorizontal: 16,
     paddingBottom: 12,
     flexDirection: 'row',
@@ -1307,7 +1307,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     ...Platform.select({
       ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16 },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   formTitle: {
@@ -1414,7 +1414,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     ...Platform.select({
       ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   actionButtonPrimaryText: { color: '#FFFFFF', fontSize: 17, fontWeight: '600', fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System' },
@@ -1431,7 +1431,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: Radii.xl,
     marginVertical: Spacing.sm,
-    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 }, android: { elevation: 8 } }),
+    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 }, android: { elevation: 0 } }),
   },
   serviceItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: Radii.xl },
   serviceInfo: { flex: 1, marginRight: Spacing.sm },
@@ -1445,7 +1445,7 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     borderRadius: 14,
     backgroundColor: Colors.fieldBg,
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 }, android: { elevation: 2 } }),
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 }, android: { elevation: 0 } }),
   },
 
   saveButtonContainer: { marginTop: Spacing.lg, marginBottom: Spacing.sm },
@@ -1455,7 +1455,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xl,
     backgroundColor: Colors.surface,
     borderRadius: Radii.xl,
-    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 }, android: { elevation: 8 } }),
+    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 }, android: { elevation: 0 } }),
   },
   emptyListText: { fontSize: 21, fontWeight: '700', color: '#343A40', marginTop: Spacing.sm, marginBottom: Spacing.xs, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Bold' : 'System' },
   emptyListSubText: { fontSize: 16, color: Colors.textMuted, textAlign: 'center', paddingHorizontal: Spacing.lg, lineHeight: 22, fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System' },
@@ -1468,7 +1468,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: Spacing.lg,
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.12, shadowRadius: 16 }, android: { elevation: 16 } }),
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.12, shadowRadius: 16 }, android: { elevation: 0 } }),
   },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   sheetTitle: { fontSize: 17, fontWeight: '800', color: Colors.text },
