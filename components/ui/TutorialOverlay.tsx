@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     backgroundColor: AppColors.white,
-    ...AppShadows.medium,
+    
   },
   iconWrapper: {
     marginBottom: 8,
