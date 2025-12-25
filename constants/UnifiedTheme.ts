@@ -18,7 +18,7 @@ export const UnifiedTheme = {
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.12,
       shadowRadius: 10,
-      elevation: 6,
+      elevation: 0,
     },
   },
 };
