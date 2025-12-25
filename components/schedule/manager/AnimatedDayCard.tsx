@@ -1,7 +1,7 @@
 // app/provider/schedule/components/AnimatedDayCard.tsx
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View, Switch, Platform } from 'react-native'; // <--- CORRIGIDO: Adicionado Platform
 import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Platform, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native'; // <--- CORRIGIDO: Adicionado Platform
 
 // Importa o componente AnimatedTimeSlot
 import AnimatedTimeSlot from './AnimatedTimeSlot'; //
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     // Estilos de sombra para Android e iOS
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   dayHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     borderColor: '#DEE2E6',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.03)', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
-      android: { elevation: 1 },
+      android: { elevation: 0 },
     }),
   },
   addSlotButtonText: { fontSize: 15, color: '#007AFF', marginLeft: 8, fontWeight: '600' },
