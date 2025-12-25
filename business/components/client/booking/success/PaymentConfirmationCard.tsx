@@ -1,9 +1,9 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Easing, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AppColors } from '../../../../../constants/appStyles';
 
 type Props = {
   title?: string;
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#DDEFE5',
-    ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 12 }, android: { elevation: 4 } }),
+    ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 12 }, android: { elevation: 0 } }),
   },
   gradient: { ...StyleSheet.absoluteFillObject },
   row: { flexDirection: 'row', alignItems: 'flex-start', padding: 14, paddingBottom: 8 },
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    ...AppShadows.medium,
+    
   },
   ctaText: { color: AppColors.white, fontWeight: '700', marginRight: 6 },
 });
