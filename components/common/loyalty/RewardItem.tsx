@@ -1,6 +1,6 @@
 // LimpeJaApp/components/loyalty/RewardItem.tsx
-import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
 import PrimaryButton from '../../common/PrimaryButton';
 import { colors } from '../../common/theme/colors';
 import { typography } from '../../common/theme/typography';
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
       },
       android: {
-        elevation: 4,
+        elevation: 0,
       },
     }),
   },
