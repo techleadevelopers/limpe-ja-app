@@ -1,22 +1,22 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
     ActivityIndicator,
-    ScrollView,
+    Animated,
+    Dimensions,
     KeyboardAvoidingView,
     Platform,
+    ScrollView,
     StatusBar,
-    Animated,
-    Dimensions
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import AuthService from '../../services/authService';
-import { InputWithIcon } from '../../components/auth/components/InputWithIcon';
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
+import { InputWithIcon } from '../../components/auth/components/InputWithIcon';
+import AuthService from '../../services/authService';
 
 import AnimatedReanimated, {
     Easing,
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 8,
+        elevation: 0,
     },
     buttonDisabled: {
         backgroundColor: '#A0CFFF',
