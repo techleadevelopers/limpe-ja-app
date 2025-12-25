@@ -1,21 +1,21 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   Alert,
-  ScrollView,
-  TouchableOpacity,
   Image,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
   useColorScheme,
+  View,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { useAuth } from '../../../contexts/AuthContext';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import Colors from '../../../constants/Colors';
+import { useAuth } from '../../../contexts/AuthContext';
 import userService from '../../../services/userService';
 
 const AppLogo = require('../../../assets/images/logo2.png');
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 6 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   paymentTitle: { fontSize: 16, color: '#111', fontWeight: '600' },
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 6 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   row: {
