@@ -117,11 +117,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E53935', // Cor base do FAB
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
+ 
   },
 });
 
