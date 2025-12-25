@@ -1,7 +1,7 @@
 // LimpeJaApp/app/auth/provider-register/personal-details.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
       },
       android: {
-        elevation: 4,
+        elevation: 0,
       },
     }),
   },
