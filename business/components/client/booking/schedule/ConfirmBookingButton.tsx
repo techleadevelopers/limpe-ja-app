@@ -1,7 +1,7 @@
-import React, { useRef, useEffect } from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, Platform, View, Animated, Easing, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import React, { useEffect, useRef } from 'react';
+import { ActivityIndicator, Animated, Dimensions, Easing, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AppColors, AppShadows } from '../../../../../constants/appStyles';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -129,7 +129,7 @@ const s = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: Platform.OS === 'ios' ? 55 : 39,
     backgroundColor: AppColors.white,
-    ...AppShadows.medium,
+    
   },
   btn: {
     backgroundColor: AppColors.primaryInteractive,
@@ -138,7 +138,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center', // Adicionado para centralizar o conteúdo
     overflow: 'hidden', // Importante para o brilho não vazar
-    ...AppShadows.medium,
+    
     borderRightWidth: 0,
     borderRightColor: '#45484b56',
     borderTopStartRadius: 44,
@@ -153,9 +153,9 @@ const s = StyleSheet.create({
     shadowOffset: { width: -1, height: 1 },
     shadowOpacity: 3.55,
     shadowRadius: 35,
-    elevation: 6,
+    elevation: 0,
   },
-  btnDisabled: { backgroundColor: AppColors.primaryInteractive + '50', ...AppShadows.small },
+  btnDisabled: { backgroundColor: AppColors.primaryInteractive + '50',  },
   text: { color: AppColors.white, fontSize: 15, fontWeight: '700' },
   shineOverlay: {
     position: 'absolute',
