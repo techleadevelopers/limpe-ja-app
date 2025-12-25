@@ -1,9 +1,9 @@
 // PremiumServiceChip.tsx
-import React, { useRef, useEffect } from 'react';
-import { TouchableOpacity, View, Text, StyleSheet, Animated, Platform, Easing } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type ChipProps = {
   id: string;
@@ -129,7 +129,7 @@ const chipStyles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 0,
   },
   border: {
     borderRadius: 16,
