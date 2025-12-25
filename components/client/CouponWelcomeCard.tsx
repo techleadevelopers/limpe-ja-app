@@ -179,7 +179,7 @@ const styles = StyleSheet.create<CouponWelcomeCardStyles>({
     alignSelf: 'center',
     marginTop: 20,
     marginBottom: 20,
-    ...AppShadows.medium,
+    ,
   },
   gradientBackground: {
     padding: 20,
