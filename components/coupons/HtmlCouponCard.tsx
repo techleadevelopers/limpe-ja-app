@@ -1,23 +1,22 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  Pressable,
-  useColorScheme,
-  Modal,
-  Animated,
-  Easing,
-} from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
-import Toast from '../Toast';
-import Colors from '../../constants/Colors';
-import Button from '../common/Button';
 import { BlurView } from 'expo-blur';
+import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    Animated,
+    Easing,
+    Image,
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useColorScheme,
+    View,
+} from 'react-native';
+import Colors from '../../constants/Colors';
+import Toast from '../Toast';
 
 // Helper hook to get theme colors
 function useTheme() {
@@ -216,7 +215,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
+    elevation: 0,
   },
   gradientBackground: {
     ...StyleSheet.absoluteFillObject,
