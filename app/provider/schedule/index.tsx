@@ -1,28 +1,28 @@
 // LimpeJaApp/app/provider/schedule/index.tsx
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  Platform,
-  Animated,
-  RefreshControl,
-  Image,
-  Easing,
-  AccessibilityInfo, // Importar AccessibilityInfo
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { PROVIDER_ROUTES } from '../../../constants/routes';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { showOverlay } from '../../../hooks/useOverlayMessage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics'; // Adicionado para iOS premium feedback
-import { formatDate } from '../../../utils/helpers';
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    AccessibilityInfo,
+    ActivityIndicator,
+    Animated,
+    Easing,
+    FlatList,
+    Image,
+    Platform,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import ProviderNavBar from '../../../components/provider/navigation/ProviderNavBar';
+import { PROVIDER_ROUTES } from '../../../constants/routes';
+import { showOverlay } from '../../../hooks/useOverlayMessage';
+import { formatDate } from '../../../utils/helpers';
 
 // ====== Design tokens (mesmos da UI padronizada - Premium iOS) ======
 const Colors = {
@@ -335,6 +335,17 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const calendarAnim = useRef(new Animated.Value(0)).current;
+  const calendarTransform = useMemo(() => {
+    const translateY = calendarAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
+    const transforms: Array<
+      | { translateY: Animated.AnimatedInterpolation<number> }
+      | { scale: number }
+    > = [{ translateY }];
+    if (Platform.OS === 'android') {
+      transforms.push({ scale: 0.98 });
+    }
+    return transforms;
+  }, [calendarAnim]);
   const agendaHeaderAnim = useRef(new Animated.Value(0)).current;
   const feedbackAnim = useRef(new Animated.Value(0)).current;
 
@@ -516,7 +527,7 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
       <Animated.View
         style={[
           styles.calendarContainer,
-          { opacity: calendarAnim, transform: [{ translateY: calendarAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }
+          { opacity: calendarAnim, transform: calendarTransform },
         ]}
       >
         <Calendar
@@ -828,10 +839,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: Colors.primary,
-    top: -16,
+    top: Platform.OS === 'ios' ? -16 : 0,
     paddingHorizontal: 18,
-    paddingVertical: Platform.OS === 'ios' ? 59 : 20,
-    paddingTop: Platform.OS === 'ios' ? 29 : 20,
+    paddingVertical: Platform.OS === 'ios' ? 59 : 28,
+    paddingTop: Platform.OS === 'ios' ? 29 : 24,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -839,7 +850,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 12,
       },
-      android: { elevation: 10 },
+      android: { elevation: 0 },
     }),
     borderBottomLeftRadius: Radii.xl,
     borderBottomRightRadius: Radii.xl,
@@ -852,13 +863,13 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'left',
     marginLeft: 22,
-    top: 38,
+    top: Platform.OS === 'ios' ? 38 : 16,
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
 
   headerActionIcon: {
     flexDirection: 'row',
-    top: 38,
+    top: Platform.OS === 'ios' ? 38 : 16,
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: Radii.pill,
@@ -871,7 +882,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
 
@@ -887,6 +898,7 @@ const styles = StyleSheet.create({
   calendarContainer: {
     backgroundColor: Colors.surface,
     marginHorizontal: 18,
+    paddingBottom: Platform.OS === 'android' ? 0: 0,
     marginTop: 16,
     borderRadius: Radii.md,
     overflow: 'hidden',
@@ -897,7 +909,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 16,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
 
@@ -909,7 +921,7 @@ const styles = StyleSheet.create({
   agendaListHeader: {
     paddingHorizontal: 18,
     paddingTop: 18,
-    paddingBottom: 12,
+    paddingBottom: Platform.OS === 'android' ? 12: 12,
     backgroundColor: Colors.bgSoft,
   },
 
@@ -923,12 +935,15 @@ const styles = StyleSheet.create({
   },
 
   // ===== List =====
-  listStyle: { flex: 1 },
+  listStyle: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? 24 : 0,
+  },
 
   listContentContainer: {
     paddingHorizontal: 18,
-    paddingBottom: 44,
-    paddingTop: 6,
+    paddingBottom: Platform.OS === 'android' ? 100 : 44,
+    paddingTop: Platform.OS === 'android' ? 10 : 6,
   },
 
   listSeparator: { height: 0 },
@@ -948,7 +963,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.10,
         shadowRadius: 18,
       },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
 
@@ -1107,7 +1122,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 10,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
 
@@ -1153,7 +1168,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.18,
         shadowRadius: 18,
       },
-      android: { elevation: 14 },
+      android: { elevation: 0 },
     }),
   },
 
@@ -1193,7 +1208,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.18,
         shadowRadius: 8,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
 
@@ -1216,7 +1231,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 18,
       },
-      android: { elevation: 12 },
+      android: { elevation: 0 },
     }),
   },
 
