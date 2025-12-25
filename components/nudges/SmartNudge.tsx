@@ -1,16 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePathname } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    Animated,
+    Easing,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const TOKENS = {
   white: '#FFF',
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     ...Platform.select({
       ios: { shadowColor: TOKENS.shadow, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   left: { flexDirection: 'row', alignItems: 'center', flex: 1 },
