@@ -1,8 +1,8 @@
 // LimpeJaApp/components/ProviderCard.tsx
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ProviderDisplayInfo } from '../types/backend/providers';
 import { formatDistance } from '../utils/formatters';
 
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 4,
+        elevation: 0,
       },
     }),
   },
