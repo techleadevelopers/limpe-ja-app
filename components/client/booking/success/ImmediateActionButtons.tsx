@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12, // Touch target maior para conforto (44px+)
     marginHorizontal: 4, // Fix: Reduzido para caber no iOS sem overflow
     minHeight: 44, // HIG compliance
-    ...AppShadows.small,
+    
   },
   actionButtonSpacing: {
     marginLeft: 8, // Espaçamento fixo entre botões, sem wrap/gap (reduzido para iOS)
