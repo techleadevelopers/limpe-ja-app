@@ -17,7 +17,7 @@ import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 
-import { AppColors, AppDurations, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../../constants/appStyles';
+import { AppColors, AppDurations, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../../../constants/appStyles';
 
 interface ReturnCouponCardProps {
   code: string;
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: 16,
     marginBottom: 16,
-    ...AppShadows.medium,
+    ,
     minHeight: Platform.OS === 'ios' ? 220 : 230,
   },
   gradientBackground: {
