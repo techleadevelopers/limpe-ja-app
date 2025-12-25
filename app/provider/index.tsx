@@ -1,11 +1,14 @@
 // LimpeJaApp/app/provider/dashboard.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics'; // CORREÇÃO: Import separado e correto para Haptics
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Alert,
   Animated,
+  Easing,
   Image,
   Platform,
   RefreshControl,
@@ -14,14 +17,12 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Easing, // CORREÇÃO: Import explícito para Easing
-  AccessibilityInfo, // CORREÇÃO: Import explícito para AccessibilityInfo
 } from 'react-native';
-import * as Haptics from 'expo-haptics'; // CORREÇÃO: Import separado e correto para Haptics
-import { useAuth } from '../../hooks/useAuth';
 import { PROVIDER_ROUTES } from '../../constants/routes'; // Importar PROVIDER_ROUTES
+import { useAuth } from '../../hooks/useAuth';
 // Import NotificationUIService
 import NotificationUIService from '../../services/notificationUIService'; // Added
+import { toastUserError } from '../_shared/errors/uiFeedback';
 // Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/dashboardService';
@@ -30,9 +31,9 @@ import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
 // CORREÇÃO: Usar a interface ProviderDashboard do arquivo de provedores,
 // que é mais completa e usada na lógica do componente.
 // import { ProviderDashboard } from '../../types/backend/dashboard';
-import { ProviderDashboard } from '../../types/backend/providers'; // Usar a interface correta
 import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
 import ProviderNavBar from '../../components/provider/navigation/ProviderNavBar';
+import { ProviderDashboard } from '../../types/backend/providers'; // Usar a interface correta
 // CORREÇÃO: Adicionar import para SafeAreaInsets (para alinhamento do header no iOS)
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -137,7 +138,10 @@ const DashboardHeader: React.FC<{
       headerStyles.headerContainer,
       {
         opacity: headerAnim,
-        transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+        transform: [
+          { translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+          ...(Platform.OS === 'android' ? [{ scale: 0.95 }] : []),
+        ],
         paddingTop: paddingTopValue // Aplicar o valor dinâmico aqui
       },
       Platform.OS === 'android' && { paddingTop: androidPaddingTopValue },
@@ -185,7 +189,7 @@ const headerStyles = StyleSheet.create({
         shadowOpacity: 0.1, // Suavizado para iOS clean
         shadowRadius: 6
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
     marginBottom: Spacing.lg,
   },
@@ -370,7 +374,7 @@ const summaryStyles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 10,
       },
-      android: { elevation: 10 },
+      android: { elevation: 0 },
     }),
   },
 
@@ -469,7 +473,7 @@ const summaryStyles = StyleSheet.create({
 
 
 // Seção isolada: apenas "Atalhos do Dia"
-const ShortcutsGrid: React.FC<{
+  const ShortcutsGrid: React.FC<{
   onViewAllServicesPress: () => void;
   onViewAllMessagesPress: () => void;
   onManageAvailability: () => void;
@@ -502,26 +506,34 @@ const ShortcutsGrid: React.FC<{
   const a7 = useAnimatedTouch();
   const a8 = useAnimatedTouch();
   const a9 = useAnimatedTouch();
-  const Item = ({ icon, label, anim, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; anim: ReturnType<typeof useAnimatedTouch>; onPress: () => void }) => (
-    <TouchableOpacity
-      style={[quickActionStyles.gridItem, { transform: [{ scale: anim.scaleAnim }] }]}
-      onPress={onPress}
-      onPressIn={anim.onPressIn}
-      onPressOut={anim.onPressOut}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}. Toque para abrir.`}
-      accessibilityHint={`Navegue para a seção de ${label.toLowerCase()}.`}
-    >
-      <Ionicons name={icon} size={27} color={ICON_PRIMARY} accessibilityHidden={true} />
-      <Text style={[quickActionStyles.gridItemText, { display: 'flex' }]} numberOfLines={1}>{label}</Text>
-    </TouchableOpacity>
-  );
+  const Item = ({ icon, label, anim, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; anim: ReturnType<typeof useAnimatedTouch>; onPress: () => void }) => {
+    const iconSize = Platform.OS === 'android' ? 24 : 27;
+    return (
+      <TouchableOpacity
+        style={[quickActionStyles.gridItem, { transform: [{ scale: anim.scaleAnim }] }]}
+        onPress={onPress}
+        onPressIn={anim.onPressIn}
+        onPressOut={anim.onPressOut}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}. Toque para abrir.`}
+        accessibilityHint={`Navegue para a seção de ${label.toLowerCase()}.`}
+      >
+        <Ionicons name={icon} size={iconSize} color={ICON_PRIMARY} accessibilityHidden={true} />
+        <Text style={[quickActionStyles.gridItemText, { display: 'flex' }]} numberOfLines={1}>{label}</Text>
+      </TouchableOpacity>
+    );
+  };
+  const shortcutTransform = [
+    { translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+    ...(Platform.OS === 'android' ? [{ scale: 0.98 }] : []),
+  ];
+
   return (
     <Animated.View style={[
       quickActionStyles.sectionContainer,
       {
         opacity: animation,
-        transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+        transform: shortcutTransform,
       }
     ]}>
       <Text style={[quickActionStyles.sectionTitle, { display: 'flex' }]}>Atalhos do Dia</Text>
@@ -552,7 +564,7 @@ const quickActionStyles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 6,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   sectionTitle: {
@@ -580,16 +592,23 @@ const quickActionStyles = StyleSheet.create({
     borderRadius: Radii.md,
     padding: Spacing.sm,
     paddingRight: Spacing.lg, // espaço para o botão +
-    borderWidth: 1,
+    borderWidth: Platform.OS === 'android' ? 0 :  1,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: {
-        shadowColor: SHADOW_COLOR_CARD,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
       },
-      android: { elevation: 2 },
+      android: {
+        shadowColor: SHADOW_COLOR_CARD,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 2,
+      },
     }),
   },
   quickChipTitle: {
@@ -612,7 +631,7 @@ const quickActionStyles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.md,
     padding: Spacing.sm,
-    borderWidth: 1,
+    borderWidth:  Platform.OS === 'android' ? 0 : 1,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: {
@@ -621,7 +640,7 @@ const quickActionStyles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 3,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   gridItemText: {
@@ -650,7 +669,7 @@ const quickActionStyles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    borderWidth: 1,
+    borderWidth:  Platform.OS === 'android' ? 0 : 1,
     borderColor: ICON_PRIMARY,
     backgroundColor: WHITE,
     alignItems: 'center',
@@ -930,12 +949,12 @@ export default function ProviderDashboardScreen() {
       ]);
       staggerAnimationRef.current = animationSequence;
       animationSequence.start();
-    } catch (err: any) {
-      console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
-      if (isMounted.current) {
-        NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar os dados do dashboard.", "Erro");
-      }
-    } finally {
+      } catch (err: any) {
+        console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
+        if (isMounted.current) {
+          toastUserError(err, 'Erro ao carregar os dados do dashboard');
+        }
+      } finally {
       if (isMounted.current) {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -1027,15 +1046,12 @@ export default function ProviderDashboardScreen() {
                 console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
                 fetchData();
               }
-            } catch (error: any) {
-              console.error('[DashboardScreen] Erro ao aceitar agendamento:', error.response?.data || error.message, error);
-              if (isMounted.current) {
-                NotificationUIService.showError(
-                  error.response?.data?.message || 'Não foi possível aceitar o agendamento.',
-                  'Erro'
-                );
-              }
-            } finally {
+              } catch (error: any) {
+                console.error('[DashboardScreen] Erro ao aceitar agendamento:', error.response?.data || error.message, error);
+                if (isMounted.current) {
+                  toastUserError(error, 'Erro ao aceitar o agendamento');
+                }
+              } finally {
               if (isMounted.current) {
                 setUpdatingIds(prev => { const clone = { ...prev }; delete clone[bookingId]; return clone; });
               }
@@ -1065,15 +1081,12 @@ export default function ProviderDashboardScreen() {
                 console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
                 fetchData();
               }
-            } catch (error: any) {
-              console.error('[DashboardScreen] Erro ao rejeitar agendamento:', error.response?.data || error.message, error);
-              if (isMounted.current) {
-                NotificationUIService.showError(
-                  error.response?.data?.message || 'Não foi possível rejeitar o agendamento.',
-                  'Erro'
-                );
-              }
-            } finally {
+              } catch (error: any) {
+                console.error('[DashboardScreen] Erro ao rejeitar agendamento:', error.response?.data || error.message, error);
+                if (isMounted.current) {
+                  toastUserError(error, 'Erro ao rejeitar o agendamento');
+                }
+              } finally {
               if (isMounted.current) {
                 setUpdatingIds(prev => { const clone = { ...prev }; delete clone[bookingId]; return clone; });
               }
@@ -1283,13 +1296,13 @@ export default function ProviderDashboardScreen() {
             transform: [{ translateY: reviewsSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
           }
         ]}>
-          <View style={{ backgroundColor: WHITE, borderRadius: Radii.md, padding: Spacing.md, ...Platform.select({ ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 }, android: { elevation: 4 } }) }}>
+          <View style={{ backgroundColor: WHITE, borderRadius: Radii.md, padding: Spacing.md, ...Platform.select({ ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 }, android: { elevation: 0 } }) }}>
             <Text style={{ fontSize: 18, fontWeight: '600', color: TEXT_DARK, marginBottom: Spacing.md }}>Meus Serviços</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <TouchableOpacity
                 onPress={() => router.push('/provider/profile/edit-services' as any)}
                 onPressIn={() => !isReducedMotionEnabled && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-                style={{ flex: 1, marginRight: Spacing.sm, backgroundColor: PRIMARY_LIGHT, borderRadius: Radii.pill, paddingVertical: Spacing.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: ICON_PRIMARY }}
+                style={{ flex: 1, marginRight: Spacing.sm, backgroundColor: PRIMARY_LIGHT, borderRadius: Radii.pill, paddingVertical: Spacing.sm, alignItems: 'center', justifyContent: 'center', borderWidth:  Platform.OS === 'android' ? 0 : 1, borderColor: ICON_PRIMARY }}
                 accessibilityRole="button"
                 accessibilityLabel="Criar Serviço"
                 accessibilityHint="Toque para cadastrar um novo serviço"
@@ -1381,7 +1394,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   retryButtonText: {
@@ -1400,7 +1413,7 @@ const styles = StyleSheet.create({
   },
   qaPanelButton: {
     alignSelf: 'flex-end',
-    borderWidth: 1,
+    borderWidth:  Platform.OS === 'android' ? 0 : 1,
     borderColor: ICON_PRIMARY,
     borderRadius: Radii.pill,
     paddingVertical: Spacing.xs,
@@ -1425,7 +1438,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08, // Suavizado para iOS clean
         shadowRadius: 5
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   subsectionHeader: {
@@ -1475,7 +1488,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 5
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   requestItemPendingIndicator: {
@@ -1503,7 +1516,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.sm,
-    borderWidth: 1,
+    borderWidth:  Platform.OS === 'android' ? 0 : 1,
     borderColor: BORDER_SUBTLE,
   },
   requestServiceName: {
@@ -1567,7 +1580,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: Radii.pill,
-    borderWidth: 1,
+    borderWidth:  Platform.OS === 'android' ? 0 : 1,
     borderColor: BORDER_SUBTLE,
     paddingVertical: Spacing.xs,
     backgroundColor: BACKGROUND_ALT,
@@ -1605,7 +1618,7 @@ const styles = StyleSheet.create({
   },
   chatButton: {
     backgroundColor: WHITE,
-    borderWidth: 1.5,
+    borderWidth:  Platform.OS === 'android' ? 0 : 1.5,
     borderColor: ICON_PRIMARY,
     paddingHorizontal: Spacing.sm,
   },
@@ -1647,7 +1660,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
-    borderWidth: 1,
+    borderWidth:  Platform.OS === 'android' ? 0 : 1,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: {
@@ -1656,7 +1669,13 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 4
       },
-      android: { elevation: 3 },
+      android: {
+        shadowColor: SHADOW_COLOR_CARD,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 2,
+      },
     }),
   },
   serviceItemContent: {
@@ -1700,7 +1719,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 4
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   messageLinkContent: {
@@ -1783,7 +1802,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 4
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   earningsLinkText: {
@@ -1810,7 +1829,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   logoutButtonText: {
