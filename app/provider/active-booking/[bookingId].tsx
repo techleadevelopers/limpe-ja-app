@@ -1,24 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
+import { useAuth } from '../../../hooks/useAuth';
+import { useProviderBookings } from '../../../hooks/useProviderBookings';
 import { getBookingDetails } from '../../../services/bookingService';
+import NotificationUIService from '../../../services/notificationUIService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { PaymentIntentStatus } from '../../../types/backend/payments';
-import NotificationUIService from '../../../services/notificationUIService';
-import { useProviderBookings } from '../../../hooks/useProviderBookings';
-import { useAuth } from '../../../hooks/useAuth';
+import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 const PRIMARY = '#007AFF';
 const BG = '#F8F9FA';
@@ -112,7 +113,7 @@ export default function ActiveBookingDetails() {
       }
       setBooking(data);
     } catch (e: any) {
-      NotificationUIService.showError(e);
+      toastUserError(e, 'Erro ao carregar o agendamento');
     } finally {
       setLoading(false);
     }
@@ -183,7 +184,7 @@ export default function ActiveBookingDetails() {
       NotificationUIService.showSuccess('Servico iniciado.');
       await tryBeepLocalNotification('Servico iniciado', 'Você iniciou o atendimento.');
     } catch (e: any) {
-      NotificationUIService.showError(e);
+      toastUserError(e, 'Erro ao iniciar o atendimento');
     } finally {
       setSubmitting('NONE');
     }
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 4 }, shadowRadius: 10 }, android: { elevation: 3 } }),
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 4 }, shadowRadius: 10 }, android: { elevation: 0 } }),
   },
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   icon: { marginRight: 8 },
