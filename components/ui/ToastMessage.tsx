@@ -1,8 +1,8 @@
 // components/ui/ToastMessage.tsx
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient'; // For modern gradient background
+import React, { useEffect, useRef } from 'react';
+import { Animated, Dimensions, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 const { height } = Dimensions.get('window');
 const DURATION = 3000; // Duration for toast message to be visible
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 5,
             },
             android: {
-                elevation: 3,
+                elevation: 0,
                 shadowColor: 'rgba(0,0,0,0.08)',
             },
         }),
