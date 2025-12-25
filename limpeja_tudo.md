@@ -30267,7 +30267,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 1,
         shadowRadius: 15,
-        elevation: 5,
+        elevation: 0,
         paddingLeft: 5,
         paddingRight: 15,
         bottom: 90,
@@ -30323,7 +30323,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 10,
+        elevation: 0,
     },
     nextButtonText: {
         color: '#FFFFFF',
@@ -30366,7 +30366,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 10,
+        elevation: 0,
     },
     navButtonTextBack: {
         color: '#00BCD4',
@@ -30658,7 +30658,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 8,
+        elevation: 0,
     },
     buttonDisabled: {
         backgroundColor: '#A0CFFF',
@@ -31055,7 +31055,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 1,
         shadowRadius: 15,
-        elevation: 5,
+        elevation: 0,
         paddingLeft: 5,
         paddingRight: 15,
     },
@@ -31103,7 +31103,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 8,
+        elevation: 0,
     },
     buttonDisabled: {
         backgroundColor: '#A0CFFF',
@@ -32435,7 +32435,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 1,
         shadowRadius: 15,
-        elevation: 5,
+        elevation: 0,
         paddingLeft: 5,
         paddingRight: 15,
         bottom: 120,
@@ -32488,7 +32488,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 8,
+        elevation: 0,
     },
     nextButtonText: {
         color: '#FFFFFF',
@@ -32535,7 +32535,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 10,
+        elevation: 0,
     },
     navButtonTextBack: {
         color: '#00BCD4', 
@@ -33096,7 +33096,7 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
       },
       android: {
-        elevation: 4,
+        elevation: 0,
       },
     }),
   },
@@ -34112,7 +34112,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
     borderWidth: 1, // Added for error highlighting
     borderColor: 'transparent', // Default
   },
@@ -34151,7 +34151,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
   },
   serviceTypeCardSelected: {
     backgroundColor: '#a0a4ebff',
@@ -34207,7 +34207,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
   },
   priceTypeCardSelected: {
     backgroundColor: '#a0a4ebff',
@@ -34237,7 +34237,7 @@ progressOuter: { // Not used in this component
   shadowOffset: { width: 0, height: 4 },
   shadowOpacity: 0.1,
   shadowRadius: 6,
-  elevation: 4,
+  elevation: 0,
   
 },
 progressInner: { // Not used in this component
@@ -34515,7 +34515,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
     shadowRadius: 20,
-    elevation: 8,
+    elevation: 0,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.primaryLight,
@@ -34572,7 +34572,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 15,
-    elevation: 10,
+    elevation: 0,
   },
   submitButtonText: {
     color: '#FFFFFF',
@@ -34900,7 +34900,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    elevation: 4,
+    elevation: 0,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.primaryLight,
@@ -34959,7 +34959,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 0,
   },
   uploadButtonText: {
     color: '#FFFFFF',
@@ -34979,7 +34979,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 0,
     marginTop: SIZES.paddingSmall,
   },
   submitButtonText: {
@@ -35328,7 +35328,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 15,
-    elevation: 10,
+    elevation: 0,
     marginTop: 20,
   },
   submitButtonText: {
@@ -35414,7 +35414,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 5,
+    elevation: 0,
   },
   uploadButtonText: {
     color: '#FFFFFF',
@@ -36292,7 +36292,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 }, // Offset da sombra do botão de login
         shadowOpacity: 0.3,        // Opacidade da sombra do botão de login
         shadowRadius: 8,           // Raio da sombra do botão de login
-        elevation: 8,              // Elevação para Android do botão de login
+        elevation: 0,              // Elevação para Android do botão de login
     },
     actionButtonText: {
         color: '#FFFFFF',          // Cor do texto do botão de login
@@ -37397,7 +37397,7 @@ const styles = StyleSheet.create({
         shadowRadius: 16,
       },
       android: {
-        elevation: 10,
+        elevation: 0,
       },
     }),
   },
@@ -37524,7 +37524,7 @@ const styles = StyleSheet.create({
         shadowRadius: 16,
       },
       android: {
-        elevation: 10,
+        elevation: 0,
       },
     }),
   },
@@ -37540,7 +37540,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.35,
         shadowRadius: 10,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   actionButtonInner: {
@@ -37572,7 +37572,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 6,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   actionButtonOutlineInner: {
@@ -38406,7 +38406,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.white,
     borderBottomWidth: 1,
     borderBottomColor: AppColors.backgroundNeutral,
-    ...AppShadows.medium,
+    ,
   },
   filterButton: {
     flex: 1,
@@ -38431,7 +38431,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.6,
         shadowRadius: 4,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   filterIcon: {
@@ -38465,7 +38465,7 @@ const styles = StyleSheet.create({
         shadowRadius: 16,
       },
       android: {
-        elevation: 10,
+        elevation: 0,
       },
     }),
   },
@@ -38611,7 +38611,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 10,
-    ...AppShadows.medium,
+    ,
   },
   emptyStateButtonText: {
     color: AppColors.white,
@@ -38626,7 +38626,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     borderRadius: 30,
     marginTop: 20,
-    ...AppShadows.medium,
+    ,
   },
   exploreButtonText: {
     color: AppColors.white,
@@ -40159,7 +40159,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.17,
         shadowRadius: 9,
-        elevation: 6,
+        elevation: 0,
     },
     stepItem: {
         borderRadius: 40,
@@ -40198,7 +40198,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        ...AppShadows.medium,
+        ,
     },
     floatingSummaryContent: {
         flexDirection: 'row',
@@ -40246,7 +40246,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.06,
         shadowRadius: 12,
-        elevation: 3,
+        elevation: 0,
     },
     /* Opcional: título das seções internas (se quiser manter o estilo anterior em outros lugares) */
     sectionTitle: {
@@ -40454,7 +40454,7 @@ const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, ti
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.06,
         shadowRadius: 12,
-        elevation: 3, // Sombra sutil no Android
+        elevation: 0, // Sombra sutil no Android
     };
 
     // ✅ Tipografia iOS-like: pesos variados para hierarchy
@@ -41269,7 +41269,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 0,
   },
   topRow: {
     flexDirection: 'row',
@@ -41976,7 +41976,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   couponHeader: {
     flexDirection: 'row',
@@ -42056,7 +42056,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   prefsTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 6 },
   prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
@@ -42072,7 +42072,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   howTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 8 },
   howItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
@@ -42090,7 +42090,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
   tabButtonActive: {},
@@ -42103,7 +42103,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 15,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   noCouponsText: {
     marginTop: 10,
@@ -44062,7 +44062,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
-    elevation: 12,
+    elevation: 0,
   },
   couponCardImageStyle: {
     borderRadius: 15,
@@ -44292,7 +44292,7 @@ const styles = StyleSheet.create({
         shadowRadius: 3.84,
       },
       android: {
-        elevation: 5,
+        elevation: 0,
       },
     }),
   },
@@ -44667,7 +44667,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
       },
       android: {
-        elevation: 15,
+        elevation: 0,
       },
     }),
   },
@@ -44691,7 +44691,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
       },
       android: {
-        elevation: 15,
+        elevation: 0,
       },
     }),
   },
@@ -44738,7 +44738,7 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
       },
       android: {
-        elevation: 8,
+        elevation: 0,
       },
     }),
   },
@@ -45436,7 +45436,7 @@ export const styles = StyleSheet.create({
     backgroundColor: AppColors.white, // Usando AppColors
     borderRadius: 30,
     padding: 10,
-    ...AppShadows.small, // Usando AppShadows
+    
   },
 
   // Content Area Styles (REVERTIDO PARA O FUNDO BRANCO SÓLIDO)
@@ -45466,7 +45466,7 @@ export const styles = StyleSheet.create({
   // --- NOVOS ESTILOS PARA O CABEÇALHO (HEADER) ---
   headerContainer: {
     backgroundColor: AppColors.white, // Usando AppColors
-    ...AppShadows.medium, // Usando AppShadows
+    
     
   },
   headerTitle: {
@@ -45640,7 +45640,7 @@ export const styles = StyleSheet.create({
     height: 60,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
   },
   actionButtonText: {
     fontSize: 10,
@@ -45663,7 +45663,7 @@ export const styles = StyleSheet.create({
     marginBottom: 15,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
     
   },
   reviewHeader: {
@@ -45740,7 +45740,7 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
   },
   serviceName: {
     fontSize: 16,
@@ -45771,7 +45771,7 @@ export const styles = StyleSheet.create({
     backgroundColor: AppColors.white, // Usando AppColors
     borderTopWidth: 1,
     borderTopColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.medium, // Usando AppColors
+    , // Usando AppColors
   },
   bookServiceButtonGradient: {
     borderRadius: 15,
@@ -45799,7 +45799,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: AppColors.warningYellow + '50', // Usando AppColors
-    elevation: 5,
+    elevation: 0,
   },
   noServicesMessageText: {
     color: AppColors.textBody, // Usando AppColors
@@ -45853,7 +45853,7 @@ export const styles = StyleSheet.create({
     marginRight: 7,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
   },
   thumbnailImage: {
     width: '100%',
@@ -46022,7 +46022,7 @@ export const styles = StyleSheet.create({
     marginTop: 10,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
   },
   viewAllReviewsButtonText: {
     color: AppColors.primaryInteractive, // Usando AppColors
@@ -46711,7 +46711,7 @@ const chatStyles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 0,
   },
   headerButton: {
     padding: 5,
@@ -46788,7 +46788,7 @@ const chatStyles = StyleSheet.create({
         shadowRadius: 2,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
@@ -46836,7 +46836,7 @@ const chatStyles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 8,
+        elevation: 0,
       },
     }),
   },
@@ -47177,7 +47177,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 0,
   },
   topRow: {
     flexDirection: 'row',
@@ -47242,7 +47242,7 @@ const styles = StyleSheet.create({
             shadowRadius: 8,
         },
         android: {
-            elevation: 6,
+            elevation: 0,
         },
     }),
   },
@@ -47824,7 +47824,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 15,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   errorText: {
     marginTop: 10,
@@ -47849,7 +47849,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderRadius: 12,
     padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   cardTitle: {
     fontSize: 16,
@@ -47868,7 +47868,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 0,
   },
   summaryValue: {
     fontSize: 22,
@@ -48590,7 +48590,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   discountHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   pill: { backgroundColor: '#0A84FF', paddingVertical: 3, paddingHorizontal: 8, borderRadius: 999, marginRight: 8 },
@@ -48633,7 +48633,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   prefsTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 6 },
   prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
@@ -48649,7 +48649,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   howTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 8 },
   howItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
@@ -48667,7 +48667,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
   tabButtonActive: {},
@@ -49403,7 +49403,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   discountHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   pill: { backgroundColor: '#0A84FF', paddingVertical: 3, paddingHorizontal: 8, borderRadius: 999, marginRight: 8 },
@@ -49446,7 +49446,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   prefsTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 6 },
   prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
@@ -49462,7 +49462,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   howTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 8 },
   howItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
@@ -49480,7 +49480,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
   tabButtonActive: {},
@@ -50123,7 +50123,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
   },
   headerBackButton: {
     marginRight: 15,
@@ -50183,7 +50183,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
-    elevation: 8,
+    elevation: 0,
   },
   contentContainer: {
     paddingHorizontal: 20,
@@ -50215,7 +50215,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
   },
   originalPrice: {
     fontSize: 16,
@@ -50267,7 +50267,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
-    elevation: 10,
+    elevation: 0,
   },
   ctaButton: {
     backgroundColor: '#28A745',
@@ -50280,7 +50280,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 6,
+    elevation: 0,
   },
   ctaButtonText: {
     color: '#FFFFFF',
@@ -51039,7 +51039,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
-        elevation: 5,
+        elevation: 0,
     },
     headerBackButton: {
         marginRight: 15,
@@ -51078,7 +51078,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 10,
             },
             android: {
-                elevation: 8,
+                elevation: 0,
             },
         }),
     },
@@ -51137,7 +51137,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 3,
             },
             android: {
-                elevation: 2,
+                elevation: 0,
             },
         }),
     },
@@ -51159,7 +51159,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 3,
             },
             android: {
-                elevation: 2,
+                elevation: 0,
             },
         }),
     },
@@ -51219,7 +51219,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 5,
             },
             android: {
-                elevation: 6,
+                elevation: 0,
             },
         }),
     },
@@ -51650,7 +51650,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 8,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   searchIcon: { marginRight: 10 },
@@ -51673,7 +51673,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 8,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
 
@@ -51695,7 +51695,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 10,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
@@ -51729,7 +51729,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 8,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   menuItemWrapper: {},
@@ -51754,7 +51754,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 8,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
 });
@@ -52097,7 +52097,7 @@ export default function RankingScreen() {
                 shadowRadius: 10,
               },
               android: { // Sombra robusta para Android
-                elevation: 15,
+                elevation: 0,
               },
             }),
           },
@@ -52227,7 +52227,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 8 } },
-      android: { elevation: 10 },
+      android: { elevation: 0 },
     }),
   },
   myRankText: { color: '#FFF', marginLeft: 6 },
@@ -52257,7 +52257,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10, // Raio da sombra ajustado para React Native (o 32px do CSS é muito grande)
       },
       android: {
-        elevation: 15, // Elevação para Android para simular sombra
+        elevation: 0, // Elevação para Android para simular sombra
       },
     }),
   },
@@ -53167,7 +53167,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
     padding: 14,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', marginBottom: 10 }, // Color set by theme
@@ -53242,7 +53242,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 0,
   },
   termsButtonText: {
     fontSize: 14,
@@ -53464,7 +53464,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 0,
   },
   label: {
     fontSize: 16,
@@ -53623,7 +53623,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
   },
   cardTitle: {
     fontSize: 18,
@@ -54105,7 +54105,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
-    elevation: 8,
+    elevation: 0,
     overflow: 'hidden',
   },
   headerRow: {
@@ -54173,7 +54173,7 @@ const styles = StyleSheet.create({
     padding: 14,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   formTitle: { fontSize: 16, fontWeight: '700', color: '#1f2d5c', marginBottom: 10 },
@@ -54217,7 +54217,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } }, android: { elevation: 2 } }),
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } }, android: { elevation: 0 } }),
   },
   emptyTitle: { marginTop: 8, fontWeight: '700', color: '#1f2d5c' },
   emptySubtitle: { marginTop: 4, textAlign: 'center', color: '#6b7db2' },
@@ -54227,7 +54227,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 14,
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } }, android: { elevation: 2 } }),
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } }, android: { elevation: 0 } }),
   },
   ticketRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statusDot: { width: 10, height: 10, borderRadius: 8 },
@@ -55362,7 +55362,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
   },
   headerBackButton: {
     marginRight: 15,
@@ -55393,7 +55393,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   subHeader: {
@@ -55413,7 +55413,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
         ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
     }),
   },
   searchIcon: {
@@ -55469,7 +55469,7 @@ const styles = StyleSheet.create({
     borderColor: '#DEE2E6',
     ...Platform.select({
         ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
     }),
   },
   contactIcon: {
@@ -55703,7 +55703,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
@@ -56034,7 +56034,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
   },
   headerTitle: {
     fontSize: 20,
@@ -56078,7 +56078,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
         ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
     }),
   },
   notificationItem: {
@@ -57026,7 +57026,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
@@ -57053,7 +57053,7 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
@@ -57084,7 +57084,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
@@ -57118,7 +57118,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
@@ -57150,7 +57150,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
@@ -57522,7 +57522,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.16,
         shadowRadius: 6,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
     flexDirection: 'row',
     alignItems: 'center',
@@ -57546,7 +57546,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.18,
         shadowRadius: 16,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   bannerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -57586,7 +57586,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.12,
         shadowRadius: 10,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#111827' },
@@ -57825,7 +57825,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
   },
   headerBackButton: {
     marginRight: 15,
@@ -58154,7 +58154,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 8,
             },
             android: {
-                elevation: 6,
+                elevation: 0,
             },
         }),
     },
@@ -58434,7 +58434,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 10,
+    elevation: 0,
   },
   panicButton: {
     backgroundColor: '#dc3545',
@@ -58462,7 +58462,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 10,
+    elevation: 0,
   },
   countdownText: {
     fontSize: 80,
@@ -58847,7 +58847,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
-        elevation: 5,
+        elevation: 0,
     },
     headerBackButton: {
         marginRight: 15,
@@ -58881,7 +58881,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         ...Platform.select({
             ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 5 },
-            android: { elevation: 2, borderWidth: 0.5, borderColor: '#E0E0E0' },
+            android: { elevation: 0, borderWidth: 0.5, borderColor: '#E0E0E0' },
         }),
     },
     sectionTitle: {
@@ -59260,7 +59260,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 3,
             },
             android: {
-                elevation: 3,
+                elevation: 0,
             },
         }),
     },
@@ -59280,7 +59280,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 3,
             },
             android: {
-                elevation: 2,
+                elevation: 0,
             },
         }),
     },
@@ -59337,7 +59337,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 3,
             },
             android: {
-                elevation: 3,
+                elevation: 0,
             },
         }),
     },
@@ -59573,7 +59573,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 4,
             },
             android: {
-                elevation: 2,
+                elevation: 0,
             },
         }),
     },
@@ -59596,7 +59596,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 5,
             },
             android: {
-                elevation: 5,
+                elevation: 0,
             },
         }),
     },
@@ -59829,7 +59829,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 5,
             },
             android: {
-                elevation: 5,
+                elevation: 0,
             },
         }),
     },
@@ -59852,7 +59852,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 8,
             },
             android: {
-                elevation: 6,
+                elevation: 0,
             },
         }),
     },
@@ -60174,7 +60174,7 @@ const headerStyles = StyleSheet.create({
     borderBottomRightRadius: 25,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
     marginBottom: 20,
   },
@@ -60269,7 +60269,7 @@ const summaryStyles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 },
-      android: { elevation: 10 },
+      android: { elevation: 0 },
     }),
   },
   cardTitle: {
@@ -60409,7 +60409,7 @@ const quickActionStyles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   sectionTitle: {
@@ -60438,7 +60438,7 @@ const quickActionStyles = StyleSheet.create({
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   gridItemText: {
@@ -61053,7 +61053,7 @@ const styles = StyleSheet.create({
     padding: 15,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   subsectionHeader: {
@@ -61098,7 +61098,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 5 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   requestItemPendingIndicator: {
@@ -61216,7 +61216,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   serviceItemContent:{
@@ -61255,7 +61255,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER_SUBTLE,
       ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   messageLinkContent: {
@@ -61719,7 +61719,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     marginTop: 15,
-    elevation: 5,
+    elevation: 0,
   },
   headerBackButton: {
     padding: 5,
@@ -61756,7 +61756,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   summaryGrid: {
@@ -61806,7 +61806,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   withdrawalButtonDisabled: {
@@ -61829,7 +61829,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   chartContainerPlaceholder: {
@@ -61917,7 +61917,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   quickLinkText: {
@@ -62032,7 +62032,7 @@ const headerStyles = StyleSheet.create({
     borderBottomRightRadius: 25,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
     marginBottom: 20,
   },
@@ -62120,7 +62120,7 @@ const summaryStyles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 },
-      android: { elevation: 10 },
+      android: { elevation: 0 },
     }),
   },
   cardTitle: {
@@ -62214,7 +62214,7 @@ const quickActionStyles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   sectionTitle: {
@@ -62245,7 +62245,7 @@ const quickActionStyles = StyleSheet.create({
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   gridItemText: {
@@ -62788,7 +62788,7 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
       },
       android: {
-        elevation: 12,
+        elevation: 0,
       },
     }),
   },
@@ -62812,7 +62812,7 @@ const styles = StyleSheet.create({
     padding: 15,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   subsectionHeader: {
@@ -62857,7 +62857,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 5 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   requestItemPendingIndicator: {
@@ -62975,7 +62975,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   serviceItemContent:{
@@ -63014,7 +63014,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER_SUBTLE,
       ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   messageLinkContent: {
@@ -63593,7 +63593,7 @@ const chatStyles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 0,
   },
   headerButton: {
     padding: 5,
@@ -63670,7 +63670,7 @@ const chatStyles = StyleSheet.create({
         shadowRadius: 2,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
@@ -63716,7 +63716,7 @@ const chatStyles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 8,
+        elevation: 0,
       },
     }),
   },
@@ -64071,7 +64071,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 0,
   },
   topRow: {
     flexDirection: 'row',
@@ -64136,7 +64136,7 @@ const styles = StyleSheet.create({
             shadowRadius: 8,
         },
         android: {
-            elevation: 6,
+            elevation: 0,
         },
     }),
   },
@@ -64575,7 +64575,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
   },
   headerTitle: {
     fontSize: 20,
@@ -64619,7 +64619,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
         ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
     }),
   },
   notificationItem: {
@@ -65538,7 +65538,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 0,
   },
   headerBackButton: {
     marginRight: 15,
@@ -65580,7 +65580,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
       },
       android: {
-        elevation: 6,
+        elevation: 0,
       },
     }),
   },
@@ -65638,7 +65638,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 5,
+        elevation: 0,
       },
     }),
   },
@@ -65679,7 +65679,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
       },
       android: {
-        elevation: 6,
+        elevation: 0,
       },
     }),
   },
@@ -65753,7 +65753,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
       },
       android: {
-        elevation: 6,
+        elevation: 0,
       },
     }),
   },
@@ -66238,7 +66238,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     borderBottomLeftRadius: Radii.xl,
     borderBottomRightRadius: Radii.xl,
   },
@@ -66277,7 +66277,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 10,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   calendarStyle: {
@@ -66312,7 +66312,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.4,
         shadowRadius: 8,
       },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
   appointmentCard: {
@@ -66410,7 +66410,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 0,
   },
   manageAvailabilityButtonText: {
     color: '#FFFFFF',
@@ -67025,7 +67025,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    elevation: 0,
   },
   headerBackButton: {
     padding: 6,
@@ -67054,7 +67054,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -67650,7 +67650,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     borderBottomLeftRadius: Radii.xl,
     borderBottomRightRadius: Radii.xl,
   },
@@ -67689,7 +67689,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 10,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   calendarStyle: {
@@ -67724,7 +67724,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.4,
         shadowRadius: 8,
       },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
   appointmentCard: {
@@ -67822,7 +67822,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 0,
   },
   manageAvailabilityButtonText: {
     color: '#FFFFFF',
@@ -68654,7 +68654,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     borderBottomLeftRadius: Radii.xl,
     borderBottomRightRadius: Radii.xl,
   },
@@ -68718,7 +68718,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 6,
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   dayHeader: {
@@ -68805,7 +68805,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 6,
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   calendarOverrideStyle: {
@@ -68825,7 +68825,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 6,
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   overrideTitle: {
@@ -68901,7 +68901,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 10,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   saveButtonContent: {
@@ -69340,7 +69340,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
     overflow: 'hidden',
   },
   headerTitle: {
@@ -69367,7 +69367,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E9ECEF', // Neutro - Cinza claro
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   filterButton: {
@@ -69381,7 +69381,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF', // Azul Principal
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,122,255,0.3)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 4 },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
   filterButtonText: {
@@ -69407,7 +69407,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF', // Neutro - Branco
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.07)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   serviceCard: {
@@ -69512,7 +69512,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,122,255,0.3)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 4 },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
   emptyStateButtonText: {
@@ -69954,7 +69954,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
     overflow: 'hidden',
   },
   headerTitle: {
@@ -69981,7 +69981,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E9ECEF',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   filterButton: {
@@ -69995,7 +69995,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,122,255,0.3)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 4 },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
   filterButtonText: {
@@ -70021,7 +70021,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.07)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   serviceCard: {
@@ -70126,7 +70126,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,122,255,0.3)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 4 },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
   emptyStateButtonText: {
@@ -70584,7 +70584,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 0,
   },
   headerBackButton: {
     marginRight: 15,
@@ -70613,7 +70613,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
       },
       android: {
-        elevation: 6,
+        elevation: 0,
       },
     }),
   },
@@ -70706,7 +70706,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 5,
+        elevation: 0,
       },
     }),
   },
@@ -72355,7 +72355,7 @@ Exemplo de Sombra de Card: shadowColor: '#000', shadowOffset: { width: 0, height
 
 Exemplo de Sombra de Botão: shadowColor: '#007BFF', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 8.
 
-A propriedade elevation do Android é usada para replicar o efeito de sombra (elevation: 8 ou 5).
+A propriedade elevation do Android é usada para replicar o efeito de sombra (elevation: 0 ou 5).
 
 Bordas:
 
@@ -128203,7 +128203,7 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
@@ -128324,7 +128324,7 @@ const internalStyles = StyleSheet.create({
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 1,
         shadowRadius: 15,
-        elevation: 5,
+        elevation: 0,
         paddingLeft: 5,
         paddingRight: 15,
     },
@@ -128400,7 +128400,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 0,
   },
   progressInner: {
     height: 30,
@@ -128563,7 +128563,7 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
@@ -128798,7 +128798,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 8,
             },
             android: {
-                elevation: 5,
+                elevation: 0,
             },
         }),
     },
@@ -128877,7 +128877,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 3,
             },
             android: {
-                elevation: 4,
+                elevation: 0,
             },
         }),
     },
@@ -129036,7 +129036,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 12,
             },
             android: {
-                elevation: 10,
+                elevation: 0,
             },
         }),
     },
@@ -129113,7 +129113,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 4,
             },
             android: {
-                elevation: 3,
+                elevation: 0,
             },
         }),
     },
@@ -129151,7 +129151,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 15,
             },
             android: {
-                elevation: 12,
+                elevation: 0,
             },
         }),
     },
@@ -129423,7 +129423,7 @@ const s = StyleSheet.create({
     padding: 12,
     marginTop: 16,
     overflow: 'hidden',
-    ...AppShadows.small, // Adicionando sombra
+    , // Adicionando sombra
     
   },
 
@@ -129508,7 +129508,7 @@ const s = StyleSheet.create({
   skeletonIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: AppColors.borderNeutral, marginRight: 12 }, // Usando AppColors
   skeletonLine: { height: 12, width: '70%', backgroundColor: AppColors.borderNeutral, borderRadius: 6 }, // Usando AppColors
 
-  inputCard: { backgroundColor: AppColors.white, padding: 16, marginHorizontal: 16, borderRadius: 18, marginTop: 10, ...AppShadows.small }, // Usando AppColors e AppShadows
+  inputCard: { backgroundColor: AppColors.white, padding: 16, marginHorizontal: 16, borderRadius: 18, marginTop: 10,  }, // Usando AppColors e AppShadows
   inputTitle: { fontSize: 16, fontWeight: '700', color: AppColors.textBody, textAlign: 'center', marginBottom: 14 }, // Usando AppColors
   inputRow: {
     flexDirection: 'row',
@@ -129804,7 +129804,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   monthNavText: {
     fontSize: 13,
@@ -129825,7 +129825,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 2, height: 4, },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 0,
   },
   currentMonthText: {
     fontSize: 10,
@@ -129967,7 +129967,7 @@ const s = StyleSheet.create({
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: 40, paddingTop: 18, paddingBottom: Platform.OS === 'ios' ? 24 : 24,
     backgroundColor: AppColors.white,
-    ...AppShadows.medium,
+    ,
   },
   btn: {
     backgroundColor: AppColors.primaryInteractive,
@@ -129976,7 +129976,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center', // Adicionado para centralizar o conteúdo
     overflow: 'hidden', // Importante para o brilho não vazar
-    ...AppShadows.medium,
+    ,
     borderRightWidth: 0,
     borderRightColor: '#45484b56',
     borderTopStartRadius: 44,
@@ -129991,9 +129991,9 @@ const s = StyleSheet.create({
     shadowOffset: { width: -1, height: 1 },
     shadowOpacity: 3.55,
     shadowRadius: 35,
-    elevation: 6,
+    elevation: 0,
   },
-  btnDisabled: { backgroundColor: AppColors.primaryInteractive + '50', ...AppShadows.small },
+  btnDisabled: { backgroundColor: AppColors.primaryInteractive + '50',  },
   text: { color: AppColors.white, fontSize: 15, fontWeight: '700' },
   shineOverlay: {
     position: 'absolute',
@@ -130110,7 +130110,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 4,
+    elevation: 0,
     marginHorizontal: 15,
   },
   paymentMethodTitle: {
@@ -130134,7 +130134,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   paymentOptionText: {
     flex: 1,
@@ -130233,7 +130233,7 @@ const s = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     borderWidth: 1, borderColor: '#E9EDF0',
-    shadowColor: '#1E2A3B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+    shadowColor: '#1E2A3B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 0,
   },
   amountBox: { backgroundColor: '#E9F2FF', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, marginBottom: 12, alignItems: 'center' },
   amountLabel: { fontSize: 13, color: '#2A72E7', fontWeight: '600' },
@@ -130430,7 +130430,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: -1, height: 1 },
     shadowOpacity: 1.05,
     shadowRadius: 9,
-    elevation: 6,
+    elevation: 0,
   },
   photo: { width: 58, height: 58, borderRadius: 29, marginRight: 10, borderWidth: 2, borderColor: '#E7F0FF' },
   photoPlaceholder: { width: 58, height: 58, borderRadius: 29, marginRight: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
@@ -130447,7 +130447,7 @@ const styles = StyleSheet.create({
   ratingStarIcon: {
     marginRight: 1,
   },
-  skeleton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18, marginHorizontal: 16, marginTop: 14, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 4, height: 96 },
+  skeleton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18, marginHorizontal: 16, marginTop: 14, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 0, height: 96 },
   skelImg: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#E6EEF9', marginRight: 12 },
   skelLineLg: { height: 16, width: '80%', backgroundColor: '#E6EEF9', borderRadius: 6, marginBottom: 8 },
   skelLineSm: { height: 14, width: '60%', backgroundColor: '#E6EEF9', borderRadius: 6, marginBottom: 8 },
@@ -130700,7 +130700,7 @@ const s = StyleSheet.create({
     marginHorizontal: 35, // Mantido para tamanho do card igual
     marginVertical: 10,
     marginTop: 22,
-    ...AppShadows.medium, // Adicionado sombra para o card
+    , // Adicionado sombra para o card
   },
   header: {
     flexDirection: 'row',
@@ -130762,7 +130762,7 @@ const s = StyleSheet.create({
   },
   cellSel: {
     backgroundColor: AppColors.primaryInteractive,
-    ...AppShadows.small, // Sombra para célula selecionada
+    , // Sombra para célula selecionada
     borderWidth: 1.5,
     borderColor: AppColors.primaryDark, // Cor da borda mais escura
   },
@@ -130890,7 +130890,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 4, // Equivalente Android
+        elevation: 0, // Equivalente Android
     },
     headerRow: {
         flexDirection: 'row',
@@ -131215,7 +131215,7 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
-    ...AppShadows.medium, // Usando AppShadows
+    
   },
   title: {
     fontSize: 16,
@@ -131395,7 +131395,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     overflow: 'hidden',
     backgroundColor: AppColors.backgroundLight,
-    ...AppShadows.small,
+    ,
   },
   gradientFill: {
     ...StyleSheet.absoluteFillObject,
@@ -131406,7 +131406,7 @@ const styles = StyleSheet.create({
   },
   selected: {
     backgroundColor: AppColors.primaryInteractive,
-    ...AppShadows.medium,
+    ,
   },
   unavailable: {
     backgroundColor: AppColors.backgroundNeutral,
@@ -131425,7 +131425,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: -1, height: 1 },
     shadowOpacity: 1.05,
     shadowRadius: 9,
-    elevation: 6,
+    elevation: 0,
   },
   text: { fontSize: 12, color: AppColors.textBody, fontWeight: '600', },
   textSelected: { color: AppColors.white, fontWeight: '700', },
@@ -131569,7 +131569,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 40,
     paddingVertical: 22,
-    ...AppShadows.medium,
+    ,
     borderTopStartRadius: 28,
     borderBottomStartRadius: 28,
     borderTopEndRadius: 28,
@@ -132014,7 +132014,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginTop: 12, // Gap acima confortável
     marginBottom: 0, // FIX: Zero gap abaixo – cupom/PIX cuida do spacing (cola suavemente)
-    ...AppShadows.medium,
+    ,
   },
   cardContentNew: {
     padding: 25, // Padding interno premium (confortável, 44px+ touch)
@@ -132195,7 +132195,7 @@ const styles = StyleSheet.create({
     minHeight: 80, // Touch target confortável
     overflow: 'hidden',
     position: 'relative',
-    ...AppShadows.medium, // Usando AppShadows
+    
   },
   gradientBackground: {
     ...StyleSheet.absoluteFillObject,
@@ -132285,7 +132285,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12, // Touch target maior para conforto (44px+)
     marginHorizontal: 4, // Fix: Reduzido para caber no iOS sem overflow
     minHeight: 44, // HIG compliance
-    ...AppShadows.small,
+    ,
   },
   actionButtonSpacing: {
     marginLeft: 8, // Espaçamento fixo entre botões, sem wrap/gap (reduzido para iOS)
@@ -132414,7 +132414,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 15,
         marginTop: 20,
         alignItems: 'center',
-        ...AppShadows.medium, // Usando AppShadows
+        
         overflow: 'hidden',
         borderWidth: 0,
     },
@@ -132582,7 +132582,7 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 12, // Gap entre botões confortável (era 16, reduzido para compacto mas premium)
     minHeight: 44, // HIG compliance
-    ...AppShadows.medium, // Usando AppShadows
+    
   },
   downloadButtonText: {
     color: AppColors.white, // Usando AppColors
@@ -132592,7 +132592,7 @@ const styles = StyleSheet.create({
   },
   secondaryDownloadButton: {
     backgroundColor: AppColors.white, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
   },
 });
 ```
@@ -132859,7 +132859,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: 5, // FIX: Reduzido de 10 para 5 – minimiza gap acima do cupom (com PIX)
     marginBottom: 20, // Gap final confortável (20px, permite scroll suave)
-    ...AppShadows.medium,
+    ,
     // ✅ Mantido minHeight sem alteração (250px iOS/260px Android) – elementos internos ajustados para caber
     minHeight: Platform.OS === 'ios' ? 250 : 260,
   },
@@ -133051,7 +133051,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.03,
         shadowRadius: 3,
-        elevation: 2,
+        elevation: 0,
     },
     securityImage: {
         width: 120,
@@ -133401,7 +133401,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
     backgroundColor: AppColors.white,
-    ...AppShadows.small,
+    ,
   },
   pixInfoHeader: {
     fontSize: 18,
@@ -133431,7 +133431,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 220,
     resizeMode: 'contain',
-    elevation: 3,
+    elevation: 0,
     shadowColor: AppColors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -133471,7 +133471,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 28,
     backgroundColor: AppColors.backgroundLight,
-    elevation: 3,
+    elevation: 0,
     shadowColor: AppColors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -133684,7 +133684,7 @@ const styles = StyleSheet.create<CouponWelcomeCardStyles>({
     alignSelf: 'center',
     marginTop: 20,
     marginBottom: 20,
-    ...AppShadows.medium,
+    ,
   },
   gradientBackground: {
     padding: 20,
@@ -134075,7 +134075,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 8, // Blur suave como no iOS 17
             },
             android: {
-                elevation: 8, // Compatível, mas menos blur
+                elevation: 0, // Compatível, mas menos blur
             },
         }),
     },
@@ -134171,7 +134171,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 2,
             },
             android: {
-                elevation: 3,
+                elevation: 0,
             },
         }),
     },
@@ -134558,7 +134558,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 12,
             },
             android: {
-                elevation: 10,
+                elevation: 0,
             },
         }),
     },
@@ -134635,7 +134635,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 4,
             },
             android: {
-                elevation: 3,
+                elevation: 0,
             },
         }),
     },
@@ -134673,7 +134673,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 15,
             },
             android: {
-                elevation: 12,
+                elevation: 0,
             },
         }),
     },
@@ -134876,7 +134876,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
-    elevation: 8,
+    elevation: 0,
     // borda sutil para contraste em fundos claros
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
@@ -135284,7 +135284,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 0,
   },
 });
 
@@ -135511,7 +135511,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 4 * 0.95,
             },
             android: {
-                elevation: 8 * 0.95,
+                elevation: 0 * 0.95,
             },
         }),
     },
@@ -135592,7 +135592,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 10 * 0.95,
             },
             android: {
-                elevation: 8 * 0.95,
+                elevation: 0 * 0.95,
             },
         }),
         borderWidth: StyleSheet.hairlineWidth * 0.95,
@@ -135623,7 +135623,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 * 0.95 },
         shadowOpacity: 0.3,
         shadowRadius: 5 * 0.95,
-        elevation: 6 * 0.95,
+        elevation: 0 * 0.95,
     },
     headerPadding: {
         paddingHorizontal: 10,
@@ -135766,7 +135766,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 0,
   },
   icon: {
     width: 39, // Tamanho do ícone
@@ -135905,7 +135905,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
   },
   title: {
     marginTop: 8,
@@ -136111,7 +136111,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -5 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 10,
+    elevation: 0,
     // A cor de fundo é definida dinamicamente no componente
   },
   navItem: {
@@ -136146,7 +136146,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 }, // Sombra para baixo (como box-shadow 0 5px)
     shadowOpacity: 1.3,
     shadowRadius: 5,
-    elevation: 5,
+    elevation: 0,
     bottom: '100%', // Posiciona a barra superior acima da área principal do indicador
   },
   currentIndicatorBottom: {
@@ -136160,7 +136160,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -5 }, // Sombra para cima (como box-shadow 0 -5px)
     shadowOpacity: 0.3,
     shadowRadius: 3,
-    elevation: 5,
+    elevation: 0,
     top: '100%', // Posiciona a barra inferior abaixo da área principal do indicador
   },
   currentIndicatorTriangle: {
@@ -136398,7 +136398,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.25,
         shadowRadius: 10,
-        elevation: 10,
+        elevation: 0,
     },
     // Novo estilo para os grupos de navegação
     navGroup: {
@@ -136441,7 +136441,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.35,
         shadowRadius: 12,
-        elevation: 15,
+        elevation: 0,
     },
     centralButtonGradient: {
         width: 32,
@@ -136571,7 +136571,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 }, // Deslocamento vertical mais pronunciado
     shadowOpacity: 0.17, // Opacidade aumentada para robustezs
     shadowRadius: 9, // Raio de desfoque para conforto
-    elevation: 6, // Elevação aumentada para robustez no Android
+    elevation: 0, // Elevação aumentada para robustez no Android
   },
   leftContent: {
     flexDirection: 'row',
@@ -136760,7 +136760,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 10,
             },
             android: {
-                elevation: 12,
+                elevation: 0,
             },
         }),
     },
@@ -136786,7 +136786,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 5,
             },
             android: {
-                elevation: 4,
+                elevation: 0,
             },
         }),
         borderWidth: 1,
@@ -136835,7 +136835,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 5,
             },
             android: {
-                elevation: 4,
+                elevation: 0,
             },
         }),
     },
@@ -137081,7 +137081,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 3,
             },
             android: {
-                elevation: 4,
+                elevation: 0,
             },
         }),
     },
@@ -137566,7 +137566,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.48,
         shadowRadius: 28,
-        elevation: 6,
+        elevation: 0,
     },
     reflectionOverlay: {
         position: 'absolute',
@@ -138159,7 +138159,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3,
+        elevation: 0,
     },
     cardContentWrapper: {
         width: '100%',
@@ -138488,7 +138488,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
     marginBottom: 15,
   },
   sectionTitle: {
@@ -138906,7 +138906,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -139253,7 +139253,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 100, // Ajuste a posição conforme necessário para não sobrepor a NavBar
     right: 20,
-    ...AppShadows.medium,
+    ,
   },
   pillButton: {
     backgroundColor: AppColors.primaryInteractive,
@@ -139574,7 +139574,7 @@ const Card: React.FC<CardProps> = ({ children, style }) => {
       },
       shadowOpacity: 0.25, // Esses valores podem precisar de ajuste com base na sua definição de 'shadows.card'
       shadowRadius: 3.84,
-      elevation: 5, // Para Android
+      elevation: 0, // Para Android
     },
   });
 
@@ -140185,7 +140185,7 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
       },
       android: {
-        elevation: 4,
+        elevation: 0,
       },
     }),
   },
@@ -140677,7 +140677,7 @@ export const shadows = {
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 5, // Para Android
+    elevation: 0, // Para Android
   } as ViewStyle,
   button: {
     shadowColor: colors.primary,
@@ -140687,7 +140687,7 @@ export const shadows = {
     },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 8, // Para Android
+    elevation: 0, // Para Android
   } as ViewStyle,
   input: {
     shadowColor: colors.primaryLight,
@@ -140697,7 +140697,7 @@ export const shadows = {
     },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 3, // Para Android
+    elevation: 0, // Para Android
   } as ViewStyle,
 };
 ```
@@ -140872,7 +140872,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EDF4FF',
     padding: 6,
     borderRadius: 20,
-    elevation: 2,
+    elevation: 0,
   },
   couponImage: {
     width: width * 0.7,
@@ -141059,7 +141059,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       ios:  { shadowColor: SHADOW, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
 });
@@ -141091,7 +141091,7 @@ const theme = useTheme(); // Obtém o tema atual
 return (
 <Animated.View style={{ position: 'absolute', bottom: 24, right: 16, transform: [{ scale }] }}>
 <Pressable onPress={onOpen} onPressIn={onPressIn} onPressOut={onPressOut}
-style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.primary, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 999, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 }}> {/* Usando theme.primary */}
+style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.primary, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 999, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 0 }}> {/* Usando theme.primary */}
 <Text style={{ color: '#FFF', fontWeight: '800', marginRight: 6 }}>🎁</Text>
 <Text style={{ color: '#FFF', fontWeight: '700' }}>{code}</Text>
 </Pressable>
@@ -141343,7 +141343,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.15,
     shadowRadius: 5,
-    elevation: 5,
+    elevation: 0,
     position: 'relative', // Keep relative for positioning inner elements like circles
     width: '90%', // Make it responsive, take 90% of parent width
     maxWidth: 400, // Limit max width for larger screens
@@ -141515,7 +141515,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: -20,
     marginBottom: 20,
-    ...AppShadows.medium,
+    ,
   },
   gradientBackground: {
     padding: 20,
@@ -142175,7 +142175,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 15,
-    elevation: 8,
+    elevation: 0,
     overflow: 'hidden',
     backgroundColor: 'transparent',
   },
@@ -143348,7 +143348,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 8,
             },
             android: {
-                elevation: 6,
+                elevation: 0,
             },
         }),
     },
@@ -143791,7 +143791,7 @@ const styles = StyleSheet.create({
   spark: {
     position: 'absolute', top: 1, width: 20, height: 20, borderRadius: 10,
     right: undefined,
-    shadowColor: '#000', shadowOpacity: 0.12, shadowOffset: { width: 0, height: 1 }, shadowRadius: 2, elevation: 2,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowOffset: { width: 0, height: 1 }, shadowRadius: 2, elevation: 0,
   },
 
   infoRow: { marginTop: 8, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
@@ -144354,7 +144354,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     ...Platform.select({
       ios: { shadowColor: TOKENS.shadow, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   left: { flexDirection: 'row', alignItems: 'center', flex: 1 },
@@ -144579,7 +144579,7 @@ const styles = StyleSheet.create({
     padding: 16,
     ...Platform.select({
       ios:    { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 6 },
-      android:{ elevation: 4 },
+      android:{ elevation: 0 },
     }),
   },
 
@@ -144841,7 +144841,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   quickActionButton: {
@@ -145024,7 +145024,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,122,255,0.2)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.5, shadowRadius: 5 },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
   chartDetailButtonText: {
@@ -145121,7 +145121,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 0,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -145233,7 +145233,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -145614,7 +145614,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
       },
       android: {
-        elevation: 10, // Sombra para Android
+        elevation: 0, // Sombra para Android
       },
     }),
   },
@@ -145706,7 +145706,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   logoutButton: {
@@ -145834,7 +145834,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   chartBottomCards: {
@@ -145852,7 +145852,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   chartBottomCardLabel: {
@@ -146264,7 +146264,7 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
       },
       android: {
-        elevation: 12,
+        elevation: 0,
       },
     }),
   },
@@ -146326,7 +146326,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 5 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   requestItemPendingIndicator: {
@@ -146445,7 +146445,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   serviceItemContent:{
@@ -146485,7 +146485,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER_SUBTLE,
       ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   messageLinkContent: {
@@ -146587,7 +146587,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
       },
       android: {
-        elevation: 5,
+        elevation: 0,
       },
     }),
   },
@@ -146859,7 +146859,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   sectionTitle: {
@@ -146933,7 +146933,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   reviewCardTouchable: {
@@ -147167,7 +147167,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
     shadowRadius: 5,
-    elevation: 4,
+    elevation: 0,
   },
   header: {
     flexDirection: 'row',
@@ -147450,7 +147450,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
     overflow: 'hidden', // Para o indicador iminente
   },
@@ -147722,7 +147722,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   sectionTitle: {
@@ -148060,7 +148060,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         ...Platform.select({
             ios: { shadowColor: 'rgba(0,0,0,0.07)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-            android: { elevation: 2 },
+            android: { elevation: 0 },
         }),
     },
     transactionItem: {
@@ -148219,7 +148219,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         ...Platform.select({
             ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
-            android: { elevation: 4 },
+            android: { elevation: 0 },
         }),
     },
     chartContainer: {
@@ -148377,7 +148377,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         ...Platform.select({
             ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 }, // Sombra maior
-            android: { elevation: 10 },
+            android: { elevation: 0 },
         }),
     },
     summaryGrid: {
@@ -148429,7 +148429,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         ...Platform.select({
             ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
-            android: { elevation: 3 },
+            android: { elevation: 0 },
         }),
     },
     withdrawalButtonDisabled: {
@@ -148554,7 +148554,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         ...Platform.select({
             ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 },
-            android: { elevation: 8 },
+            android: { elevation: 0 },
         }),
     },
     transactionsListContent: {
@@ -148597,7 +148597,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
         ...Platform.select({
             ios: { shadowColor: ICON_PRIMARY, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6 },
-            android: { elevation: 6, backgroundColor: ICON_PRIMARY },
+            android: { elevation: 0, backgroundColor: ICON_PRIMARY },
         }),
     },
     emptyStateButtonText: {
@@ -148618,7 +148618,7 @@ const styles = StyleSheet.create({
         backgroundColor: PRIMARY_LIGHT, // Usando a constante PRIMARY_LIGHT
         ...Platform.select({
             ios: { shadowColor: ICON_PRIMARY, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
-            android: { elevation: 3 },
+            android: { elevation: 0 },
         }),
     },
     viewAllTransactionsButtonText: {
@@ -148808,7 +148808,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 4,
             },
             android: {
-                elevation: 4,
+                elevation: 0,
             },
         }),
     },
@@ -149601,7 +149601,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3,
+        elevation: 0,
         position: 'relative', // Necessário para o posicionamento absoluto do botão de fechar
         width: '100%', // Ocupa toda a largura do pai (BottomSlideInCard)
         maxWidth: 400, // Largura máxima para o conteúdo do card
@@ -149874,7 +149874,7 @@ export const PanicBanner: React.FC<PanicBannerProps> = ({
       style={[
         styles.wrap,
         compact ? styles.wrapCompact : styles.wrapLarge,
-        Platform.select({ android: { elevation: 8 } }),
+        Platform.select({ android: { elevation: 0 } }),
         style,
       ]}
     >
@@ -150150,7 +150150,7 @@ const styles = StyleSheet.create({
     // Estilos de sombra para Android e iOS
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   dayHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
@@ -150169,7 +150169,7 @@ const styles = StyleSheet.create({
     borderColor: '#DEE2E6',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.03)', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
-      android: { elevation: 1 },
+      android: { elevation: 0 },
     }),
   },
   addSlotButtonText: { fontSize: 15, color: '#007AFF', marginLeft: 8, fontWeight: '600' },
@@ -150442,7 +150442,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   specialSectionCard: { marginTop: 20 },
@@ -150458,7 +150458,7 @@ const styles = StyleSheet.create({
     borderColor: '#CED4DA',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   blockDateButtonText: {
@@ -150531,7 +150531,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   saveButtonDisabled: {
@@ -150624,7 +150624,7 @@ const styles = StyleSheet.create({
         minHeight: 100, // Ensure enough height for the card
         ...Platform.select({
             ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-            android: { elevation: 2 },
+            android: { elevation: 0 },
         }),
     },
     avatarPlaceholder: {
@@ -150721,7 +150721,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginBottom: 10,
-    elevation: 2,
+    elevation: 0,
   },
   textContainer: {
     flex: 1,
@@ -150820,7 +150820,7 @@ const styles = StyleSheet.create({
         minHeight: 100, // Ensure enough height for the card
         ...Platform.select({
             ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-            android: { elevation: 2 },
+            android: { elevation: 0 },
         }),
     },
     avatarPlaceholder: {
@@ -151236,7 +151236,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 0,
   },
   customToastImage: {
     width: 36,
@@ -151478,7 +151478,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 15,
-    elevation: 8,
+    elevation: 0,
     overflow: 'hidden',
     backgroundColor: 'transparent',
   },
@@ -151544,7 +151544,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.20,
     shadowRadius: 1.41,
-    elevation: 2, // Para Android
+    elevation: 0, // Para Android
     marginBottom: 16, // Espaçamento padrão
   },
   pressed: {
@@ -151999,7 +151999,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
       },
       android: {
-        elevation: 8,
+        elevation: 0,
       },
     }),
     borderWidth: StyleSheet.hairlineWidth, // Borda fina para um toque mais clean
@@ -152028,7 +152028,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 6,
+    elevation: 0,
   },
 });
 
@@ -152248,7 +152248,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 5,
             },
             android: {
-                elevation: 8,
+                elevation: 0,
             },
         }),
     },
@@ -152768,14 +152768,14 @@ export const AppShadows = {
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
   } as ViewStyle, // Explicitamente tipado como ViewStyle
   medium: {
     shadowColor: AppColors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
-    elevation: 8,
+    elevation: 0,
   } as ViewStyle, // Explicitamente tipado como ViewStyle
   large: Platform.select({ // Adicionado: Sombra grande
     ios: {
@@ -152785,7 +152785,7 @@ export const AppShadows = {
       shadowRadius: 15,
     },
     android: {
-      elevation: 12,
+      elevation: 0,
     },
   }) as ViewStyle, // Explicitamente tipado como ViewStyle
 };
@@ -153384,7 +153384,7 @@ export const commonStyles = StyleSheet.create({
     shadowOpacity: 0.08, 
     shadowRadius: 8, 
     shadowOffset: { width: 0, height: 4 }, 
-    elevation: 2, 
+    elevation: 0, 
     flexDirection: 'row', 
     alignItems: 'center', 
     gap: 10, 
@@ -153550,7 +153550,7 @@ export const UnifiedTheme = {
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.12,
       shadowRadius: 10,
-      elevation: 6,
+      elevation: 0,
     },
   },
 };
