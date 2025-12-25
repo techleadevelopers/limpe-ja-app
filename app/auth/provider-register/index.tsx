@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -14,17 +15,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
 import { RegisterProviderDto } from '../../../types/backend/auth';
 import { AUTH_ROUTES } from '../../routes';
 
-import { AnimatedErrorMessage } from '../../../components/auth/components/AnimatedErrorMessage';
-import * as Location from 'expo-location';
-import { ensureLocationPermission } from '../../../services/locationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AnimatedErrorMessage } from '../../../components/auth/components/AnimatedErrorMessage';
+import { ensureLocationPermission } from '../../../services/locationService';
 
 import AnimatedReanimated, {
   Easing,
@@ -35,7 +35,7 @@ import AnimatedReanimated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { AuthFieldErrorMap, showUserError } from '../../_shared/errors/userError';
+import { FieldErrorMap, showUserError } from '../../_shared/errors/userError';
 
 const LOGO_IMAGE = require('../../../assets/images/logo2.png');
 
@@ -96,7 +96,7 @@ export default function RegisterProviderScreen() {
   const geocodeCache = useRef(new Map<string, { latitude: number; longitude: number }>()).current;
   const isGeocodingRef = useRef(false);
 
-  const applyProviderFieldErrors = (fieldErrors?: AuthFieldErrorMap) => {
+  const applyProviderFieldErrors = (fieldErrors?: FieldErrorMap) => {
     if (!fieldErrors) return;
     const setterMap: Record<string, React.Dispatch<React.SetStateAction<string | null>>> = {
       email: setEmailError,
@@ -135,7 +135,7 @@ export default function RegisterProviderScreen() {
         setterMap[key.replace('address.', '')] ??
         setterMap[key.replace('_', '')];
       if (setter) {
-        setter(message);
+        setter(typeof message === 'string' ? message : String(message));
       }
     }
   };
@@ -175,7 +175,7 @@ export default function RegisterProviderScreen() {
     setAddressError(null);
 
     if (cleanedCep.length !== 8) {
-      setCepInputError('CEP deve conter 8 dĂ­gitos.');
+      setCepInputError('CEP deve conter 8 dí­gitos.');
       setStreet('');
       setNeighborhood('');
       setCity('');
@@ -189,7 +189,7 @@ export default function RegisterProviderScreen() {
       const data = await response.json();
 
       if (data.erro) {
-        setCepInputError('CEP nĂŁo encontrado ou invĂˇlido.');
+        setCepInputError('CEP não encontrado ou inválido.');
         setStreet('');
         setNeighborhood('');
         setCity('');
@@ -337,7 +337,7 @@ export default function RegisterProviderScreen() {
     } else if (cleanedCep.length > 0 && cleanedCep.length !== 8) {
       // Clear fields if CEP is invalid/incomplete for robustness
       setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState('');
-      setCepInputError(cleanedCep.length < 8 ? "CEP incompleto. Digite os 8 dĂ­gitos." : null);
+      setCepInputError(cleanedCep.length < 8 ? "CEP incompleto. Digite os 8 dígitos." : null);
       setAddressError(null);
     } else if (cleanedCep.length === 0) {
       // Clear on empty
@@ -411,11 +411,11 @@ export default function RegisterProviderScreen() {
   // --- BLUR HANDLERS (SET SPECIFIC ERRORS) ---
   const handleEmailBlur = useCallback(() => {
     if (!email.trim()) {
-      setEmailError('O e-mail Ă© obrigatĂłrio.');
+      setEmailError('O e-mail é obrigatório.');
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.\S+$/;
       if (!emailRegex.test(email.trim())) {
-        setEmailError('Formato de e-mail invĂˇlido.');
+        setEmailError('Formato de e-mail inválido.');
       } else {
         setEmailError(null);
       }
@@ -424,7 +424,7 @@ export default function RegisterProviderScreen() {
 
   const handleUsernameBlur = useCallback(() => {
     if (!username.trim()) {
-      setUsernameError('O nome completo Ă© obrigatĂłrio.');
+      setUsernameError('O nome completo é obrigatório.');
     } else {
       setUsernameError(null);
     }
@@ -432,11 +432,11 @@ export default function RegisterProviderScreen() {
 
   const handlePhoneBlur = useCallback(() => {
     if (!phone.trim()) {
-      setPhoneError('O telefone Ă© obrigatĂłrio.');
+      setPhoneError('O telefone é obrigatório.');
     } else {
       const cleanedPhone = phone.replace(/\D/g, '');
       if (cleanedPhone.length < 10 || cleanedPhone.length > 11) {
-        setPhoneError('O telefone deve ter 10 ou 11 dĂ­gitos.');
+        setPhoneError('O telefone deve ter 10 ou 11 dí­gitos.');
       } else {
         setPhoneError(null);
       }
@@ -446,15 +446,16 @@ export default function RegisterProviderScreen() {
   const handleCpfBlur = useCallback(() => {
     const cleanedCpf = cpf.replace(/\D/g, '');
     if (!cpf.trim()) {
-      setCpfError('O CPF Ă© obrigatĂłrio.');
+      setCpfError('O CPF é obrigatório.');
     } else if (cleanedCpf.length !== 11) {
-      setCpfError('CPF invĂˇlido. Deve conter 11 dĂ­gitos.');
+      setCpfError('CPF inválido. Deve conter 11 dí­gitos.');
     } else {
       setCpfError(null);
     }
   }, [cpf]);
 
   const handleDateOfBirthBlur = useCallback(() => {
+    setDateOfBirthError(null);
     if (!dateOfBirth.trim()) {
       setDateOfBirthError('A data de nascimento eh obrigatoria.');
     } else {
@@ -484,9 +485,9 @@ export default function RegisterProviderScreen() {
 
   const handlePasswordBlur = useCallback(() => {
     if (!password.trim()) {
-      setPasswordError('A senha Ă© obrigatĂłria.');
+      setPasswordError('A senha é obrigatória.');
     } else if (password.length < 6) {
-      setPasswordError('A senha deve ter no mĂ­nimo 6 caracteres.');
+      setPasswordError('A senha deve ter no mínimo 6 caracteres.');
     } else {
       setPasswordError(null);
     }
@@ -495,7 +496,7 @@ export default function RegisterProviderScreen() {
   const handleCepBlur = useCallback(() => {
     const cleanedCep = cep.replace(/\D/g, '');
     if (cleanedCep.length !== 8) {
-      setCepInputError("CEP invĂˇlido. Digite os 8 dĂ­gitos.");
+      setCepInputError("CEP inválido. Digite os 8 dí­gitos.");
     } else {
       setCepInputError(null);
     }
@@ -503,7 +504,7 @@ export default function RegisterProviderScreen() {
 
   const handleStreetBlur = useCallback(() => {
     if (!street.trim()) {
-      setStreetError('A rua Ă© obrigatĂłria.');
+      setStreetError('A rua é obrigatória.');
     } else {
       setStreetError(null);
     }
@@ -511,7 +512,7 @@ export default function RegisterProviderScreen() {
 
   const handleNumberBlur = useCallback(() => {
     if (!number.trim()) {
-      setNumberError('O nĂşmero Ă© obrigatĂłrio.');
+      setNumberError('O número é obrigatório.');
     } else {
       setNumberError(null);
     }
@@ -519,7 +520,7 @@ export default function RegisterProviderScreen() {
 
   const handleNeighborhoodBlur = useCallback(() => {
     if (!neighborhood.trim()) {
-      setNeighborhoodError('O bairro Ă© obrigatĂłrio.');
+      setNeighborhoodError('O bairro é obrigatoria.');
     } else {
       setNeighborhoodError(null);
     }
@@ -527,7 +528,7 @@ export default function RegisterProviderScreen() {
 
   const handleCityBlur = useCallback(() => {
     if (!city.trim()) {
-      setCityError('A cidade Ă© obrigatĂłria.');
+      setCityError('A cidade é obrigatoria..');
     } else {
       setCityError(null);
     }
@@ -535,16 +536,16 @@ export default function RegisterProviderScreen() {
 
   const handleStateBlur = useCallback(() => {
     if (!state.trim()) {
-      setStateError('O estado Ă© obrigatĂłrio.');
+      setStateError('O estado é obrigatorio.');
     } else if (state.trim().length !== 2 || !/^[A-Z]{2}$/i.test(state.trim())) {
-      setStateError('O estado (UF) deve ter 2 letras vĂˇlidas.');
+      setStateError('O estado (UF) deve ter 2 letras válidas.');
     } else {
       setStateError(null);
     }
   }, [state]);
 
   const handleNext = async () => {
-    devLog(`[RegisterProvider] handleNext: Tentando avanĂ§ar do Step ${currentStep}. SubStep: ${subStepAddress}`);
+    devLog(`[RegisterProvider] handleNext: Tentando avançar do Step ${currentStep}. SubStep: ${subStepAddress}`);
     setGeneralError(null);
     setAddressError(null);
     // Simple guard to avoid double-taps triggering multiple geocode calls
@@ -558,49 +559,49 @@ export default function RegisterProviderScreen() {
         handleUsernameBlur();
         handleEmailBlur();
         setGeneralError('Por favor, preencha nome e e-mail corretamente.');
-        devWarn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 1 invĂˇlido.");
+        devWarn("[RegisterProvider] handleNext: Falha ao avançar: Step 1 inválido.");
         return;
       }
       setCurrentStep(2);
-      devLog("[RegisterProvider] handleNext: AvanĂ§ando para o Step 2 (Telefone + CPF).");
+      devLog("[RegisterProvider] handleNext: Avançando para o Step 2 (Telefone + CPF).");
     } else if (currentStep === 2) { // Step 2: Phone + CPF
       const isValid = checkStep2Validity();
       if (!isValid) {
         handlePhoneBlur();
         handleCpfBlur();
         setGeneralError('Por favor, preencha telefone e CPF corretamente.');
-        devWarn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 2 invĂˇlido.");
+        devWarn("[RegisterProvider] handleNext: Falha ao avançr: Step 2 inválido.");
         return;
       }
       setCurrentStep(3);
-      devLog("[RegisterProvider] handleNext: AvanĂ§ando para o Step 3 (Data + Senha).");
+      devLog("[RegisterProvider] handleNext: Avançando para o Step 3 (Data + Senha).");
     } else if (currentStep === 3) { // Step 3: DateOfBirth + Password
       const isValid = checkStep3Validity();
       if (!isValid) {
         handleDateOfBirthBlur();
         handlePasswordBlur();
         setGeneralError('Por favor, preencha data de nascimento e senha corretamente.');
-        devWarn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Step 3 invĂˇlido.");
+        devWarn("[RegisterProvider] handleNext: Falha ao avançar: Step 3 inválido.");
         return;
       }
       setCurrentStep(4); // New Step 4 for Address
       setSubStepAddress(1);
-      devLog("[RegisterProvider] handleNext: AvanĂ§ando para o Step 4 (EndereĂ§o).");
+      devLog("[RegisterProvider] handleNext: Avançando para o Step 4 (Endereço).");
     } else if (currentStep === 4) { // Step 4: Address
       if (subStepAddress === 1) {
         const isValid = checkAddressSubStep1Validity();
         if (!isValid) {
           handleCepBlur();
-          setAddressError("CEP invĂˇlido. Digite os 8 dĂ­gitos.");
-          devWarn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Sub-step 1 (CEP) invĂˇlido.");
+          setAddressError("CEP inválido. Digite os 8 dí­gitos.");
+          devWarn("[RegisterProvider] handleNext: Falha ao avançar: Sub-step 1 (CEP) inválido.");
           return;
         }
         if (cepLoading) {
-          setAddressError('Aguarde a busca do CEP ser concluĂ­da.');
+          setAddressError('Aguarde a busca do CEP ser concluí­da.');
           return;
         }
         setSubStepAddress(2);
-        devLog("[RegisterProvider] handleNext: AvanĂ§ando para o Sub-step 2 (Detalhes do EndereĂ§o).");
+        devLog("[RegisterProvider] handleNext: Avançando para o Sub-step 2 (Detalhes do Endereço).");
       } else if (subStepAddress === 2) {
         const isValid = checkAddressSubStep2Validity();
         if (!isValid) {
@@ -609,21 +610,21 @@ export default function RegisterProviderScreen() {
           handleNeighborhoodBlur();
           handleCityBlur();
           handleStateBlur();
-          setAddressError('Por favor, preencha todos os campos de endereĂ§o corretamente.');
-          devWarn("[RegisterProvider] handleNext: Falha ao avanĂ§ar: Sub-step 2 (Detalhes do EndereĂ§o) invĂˇlido.");
+          setAddressError('Por favor, preencha todos os campos de endereço corretamente.');
+          devWarn("[RegisterProvider] handleNext: Falha ao avançar: Sub-step 2 (Detalhes do Endereço) inválido.");
           return;
         }
         setIsLoading(true);
         try {
           const ok = await ensureLocationPermission();
           if (!ok) {
-            setAddressError('A permissĂŁo para acessar a localizaĂ§ĂŁo foi negada. Por favor, habilite-a nas configuraĂ§Ăµes do seu dispositivo.');
+            setAddressError('A permissão para acessar a localização foi negada. Por favor, habilite-a nas configurações do seu dispositivo.');
             setIsLoading(false);
             return;
           }
 
           const fullAddress = `${street.trim()}, ${number.trim()}, ${neighborhood.trim()}, ${city.trim()}, ${state.trim()}, ${cep.trim()}`;
-          devLog("[RegisterProvider] Geocodificando endereĂ§o:", fullAddress);
+          devLog("[RegisterProvider] Geocodificando endereço:", fullAddress);
 
           // Geocode with cache + bounded retries (rate-limit safe)
           const geocodeWithBackoff = async (address: string): Promise<{ latitude: number; longitude: number }> => {
@@ -709,7 +710,7 @@ export default function RegisterProviderScreen() {
               longitude,
             },
           });
-          devLog("[RegisterProvider] handleNext (Step 4 - final sub-step): signUpProvider do AuthContext retornou sucesso. Redirecionando para Detalhes do ServiĂ§o.");
+          devLog("[RegisterProvider] handleNext (Step 4 - final sub-step): signUpProvider do AuthContext retornou sucesso. Redirecionando para Detalhes do Serviço.");
           // Clear AsyncStorage after successful registration
           await AsyncStorage.removeItem('providerRegisterFormData');
           router.replace(AUTH_ROUTES.PROVIDER_SERVICE_DETAILS);
@@ -786,26 +787,26 @@ export default function RegisterProviderScreen() {
 
     switch (currentStep) {
       case 1:
-        stepText = `Dados BĂˇsicos`;
-        microcopy = 'Vamos comeĂ§ar com seu nome e e-mail. Ă‰ rĂˇpido!';
+        stepText = `Dados Básicos`;
+        microcopy = 'Vamos começar com seu nome e e-mail.';
         break;
       case 2:
         stepText = ` Contato e Identidade`;
-        microcopy = 'Agora, telefone e CPF para contato e verificaĂ§ĂŁo.';
+        microcopy = 'Agora, telefone e CPF para contato e verificação.';
         break;
       case 3:
         stepText = `Dados Pessoais`;
-        microcopy = 'Data de nascimento e senha para seguranĂ§a.';
+        microcopy = 'Data de nascimento e senha para segurança.';
         break;
       case 4:
         switch (subStepAddress) {
           case 1:
-            stepText = ` EndereĂ§o (CEP)`;
-            microcopy = 'Informe seu CEP e buscamos o endereĂ§o automaticamente.';
+            stepText = ` Endereço (CEP)`;
+            microcopy = 'Informe seu CEP e buscamos o endereço automaticamente.';
             break;
           case 2:
-            stepText = `EndereĂ§o (Detalhes)`;
-            microcopy = 'Confirme e complete os detalhes do seu endereĂ§o.';
+            stepText = `Endereço (Detalhes)`;
+            microcopy = 'Confirme e complete os detalhes do seu endereço.';
             break;
         }
         break;
@@ -820,7 +821,7 @@ export default function RegisterProviderScreen() {
     } else if (currentStep === 3) {
       return 'Voltar para Contato e Identidade';
     } else if (currentStep === 2) {
-      return 'Voltar para Dados BĂˇsicos';
+      return 'Voltar para Dados Básicos';
     }
     return '';
   };
@@ -836,11 +837,7 @@ export default function RegisterProviderScreen() {
       case 3:
         return '';
       case 4:
-        switch (subStepAddress) {
-          case 1: return 'EndereĂ§o: CEP';
-          case 2: return 'EndereĂ§o: Detalhes';
-          default: return 'EndereĂ§o';
-        }
+        return '';
       default:
         return '';
     }
@@ -987,7 +984,7 @@ export default function RegisterProviderScreen() {
                     onPress={handleNext}
                     disabled={isLoading || !isNextButtonEnabledStep1}
                   >
-                    <Text style={styles.navButtonTextNext}>AvanĂ§ar</Text>
+                    <Text style={styles.navButtonTextNext}>Avançar</Text>
                     <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
                   </TouchableOpacity>
                 </View>
@@ -1003,7 +1000,7 @@ export default function RegisterProviderScreen() {
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="Telefone (DDD + NĂşmero)"
+                    placeholder="Telefone (DDD + Número)"
                     placeholderTextColor="#A0AEC0"
                     value={phone}
                     onChangeText={(text) => { setPhone(formatPhoneNumber(text)); setPhoneError(null); }}
@@ -1020,7 +1017,7 @@ export default function RegisterProviderScreen() {
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="CPF (apenas nĂşmeros)"
+                    placeholder="CPF (apenas números)"
                     placeholderTextColor="#A0AEC0"
                     value={cpf}
                     onChangeText={(text) => { setCpf(formatCpf(text)); setCpfError(null); }}
@@ -1044,7 +1041,7 @@ export default function RegisterProviderScreen() {
                     onPress={handleNext}
                     disabled={isLoading || !isNextButtonEnabledStep2}
                   >
-                    <Text style={styles.navButtonTextNext}>AvanĂ§ar</Text>
+                    <Text style={styles.navButtonTextNext}>Avançar</Text>
                     <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
                   </TouchableOpacity>
                 </View>
@@ -1077,7 +1074,7 @@ export default function RegisterProviderScreen() {
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="Senha (mĂ­nimo 6 caracteres)"
+                    placeholder="Senha (mínimo 6 caracteres)"
                     placeholderTextColor="#A0AEC0"
                     value={password}
                     onChangeText={(text) => { setPassword(text); setPasswordError(null); }}
@@ -1109,7 +1106,7 @@ export default function RegisterProviderScreen() {
                       <ActivityIndicator color="#FFFFFF" />
                     ) : (
                       <>
-                        <Text style={styles.navButtonTextNext}>AvanĂ§ar</Text>
+                        <Text style={styles.navButtonTextNext}>Avançar</Text>
                         <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
                       </>
                     )}
@@ -1130,7 +1127,7 @@ export default function RegisterProviderScreen() {
                       </View>
                       <TextInput
                         style={styles.input}
-                        placeholder="CEP (apenas nĂşmeros)"
+                        placeholder="CEP (apenas números)"
                         placeholderTextColor="#A0AEC0"
                         value={cep}
                         onChangeText={(text) => {
@@ -1163,7 +1160,7 @@ export default function RegisterProviderScreen() {
                         onPress={handleNext}
                         disabled={isLoading || !isNextButtonEnabledAddressSubStep1}
                       >
-                        <Text style={styles.navButtonTextNext}>PrĂłximo</Text>
+                        <Text style={styles.navButtonTextNext}>Próximo</Text>
                         <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
                       </TouchableOpacity>
                     </View>
@@ -1196,7 +1193,7 @@ export default function RegisterProviderScreen() {
                       </View>
                       <TextInput
                         style={styles.input}
-                        placeholder="NĂşmero"
+                        placeholder="Número"
                         placeholderTextColor="#A0AEC0"
                         value={number}
                         onChangeText={(text) => { setNumber(text); setNumberError(null); }}
@@ -1293,20 +1290,20 @@ export default function RegisterProviderScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: Platform.OS === 'android' ? '#ffffff' :'transparent',
   },
   keyboardAvoidingContainer: {
     flex: 1,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: 'transparent', // alterado para transparente conforme pedido
+    backgroundColor: Platform.OS === 'android' ? '#ffffff' : 'transparent', // alterado para transparente conforme pedido
   },
   scrollContentContainer: {
     flexGrow: 1,
     justifyContent: 'center', // Centraliza verticalmente o conteĂşdo todo
     alignItems: 'center',
-    paddingBottom: 60,
+    paddingBottom: Platform.OS === 'android' ? 0 : 60,
     paddingTop: 20,
   },
   contentWrapper: {
@@ -1314,7 +1311,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 380, // Ajustado para centralizaĂ§ĂŁo perfeita em telas mĂ©dias
     paddingHorizontal: 40, // Padding menor para centro exato
-    paddingTop: Platform.OS === 'ios' ? 20 : 15,
+    paddingTop: Platform.OS === 'ios' ? 20 : 0,
     alignItems: 'center',
     bottom: 80,
   },
@@ -1329,7 +1326,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     marginBottom: 20, // Logo mais prĂłxima
-    top: 130,
+    top: Platform.OS === 'android' ? 96 : 130,
     right: 10,
   },
   logo: {
@@ -1352,9 +1349,10 @@ const styles = StyleSheet.create({
   stepIndicatorText: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#1C3A5F',
+    color:  Platform.OS === 'android' ? '#292b2eff' :'#1C3A5F',
     textAlign: 'center',
     marginBottom: 8,
+    bottom: Platform.OS === 'android' ? 40 : 0,
     width: '100%',
   },
   microcopyText: {
@@ -1363,6 +1361,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 30,
     paddingHorizontal: 20,
+    bottom: Platform.OS === 'android' ? 39 : 0,
     lineHeight: 20,
     width: '100%',
   },
@@ -1370,17 +1369,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     // bottom: 20, // REMOVIDO para alinhar com os steps anteriores
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Platform.OS === 'android' ? '#85d0fc10' : '#FFFFFF',
     borderRadius: 28,
-    height: 45,
+    height: Platform.OS === 'android' ? 39 : 45,
     marginBottom: 10, // EspaĂ§o mĂ­nimo para o erro ficar colado abaixo
-    shadowColor: 'rgba(100, 100, 150, 0.15)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
     paddingHorizontal: 0,
-    borderWidth: 1,
+    bottom: Platform.OS === 'android' ? 39 : 0,
+    borderWidth: Platform.OS === 'android' ? 0 : 1,
     borderColor: 'transparent',
     width: '100%',
   },
@@ -1391,18 +1386,15 @@ const styles = StyleSheet.create({
   },
   iconCircle: {
     width: 45,
-    height: 45,
+    height: Platform.OS === 'android' ? 39 : 45,
     right: 3,
     borderRadius: 80,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F8FF',
+    backgroundColor: Platform.OS === 'android' ? '#85d0fc10' :'#F0F8FF',
     marginRight: 12,
-    shadowColor: '#00BCD4',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: Platform.OS === 'android' ? '#F0F8FF' :'#00BCD4',
+    
   },
   input: {
     flex: 1,
@@ -1421,6 +1413,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     marginTop: 32,
+    bottom: Platform.OS === 'android' ? 45 : 0,
     marginBottom: 20,
   },
   navButton: {
@@ -1445,7 +1438,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 0,
   },
   navButtonTextBack: {
     color: '#00BCD4',
