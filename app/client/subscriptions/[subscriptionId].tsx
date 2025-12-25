@@ -1,10 +1,10 @@
 // LimpeJaApp/app/client/subscriptions/[subscriptionId].tsx
-import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { router, useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getSubscriptionDetails, updateSubscription } from '../../../services/subscriptionService';
 import { SubscriptionStatus, UpdateSubscriptionDto } from '../../../types/backend/subscriptions';
+import { alertUserError, getUserMessage } from '../../_shared/errors/uiFeedback';
 
 export default function SubscriptionDetailsScreen() {
   const { subscriptionId } = useLocalSearchParams();
@@ -24,7 +24,7 @@ export default function SubscriptionDetailsScreen() {
       Alert.alert('Sucesso', 'Assinatura atualizada com sucesso!');
     },
     onError: (err) => {
-      Alert.alert('Erro', `Falha ao atualizar assinatura: ${err.message}`);
+      alertUserError(err, 'Erro ao atualizar assinatura');
     },
   });
 
@@ -54,7 +54,7 @@ export default function SubscriptionDetailsScreen() {
   if (error) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Erro ao carregar detalhes: {error.message}</Text>
+        <Text style={styles.errorText}>Erro ao carregar detalhes: {getUserMessage(error)}</Text>
       </View>
     );
   }
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 0,
   },
   label: {
     fontSize: 16,
