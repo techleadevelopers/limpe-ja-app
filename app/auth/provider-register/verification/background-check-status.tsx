@@ -1,10 +1,10 @@
 // app/auth/provider-register/background-check-status.tsx
 import { Ionicons } from '@expo/vector-icons'; //
 import * as Haptics from 'expo-haptics'; //
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'; // // Added Platform
 import verificationService from '../../../../services/verificationService'; //
-import { showUserError } from '../../_shared/errors/userError';
+import { showUserError } from '../../../_shared/errors/userError';
 
 // Paleta de cores (repetida para clareza, em um projeto real viria de Colors.ts)
 const Colors = {
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
     shadowRadius: 20,
-    elevation: 8,
+    elevation: 0,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.primaryLight,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 15,
-    elevation: 10,
+    elevation: 0,
   },
   submitButtonText: {
     color: '#FFFFFF',
