@@ -1,13 +1,14 @@
-import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Image, Platform } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React from 'react';
+import { ActivityIndicator, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import Colors from '../../../constants/Colors';
-import { formatDate } from '../../../utils/helpers';
 import { getBookingDetails, updateBookingStatus } from '../../../services/bookingService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
+import { formatDate } from '../../../utils/helpers';
+import { setSafeError } from '../../_shared/errors/uiFeedback';
 
 function useTheme() {
   const scheme = (Colors as any)?.scheme || 'light';
@@ -33,7 +34,7 @@ export default function ProviderServiceDetailsScreen() {
         const d = await getBookingDetails(String(serviceId));
         if (mounted) setData(d);
       } catch (e: any) {
-        setError(e?.message || 'Não foi possível carregar o serviço.');
+        setSafeError(setError, e);
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -69,7 +70,7 @@ export default function ProviderServiceDetailsScreen() {
       const updated = await updateBookingStatus(data.id, { status: BookingStatus.CONFIRMED } as any);
       setData(updated);
     } catch (e: any) {
-      setError(e?.message || 'Falha ao aceitar.');
+      setSafeError(setError, e);
     } finally {
       setIsUpdating(false);
     }
@@ -83,7 +84,7 @@ export default function ProviderServiceDetailsScreen() {
       const updated = await updateBookingStatus(data.id, { status: BookingStatus.REJECTED } as any);
       setData(updated);
     } catch (e: any) {
-      setError(e?.message || 'Falha ao rejeitar.');
+      setSafeError(setError, e);
     } finally {
       setIsUpdating(false);
     }
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: '800' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { flex: 1, paddingHorizontal: 16, paddingBottom: 16, marginTop: 10 },
-  card: { borderRadius: 12, padding: 16, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6 }, android: { elevation: 2 } }) },
+  card: { borderRadius: 12, padding: 16, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6 }, android: { elevation: 0 } }) },
   avatar: { width: 40, height: 40, borderRadius: 20 },
   title: { fontSize: 17, fontWeight: '800' },
   sub: { fontSize: 13 },
