@@ -1,16 +1,16 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   Animated,
-  ImageBackground,
   Dimensions,
   Easing,
+  ImageBackground,
   Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const bannerImages = [
   require('../../../../assets/images/banner6.png'),
@@ -173,10 +173,16 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    width: Dimensions.get('window').width - 40,
-    height: 100,
+    width: Platform.select({
+  ios: Dimensions.get('window').width - 40,
+  android: Dimensions.get('window').width - 55,
+  default: Dimensions.get('window').width - 40,
+}),
+left: Platform.OS === 'android' ? 10 : 0,
+    height: Platform.OS === 'android' ? 93 : 100,
     borderRadius: 14,
-    marginTop: 12,
+    marginTop: Platform.OS === 'android' ? 36 : 12,
+    marginRight: Platform.OS === 'android' ? 36 : 12,
     overflow: 'hidden',
     marginHorizontal: 6,
     ...Platform.select({
@@ -186,7 +192,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 4 },
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   imageWrapper: { flex: 1 },
@@ -252,7 +258,7 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         shadowOffset: { width: 0, height: 1 },
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   buttonText: { fontSize: 9, fontWeight: '700', color: '#5f7fff' },
