@@ -4,9 +4,10 @@ import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 're
 import { formatDate } from '../../../utils/helpers'; // Certifique-se de que o caminho está correto
 import { useRouter } from 'expo-router'; // Importa o useRouter
 import { PROVIDER_ROUTES } from '../../../constants/routes'; // Importa PROVIDER_ROUTES
+import { shadow, textFix } from '../../../app/_shared/ui/parity';
 
 // Importa a tipagem do Dashboard para o resumo
-import { ProviderDashboard } from '../../../types/backend/providers';
+import { EarningsResponseDto, ProviderDashboard } from '../../../types/backend/providers';
 
 // DEFINIÇÕES DE CORES LOCAIS - ALINHADAS COM O TEMA DA DASHBOARD
 const WHITE = '#FFFFFF'; // Branco
@@ -22,6 +23,7 @@ const BORDER_SUBTLE = 'rgba(0,0,0,0.08)'; // Borda sutil
 
 interface EarningsSummaryCardProps {
     dashboardData: ProviderDashboard | null;
+    earningsData?: EarningsResponseDto | null;
     animation: Animated.Value;
     // onWithdrawalRequest: () => void; // Esta prop não é mais necessária
 }
@@ -38,10 +40,13 @@ const useAnimatedTouch = () => {
     return { scaleAnim, onPressIn, onPressOut };
 };
 
-const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData, animation }) => {
+const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData, earningsData, animation }) => {
     const router = useRouter(); // Inicializa o router
-    const displayedTotalEarnings = dashboardData?.totalEarnings ?? 0;
-    const displayedPendingWithdrawals = dashboardData?.pendingWithdrawals ?? 0;
+    const availableForWithdrawal = earningsData?.availableForWithdrawal ?? 0;
+    const pendingWithdrawals = earningsData?.pendingWithdrawals ?? 0;
+    const displayedTotalEarnings =
+        earningsData?.totalEarnings ?? dashboardData?.totalEarnings ?? 0;
+    const canWithdraw = availableForWithdrawal > 0;
 
     const { scaleAnim, onPressIn, onPressOut } = useAnimatedTouch();
 
@@ -52,46 +57,50 @@ const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData
                     </Text>
             <Text style={styles.sectionTitle} accessibilityRole="header">Seus Ganhos</Text>
             <View style={styles.summaryGrid}>
-                {/* Saldo Disponível */}
                 <View style={styles.summaryCard}>
-                    <Ionicons name="wallet-outline" size={25} color={WHITE} accessibilityLabel="Ícone de Saldo Total" /> {/* Ícone branco */}
-                    <Text style={styles.summaryCardTitle}>Saldo Disponível</Text> {/* Título branco */}
-                    <Text style={styles.summaryCardValue} accessibilityLabel={`Seu saldo total é de ${displayedTotalEarnings.toFixed(2).replace('.', ',')} reais`}>
+                    <Ionicons name="wallet-outline" size={25} color={WHITE} accessibilityLabel="Ícone de saldo liberado" />
+                    <Text style={styles.summaryCardTitle}>Saldo liberado</Text>
+                    <Text style={styles.summaryCardValue} accessibilityLabel={`Saldo liberado de R$ ${availableForWithdrawal.toFixed(2).replace('.', ',')}`}>
+                        R$ {availableForWithdrawal.toFixed(2).replace('.', ',')}
+                    </Text>
+                </View>
+                <View style={styles.summaryCard}>
+                    <Ionicons name="hourglass-outline" size={25} color={WARNING_YELLOW} accessibilityLabel="Ícone de saldo pendente" />
+                    <Text style={styles.summaryCardTitle}>Saldo pendente</Text>
+                    <Text style={styles.summaryCardValue} accessibilityLabel={`Saldo pendente de R$ ${pendingWithdrawals.toFixed(2).replace('.', ',')}`}>
+                        R$ {pendingWithdrawals.toFixed(2).replace('.', ',')}
+                    </Text>
+                </View>
+                <View style={styles.summaryCard}>
+                    <Ionicons name="cash-outline" size={25} color={SUCCESS_GREEN} accessibilityLabel="Ícone de total acumulado" />
+                    <Text style={styles.summaryCardTitle}>Total acumulado</Text>
+                    <Text style={styles.summaryCardValue} accessibilityLabel={`Total acumulado de R$ ${displayedTotalEarnings.toFixed(2).replace('.', ',')}`}>
                         R$ {displayedTotalEarnings.toFixed(2).replace('.', ',')}
                     </Text>
                 </View>
-                {/* Saque Pendente */}
-                <View style={styles.summaryCard}>
-                    <Ionicons name="hourglass-outline" size={25} color={WARNING_YELLOW} accessibilityLabel="Ícone de Saque Pendente" />
-                    <Text style={styles.summaryCardTitle}>Saque Pendente</Text> {/* Título branco */}
-                    <Text style={styles.summaryCardValue} accessibilityLabel={`Você tem ${displayedPendingWithdrawals.toFixed(2).replace('.', ',')} reais pendentes para saque`}>
-                        R$ {displayedPendingWithdrawals.toFixed(2).replace('.', ',')}
-                    </Text>
-                </View>
-                {/* Ganhos Mês */}
-                <View style={styles.summaryCard}>
-                    <Ionicons name="cash-outline" size={25} color={SUCCESS_GREEN} accessibilityLabel="Ícone de Ganhos Mês" />
-                    <Text style={styles.summaryCardTitle}>Ganhos Mês</Text> {/* Título branco */}
-                    <Text style={styles.summaryCardValue} accessibilityLabel={`Seus ganhos este mês são de ${displayedTotalEarnings.toFixed(2).replace('.', ',')} reais`}>
-                        R$ {displayedTotalEarnings.toFixed(2).replace('.', ',')}
-                    </Text>
-                    
-                </View>
-                
             </View>
             {/* Botão Solicitar Saque - Estilo do botão da Dashboard, mas com cor de sucesso */}
             <TouchableOpacity
                 style={[
                     styles.withdrawalButton,
-                    (displayedTotalEarnings === 0 || displayedPendingWithdrawals > 0) && styles.withdrawalButtonDisabled,
+                    !canWithdraw && styles.withdrawalButtonDisabled,
                     { transform: [{ scale: scaleAnim }] }
                 ]}
-                onPress={() => router.push(PROVIDER_ROUTES.WITHDRAW as any)} // CORREÇÃO APLICADA AQUI: 'as any'
+                onPress={() => {
+                    router.push({
+                        pathname: PROVIDER_ROUTES.WITHDRAW,
+                        params: { availableForWithdrawal: availableForWithdrawal.toFixed(2) },
+                    } as any);
+                }}
                 onPressIn={onPressIn}
                 onPressOut={onPressOut}
-                disabled={displayedTotalEarnings === 0 || displayedPendingWithdrawals > 0}
+                disabled={!canWithdraw}
                 accessibilityRole="button"
-                accessibilityLabel={displayedTotalEarnings === 0 || displayedPendingWithdrawals > 0 ? "Botão de solicitar saque desabilitado" : "Solicitar saque do saldo disponível"}
+                accessibilityLabel={
+                    !canWithdraw
+                        ? "Botão de solicitar saque desabilitado"
+                        : `Solicitar saque de R$ ${availableForWithdrawal.toFixed(2).replace('.', ',')}`
+                }
             >
                 <Ionicons name="arrow-up-circle-outline" size={24} color={WHITE} />
                 <Text style={styles.withdrawalButtonText}>Solicitar Saque</Text>
@@ -102,23 +111,19 @@ const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData
 
 const styles = StyleSheet.create({
     sectionTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: WHITE, // Título principal do card azul deve ser branco
+        ...textFix({ fontSize: 20, fontWeight: 'bold' }),
+        color: WHITE,
         marginBottom: 15,
         marginTop: 10,
-        textAlign: 'center', // Centralizar o título
+        textAlign: 'center',
         fontFamily: 'System'
     },
     summaryContainer: {
-        backgroundColor: ICON_PRIMARY, // Fundo azul primário
-        borderRadius: 18, // Bordas mais arredondadas como na dashboard
+        backgroundColor: ICON_PRIMARY,
+        borderRadius: 18,
         padding: 20,
         marginBottom: 20,
-        ...Platform.select({
-            ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 }, // Sombra maior
-            android: { elevation: 10 },
-        }),
+        ...shadow(3),
     },
     summaryGrid: {
         flexDirection: 'row',
@@ -127,35 +132,35 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     summaryCard: {
-        width: '30%', // Para 3 itens por linha, similar às ações rápidas da dashboard
-        aspectRatio: 1, // Manter proporção quadrada
-        backgroundColor: 'rgba(255,255,255,0.2)', // Fundo semi-transparente branco para os cards internos
-        borderRadius: 12, // Bordas arredondadas
-        padding: 10, // Menor padding para caber
+        width: '30%',
+        aspectRatio: 1,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 12,
+        padding: 10,
         marginBottom: 15,
         alignItems: 'center',
-        justifyContent: 'center', // Centralizar conteúdo
+        justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)', // Borda mais sutil no fundo azul
+        borderColor: 'rgba(255,255,255,0.3)',
+        ...shadow(1),
     },
     summaryCardTitle: {
-        fontSize: 10, // Fonte menor para caber
-        color: 'rgba(255,255,255,0.7)', // Texto mais suave
+        ...textFix({ fontSize: 10 }),
+        color: 'rgba(255,255,255,0.7)',
         marginTop: 8,
         marginBottom: 5,
         textAlign: 'center',
         fontFamily: 'System'
     },
     summaryCardValue: {
-        fontSize: 18, // Fonte menor
-        fontWeight: 'bold',
-        color: WHITE, // Valor principal em branco
+        ...textFix({ fontSize: 18, fontWeight: 'bold' }),
+        color: WHITE,
         textAlign: 'center',
         fontFamily: 'System'
     },
     summaryCardSubtitle: {
-        fontSize: 12, // Fonte ainda menor
-        color: 'rgba(255,255,255,0.5)', // Subtítulo mais suave
+        ...textFix({ fontSize: 12 }),
+        color: 'rgba(255,255,255,0.5)',
         marginTop: 2,
         textAlign: 'center',
         fontFamily: 'System'
@@ -164,13 +169,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255,255,255,0.2)', // Fundo semi-transparente como o da dashboard
-        borderRadius: 25, // Bordas mais arredondadas
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 25,
         paddingVertical: 12,
-        ...Platform.select({
-            ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
-            android: { elevation: 3 },
-        }),
+        ...shadow(2),
     },
     withdrawalButtonDisabled: {
         backgroundColor: 'rgba(255,255,255,0.1)', // Desabilitado ainda mais transparente
@@ -179,10 +181,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0,
     },
     withdrawalButtonText: {
-        color: WHITE, // Texto do botão em branco
-        fontSize: 16,
-        fontWeight: '600', // Semibold
-        marginHorizontal: 10, // Espaçamento similar
+        ...textFix({ fontSize: 16, fontWeight: '600' }),
+        color: WHITE,
+        marginHorizontal: 10,
         fontFamily: 'System'
     },
 });
