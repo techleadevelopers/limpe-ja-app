@@ -8,18 +8,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Easing,
-    Platform,
-    RefreshControl,
-    StyleProp,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    ViewStyle
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Easing,
+  Platform,
+  RefreshControl,
+  StyleProp,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,12 +27,18 @@ import { formatAddressCompact } from '../../../utils/address';
 import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
 
-import { AppColors, AppShadows } from '../../../constants/appStyles';
+import { AppColors } from '../../../constants/appStyles';
 import Colors from '../../../constants/Colors';
 import { useAuth } from '../../../hooks/useAuth';
 import { getBookingsForUser } from '../../../services/bookingService';
+import {
+  AppNotification,
+  getMyNotifications,
+  markNotificationAsRead,
+} from '../../../services/notificationService';
 import { getProviderAvatar } from '../../../services/providerService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
+import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 import ScreenContainer from '@/components/layout/ScreenContainer';
 import { useDevice } from '@/utils/responsive';
@@ -57,6 +63,14 @@ const { highlightNew } = useLocalSearchParams<{ highlightNew?: string }>();
 type FilterType = 'requests' | 'upcoming' | 'completed' | 'cancelled';
 
 const isAxiosError = (error: unknown): error is AxiosError => axios.isAxiosError(error);
+
+type PaymentConfirmedMeta = {
+  bookingId: string;
+  providerName?: string;
+  scheduledAt?: string;
+  amount?: number;
+  paymentMethod?: string;
+};
 
 const TOP_HAIRLINE = Platform.OS === 'android' ? 1 : StyleSheet.hairlineWidth;
 const BOTTOM_HAIRLINE = Platform.OS === 'android' ? 1 : StyleSheet.hairlineWidth;
@@ -96,6 +110,8 @@ const gradients = {
   other: ['#F3F4F6', '#F3F4F6'] as const,
   rescheduled: ['rgba(124,58,237,0.12)', 'rgba(124,58,237,0.12)'] as const,
 } as const;
+
+const PAYMENT_NOTIFICATION_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const renderProviderAvatar = (avatarUrl?: string | null, size: number = 60) => {
   const [imageError, setImageError] = useState(false);
@@ -309,6 +325,7 @@ export default function MyBookingsScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterType>((highlightNew ? 'requests' : 'upcoming') as FilterType);
   const [headerTitle, setHeaderTitle] = useState('Meus Agendamentos');
+  const [paymentNotification, setPaymentNotification] = useState<AppNotification | null>(null);
   const insets = useSafeAreaInsets();
   const { isSmallPhone, isLargePhone } = useDevice();
 
@@ -437,7 +454,7 @@ export default function MyBookingsScreen() {
           } else if (err instanceof Error) {
             errorMessage = err.message || errorMessage;
           }
-          Alert.alert('Erro', sanitizeText(errorMessage));
+          alertUserError(err, 'Erro ao carregar agendamentos');
           setHeaderTitle('Erro ao carregar');
         } finally {
           setIsLoading(false);
@@ -460,16 +477,70 @@ export default function MyBookingsScreen() {
     }
   }, [highlightNew]);
 
-  const handleRefresh = useCallback(() => {
-    setIsRefreshing(true);
-    loadBookings(activeFilter, true);
-  }, [activeFilter, loadBookings]);
-
   const handleFilterChange = (newFilter: FilterType) => {
     if (newFilter === activeFilter) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setActiveFilter(newFilter);
   };
+
+  const fetchPaymentNotifications = useCallback(async () => {
+    if (!user?.id) {
+      setPaymentNotification(null);
+      return;
+    }
+    try {
+      const notifications = await getMyNotifications();
+      const recentPayments = notifications
+        .filter(
+          (n) => (n.type?.toString().toUpperCase?.() ?? '') === 'PAYMENT_CONFIRMED',
+        )
+        .filter((n) => !n.isRead)
+        .filter((n) => {
+          const createdAt = new Date(n.createdAt).getTime();
+          if (Number.isNaN(createdAt)) return false;
+          return Date.now() - createdAt <= PAYMENT_NOTIFICATION_WINDOW_MS;
+        })
+        .filter((n) => {
+          const meta = n.meta as PaymentConfirmedMeta | undefined;
+          return !!meta?.bookingId;
+        })
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+      setPaymentNotification(recentPayments[0] ?? null);
+    } catch (error) {
+      console.error(
+        'Erro ao buscar notificações de pagamento confirmado',
+        error,
+      );
+    }
+  }, [user?.id]);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadBookings(activeFilter, true);
+    fetchPaymentNotifications();
+  }, [activeFilter, loadBookings, fetchPaymentNotifications]);
+
+  useEffect(() => {
+    fetchPaymentNotifications();
+  }, [fetchPaymentNotifications]);
+
+  const handlePaymentBannerPress = useCallback(async () => {
+    if (!paymentNotification) return;
+    const meta = paymentNotification.meta as PaymentConfirmedMeta | undefined;
+    if (!meta?.bookingId) return;
+    try {
+      await markNotificationAsRead(paymentNotification.id);
+      setPaymentNotification(null);
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida', error);
+    } finally {
+      fetchPaymentNotifications();
+    }
+    router.push(`/client/bookings/${meta.bookingId}` as any);
+  }, [fetchPaymentNotifications, paymentNotification, router]);
 
   const EmptyListFeedback = () => {
     const iconAnim = useRef(new Animated.Value(0)).current;
@@ -543,13 +614,36 @@ export default function MyBookingsScreen() {
     );
   };
 
+  const paymentMeta = paymentNotification?.meta as PaymentConfirmedMeta | undefined;
+  const paymentProviderLabel = paymentMeta?.providerName ?? 'Seu prestador';
+  const paymentScheduledLabel = paymentMeta?.scheduledAt
+    ? formatDateTime(paymentMeta.scheduledAt, undefined, {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : 'Horário pendente';
+  const paymentAmountLabel =
+    typeof paymentMeta?.amount === 'number'
+      ? formatPriceBRL(paymentMeta.amount)
+      : undefined;
+
   return (
     <ScreenContainer style={[styles.container, { backgroundColor: theme.background, paddingTop: 0, paddingBottom: 92 }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header temático (alinha com ScheduleHeader: vidro leve + cantos arredondados) */}
       <Animated.View style={{ opacity: navbarFadeAnim, transform: [{ translateY: navbarSlideAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }] }}>
-        <View style={[styles.thematicHeader, fix.blurBg, { paddingTop: fix.padTop(0, 14) }]}>
+        <View
+  style={[
+    styles.thematicHeader,
+    fix.blurBg,
+    {
+      paddingTop: Platform.OS === 'android' ? Math.max(insets.top, 10) : fix.padTop(0, 14),
+    },
+  ]}
+>
           <BlurView intensity={Platform.OS === 'ios' ? 10 : 20} tint="light" style={StyleSheet.absoluteFillObject} />
           <LinearGradient colors={[ theme.cardBackground as any, theme.cardBackground as any ]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
           <View style={styles.headerRow}>
@@ -615,6 +709,25 @@ export default function MyBookingsScreen() {
         ))}
       </View>
 
+      {paymentNotification && paymentMeta?.bookingId && (
+        <TouchableOpacity
+          style={styles.paymentBanner}
+          activeOpacity={0.85}
+          onPress={handlePaymentBannerPress}
+        >
+          <View style={styles.paymentBannerContent}>
+            <Text style={styles.paymentBannerTitle}>Pagamento confirmado</Text>
+            <Text style={styles.paymentBannerSubtitle}>
+              {paymentProviderLabel} · {paymentScheduledLabel}
+            </Text>
+            {paymentAmountLabel && (
+              <Text style={styles.paymentBannerAmount}>{paymentAmountLabel}</Text>
+            )}
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#2563eb" />
+        </TouchableOpacity>
+      )}
+
       {isLoading && bookings.length === 0 ? (
         <View style={styles.centeredFeedback}>
           <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
@@ -648,8 +761,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: UI.bg },
   // Header temático (vidro leve + bordas arredondadas) alinhado ao ScheduleHeader
   thematicHeader: {
-    marginHorizontal: 12,
-    marginTop: 28,
+  marginHorizontal: 12,
+  marginTop: Platform.OS === 'android' ? 10 : 28,
     marginBottom: 6,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -658,23 +771,34 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
-      android: { elevation: 1.5 },
+      android: { elevation: 0.5 },
     }),
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingVertical: 10, marginTop: 28},
+  headerRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  paddingHorizontal: 10,
+  paddingVertical: 10,
+  ...(Platform.OS === 'android' ? { marginTop: -20 } : { marginTop: 28 }),
+},
   headerIconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700', color: UI.textPrimary, left: 4, },
   navbarContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
+    borderTopLeftRadius: 26,
+borderTopRightRadius: 26,
+overflow: 'hidden',
+backgroundColor: 'transparent',
     right: 0,
     height: 94,
     zIndex: 1000,
-    elevation: Platform.OS === 'android' ? 1.5 : 20,
+    elevation: Platform.OS === 'android' ? 1.5 : 2,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.18, shadowRadius: 12 },
-      android: { elevation: 1.5 },
+      android: { elevation: 0.5 },
     }),
   },
   filterHeaderRow: {
@@ -727,12 +851,29 @@ const styles = StyleSheet.create({
     borderColor: AppColors.primaryInteractive,
     ...Platform.select({
       ios: { shadowColor: AppColors.primaryInteractive + '22', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8 },
-      android: { elevation: 1.5 },
+      android: { elevation: 0.5 },
     }),
   },
   filterIcon: { marginRight: 8, transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
   filterButtonText: { fontSize: 13, fontWeight: '600', color: AppColors.textBody, fontFamily: 'Montserrat-Regular' },
   filterButtonTextActive: { color: AppColors.white, fontWeight: '700', fontFamily: 'Montserrat-SemiBold' },
+  paymentBanner: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  paymentBannerContent: { flex: 1, marginRight: 10 },
+  paymentBannerTitle: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
+  paymentBannerSubtitle: { fontSize: 13, color: '#1e293b', marginTop: 4 },
+  paymentBannerAmount: { fontSize: 14, fontWeight: '600', color: '#2563eb', marginTop: 4 },
 
   listContentContainer: { paddingVertical: 18, paddingHorizontal: 16 },
     itemCard: {
@@ -742,7 +883,7 @@ const styles = StyleSheet.create({
       overflow: 'hidden',
       ...Platform.select({
         ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12 },
-        android: { elevation: 1.5 },
+        android: { elevation: 0.5 },
       }),
     },
   itemCardContent: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, position: 'relative' },
@@ -812,10 +953,10 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: fix.font(20), fontWeight: '700', color: AppColors.textBody, textAlign: 'center', marginBottom: 10, fontFamily: 'Montserrat-SemiBold' },
   emptySubText: { fontSize: 15, color: AppColors.textAuxiliary, textAlign: 'center', marginBottom: 24, fontFamily: 'Montserrat-Regular', lineHeight: 20 },
 
-  emptyStateButton: { backgroundColor: AppColors.primaryInteractive, paddingVertical: Platform.OS === 'android' ? 16 : 14, paddingHorizontal: 26, borderRadius: 28, flexDirection: 'row', alignItems: 'center', marginTop: 8, ...AppShadows.medium },
+  emptyStateButton: { backgroundColor: AppColors.primaryInteractive, paddingVertical: Platform.OS === 'android' ? 16 : 14, paddingHorizontal: 26, borderRadius: 28, flexDirection: 'row', alignItems: 'center', marginTop: 8,  },
   emptyStateButtonText: { color: AppColors.white, fontSize: 15, fontWeight: '600', marginLeft: 10, fontFamily: 'Montserrat-Regular' },
 
-  exploreButton: { backgroundColor: '#5196d3ff', paddingVertical: Platform.OS === 'android' ? 16 : 14, paddingHorizontal: 34, borderRadius: 30, marginTop: 10, ...AppShadows.medium },
+  exploreButton: { backgroundColor: '#5196d3ff', paddingVertical: Platform.OS === 'android' ? 16 : 14, paddingHorizontal: 34, borderRadius: 30, marginTop: 10,  },
   exploreButtonText: { color: AppColors.white, fontSize: 16, fontWeight: '700', fontFamily: 'Montserrat-SemiBold' },
   iconAdjust: { transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
 });
