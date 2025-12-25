@@ -2,27 +2,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Adicione AppShadows aqui!
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AnimatedReanimated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-  withSequence,
   cancelAnimation,
-  withDelay,
+  Easing,
   interpolate,
   interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming
 } from 'react-native-reanimated';
 
 import { CLIENT_ROUTES } from '../../../../constants/routes';
-import { ProviderDisplayInfo } from '../../../../types/backend/providers';
-import { Icons3D } from '../../../../constants/icons3d';
-import { PricingType } from '../../../../types/backend/services';
 import { ProviderServiceOffering } from '../../../../types/backend/provider-service';
+import { ProviderDisplayInfo } from '../../../../types/backend/providers';
+import { PricingType } from '../../../../types/backend/services';
 // Importar os novos formatadores e helpers
 import { formatDistance } from '../../../../utils/formatters';
 import { getFormattedServicePrice, getNumericPriceValue } from '../../../../utils/service-helpers';
@@ -41,10 +38,12 @@ interface RecomendacaoCardProps {
 const UI_SCALE = 1.07;
 const UI_FINE_TUNE = 0.98; // redução solicitada de 2%
 const S = (n: number) => parseFloat((n * UI_SCALE * UI_FINE_TUNE * 0.95).toFixed(2));
+const ANDROID_SHRINK_SCALE = Platform.OS === 'android' ? 0.9 : 1;
 
 const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   const router = useRouter();
   const { t } = useTranslation();
+  const androidShrinkStyle = Platform.OS === 'android' ? { transform: [{ scale: ANDROID_SHRINK_SCALE }] } : undefined;
 
   if (!item || !item.id || !item.fullName) {
     return null;
@@ -596,7 +595,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
   return (
     // NOVO: Wrapper com position: "relative" para posicionar a distancia absolutamente
-    <View style={styles.cardWrapperWithDistance}>
+    <View style={[styles.cardWrapperWithDistance, androidShrinkStyle]}>
       {/* Micro-Pill de Localizacao/Distancia + horario (mesmo se distancia faltar) */}
       {(showDistancePill || formattedNextAvailable) && (
         <View style={styles.distancePillSmall}>
@@ -801,10 +800,11 @@ const styles = StyleSheet.create({
   cardWrapperWithDistance: { // NOVO ESTILO: Container pai para posicionamento absoluto
     width: S(116),
     height: S(163), // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
-    marginRight: S(13),
-    marginBottom: 2,
-    marginTop: 8,
-    left: 3,
+    marginRight: Platform.OS === 'android' ? S(-1) : S(13),
+    marginBottom: Platform.OS === 'android' ? -4 : 2,
+    marginTop: Platform.OS === 'android' ? 3 : 8,
+    left: Platform.OS === 'android' ? 0 : 3,
+    
     position: 'relative', // Essencial
     overflow: 'visible',
   },
@@ -812,12 +812,10 @@ const styles = StyleSheet.create({
     width: '100%', // Preenche o wrapper
     height: '100%', // Preenche o wrapper
     overflow: 'hidden',
+right: Platform.OS === 'android' ? 5 : 0,
     // Margins removidos daqui e movidos para cardWrapperWithDistance
-    
-    // --- POLIMENTO APLICADO: SOMBRAS E BORDAS ---
-    ...AppShadows.card, // Aplicando a Sombra Confortável
-    
-    // Removendo bordas complexas e redundantes para o look clean
+
+    // Removendo bordas complexas e redundantes para o look clean
     borderWidth: 0, 
     borderColor: 'transparent',
     borderRightWidth: 0,
@@ -835,7 +833,7 @@ const styles = StyleSheet.create({
   distancePillSmall: {
     position: 'absolute',
     top: 116,
-    right: 10,
+    right: Platform.OS === 'android' ? 15 : 10,
     zIndex: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.42)', // Fundo levemente opaco
     flexDirection: 'column', // Mantido o seu layout de coluna
@@ -855,13 +853,7 @@ const styles = StyleSheet.create({
     borderTopEndRadius: 20,
     borderBottomEndRadius: 20,
 
-    // Sombra Ultra-Suave (Melhor para premium)
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08, // Opacidade baixa
-    shadowRadius: 3,
-    elevation: 2,
-    overflow: 'hidden',
+    
 },
   distancePillSmallText: {
     marginTop: 2,
@@ -887,7 +879,7 @@ const styles = StyleSheet.create({
     color: '#3F4A5A',
     lineHeight: S(11),
     marginLeft: 2,
-     right: -19,
+    right: -19,
     marginTop: 1,
     textAlign: 'center',
   },
@@ -928,13 +920,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     
     borderRadius: 8,
-    shadowColor: '#5da2ec',
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
-    overflow: 'hidden',
-    transform: [{ scale: 0.95 }], // redução de ~5% apenas no badge de horário
+    
   },
  nextAvailableCircle: {
   width: S(38),
@@ -990,7 +976,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 },
-    elevation: 3,
+    elevation: 0,
   },
   ratingBadgeIcon: {
     marginBottom: 2,
@@ -1009,7 +995,7 @@ const styles = StyleSheet.create({
   },
   nextAvailableIcon: {
     marginRight: 2,
-    marginTop: Platform.OS === 'ios' ? 0.5 : 0,
+    marginTop: Platform.OS === 'ios' ? 0.5 : -1,
   },
   nextAvailableDayText: {
     fontSize: 7.5,
@@ -1136,9 +1122,9 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'center',
     marginTop: 0, // REDUZIDO: De -2 para 0 (compactar)
-    marginBottom: 2, // REDUZIDO: Adicionado pequeno espaço para ratings
+    marginBottom: Platform.OS === 'android' ? 2 : 2,
     left: 14,
-    bottom: 68, // REMOVIDO: Posicionamentos absolutos para fluxo natural
+    bottom: Platform.OS === 'android' ? 76 : 68,
   },
   metricRow: {
     flexDirection: 'row',
@@ -1156,7 +1142,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginLeft: 2, // ~2% do card (~2-3px) sem quebrar layout
     zIndex: 5,
-    elevation: 2,
+    elevation: 0,
   },
   metricValue: {
     fontSize: S(9), // 5% menor que 9.025
@@ -1297,7 +1283,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.25,
     shadowRadius: 3,
-    elevation: 4,
+    elevation: 0,
 
     // Micro brilho para iOS look
     borderWidth: 0.5,
