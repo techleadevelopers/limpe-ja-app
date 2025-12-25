@@ -1,19 +1,19 @@
 // LimpeJaApp/app/client/category/[categoryId].tsx (ou services/category/[categoryId].tsx)
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  Platform,
-  TouchableOpacity,
-  Animated,
-  Easing,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Animated,
+    Easing,
+    FlatList,
+    Platform,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 // Importar o NOVO componente CategoryProviderCard para reutilizar a UI
 import CategoryProviderCard from '../../../components/client/explore/category/CategoryProviderCard';
@@ -23,6 +23,7 @@ import { getProvidersByServiceCategory } from '../../../services/providerService
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
 // Importar o NavBar e seus tipos (ajuste o caminho se necessário)
 import NavBar from '../../../components/client/explore/home/NavBar';
+import { setSafeError } from '../../_shared/errors/uiFeedback';
 
 const FilteredProvidersScreen: React.FC = () => {
   const router = useRouter();
@@ -78,7 +79,7 @@ const FilteredProvidersScreen: React.FC = () => {
       setProviders(fetchedProviders);
     } catch (err: any) {
       console.error('Erro ao buscar provedores por categoria:', err);
-      setError(err.message || 'Não foi possível carregar os prestadores desta categoria.');
+      setSafeError(setError, err);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 }, // Shadow leve para elevação sutil, como em Schedule
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 4, // Elevation baixa para Android, matching clean look
+    elevation: 0, // Elevation baixa para Android, matching clean look
   },
   topRow: {
     flexDirection: 'row',
