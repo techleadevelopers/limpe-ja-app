@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Platform, SafeAreaView, KeyboardAvoidingView } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supportService } from '../../../services/supportService';
 import { showAppAlert } from '../../../utils/alerts';
 // CORREÇÃO: Importar tipos do arquivo centralizado
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 4,
             },
             android: {
-                elevation: 2,
+                elevation: 0,
             },
         }),
     },
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 5,
             },
             android: {
-                elevation: 5,
+                elevation: 0,
             },
         }),
     },
