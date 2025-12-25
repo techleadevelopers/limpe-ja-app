@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     Alert, // Manter Alert para casos específicos ou como fallback
     Animated,
+    Easing,
     Linking,
     Platform,
     ScrollView,
@@ -13,13 +14,12 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    Easing,
 } from 'react-native';
 
 // Importar o serviço de FAQ
-import { getFaqs } from '../../services/faqService';
-import Toast from '../../components/Toast'; // Importar Toast (assumindo NoticeToast)
 import { Skeleton } from '../../components/Skeleton'; // Importar Skeleton
+import Toast from '../../components/Toast'; // Importar Toast (assumindo NoticeToast)
+import { getFaqs } from '../../services/faqService';
 
 // Interface FAQItem
 interface FAQItem {
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
   },
   headerBackButton: {
     marginRight: 15,
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   subHeader: {
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
         ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
     }),
   },
   searchIcon: {
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     borderColor: '#DEE2E6',
     ...Platform.select({
         ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
     }),
   },
   contactIcon: {
