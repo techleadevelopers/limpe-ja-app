@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 100, // Ajuste a posição conforme necessário para não sobrepor a NavBar
     right: 20,
-    ...AppShadows.medium,
+    ,
   },
   pillButton: {
     backgroundColor: AppColors.primaryInteractive,
