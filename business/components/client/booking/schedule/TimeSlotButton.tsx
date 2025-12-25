@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, Animated } from 'react-native';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import { AppColors, AppShadows } from '../../../../../constants/appStyles';
 
 type Props = {
   time: string;
@@ -92,11 +92,11 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.backgroundLight,
   },
   available: {
-    ...AppShadows.small,
+    
   },
   selected: {
     backgroundColor: AppColors.primaryInteractive,
-    ...AppShadows.medium,
+    
   },
   unavailable: {
     backgroundColor: AppColors.backgroundNeutral,
