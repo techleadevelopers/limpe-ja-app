@@ -1,8 +1,8 @@
 // LimpeJaApp/app/client/explore/ranking/index.tsx
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, StyleSheet, Text, FlatList, Animated, Easing, TouchableOpacity, Platform, ActivityIndicator, RefreshControl } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Easing, FlatList, Platform, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import RankingCard from '../../../../components/ranking/RankingCard';
 import Colors from '../../../../constants/Colors';
 import RankingService from '../../../../services/rankingService';
@@ -114,7 +114,7 @@ export default function RankingScreen() {
               borderRadius: 16,
               ...Platform.select({
                 ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10 },
-                android: { elevation: 3 },
+                android: { elevation: 0 },
               }),
             }}
           />
