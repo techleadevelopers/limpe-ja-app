@@ -1,8 +1,8 @@
 // app/provider/components/dashboard/CircularProgressChart.tsx
-import React, { useRef, useEffect, useState } from 'react'; // Import useState
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
+import React, { useEffect, useRef, useState } from 'react'; // Import useState
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 
 interface CircularProgressChartProps {
   progress: number; // 0 to 1 for 0-100%
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,122,255,0.2)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.5, shadowRadius: 5 },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
   chartDetailButtonText: {
