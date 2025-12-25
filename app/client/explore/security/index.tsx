@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SecurityScreen() {
@@ -120,7 +119,7 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
       },
       android: {
-        elevation: 4,
+        elevation: 0,
       },
     }),
   },
@@ -167,7 +166,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 8,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   trustBannerText: {
@@ -195,7 +194,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 6,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   infoTitle: {
@@ -224,7 +223,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 6,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   ctaBtnText: {
