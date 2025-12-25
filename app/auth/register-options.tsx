@@ -1,18 +1,18 @@
 // app/auth/register-options.tsx
-import React, { useRef, useEffect } from 'react';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
+    Animated,
     Image,
     Platform,
-    Animated,
     StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { Stack, useRouter, Link, useLocalSearchParams } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { CLIENT_ROUTES, AUTH_ROUTES } from '../routes';
+import { AUTH_ROUTES, CLIENT_ROUTES } from '../routes';
 // import { LinearGradient } from 'expo-linear-gradient'; // Removido, não será mais usado diretamente nos botões
 
 // Certifique-se que o caminho para o seu logo está correto
@@ -203,18 +203,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'transparent',
         padding: 25,
+        marginTop: Platform.OS === 'android' ? 40 : 0,
     },
     logoContainer: {
-        marginBottom: 20,
+        marginBottom: Platform.OS === 'android' ? 3 : 20,
         marginTop: -80,
     },
     logo: {
-        width: 170,
-        height: 160,
+        width: Platform.OS === 'android' ? 135 : 170,
+        height: Platform.OS === 'android' ? 170 : 160,
         resizeMode: 'contain',
     },
     mainTitle: {
-        fontSize: 28,
+        fontSize: Platform.OS === 'android' ? 25 :28,
         fontWeight: 'bold',
         color: '#1C3A5F',
         textAlign: 'center',
@@ -243,7 +244,7 @@ const styles = StyleSheet.create({
     actionButton: {
         backgroundColor: '#40C0F0', // Cor do botão de login
         borderRadius: 28,          // Borda arredondada do botão de login
-        paddingVertical: 15,       // Aumentei um pouco para um melhor toque, o do login é 10
+        paddingVertical: Platform.OS === 'android' ? 10 : 15,       // Aumentei um pouco para um melhor toque, o do login é 10
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: 52, // Altura mínima para garantir consistência
@@ -252,11 +253,11 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 }, // Offset da sombra do botão de login
         shadowOpacity: 0.3,        // Opacidade da sombra do botão de login
         shadowRadius: 8,           // Raio da sombra do botão de login
-        elevation: 8,              // Elevação para Android do botão de login
+        elevation: 0,              // Elevação para Android do botão de login
     },
     actionButtonText: {
         color: '#FFFFFF',          // Cor do texto do botão de login
-        fontSize: 16,              // Aumentei para 16, o do login é 14, para se destacar mais
+        fontSize: Platform.OS === 'android' ? 15 : 16,              // Aumentei para 16, o do login é 14, para se destacar mais
         fontWeight: '600',         // Peso da fonte do botão de login
         marginLeft: 8, // Espaçamento entre o ícone e o texto
     },
@@ -264,7 +265,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 30,
+        marginTop: Platform.OS === 'android' ? 8 :  30,
     },
     loginText: {
         fontSize: 15,
