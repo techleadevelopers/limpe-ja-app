@@ -1,8 +1,8 @@
 // LimpeJaApp/app/client/bookings/components/success/MainActionButtons.tsx
-import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { AppColors } from '../../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface MainActionButtonsProps {
   onGoToBookings: () => void;
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 12, // Gap entre botões confortável (era 16, reduzido para compacto mas premium)
     minHeight: 44, // HIG compliance
-    ...AppShadows.medium, // Usando AppShadows
+    
   },
   downloadButtonText: {
     color: AppColors.white, // Usando AppColors
@@ -131,6 +131,6 @@ const styles = StyleSheet.create({
   },
   secondaryDownloadButton: {
     backgroundColor: AppColors.white, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    
   },
 });
