@@ -8,7 +8,7 @@ type Props = {
   onPress: (time: string) => void;
   isAvailable: boolean;
   itemWidth?: number;
-  // Controle de espaçamento existente
+
   isRecommended?: boolean;
   dense?: boolean;
   noHorizontalMargin?: boolean;
@@ -38,34 +38,38 @@ export default function TimeSlotButton({
     }).start();
   };
 
-  // Margem horizontal baseada nas props (compat RN antigos sem 'gap')
-  const horizontalMargin = noHorizontalMargin ? 0 : 4;
+  // ✅ Espaçamento vai no WRAPPER (evita “estourar” e cortar o último item da linha)
+  const horizontalPad = noHorizontalMargin ? 0 : 6;
 
   return (
-    <Animated.View style={{ transform: [{ scale: pressAnim }], width: itemWidth }}>
+    <Animated.View
+      style={[
+        styles.cellWrap,
+        {
+          transform: [{ scale: pressAnim }],
+          paddingHorizontal: horizontalPad,
+          // se você passa itemWidth, ele vira o tamanho da célula
+          width: itemWidth,
+        },
+      ]}
+    >
       <TouchableOpacity
         onPress={() => isAvailable && onPress(time)}
         disabled={!isAvailable}
         style={[
           styles.buttonBase,
-          {
-            marginHorizontal: horizontalMargin,
-            minWidth: dense ? 80 : 84,
-          },
+          // ✅ Botão ocupa a célula inteira (sem marginHorizontal aqui)
+          // ✅ minWidth menor pra não “forçar” o layout a vazar
+          { minWidth: dense ? 72 : 78 },
           !isAvailable ? styles.unavailable : isSelected ? styles.selected : styles.available,
         ]}
         activeOpacity={0.9}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
       >
-        <View>
+        <View style={styles.textRow}>
           <Text
-            style={[
-              styles.text,
-              { marginRight: 4 },
-              isSelected && styles.textSelected,
-              !isAvailable && styles.textUnavailable,
-            ]}
+            style={[styles.text, isSelected && styles.textSelected, !isAvailable && styles.textUnavailable]}
             numberOfLines={1}
             ellipsizeMode="clip"
             maxFontSizeMultiplier={1.1}
@@ -80,6 +84,12 @@ export default function TimeSlotButton({
 }
 
 const styles = StyleSheet.create({
+  // ✅ wrapper “célula”
+  cellWrap: {
+    // ajuda em grids (evita overflow)
+    flexShrink: 1,
+  },
+
   buttonBase: {
     height: 30,
     paddingHorizontal: 12,
@@ -88,27 +98,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
+
+    // ✅ crucial: botão não pode vazar da célula
+    width: '100%',
+    flexShrink: 1,
+
     overflow: 'hidden',
     backgroundColor: AppColors.backgroundLight,
   },
+
+  textRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // ✅ garante centralização real e evita “empurrão” lateral
+    width: '100%',
+  },
+
   available: {
-    ...AppShadows.small,
+    
   },
   selected: {
     backgroundColor: AppColors.primaryInteractive,
-    ...AppShadows.medium,
+    
   },
   unavailable: {
     backgroundColor: AppColors.backgroundNeutral,
     opacity: 0.55,
     borderRadius: 16,
   },
+
   text: {
     fontSize: 12.5,
     fontWeight: '800',
     color: AppColors.textBody,
     letterSpacing: -0.2,
     lineHeight: 16,
+    textAlign: 'center',
   },
   textSelected: {
     color: AppColors.white,
@@ -117,4 +143,3 @@ const styles = StyleSheet.create({
     color: '#a2acbb',
   },
 });
-
