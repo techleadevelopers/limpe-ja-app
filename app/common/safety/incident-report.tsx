@@ -1,25 +1,25 @@
 // LimpeJaApp/app/common/safety/incident-report.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  Animated,
-  Easing,
-  Platform,
-} from 'react-native';
+import { Ionicons } from '@expo/vector-icons'; // Importar Ionicons para o cabeçalho
 import { Picker } from '@react-native-picker/picker';
-import * as ImagePicker from 'expo-image-picker';
 import { useMutation } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Easing,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { reportIncident } from '../../../services/safetyService';
 import { IncidentReportDto, IncidentType } from '../../../types/backend/safety';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons'; // Importar Ionicons para o cabeçalho
 
 export default function IncidentReportScreen() {
   const [incidentType, setIncidentType] = useState<IncidentType>(IncidentType.OTHER);
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
   },
   headerBackButton: {
     marginRight: 15,
