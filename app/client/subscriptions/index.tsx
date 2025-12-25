@@ -1,12 +1,11 @@
 // LimpeJaApp/app/client/subscriptions/index.tsx
-import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getSubscriptionsForUser } from '../../../services/subscriptionService';
 import { Subscription } from '../../../types/backend/subscriptions';
-import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import NotificationUIService from '../../../services/notificationUIService';
+import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 export default function SubscriptionsListScreen() {
   const { data: subscriptions, isLoading, error } = useQuery({
@@ -19,7 +18,7 @@ export default function SubscriptionsListScreen() {
   }
 
   if (error) {
-    NotificationUIService.showError((error as any)?.message || 'Não foi possível carregar suas assinaturas.', 'Erro');
+    toastUserError(error, 'Erro ao carregar assinaturas');
   }
 
   const renderItem = ({ item }: { item: Subscription }) => (
@@ -89,7 +88,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
   },
   cardTitle: {
     fontSize: 18,
