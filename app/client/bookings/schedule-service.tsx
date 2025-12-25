@@ -2,10 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
   Easing,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -16,12 +18,10 @@ import {
   TouchableOpacity,
   View,
   ViewStyle,
-  Modal,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 
-import NotificationUIService from '../../../services/notificationUIService';
 import { getPricingConfig } from '../../../services/configService';
+import NotificationUIService from '../../../services/notificationUIService';
 
 import { useAuth } from '../../../hooks/useAuth';
 import { createBooking } from '../../../services/bookingService';
@@ -29,25 +29,25 @@ import { getProviderAvailability, getProviderDetails } from '../../../services/p
 
 import { BookingAddress, BookingDetails, CreateBookingDto } from '../../../types/backend/bookings';
 import { ProviderAvailability, ProviderDisplayInfo, ProviderServiceOffering } from '../../../types/backend/providers';
-import { UserProfile } from '../../../types/backend/users';
 import { PricingType } from '../../../types/backend/services';
+import { UserProfile } from '../../../types/backend/users';
 import { formatBRL } from '../../../utils/formatters';
 
+import { generateDailySlots } from '../../../utils/timeSlots';
 import { useBookingPricing } from '../../../utils/useBookingPricing';
 import { useCouponValidation } from '../../../utils/useCouponValidation';
-import { generateDailySlots } from '../../../utils/timeSlots';
 
 import AddressSection from '../../../components/client/booking/schedule/AddressSection';
 import ProviderBrief from '../../../components/client/booking/schedule/ProviderBrief';
 import TimeSlotsSection from '../../../components/client/booking/schedule/TimeSlotsSection';
 
-import ScheduleHeader from '../../../components/client/booking/schedule/ScheduleHeader';
-import ScheduleCalendar from '../../../components/client/booking/schedule/ScheduleCalendar';
-import NotesInputSection from '../../../components/client/booking/schedule/NotesInputSection';
 import ConfirmBookingButton from '../../../components/client/booking/schedule/ConfirmBookingButton';
+import NotesInputSection from '../../../components/client/booking/schedule/NotesInputSection';
+import ScheduleCalendar from '../../../components/client/booking/schedule/ScheduleCalendar';
+import ScheduleHeader from '../../../components/client/booking/schedule/ScheduleHeader';
 
-import { AppColors, AppDurations, AppShadows, SCREEN_WIDTH } from '../../../constants/appStyles';
 import { useDevice } from '@/utils/responsive';
+import { AppColors, AppDurations, AppShadows, SCREEN_WIDTH } from '../../../constants/appStyles';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
@@ -2186,11 +2186,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     padding: 6,
     flexDirection: 'row',
-    shadowColor: '#2f3344e8',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.57,
-    shadowRadius: 2,
-    elevation: 6,
+    
     borderWidth: 0.2,
     borderColor: 'rgba(85, 123, 228, 0.86)',
   },
@@ -2229,7 +2225,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    ...AppShadows.medium,
+    
   },
   floatingSummaryContent: {
     flexDirection: 'row',
@@ -2259,7 +2255,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    ...AppShadows.medium,
+    
   },
   safetyBannerLeft: {
     flexDirection: 'row',
@@ -2282,7 +2278,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
@@ -2320,11 +2316,7 @@ const styles = StyleSheet.create({
     padding: 18,
     marginHorizontal: 18,
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
+   
   },
   sectionTitle: {
     fontSize: 20,
@@ -2467,7 +2459,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
       },
       android: {
-        elevation: 4,
+        elevation: 0,
       },
     }),
   },
@@ -2545,11 +2537,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 12,
+   
   },
   modalHeaderRow: {
     flexDirection: 'row',
@@ -2643,7 +2631,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 28 : 24,
     backgroundColor: AppColors.white,
-    ...AppShadows.medium,
+    
   },
   nextStepButton: {
     backgroundColor: AppColors.primaryInteractive,
@@ -2656,18 +2644,17 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     borderRadius: 44,
     overflow: 'hidden',
-    ...AppShadows.medium,
     borderRightWidth: 0,
     borderRightColor: 'transparent',
     borderBottomColor: 'transparent',
     borderBottomWidth: 0,
     borderLeftColor: 'transparent',
     borderLeftWidth: 0,
-    shadowColor: AppColors.black,
+    
   },
   nextStepButtonDisabled: {
     backgroundColor: `${AppColors.primaryInteractive}50`,
-    ...AppShadows.small,
+    
   },
   nextStepButtonText: {
     color: AppColors.white,
@@ -2700,7 +2687,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 0,
   },
   slotBadgeText: {
     color: '#FFFFFF',
