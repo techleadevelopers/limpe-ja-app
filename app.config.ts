@@ -10,14 +10,13 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
 
     name: 'LimpeJá',
     slug: 'limpeja',
-    version: '1.0.11',
+    version: '1.0.13',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'cleaning',
     userInterfaceStyle: 'automatic',
 
     splash: {
-      image: './assets/images/splash.png',
       resizeMode: 'contain',
       backgroundColor: '#ffffff',
     },
@@ -27,7 +26,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.techleadevelopers.limpeja',
-      buildNumber: '16',
+      buildNumber: '18',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription:
@@ -62,15 +61,6 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
       'expo-router',
       'expo-localization',
       'expo-secure-store',
-      [
-        'expo-splash-screen',
-        {
-          image: './assets/images/splash.png',
-          imageWidth: 200,
-          resizeMode: 'contain',
-          backgroundColor: '#ffffff',
-        },
-      ],
       // ✅ Corrige: FirebaseAuth/FirebaseAuthInterop exigem module maps quando integrados como static libs.
       // useFrameworks: "dynamic" (como você já usa) + useModularHeaders: true resolve o erro de pods Swift.
       [
