@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Easing, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import { AppColors, AppShadows } from '../../../../../constants/appStyles';
 import * as Haptics from 'expo-haptics';
 
 interface LoyaltyTeaserSectionProps {
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: 20,
     alignItems: 'center',
-    ...AppShadows.medium,
+    
     overflow: 'hidden',
     borderWidth: 0,
   },
