@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import { QuickActionItem } from '../../../types/provider'; // Ajuste o caminho
 import AnimatedQuickActionButton from './AnimatedQuickActionButton';
 // REMOVIDO: A importação condicional do SkeletonPlaceholder foi removida.
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
       },
       android: {
-        elevation: 5,
+        elevation: 0,
       },
     }),
   },
