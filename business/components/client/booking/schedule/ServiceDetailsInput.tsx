@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { PricingType } from '../../../../types/backend/services'; // Ajuste o path conforme sua estrutura
-import { AppColors } from '../../../../constants/appStyles'; // Ajuste o path
+import { PricingType } from '../../../../../types/backend/services'; // Ajuste o path conforme sua estrutura
+import { AppColors } from '../../../../../constants/appStyles'; // Ajuste o path
 
 type Props = {
   pricingType: PricingType;
