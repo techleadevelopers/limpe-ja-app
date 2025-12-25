@@ -1,4 +1,7 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { Stack, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,18 +16,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
 import Toast from 'react-native-toast-message';
+import ProviderNavBar from '../../../components/provider/navigation/ProviderNavBar';
 import Colors from '../../../constants/Colors';
 import {
-  listProviderPromotions,
   createProviderPromotion,
+  listProviderPromotions,
   updateProviderPromotion,
 } from '../../../services/providerPromotionsService';
 import { ProviderPromotionDto } from '../../../types/backend/providerPromotions';
-import ProviderNavBar from '../../../components/provider/navigation/ProviderNavBar';
+import { getUserMessage } from '../../_shared/errors/uiFeedback';
 
 const PERCENT_OPTIONS = [5, 10, 15, 20];
 const DURATION_OPTIONS = [7, 14, 30];
@@ -67,31 +68,37 @@ const PromotionsScreen = () => {
   const [isVerificationPending, setIsVerificationPending] = useState(false);
   const router = useRouter();
 
-  const resolveErrorMessage = useCallback(
-    (error: unknown, action: 'list' | 'create' | 'toggle') => {
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const loginMessage = 'Faça login novamente.';
-        const verificationMessage =
-          action === 'toggle'
-            ? 'Complete a verificação para ativar promoções.'
-            : 'Complete a verificação para criar/ativar promoções.';
+const resolveErrorMessage = useCallback(
+  (error: unknown, action: 'list' | 'create' | 'toggle') => {
+    const sanitized = getUserMessage(error);
+    if (!axios.isAxiosError(error)) {
+      return sanitized;
+    }
 
-        if (status === 401) {
-          return loginMessage;
-        }
-        if (status === 403) {
-          return action === 'list' ? loginMessage : verificationMessage;
-        }
-        if (status === 400) {
-          return error.response?.data?.message ?? 'Dados inválidos.';
-        }
-        return error.response?.data?.message ?? error.message ?? 'Erro inesperado.';
-      }
-      return 'Erro inesperado.';
-    },
-    [],
-  );
+    const status = error.response?.status;
+    const responseData = error.response?.data;
+    const loginMessage = 'Faça login novamente.';
+    const verificationMessage =
+      action === 'toggle'
+        ? 'Complete a verificação para ativar promoções.'
+        : 'Complete a verificação para criar/ativar promoções.';
+
+    if (status === 401) {
+      return loginMessage;
+    }
+    if (status === 403) {
+      return action === 'list' ? loginMessage : verificationMessage;
+    }
+    const hasServerMessage =
+      typeof responseData === 'object' && responseData !== null && 'message' in responseData;
+    if (status === 400 && !hasServerMessage) {
+      return 'Dados inválidos.';
+    }
+
+    return sanitized;
+  },
+  [],
+);
 
   const loadPromotions = useCallback(
     async (options?: { refreshing?: boolean }) => {
@@ -585,7 +592,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 12,
-    elevation: 3,
+    elevation: 0,
   },
   activeDiscount: {
     fontSize: 40,
@@ -648,7 +655,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.03,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 0,
   },
   emptyActiveTitle: {
     fontSize: 20,
