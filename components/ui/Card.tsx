@@ -1,8 +1,7 @@
 // LimpeJaApp/src/components/ui/Card.tsx
 import React from 'react';
-import { View, StyleSheet, ViewStyle, Pressable, Platform } from 'react-native';
+import { Platform, Pressable, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
 import Colors from '../../constants/Colors';
-import { useColorScheme } from 'react-native';
 
 interface CardProps {
   children: React.ReactNode;
@@ -23,7 +22,7 @@ const Card: React.FC<CardProps> = ({ children, style, onPress }) => {
     },
     Platform.select({
       android: {
-        elevation: 3,
+        elevation: 0,
         shadowColor: 'rgba(0,0,0,0.08)',
       },
       default: {},
@@ -55,7 +54,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.20,
     shadowRadius: 1.41,
-    elevation: 2, // Para Android
+    elevation: 0, // Para Android
     marginBottom: 16, // Espaçamento padrão
   },
   pressed: {
