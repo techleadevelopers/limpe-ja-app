@@ -1,7 +1,7 @@
 // LimpeJaApp/app/client/ofertas/[ofertaId].tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react'; // Adicionado useCallback
+import { useCallback, useEffect, useRef, useState } from 'react'; // Adicionado useCallback
 import {
     ActivityIndicator,
     Alert,
@@ -18,6 +18,7 @@ import {
 import { getOfferDetails } from '../../../services/offerService'; // Importa a função getOfferDetails
 import { Offer } from '../../../types/backend/offers'; // Importa a interface Offer
 import { formatDate } from '../../../utils/helpers'; // Para formatar datas
+import { setSafeError } from '../../_shared/errors/uiFeedback';
 
 // REMOVIDO: interface OfferDetails local
 // REMOVIDO: MOCK_OFFERS
@@ -74,7 +75,7 @@ export default function DetalhesOfertaScreen() {
       }
     } catch (err: any) {
       console.error("[DetalhesOfertaScreen] Erro ao buscar detalhes da oferta:", err.response?.data || err.message);
-      setError(err.response?.data?.message || "Não foi possível carregar os detalhes da oferta.");
+      setSafeError(setError, err);
       setOffer(null);
     } finally {
       setIsLoading(false);
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
   },
   headerBackButton: {
     marginRight: 15,
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
-    elevation: 8,
+    elevation: 0,
   },
   contentContainer: {
     paddingHorizontal: 20,
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
   },
   originalPrice: {
     fontSize: 16,
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
-    elevation: 10,
+    elevation: 0,
   },
   ctaButton: {
     backgroundColor: '#28A745',
@@ -403,7 +404,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 6,
+    elevation: 0,
   },
   ctaButtonText: {
     color: '#FFFFFF',
