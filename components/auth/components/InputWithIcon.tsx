@@ -1,6 +1,6 @@
 // LimpeJaApp/app/auth/components/InputWithIcon.tsx
 import React from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, TextStyle, ViewStyle } from 'react-native'; // Importe TextStyle e ViewStyle
+import { View, TextInput, StyleSheet, TouchableOpacity, TextStyle, ViewStyle, Platform } from 'react-native'; // Importe TextStyle e ViewStyle
 import { Ionicons } from '@expo/vector-icons';
 import { TextInputProps } from 'react-native'; // Importar TextInputProps
 
@@ -68,16 +68,11 @@ const internalStyles = StyleSheet.create({
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: Platform.OS === 'android' ? '#85d0fc34' : '#FFFFFF',
         borderRadius: 28,
         height: 48, // ALTURA FINAL
         bottom: 55,
         marginBottom: 10,
-        shadowColor: 'rgba(100, 100, 150, 0.15)',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 1,
-        shadowRadius: 15,
-        elevation: 5,
         paddingLeft: 5,
         paddingRight: 15,
     },
@@ -88,7 +83,7 @@ const internalStyles = StyleSheet.create({
         borderRadius: 40,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: Platform.OS === 'android' ? '#85d0fc10' : '#FFFFFF',
         marginRight: 10,
     },
     input: {
