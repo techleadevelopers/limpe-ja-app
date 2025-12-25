@@ -1,7 +1,7 @@
 // components/skeletons/ServiceItemSkeleton.tsx
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Dimensions, Platform, StyleSheet, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
         minHeight: 100, // Ensure enough height for the card
         ...Platform.select({
             ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-            android: { elevation: 2 },
+            android: { elevation: 0 },
         }),
     },
     avatarPlaceholder: {
