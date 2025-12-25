@@ -1,7 +1,7 @@
 // app/provider/components/dashboard/LogoutSection.tsx
-import React from 'react';
-import { Text, StyleSheet, TouchableOpacity, Animated, Platform, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 interface LogoutSectionProps {
   contentAnim: Animated.Value;
@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   logoutButton: {
