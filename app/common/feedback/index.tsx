@@ -1,6 +1,6 @@
 // LimpeJaApp/app/common/feedback/index.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type FeedbackProps = {
   message: string;
@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 6,
-    elevation: 2,
+    elevation: 0,
     alignItems: 'center',
   },
   message: {
