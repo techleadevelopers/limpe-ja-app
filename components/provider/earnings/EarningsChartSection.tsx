@@ -1,7 +1,7 @@
 // app/provider/earnings/components/EarningsChartSection.tsx
-import React from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React from 'react';
+import { Animated, Dimensions, Platform, StyleSheet, Text, View } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 
 // Importa a tipagem de ChartData
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         ...Platform.select({
             ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
-            android: { elevation: 4 },
+            android: { elevation: 0 },
         }),
     },
     chartContainer: {
