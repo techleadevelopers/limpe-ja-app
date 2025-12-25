@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, Animated, Easing } from 'react-native';
 import { Icons3D } from '../../../../constants/icons3d';
+import { Platform } from 'react-native';
 
 interface SideIconProps {
   showSecurity?: boolean;
@@ -108,7 +109,7 @@ const SideIcon: React.FC<SideIconProps> = ({
         onPress={onPressSecurity || (() => Alert.alert('Segurança 3D', 'Este provedor passou por verificação de segurança 3D.'))}
       >
         <View style={styles.pulsingIconContainer}>
-          <Image source={Icons3D.facial} style={styles.iconImage} />
+          {/* <Image source={Icons3D.facial} style={styles.iconImage} /> */}
         </View>
       </TouchableOpacity>
       )}
@@ -145,13 +146,13 @@ const styles = StyleSheet.create({
     left: '48%',
   },
   iconImage: {
-    width: 67,
-    height: 67,
+    width: Platform.OS === 'android' ? 50 : 67,
+    height: Platform.OS === 'android' ? 50 : 67,
     resizeMode: 'contain',
     position: 'absolute',
     zIndex: 1,
-    top: '49%',
-    left: '6%',
+    top: Platform.OS === 'android' ? '49%' : '49%',
+    left: Platform.OS === 'android' ? '49%' : '6%',
     transform: [{ translateX: -20 }, { translateY: -20 }],
   },
   iconText: {
