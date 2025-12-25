@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import { Platform } from 'react-native';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 
 interface SecaoPrestadoresProps {
@@ -125,12 +125,14 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   sectionTitle: {
-    fontSize: 15.5,
+  fontSize: Platform.OS === 'android' ? 14 : 15.5,
     fontFamily: 'Montserrat-Regular',
-    fontWeight: '800',
-    marginTop: 20,
-    marginBottom: 0,
-  },
+    fontWeight: '600',
+    color: 'rgba(95, 118, 141, 0.7)',
+    letterSpacing: 0.5,
+  marginTop: 20,
+  marginBottom: 0,
+},
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
