@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AppColors } from '../constants/appStyles';
 
 export interface ServiceCardProps {
@@ -17,7 +17,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ id, name, description, price,
       style={[
         styles.card,
         Platform.OS === 'android' && {
-          elevation: 3,
+          elevation: 0,
           shadowColor: 'rgba(0,0,0,0.08)',
         },
       ]}
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginBottom: 10,
-    elevation: 2,
+    elevation: 0,
   },
   textContainer: {
     flex: 1,
