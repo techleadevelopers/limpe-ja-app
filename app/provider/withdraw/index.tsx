@@ -1,30 +1,31 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Alert,
-  TouchableOpacity,
-  Platform,
-  Animated,
-  KeyboardAvoidingView,
-  ScrollView,
-  ActivityIndicator,
-  Easing,
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics'; // Import para haptics premium (iOS/Android)
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Easing,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Para alinhamento robusto do header (iOS notch/status bar)
 
 // ✅ Importar a tipagem correta
-import { RequestWithdrawalDto, PixKeyType } from '../../../types/backend/payments';
+import { PixKeyType, RequestWithdrawalDto } from '../../../types/backend/payments';
 
 // 🔗 Importar serviços reais
-import { requestWithdrawal } from '../../../services/paymentService';
 import { api } from '../../../services/api';
 import NotificationUIService from '../../../services/notificationUIService'; // Para toasts premium
+import { requestWithdrawal } from '../../../services/paymentService';
+import { setSafeError, toastUserError } from '../../_shared/errors/uiFeedback';
 
 // ===== Design Tokens (Premium UI - Clean, iOS/Android consistente) =====
 const Colors = {
@@ -316,17 +317,16 @@ export default function WithdrawScreen() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); // Haptic premium para sucesso (iOS)
         }
       }
-    } catch (error: any) {
-      console.error('Erro ao solicitar saque:', error);
-      if (isMounted.current) {
-        const errorMsg = error?.response?.data?.message || error?.message || 'Não foi possível processar o saque. Verifique os dados e tente novamente.';
-        setFormError(errorMsg);
-        NotificationUIService.showError(errorMsg, 'Erro no Saque');
-        if (Platform.OS === 'ios') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); // Haptic para erro
+      } catch (error: any) {
+        console.error('Erro ao solicitar saque:', error);
+        if (isMounted.current) {
+          setSafeError(setFormError, error);
+          toastUserError(error, 'Erro no Saque');
+          if (Platform.OS === 'ios') {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); // Haptic para erro
+          }
         }
-      }
-    } finally {
+      } finally {
       if (isMounted.current) {
         setIsProcessingWithdrawal(false);
       }
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 4,
+        elevation: 0,
       },
     }),
   },
@@ -788,7 +788,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
       },
       android: {
-        elevation: 4,
+        elevation: 0,
       },
     }),
   },
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
         shadowRadius: 16,
       },
       android: {
-        elevation: 6,
+        elevation: 0,
       },
     }),
   },
@@ -997,7 +997,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
@@ -1098,7 +1098,7 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
       },
       android: {
-        elevation: 6,
+        elevation: 0,
       },
     }),
   },
