@@ -1,40 +1,40 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  Text,
-  Animated,
-  Easing,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  Platform,
-  ActivityIndicator,
-  RefreshControl,
-  useColorScheme,
-  Dimensions,
-  Switch,
-  Image,
-  ImageSourcePropType,
-  AccessibilityInfo,
-} from 'react-native';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+    AccessibilityInfo,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Dimensions,
+    Easing,
+    Image,
+    ImageSourcePropType,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    useColorScheme,
+    View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  claimMission,
-  getMyMissions,
-  MissionItem as MissionItemType,
-  MissionStatus,
-  MissionAudience,
-} from '../../../services/missionService';
 import Toast from '../../../components/Toast';
 import MissionList from '../../../components/missions/MissionList';
-import { MissionReminderCard } from '../../../components/missions/MissionReminderCard';
 import { MissionProgressSnack } from '../../../components/missions/MissionProgressSnack';
+import { MissionReminderCard } from '../../../components/missions/MissionReminderCard';
+import {
+    claimMission,
+    getMyMissions,
+    MissionAudience,
+    MissionItem as MissionItemType,
+    MissionStatus,
+} from '../../../services/missionService';
 
 import Colors from '../../../constants/Colors';
 
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFF',
     padding: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 6,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 0,
   },
   discountHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   discountBadge: { width: 52, height: 52, borderRadius: 12, backgroundColor: '#F3F6FA', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   useDiscountBtn: { marginTop: 14, backgroundColor: '#0A84FF', borderRadius: 12, paddingVertical: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
   useDiscountText: { color: '#FFFFFF', fontWeight: '800' },
 
-  prefsCard: { marginHorizontal: 16, marginTop: 16, borderRadius: 16, backgroundColor: '#FFF', padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 4 },
+  prefsCard: { marginHorizontal: 16, marginTop: 16, borderRadius: 16, backgroundColor: '#FFF', padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 0 },
   prefsTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
   prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
   prefIconWrap: { width: 34, alignItems: 'center' },
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
   prefTitle: { fontWeight: '700' },
   prefSubtitle: { fontSize: 12, color: '#6B7280', marginTop: 4 },
 
-  howCard: { marginHorizontal: 16, marginTop: 16, borderRadius: 16, backgroundColor: '#FFF', padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 4 },
+  howCard: { marginHorizontal: 16, marginTop: 16, borderRadius: 16, backgroundColor: '#FFF', padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 0 },
   howTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
   howItem: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   howText: { color: '#374151', flex: 1 },
