@@ -1,37 +1,37 @@
+import * as Sentry from '@sentry/react-native';
+import Constants from 'expo-constants';
+import * as Font from 'expo-font';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Slot, SplashScreen, usePathname, useRouter, useSegments } from 'expo-router';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { I18nextProvider, useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
+    Alert,
+    Animated,
+    LogBox,
+    Platform,
     StyleSheet,
     Text,
-    View,
-    Animated,
     TouchableOpacity,
-    Platform,
-    Alert,
-    LogBox,
+    View,
 } from 'react-native';
 import 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { io } from 'socket.io-client';
-import Constants from 'expo-constants';
+import PaymentConfirmedOverlay from "../components/global/PaymentConfirmedOverlay"; // 🔵 ADICIONADO
+import AppQueryClientProvider from '../components/provider/query-client-provider';
+import { toastConfig } from '../components/Toast';
+import { AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES } from '../constants/routes';
 import { AppProvider } from '../contexts/AppContext';
-import PaymentConfirmedOverlay from "../components/global/PaymentConfirmedOverlay";  // 🔵 ADICIONADO
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ProviderRegistrationProvider } from '../contexts/ProviderRegistrationContext';
-import { AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES } from '../constants/routes';
-import { UserRole, VerificationStatus } from '../types/backend/auth';
-import * as Sentry from '@sentry/react-native';
-import Toast from 'react-native-toast-message';
-import { toastConfig } from '../components/Toast';
-import i18n from '../i18n';
-import { I18nextProvider, useTranslation } from 'react-i18next';
 import { OverlayPortal } from '../hooks/useOverlayMessage';
-import * as Font from 'expo-font';
-import NotificationUIService from '../services/notificationUIService';
-import AppQueryClientProvider from '../components/provider/query-client-provider';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import i18n from '../i18n';
 import { getBookingsForUser } from '../services/bookingService';
+import NotificationUIService from '../services/notificationUIService';
+import { UserRole, VerificationStatus } from '../types/backend/auth';
 import { BookingDetails, BookingStatus } from '../types/backend/bookings';
 // Optional local notifications setup (Android channel) â€“ safe, no-op on iOS if unavailable
 let setupNotificationsOnce: (() => Promise<void>) | null = (async () => {
@@ -70,7 +70,11 @@ function minutesBetween(a: Date, b: Date): number {
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient as any);
 
-function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
+function FloatingActiveServicePill({
+    enabled,
+}: {
+    enabled: boolean;
+}): React.ReactElement | null {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [booking, setBooking] = React.useState<BookingDetails | null>(null);
@@ -177,7 +181,7 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
             overflow: 'hidden',
             ...Platform.select({
               ios: { shadowColor: '#000', shadowOpacity: 0.12, shadowOffset: { width: 0, height: 6 }, shadowRadius: 12 },
-              android: { elevation: 3, shadowColor: 'rgba(0,0,0,0.08)' },
+              android: { elevation: 0, shadowColor: 'rgba(0,0,0,0.08)' },
             }),
           }}
         >
