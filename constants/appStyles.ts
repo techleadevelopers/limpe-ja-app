@@ -45,14 +45,14 @@ export const AppShadows = {
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
   } as ViewStyle, // Explicitamente tipado como ViewStyle
   medium: {
     shadowColor: AppColors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
-    elevation: 8,
+    elevation: 0,
   } as ViewStyle, // Explicitamente tipado como ViewStyle
   large: Platform.select({ // Adicionado: Sombra grande
     ios: {
@@ -62,7 +62,7 @@ export const AppShadows = {
       shadowRadius: 15,
     },
     android: {
-      elevation: 12,
+      elevation: 0,
     },
   }) as ViewStyle, // Explicitamente tipado como ViewStyle
   
@@ -72,7 +72,7 @@ export const AppShadows = {
     shadowOffset: { width: 0, height: 6 }, // Maior deslocamento para sensação flutuante
     shadowOpacity: 0.1, // Opacidade reduzida para sutileza
     shadowRadius: 14, // Raio maior para suavidade máxima e visual "confortável"
-    elevation: 10, // Equivalente Android
+    elevation: 0, // Equivalente Android
   } as ViewStyle,
 };
 
@@ -105,4 +105,5 @@ export const AppTypography = {
 };
 
 
-export { SCREEN_WIDTH, SCREEN_HEIGHT };
+export { SCREEN_HEIGHT, SCREEN_WIDTH };
+
