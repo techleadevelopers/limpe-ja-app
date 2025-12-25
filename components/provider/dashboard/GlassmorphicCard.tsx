@@ -1,16 +1,16 @@
 // LimpeJaApp/app/provider/components/dashboard/GlassmorphicCard.tsx
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Certifique-se de que está instalado
+import { BlurView } from 'expo-blur'; // Certifique-se de que está instalado
+import { LinearGradient } from 'expo-linear-gradient'; // Certifique-se de que está instalado
 import React, { useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Platform,
+    Animated,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Certifique-se de que está instalado
-import { LinearGradient } from 'expo-linear-gradient'; // Certifique-se de que está instalado
-import { BlurView } from 'expo-blur'; // Certifique-se de que está instalado
 
 // Definindo os tipos para as props do GlassmorphicCard
 export interface GlassmorphicCardProps {
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
       },
       android: {
-        elevation: 10, // Sombra para Android
+        elevation: 0, // Sombra para Android
       },
     }),
   },
