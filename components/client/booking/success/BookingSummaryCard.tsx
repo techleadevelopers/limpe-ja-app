@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 12,
     alignSelf: 'center',
-    ...AppShadows.medium,
+    
   },
   cardContentNew: {
     padding: 25, // Padding interno premium (confortável, 44px+ touch)
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    ...AppShadows.small, // Sombra leve para elevação
+    
   },
   totalLabel: {
     fontSize: 16,
