@@ -1,7 +1,7 @@
 // app/provider/schedule/components/SaveChangesButton.tsx
-import React, { useRef } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React, { useRef } from 'react';
+import { ActivityIndicator, Animated, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 interface SaveChangesButtonProps {
   isSaving: boolean;
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   saveButtonDisabled: {
