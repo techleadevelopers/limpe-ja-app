@@ -3,19 +3,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'; // Adicionado useRouter
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  Animated, // Importado para animações
-  Easing, // Importado para easing das animações
-  Image, // Importado para exibir avatar no cabeçalho
+    ActivityIndicator,
+    Alert,
+    Animated, // Importado para animações
+    Easing,
+    FlatList, // Importado para easing das animações
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { io, Socket } from 'socket.io-client';
 import { appConfig } from '../../../config/appConfig';
@@ -24,6 +24,7 @@ import { getBookingDetails } from '../../../services/bookingService';
 import { getChatMessages, sendMessage as sendChatMessage } from '../../../services/chatService';
 import { BookingStatus } from '../../../types/backend/bookings';
 import { Message, SendMessageDto } from '../../../types/backend/chat';
+import { alertUserError, getUserMessage } from '../../_shared/errors/uiFeedback';
 
 const SOCKET_URL = appConfig.apiUrl.replace('http', 'ws');
 
@@ -110,8 +111,9 @@ export default function ProviderChatScreen() { // Renomeado para ProviderChatScr
         }
       } catch (error: any) {
         console.error('ProviderChatScreen: Erro ao carregar mensagens ou verificar agendamento:', error);
+        const normalized = getUserMessage(error);
         if (error.message.includes("Não é possível acessar esta conversa") || error.message.includes("Não é possível enviar mensagens")) {
-          setChatBlockedMessage(error.message);
+          setChatBlockedMessage(normalized);
         } else {
           Alert.alert('Erro', 'Não foi possível carregar as mensagens do chat.');
           setChatBlockedMessage("Não foi possível carregar as mensagens.");
@@ -214,10 +216,11 @@ export default function ProviderChatScreen() { // Renomeado para ProviderChatScr
 
     } catch (error: any) {
       console.error('ProviderChatScreen: Erro ao enviar mensagem:', error);
+      const normalized = getUserMessage(error);
       if (error.message.includes("Não é possível enviar mensagens")) {
-        setChatBlockedMessage(error.message);
+        setChatBlockedMessage(normalized);
       } else {
-        Alert.alert('Erro', error.message || 'Não foi possível enviar a mensagem.');
+        alertUserError(error, 'Erro ao enviar mensagem');
       }
     }
   }, [inputText, user, chatId, recipientId, chatBlockedMessage]);
@@ -386,7 +389,7 @@ const chatStyles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 0,
   },
   headerButton: {
     padding: 5,
@@ -463,7 +466,7 @@ const chatStyles = StyleSheet.create({
         shadowRadius: 2,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
@@ -509,7 +512,7 @@ const chatStyles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 8,
+        elevation: 0,
       },
     }),
   },
