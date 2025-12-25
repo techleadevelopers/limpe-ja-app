@@ -1,9 +1,9 @@
 // app/provider/components/dashboard/UpcomingServiceItem.tsx
-import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Alert } from 'react-native';
-import { BookingDetails } from '../../../types/backend/bookings';
-import Toast from 'react-native-toast-message'; // Supondo a instalação de uma biblioteca de Toast
 import { Ionicons } from '@expo/vector-icons';
+import React, { useRef } from 'react';
+import { Alert, Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Toast from 'react-native-toast-message'; // Supondo a instalação de uma biblioteca de Toast
+import { BookingDetails } from '../../../types/backend/bookings';
 
 interface UpcomingServiceItemProps {
   booking: BookingDetails; // CORRIGIDO: Usar BookingDetails
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
     overflow: 'hidden', // Para o indicador iminente
   },
