@@ -1,8 +1,8 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import UpcomingServiceItem from './UpcomingServiceItem';
+import React, { useRef } from 'react';
+import { Animated, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings'; // CORRIGIDO: Importação e uso de BookingDetails
+import UpcomingServiceItem from './UpcomingServiceItem';
 
 interface UpcomingServicesSectionProps {
   contentAnim: Animated.Value;
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   sectionTitle: {
