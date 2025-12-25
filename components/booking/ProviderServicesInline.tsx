@@ -1,9 +1,8 @@
 // app/components/booking/ProviderServicesInline.tsx
-import React from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/appStyles';
 import type { ProviderServiceOffering } from '@/types/backend/provider-service';
+import { Ionicons } from '@expo/vector-icons';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 /**
  * Lista horizontal de serviços do mesmo provedor (upsell).
@@ -85,7 +84,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 0,
   },
   row: { flexDirection: 'row', alignItems: 'center' },
   name: {
