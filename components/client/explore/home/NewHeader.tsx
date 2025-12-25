@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getMyNotifications } from '../../../../services/notificationService';
 import { useAuth } from '../../../../hooks/useAuth';
+import { useAndroidDialog } from '../../../../hooks/useAndroidDialog';
 
 interface NewHeaderProps {
   userName: string;
@@ -59,19 +60,31 @@ const NewHeader: React.FC<NewHeaderProps> = ({
 
   const effectiveVisitor = isVisitor || !isAuthenticated;
 
+  const { showDialog, dialogElement } = useAndroidDialog();
+
   const handleNotificationPress = () => {
     if (effectiveVisitor) {
-      Alert.alert(
-        'Cadastro necessário',
-        'Crie seu cadastro para agendar serviços de limpeza',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Continuar',
-            onPress: () => router.push('/auth/client-register' as any),
-          },
-        ]
-      );
+      if (Platform.OS === 'android') {
+        showDialog({
+          title: 'Cadastro necessário',
+          message: 'Crie seu cadastro para agendar serviços de limpeza',
+          cancelLabel: 'Cancelar',
+          confirmLabel: 'Continuar',
+          onConfirm: () => router.push('/auth/client-register' as any),
+        });
+      } else {
+        Alert.alert(
+          'Cadastro necessário',
+          'Crie seu cadastro para agendar serviços de limpeza',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Continuar',
+              onPress: () => router.push('/auth/client-register' as any),
+            },
+          ]
+        );
+      }
       return;
     }
     router.push('/client/notifications' as any);
@@ -109,10 +122,11 @@ const NewHeader: React.FC<NewHeaderProps> = ({
   );
 
   return (
-    <LinearGradient
-      colors={['transparent', 'transparent']}
-      style={[styles.container, { marginTop: insets.top - 29 }]}
-    >
+    <>
+      <LinearGradient
+        colors={['transparent', 'transparent']}
+        style={[styles.container, { marginTop: insets.top - 29 }]}
+      >
       {/* ESQUERDA – PERFIL */}
       <View style={styles.leftContent}>
         <Animated.View style={{ transform: [{ scale: avatarScale }] }}>
@@ -175,7 +189,9 @@ const NewHeader: React.FC<NewHeaderProps> = ({
           </TouchableOpacity>
         </Animated.View>
       </View>
-    </LinearGradient>
+      </LinearGradient>
+      {dialogElement}
+    </>
   );
 };
 
@@ -188,21 +204,20 @@ const getGreeting = () => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: Constants.statusBarHeight - 180,
+    paddingVertical: Platform.OS === 'android' ? 13 : -180,
     left: 3,
-    top: 0,
-    marginHorizontal: 12,
-    paddingHorizontal: 9,
+    top: Platform.OS === 'android' ? 7 : 0,
+    marginHorizontal: Platform.OS === 'android' ? 10 : 12,
+    paddingHorizontal: Platform.OS === 'android' ? 7 : 9,
     borderBottomEndRadius: 40,
     borderBottomStartRadius: 40,
     borderTopEndRadius: 40,
     borderTopStartRadius: 40,
-    marginBottom: -8,
+    marginBottom: Platform.OS === 'android' ? -25 : -8,
 
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 6,
     overflow: 'hidden',
   },
   iconBare: {
@@ -220,8 +235,8 @@ const styles = StyleSheet.create({
 
   /* 🔥 NOVO ESTILO: IGUAL FUNDO DOS CARDS */
   fixedCircle: {
-    width: 38,
-    height: 38,
+    width: Platform.OS === 'android' ? 36 : 38,
+    height: Platform.OS === 'android' ? 36 : 38,
     borderRadius: 20,
 
     backgroundColor: '#e0e8f5ff', // mesmo fundo dos cards
@@ -264,23 +279,23 @@ const styles = StyleSheet.create({
   },
 
   greetingText: {
-    fontSize: 15,
-    marginLeft: 5,
+    fontSize: Platform.OS === 'android' ? 12 : 15,
+    marginLeft: Platform.OS === 'android' ? 2 : 5,
     color: '#8d9fafff',
-    fontWeight: Platform.select({ ios: '300', android: '900' }),
+    fontWeight: Platform.select({ ios: '300', android: '300' }),
   },
 
   userNameText: {
-    fontSize: 19.5,
-    marginLeft: 5,
+    fontSize: Platform.OS === 'android' ? 17 : 19.5,
+    marginLeft: Platform.OS === 'android' ? 2 : 5,
     fontFamily: Platform.select({
       ios: 'Roboto',
-      android: 'Montserrat-Thin',
+      android: 'Montserrat-Regular',
     }),
     color: '#7398b9ff',
     fontWeight: Platform.select({
       ios: '400',
-      android: 'bold',
+      android: '600',
     }),
   },
 });
