@@ -1,10 +1,10 @@
 // LimpeJaApp/app/client/bookings/components/success/ProviderInfoSection.tsx
 import React, { useEffect, useRef } from 'react';
 import { Image, StyleSheet, Text, View, Animated, Easing, Platform } from 'react-native';
-import { renderStars } from '../../../../utils/ui-helpers'; // Assumindo que renderStars está aqui
-import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
-import { sanitizeText } from '../../../../utils/formatters'; // Importar sanitizeText
-import { useProviderMetrics } from '../../../../hooks/useProviderMetrics';
+import { renderStars } from '../../../../../utils/ui-helpers'; // Assumindo que renderStars está aqui
+import { AppColors } from '../../../../../constants/appStyles'; // Importe AppColors
+import { sanitizeText } from '../../../../../utils/formatters'; // Importar sanitizeText
+import { useProviderMetrics } from '../../../../../hooks/useProviderMetrics';
 
 interface ProviderMetrics {
   acceptanceRate?: number | null;
