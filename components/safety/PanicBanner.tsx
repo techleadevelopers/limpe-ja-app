@@ -1,20 +1,20 @@
 // components/safety/PanicBanner.tsx
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  Linking,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  Image,
-  useColorScheme,
-  ViewStyle,
-} from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    Animated,
+    Easing,
+    Image,
+    Linking,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    useColorScheme,
+    View,
+    ViewStyle,
+} from 'react-native';
 
 import Colors from '@constants/Colors';
 import { Icons3D } from '../../constants/icons3d';
@@ -139,7 +139,7 @@ export const PanicBanner: React.FC<PanicBannerProps> = ({
       style={[
         styles.wrap,
         compact ? styles.wrapCompact : styles.wrapLarge,
-        Platform.select({ android: { elevation: 8 } }),
+        Platform.select({ android: { elevation: 0 } }),
         style,
       ]}
     >
