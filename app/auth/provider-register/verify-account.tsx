@@ -325,8 +325,8 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     splashLogo: {
-        width: 250,
-        height: 250,
+        width: 150,
+        height: 150,
         resizeMode: 'contain',
         marginBottom: 20,
     },
