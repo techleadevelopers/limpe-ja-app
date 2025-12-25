@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         ...Platform.select({
             ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 },
-            android: { elevation: 8 },
+            android: { elevation: 0 },
         }),
     },
     transactionsListContent: {
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
         ...Platform.select({
             ios: { shadowColor: ICON_PRIMARY, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6 },
-            android: { elevation: 6, backgroundColor: ICON_PRIMARY },
+            android: { elevation: 0, backgroundColor: ICON_PRIMARY },
         }),
     },
     emptyStateButtonText: {
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
         backgroundColor: PRIMARY_LIGHT, // Usando a constante PRIMARY_LIGHT
         ...Platform.select({
             ios: { shadowColor: ICON_PRIMARY, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
-            android: { elevation: 3 },
+            android: { elevation: 0 },
         }),
     },
     viewAllTransactionsButtonText: {
