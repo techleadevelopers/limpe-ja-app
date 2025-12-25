@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
       },
       android: {
-        elevation: 12,
+        elevation: 0,
       },
     }),
   },
@@ -434,13 +434,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
+    borderWidth: Platform.OS === 'android' ? 0 : 1,
     borderColor: BORDER_SUBTLE,
     position: 'relative',
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 5 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   requestItemPendingIndicator: {
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
   },
   chatButton: {
     backgroundColor: WHITE,
-    borderWidth: 1.5,
+    borderWidth: Platform.OS === 'android' ? 0 : 1.5,
     borderColor: ICON_PRIMARY,
     paddingHorizontal: 12,
   },
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
   },
   detailsButton: {
     backgroundColor: BACKGROUND_ALT,
-    borderWidth: 1.5,
+    borderWidth: Platform.OS === 'android' ? 0 : 1.5,
     borderColor: ICON_PRIMARY,
   },
   actionButtonTextWhite: {
@@ -555,11 +555,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: Platform.OS === 'android' ? 0 : 1,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   serviceItemContent:{
@@ -595,11 +595,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginTop: 15,
-    borderWidth: 1,
+    borderWidth: Platform.OS === 'android' ? 0 : 1,
     borderColor: BORDER_SUBTLE,
       ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   messageLinkContent: {
