@@ -3,12 +3,12 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { DocumentPhotoType } from '../../../../types/backend/verification';
 import AnimatedErrorMessage from '../../../../components/schedule/manager/AnimatedErrorMessage';
 import colors from '../../../../constants/Colors';
 import { SIZES } from '../../../../constants/theme';
 import verificationService from '../../../../services/verificationService';
-import { showUserError } from '../../_shared/errors/userError';
+import { DocumentPhotoType } from '../../../../types/backend/verification';
+import { showUserError } from '../../../_shared/errors/userError';
 
 const PARTE_FRENTE_IMAGE = require('../../../../assets/images/partefrente.png');
 const PARTE_TRAS_IMAGE = require('../../../../assets/images/partetras.png');
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    elevation: 4,
+    elevation: 0,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.primaryLight,
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 0,
   },
   uploadButtonText: {
     color: '#FFFFFF',
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 0,
     marginTop: SIZES.paddingSmall,
   },
   submitButtonText: {
