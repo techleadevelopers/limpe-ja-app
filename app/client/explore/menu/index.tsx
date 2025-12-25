@@ -1,25 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  AccessibilityInfo,
-  Animated,
-  Dimensions,
-  Easing,
-  Image,
-  ImageSourcePropType,
-  Platform,
-  Pressable,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useColorScheme,
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import {
+    AccessibilityInfo,
+    Animated,
+    Dimensions,
+    Easing,
+    Image,
+    ImageSourcePropType,
+    Platform,
+    Pressable,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useColorScheme,
+} from 'react-native';
 import NavBar from '../../../../components/client/explore/home/NavBar';
 
 import Colors from '../../../../constants/Colors';
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
