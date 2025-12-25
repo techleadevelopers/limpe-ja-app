@@ -164,7 +164,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
-    ...AppShadows.medium,
     paddingBottom: 20,
   },
   securityImage: {
