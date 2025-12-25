@@ -1,21 +1,21 @@
-import React, { useRef, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  ImageBackground,
-  Dimensions,
-  Easing,
-  Platform,
-} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    Animated,
+    Dimensions,
+    Easing,
+    ImageBackground,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const bannerImages = [
-  require('../../../../assets/images/banner6.png'),
-  require('../../../../assets/images/banner4.png'),
-  require('../../../../assets/images/banner3.png'),
+  require('../../../../../assets/images/banner6.png'),
+  require('../../../../../assets/images/banner4.png'),
+  require('../../../../../assets/images/banner3.png'),
 ];
 
 interface CarouselBannerItemProps {
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 4 },
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   imageWrapper: { flex: 1 },
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         shadowOffset: { width: 0, height: 1 },
       },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   buttonText: { fontSize: 9, fontWeight: '700', color: '#5f7fff' },
