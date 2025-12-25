@@ -1,31 +1,31 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Platform,
-  RefreshControl,
-  Animated,
-  Easing,
-  TouchableOpacity,
-  useColorScheme,
-  ActivityIndicator,
-  FlatList,
-  Share,
-  Image,
-  ImageSourcePropType,
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Animated,
+    Easing,
+    FlatList,
+    Image,
+    ImageSourcePropType,
+    Platform,
+    RefreshControl,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useColorScheme,
+    View,
+} from 'react-native';
 
 import Colors from '../../../constants/Colors';
 import RankingService from '../../../services/rankingService';
-import type { LeaderboardPeriod, LeaderboardEntry } from '../../../types/backend/ranking';
+import type { LeaderboardEntry, LeaderboardPeriod } from '../../../types/backend/ranking';
 
 // seus componentes existentes
-import RankingCard from '../../../components/ranking/RankingCard';
 import { RankingBadge } from '../../../components/ranking/RankingBadge';
+import RankingCard from '../../../components/ranking/RankingCard';
 import { SLAResponseChip } from '../../../components/ranking/SLAResponseChip';
 
 // ---------- 3D Icons ----------
@@ -332,7 +332,7 @@ export default function RankingScreen() {
                 shadowRadius: 10,
               },
               android: { // Sombra robusta para Android
-                elevation: 15,
+                elevation: 0,
               },
             }),
           },
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 8 } },
-      android: { elevation: 10 },
+      android: { elevation: 0 },
     }),
   },
   myRankText: { color: '#FFF', marginLeft: 6 },
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10, // Raio da sombra ajustado para React Native (o 32px do CSS é muito grande)
       },
       android: {
-        elevation: 15, // Elevação para Android para simular sombra
+        elevation: 0, // Elevação para Android para simular sombra
       },
     }),
   },
