@@ -1,8 +1,8 @@
 // app/provider/components/dashboard/DashboardLoadingIndicator.tsx
-import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Animated, Platform } from 'react-native';
-import { Stack } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Stack } from 'expo-router';
+import React from 'react';
+import { ActivityIndicator, Animated, Platform, StyleSheet, Text, View } from 'react-native';
 
 interface DashboardLoadingIndicatorProps {
   headerAnim: Animated.Value;
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 0,
     position: 'relative',
     overflow: 'hidden',
   },
