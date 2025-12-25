@@ -1,8 +1,7 @@
 // LimpeJaApp/app/auth/components/InputWithIcon.tsx
-import React from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, TextStyle, ViewStyle } from 'react-native'; // Importe TextStyle e ViewStyle
 import { Ionicons } from '@expo/vector-icons';
-import { TextInputProps } from 'react-native'; // Importar TextInputProps
+import React from 'react';
+import { StyleSheet, TextInput, TextInputProps, TouchableOpacity, View, ViewStyle } from 'react-native'; // Importe TextStyle e ViewStyle
 
 // A interface InputWithIconProps agora estende TextInputProps.
 interface InputWithIconProps extends TextInputProps { // <-- AQUI ESTÁ A MUDANÇA PRINCIPAL
@@ -77,7 +76,7 @@ const internalStyles = StyleSheet.create({
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 1,
         shadowRadius: 15,
-        elevation: 5,
+        elevation: 0,
         paddingLeft: 5,
         paddingRight: 15,
     },
