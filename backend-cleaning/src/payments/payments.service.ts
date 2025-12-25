@@ -37,6 +37,8 @@ import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 import { CouponsService } from '../coupons/coupons.service';
 import { PayoutsService } from '../payouts/payouts.service';
 import { ConnectService } from '../connect/connect.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { CreateNotificationDto } from '../notifications/dto/create-notification.dto';
 import { PaymentIntentLocker } from './payment-intent-locker';
 
 // 1. Definição do Tipo (Recomendado para corrigir o Erro 2339)
@@ -142,6 +144,7 @@ export class PaymentsService {
     private readonly couponsService: CouponsService,
     private readonly payoutsService: PayoutsService,
     private readonly queues: QueuesService,
+    private readonly notificationsService: NotificationsService,
     private readonly connectService: ConnectService,
   ) {
     this.pagseguroApiToken =
@@ -237,6 +240,7 @@ export class PaymentsService {
     ];
     let shouldNotifyPaymentConfirmed = false;
     let bookingForNotification: BookingWithUsers | null = null;
+    let bookingIdToConfirm: string | null = null;
 
     if (
       payload.event === 'charge.paid' ||
@@ -286,11 +290,8 @@ export class PaymentsService {
               return;
             }
 
-            // Garante que o status do booking seja CONFIRMED
-            await tx.booking.update({
-              where: { id: booking.id },
-              data: { status: BookingStatus.CONFIRMED },
-            });
+            // Agendar confirmation via BookingsService após a transação
+            bookingIdToConfirm ??= booking.id;
 
             this.logger.log(
               `[PaymentsService] Pagamento ${externalRef} para o agendamento ${booking.id} CONFIRMADO.`,
@@ -354,6 +355,20 @@ export class PaymentsService {
             `[PaymentsService] Webhook para ref ${externalRef} recebido, mas PaymentIntent não encontrado.`,
           );
         }
+        if (bookingIdToConfirm) {
+          try {
+            await this.bookingsService.systemChangeStatus(
+              bookingIdToConfirm,
+              BookingStatus.CONFIRMED,
+            );
+          } catch (err) {
+            this.logger.warn(
+              `[PaymentsService] Falha ao confirmar booking ${bookingIdToConfirm} via BookingsService: ${err?.message || err}`,
+            );
+          } finally {
+            bookingIdToConfirm = null;
+          }
+        }
       }
     }
 
@@ -386,6 +401,7 @@ export class PaymentsService {
           idempotencyKey: `notif:payment_confirmed:provider:${b.id}`,
         });
       }
+      await this.persistPaymentConfirmedNotification(b);
     }
 
     // Falha de pagamento: marca intent como FAILED e notifica cliente
@@ -572,54 +588,61 @@ export class PaymentsService {
     }
   }
 
-  async confirmPixPayment(referenceId: string) {
-    this.logger.log('>>> CONFIRMANDO PIX PARA REFERENCE:', referenceId);
-
-    if (!referenceId) {
-      this.logger.warn('confirmPixPayment chamado sem referenceId');
-      return;
-    }
-
-    const intent = await this.prisma.paymentIntent.findFirst({
-      where: {
-        OR: [
-          { externalOrderId: referenceId },
-          { externalChargeId: referenceId },
-        ],
-      },
-    });
-
-    if (!intent) {
-      this.logger.warn(
-        'Nenhum PaymentIntent encontrado para referência:',
-        referenceId,
-      );
-      return;
-    }
-
-    // A lógica de ledger foi movida para handlePaymentWebhook para generalidade.
-    // Aqui, apenas confirmamos o booking, se ainda não estiver confirmado.
-    const booking = await this.prisma.booking.findUnique({
-      where: { id: intent.bookingId },
-      select: { status: true }, // Apenas o status para verificar
-    });
-
-    if (booking && booking.status !== BookingStatus.CONFIRMED) {
-      await this.prisma.booking.update({
-        where: { id: intent.bookingId },
-        data: { status: BookingStatus.CONFIRMED },
-      });
-      this.logger.log('✓ Booking confirmado via PIX:', intent.bookingId);
-    } else if (booking) {
-      this.logger.log(
-        `Booking ${intent.bookingId} já está CONFIRMED. Nenhuma ação necessária.`,
-      );
-    } else {
-      this.logger.warn(
-        `Booking ${intent.bookingId} não encontrado ao tentar confirmar PIX.`,
-      );
-    }
-  }
+
+  async confirmPixPayment(referenceId: string) {
+    this.logger.log('>>> CONFIRMANDO PIX PARA REFERENCE:', referenceId);
+
+    if (!referenceId) {
+      this.logger.warn('confirmPixPayment chamado sem referenceId');
+      return;
+    }
+
+    const intent = await this.prisma.paymentIntent.findFirst({
+      where: {
+        OR: [
+          { externalOrderId: referenceId },
+          { externalChargeId: referenceId },
+        ],
+      },
+    });
+
+    if (!intent) {
+      this.logger.warn(
+        'Nenhum PaymentIntent encontrado para referencia:',
+        referenceId,
+      );
+      return;
+    }
+
+    // A lógica de ledger foi movida para handlePaymentWebhook para generalidade.
+    // Aqui, apenas confirmamos o booking, se ainda nao estiver confirmado.
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: intent.bookingId },
+      select: { status: true }, // Apenas o status para verificar
+    });
+
+    if (booking && booking.status !== BookingStatus.CONFIRMED) {
+      try {
+        await this.bookingsService.systemChangeStatus(
+          intent.bookingId,
+          BookingStatus.CONFIRMED,
+        );
+        this.logger.log('? Booking confirmado via PIX:', intent.bookingId);
+      } catch (err) {
+        this.logger.warn(
+          `[PaymentsService] Falha ao confirmar booking ${intent.bookingId} via BookingsService: ${err?.message || err}`,
+        );
+      }
+    } else if (booking) {
+      this.logger.log(
+        `Booking ${intent.bookingId} já está CONFIRMED. Nenhuma açao necessária.`,
+      );
+    } else {
+      this.logger.warn(
+        `Booking ${intent.bookingId} nao encontrado ao tentar confirmar PIX.`,
+      );
+    }
+  }
 
   // Admin: listar transações com filtros básicos
   async listTransactions(type?: string, status?: string) {
@@ -1090,6 +1113,82 @@ export class PaymentsService {
       id: intent.id,
       amountCents: intent.amountCents,
     } as PixChargeResponseDto;
+  }
+
+  private getScheduledAtIsoString(booking: BookingWithUsers): string | undefined {
+    if (booking.scheduledStart) {
+      return booking.scheduledStart.toISOString();
+    }
+    if (!booking.scheduledDate || !booking.scheduledTime) {
+      return undefined;
+    }
+    const timeSegment = booking.scheduledTime;
+    const normalizedTime =
+      timeSegment.split(':').length === 2 ? `${timeSegment}:00` : timeSegment;
+    const candidate = new Date(`${booking.scheduledDate}T${normalizedTime}`);
+    if (Number.isNaN(candidate.getTime())) {
+      return undefined;
+    }
+    return candidate.toISOString();
+  }
+
+  private buildPaymentConfirmedNotificationPayload(
+    booking: BookingWithUsers,
+  ): CreateNotificationDto | null {
+    const clientUserId = booking.client?.userId;
+    if (!clientUserId) {
+      return null;
+    }
+    const providerName =
+      booking.provider?.user?.fullName ||
+      booking.provider?.fullName ||
+      'Prestador';
+    const scheduledAt = this.getScheduledAtIsoString(booking);
+    const amount = Number(booking.totalPrice ?? 0);
+
+    const actionPayload = {
+      bookingId: booking.id,
+      providerName,
+      scheduledAt,
+      amount,
+      paymentMethod: 'PIX',
+    };
+
+    return {
+      userId: clientUserId,
+      type: 'PAYMENT_CONFIRMED',
+      title: 'Pagamento confirmado',
+      message: `Pagamento confirmado para o seu atendimento com ${providerName}.`,
+      targetUrl: `/client/bookings/${booking.id}`,
+      category: 'payment',
+      idempotencyKey: `payment_confirmed:client:${booking.id}`,
+      scheduledAt,
+      actionButtons: {
+        primary: {
+          text: 'Ver agendamento',
+          action: 'view_booking',
+          data: actionPayload,
+        },
+      },
+    };
+  }
+
+  private async persistPaymentConfirmedNotification(
+    booking: BookingWithUsers,
+  ): Promise<void> {
+    const dto = this.buildPaymentConfirmedNotificationPayload(booking);
+    if (!dto) {
+      return;
+    }
+    try {
+      await this.notificationsService.createNotification(dto);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : 'unknown error';
+      this.logger.warn(
+        `[PaymentsService] Falha ao persistir notificação PAYMENT_CONFIRMED: ${message}`,
+      );
+    }
   }
 
   async getPaymentIntentForBooking(
