@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
+    Easing,
     FlatList,
     Image,
     Platform,
@@ -11,11 +12,10 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Easing, // Adicionado Easing para animações
 } from 'react-native';
 
 import { useAuth } from '../../../hooks/useAuth';
-import { getChatListForUser, ConversationItem } from '../../../services/chatService'; // Assumindo ConversationItem é exportado de chatService
+import { ConversationItem, getChatListForUser } from '../../../services/chatService'; // Assumindo ConversationItem é exportado de chatService
 
 // Helper para formatar data/hora (copiado de utils/helpers do cliente)
 const formatDate = (isoTimestamp: string, options?: Intl.DateTimeFormatOptions): string => {
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 4,
+    elevation: 0,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
             shadowRadius: 12,
         },
         android: {
-            elevation: 5,
+            elevation: 0,
         },
     }),
   },
