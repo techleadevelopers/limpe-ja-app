@@ -1,9 +1,9 @@
 // LimpeJaApp/app/client/bookings/components/success/ProviderInfoSection.tsx
 import React, { useEffect, useRef } from 'react';
 import { Image, StyleSheet, Text, View, Animated, Easing, Platform } from 'react-native';
-import { renderStars } from '../../../../utils/ui-helpers'; // Assumindo que renderStars está aqui
-import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
-import { sanitizeText } from '../../../../utils/formatters'; // Importar sanitizeText
+import { renderStars } from '../../../../utils/ui-helpers';
+import { AppColors } from '../../../../constants/appStyles';
+import { sanitizeText } from '../../../../utils/formatters';
 import { useProviderMetrics } from '../../../../hooks/useProviderMetrics';
 
 interface ProviderMetrics {
@@ -26,9 +26,8 @@ export default function ProviderInfoSection({
   providerRating,
 }: ProviderInfoSectionProps) {
   const starSize = 15;
-  const starColor = AppColors.primaryInteractive; // Usando AppColors para consistência
+  const starColor = AppColors.primaryInteractive;
 
-  // Invocar o hook para obter as métricas do provedor
   const providerMetrics: ProviderMetrics = useProviderMetrics(providerId);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -40,7 +39,7 @@ export default function ProviderInfoSection({
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 500,
-        delay: 0, 
+        delay: 0,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
@@ -62,23 +61,15 @@ export default function ProviderInfoSection({
     entryAnimation.start();
 
     return () => entryAnimation.stop();
-  }, []);
+  }, [fadeAnim, translateYAnim, scaleAnim]);
 
-  // 🛑 DECISÃO FINAL: Exibir estrelas se o rating for > 0 (inclui o mockado 5).
-  // Se for 0, null ou undefined, exibe "NOVO".
-  const hasRating = providerRating && providerRating > 0;
+  const hasRating = !!(providerRating && providerRating > 0);
 
-  // Usa fallback 94/25 se o provedor não tem métricas OU se não tem rating (> 0)
-  const shouldUseMetricFallback = providerMetrics.acceptanceRate === null || providerMetrics.acceptanceRate === undefined || !hasRating;
+  const shouldUseMetricFallback =
+    providerMetrics.acceptanceRate === null || providerMetrics.acceptanceRate === undefined || !hasRating;
 
-  const acceptanceRateToDisplay = shouldUseMetricFallback 
-    ? 94 
-    : providerMetrics.acceptanceRate;
-
-  const responseTimeToDisplay = shouldUseMetricFallback 
-    ? 25 
-    : providerMetrics.averageResponseTime;
-
+  const acceptanceRateToDisplay = shouldUseMetricFallback ? 94 : providerMetrics.acceptanceRate;
+  const responseTimeToDisplay = shouldUseMetricFallback ? 25 : providerMetrics.averageResponseTime;
 
   return (
     <Animated.View
@@ -90,8 +81,9 @@ export default function ProviderInfoSection({
       <Image
         source={providerAvatarUrl ? { uri: providerAvatarUrl } : require('../../../../assets/images/default-avatar.png')}
         style={styles.providerAvatar}
-        resizeMode="cover" 
+        resizeMode="cover"
       />
+
       <View style={styles.providerHeaderText}>
         <Text style={styles.providerNameText} numberOfLines={2} maxFontSizeMultiplier={1.2}>
           {sanitizeText(providerFullName)}
@@ -99,24 +91,16 @@ export default function ProviderInfoSection({
         <Text style={styles.providerRoleText} maxFontSizeMultiplier={1.2}>
           Prestador(a) de Serviço
         </Text>
-        
-        {/* BLOCO BADGES (MÉTRICAS: 94% / 25 min fallback) */}
+
         <View style={styles.badgesRow}>
-          {/* Aceitação */}
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {`${acceptanceRateToDisplay}% aceitação`}
-            </Text>
+            <Text style={styles.badgeText}>{`${acceptanceRateToDisplay}% aceitação`}</Text>
           </View>
-          
-          {/* Tempo de Resposta */}
+
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {`${responseTimeToDisplay} min resposta`}
-            </Text>
+            <Text style={styles.badgeText}>{`${responseTimeToDisplay} min resposta`}</Text>
           </View>
-          
-          {/* Outros Badges (Primeiros 2) */}
+
           {(providerMetrics.badges || []).slice(0, 2).map((badge: string, index: number) => (
             <View key={index} style={styles.badge}>
               <Text style={styles.badgeText}>{badge}</Text>
@@ -124,17 +108,19 @@ export default function ProviderInfoSection({
           ))}
         </View>
       </View>
-      
-      {/* 🛑 EXIBIÇÃO DE CLASSIFICAÇÃO / NOVO */}
-      {hasRating ? (
-        renderStars(providerRating, starSize, starColor, starColor)
-      ) : (
-        <View style={styles.newBadgeContainer}>
-          <Text style={styles.newBadgeText} maxFontSizeMultiplier={1.2}>
-            NOVO
-          </Text>
-        </View>
-      )}
+
+      {/* ✅ Wrapper fixo à direita (sem hacks de right) */}
+      <View style={styles.rightSide}>
+        {hasRating ? (
+          renderStars(providerRating, starSize, starColor, starColor)
+        ) : (
+          <View style={styles.newBadgeContainer}>
+            <Text style={styles.newBadgeText} maxFontSizeMultiplier={1.2}>
+              NOVO
+            </Text>
+          </View>
+        )}
+      </View>
     </Animated.View>
   );
 }
@@ -143,23 +129,22 @@ const styles = StyleSheet.create({
   providerHeaderSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16, 
+    marginBottom: 16,
     paddingHorizontal: 5,
-    paddingTop: Platform.OS === 'android' ? 8 : 0, 
+    paddingTop: Platform.OS === 'android' ? 8 : 0,
   },
   providerAvatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    marginRight: 12, 
+    marginRight: 12,
     borderWidth: 3,
     borderColor: AppColors.borderNeutral,
   },
   providerHeaderText: {
     flex: 1,
-    flexShrink: 1, 
-    // ✅ Mantido: minWidth: 0 para corrigir o layout horizontal
-    minWidth: 0, 
+    flexShrink: 1,
+    minWidth: 0,
   },
   providerNameText: {
     fontSize: 15,
@@ -186,25 +171,36 @@ const styles = StyleSheet.create({
   badgeText: {
     color: 'white',
     fontSize: 11,
-    fontWeight: '500', 
+    fontWeight: '500',
   },
-  // ✅ CORRIGIDO: Container para o minicard "NOVO" (compacto)
-  newBadgeContainer: {
-    marginLeft: 'auto', // Empurra para a direita
-    backgroundColor: AppColors.primaryInteractive, 
-    paddingHorizontal: 4, // Padding horizontal reduzido (mais compacto)
-    paddingVertical: 2, 
-    borderRadius: 12, 
+
+  // ✅ Coluna da direita: garante alinhamento consistente no Android/iOS
+  rightSide: {
+    marginLeft: 10,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
     alignSelf: 'flex-start',
-    height: 22, // Garante altura consistente com os badges
-    justifyContent: 'center', // Centraliza o texto
-    right: 270,
+    // se no Android ainda “encostar” demais, ajuste só nele:
+    ...Platform.select({
+      android: { marginTop: 2 },
+      ios: { marginTop: 0 },
+    }),
   },
-  // ✅ ESTILO: Texto do minicard "NOVO"
+
+  newBadgeContainer: {
+    backgroundColor: AppColors.primaryInteractive,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 12,
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // ✅ NADA de right/left aqui
+  },
   newBadgeText: {
-    fontSize: 9, 
-    color: 'white', 
-    fontWeight: '500', 
+    fontSize: 9,
+    color: 'white',
+    fontWeight: '500',
     textTransform: 'uppercase',
   },
 });
