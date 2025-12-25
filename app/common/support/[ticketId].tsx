@@ -1,22 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
     ActivityIndicator,
-    TouchableOpacity,
-    TextInput,
+    Dimensions,
     KeyboardAvoidingView,
     Platform,
     SafeAreaView,
-    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { supportService } from '../../../services/supportService';
-import { SupportTicket, SupportMessage } from '../../../types/backend/support';
 import { useAuth } from '../../../contexts/AuthContext';
+import { supportService } from '../../../services/supportService';
+import { SupportMessage, SupportTicket } from '../../../types/backend/support';
 import { showAppAlert } from '../../../utils/alerts';
 import { safeFormatDate } from '../../../utils/formatters';
 
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 3,
             },
             android: {
-                elevation: 3,
+                elevation: 0,
             },
         }),
     },
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 3,
             },
             android: {
-                elevation: 2,
+                elevation: 0,
             },
         }),
     },
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 3,
             },
             android: {
-                elevation: 3,
+                elevation: 0,
             },
         }),
     },
