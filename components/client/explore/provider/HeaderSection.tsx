@@ -47,6 +47,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({ provider, onBackPress }) 
 const internalStyles = StyleSheet.create({
   container: {
     width: '100%',
+    height: Platform.OS === 'android' ? 140 : 0,
     marginTop: 25,
   },
   headerImage: {
