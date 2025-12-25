@@ -1,16 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View, Easing } from 'react-native';
-import AnimatedReanimated, { Keyframe as ReKeyframe } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient'; // Adicionado para o efeito de fade na lateral
+import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Animated, Dimensions, Easing, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AnimatedReanimated, { Keyframe as ReKeyframe } from 'react-native-reanimated';
 import { AppShadows } from '../../../../constants/appStyles'; // Ajuste o caminho conforme necessário
-import { ProviderDisplayInfo } from '../../../../types/backend/providers';
-import { useProviderMetrics } from '../../../../hooks/useProviderMetrics';
 import { Icons3D } from '../../../../constants/icons3d';
+import { useProviderMetrics } from '../../../../hooks/useProviderMetrics';
+import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 // Importar os novos formatadores e helpers
-import { formatDistance } from '../../../../utils/formatters';
 import { AnalyticsService } from '../../../../services/analyticsService';
+import { formatDistance } from '../../../../utils/formatters';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -18,6 +18,8 @@ interface PrestadorCardProps {
     item: ProviderDisplayInfo;
     onPress: (prestadorId: string) => void;
 }
+
+const ANDROID_PRESTADOR_SCALE = Platform.OS === 'android' ? 0.91 : 1;
 
 const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -28,6 +30,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
     const { t } = useTranslation();
+    const rootShrinkStyle = Platform.OS === 'android' ? { transform: [{ scale: ANDROID_PRESTADOR_SCALE }] } : undefined;
     const providerMetrics = useProviderMetrics(item.id);
 
     // Animação de entrada (fade e slide)
@@ -131,7 +134,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     }).duration(520);
 
     return (
-        <AnimatedReanimated.View entering={enteringKF}>
+        <AnimatedReanimated.View entering={enteringKF} style={rootShrinkStyle}>
         <Animated.View style={[styles.animatedCardContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
             <TouchableOpacity
                 style={styles.cardContainer}
@@ -194,8 +197,8 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
 
 const styles = StyleSheet.create({
     animatedCardContainer: {
-        marginRight: 13,
-        left: -15,
+        marginRight: Platform.OS === 'android' ? 19 : 13,
+        left: Platform.OS === 'android' ? -6 : -15,
         top: 0,
         marginBottom: 8,
         marginTop: 12,
@@ -245,11 +248,7 @@ const styles = StyleSheet.create({
             android: { backgroundColor: 'rgba(255,255,255,0.8)' },
         }),
         // sombra sutilíssima (shadowOpacity 0.06, elevation 2)
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 2,
-        elevation: 2,
+       
     },
     distancePillSmallText: {
         marginLeft: 1.5,
@@ -294,7 +293,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.5, // ⬅️ MELHORIA: Aumentado para glow mais visível
         shadowRadius: 15, // ⬅️ MELHORIA: Aumentado para expansão mais suave
         shadowOffset: { width: 0, height: 0 },
-        elevation: 5, // Aumentado para Android
+        elevation: 0, // Aumentado para Android
         zIndex: 0,
     },
     // ESTILO ATUALIZADO: Badge de Verificação - Posicionado fora do gradient para visibilidade total, no canto inferior direito da imagem para UI premium limpa (evita conflito com distance pill no topo)
@@ -307,11 +306,10 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 3,
 
-        // --- POLIMENTO APLICADO: SOMBRAS E BORDAS ---
-        ...AppShadows.small, // Sombra padrão limpa para elevação sutil
+        
         
         // Limpando as propriedades de sombra e borda antigas
-        elevation: 4, // Ajustado para ser sutil, mas visível
+        elevation: 0, // Ajustado para ser sutil, mas visível
         shadowColor: 'transparent', 
         shadowOffset: { width: 0, height: 1 }, 
         shadowOpacity: 0.1, 
