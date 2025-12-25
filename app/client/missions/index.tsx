@@ -1,16 +1,16 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator, RefreshControl, Switch, Image, ImageSourcePropType } from 'react-native';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, Image, ImageSourcePropType, Platform, RefreshControl, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { claimMission, getMyMissions, MissionItem as MissionItemType, MissionStatus, RewardType, MissionAudience } from '../../../services/missionService';
 import Toast from '../../../components/Toast';
 import MissionList from '../../../components/missions/MissionList';
-import { MissionReminderCard } from '../../../components/missions/MissionReminderCard';
 import { MissionProgressSnack } from '../../../components/missions/MissionProgressSnack';
+import { MissionReminderCard } from '../../../components/missions/MissionReminderCard';
+import { claimMission, getMyMissions, MissionAudience, MissionItem as MissionItemType, MissionStatus, RewardType } from '../../../services/missionService';
 
 import Colors from '../../../constants/Colors';
 import { metricsService } from '../../../services/metricsService';
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: '800' },
   content: { paddingHorizontal: 16, paddingBottom: 12 },
 
-  discountCard: { borderRadius: 14, backgroundColor: '#FFFFFF', padding: 16, marginBottom: 14, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12 }, android: { elevation: 3 } }) },
+  discountCard: { borderRadius: 14, backgroundColor: '#FFFFFF', padding: 16, marginBottom: 14, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12 }, android: { elevation: 0 } }) },
   discountHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   discountBadge: { width: 52, height: 52, borderRadius: 12, backgroundColor: '#F3F6FA', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   discountHeadline: { fontSize: 16, fontWeight: '700', color: '#111827' },
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   summaryCard: { marginBottom: 12 },
   reminderCard: { marginBottom: 12 },
 
-  prefsCard: { marginBottom: 16, borderRadius: 14, backgroundColor: '#FFFFFF', padding: 14, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.03, shadowRadius: 10 }, android: { elevation: 3 } }) },
+  prefsCard: { marginBottom: 16, borderRadius: 14, backgroundColor: '#FFFFFF', padding: 14, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.03, shadowRadius: 10 }, android: { elevation: 0 } }) },
   prefsTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A', marginBottom: 8 },
   prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F2F6FA' },
   prefIconWrap: { width: 28, alignItems: 'center' },
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   prefTitle: { fontWeight: '700', color: '#0F172A' },
   prefSubtitle: { fontSize: 12, color: '#64748B', marginTop: 2 },
 
-  howCard: { marginBottom: 16, borderRadius: 14, backgroundColor: '#FFFFFF', padding: 14, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.03, shadowRadius: 10 }, android: { elevation: 3 } }) },
+  howCard: { marginBottom: 16, borderRadius: 14, backgroundColor: '#FFFFFF', padding: 14, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.03, shadowRadius: 10 }, android: { elevation: 0 } }) },
   howTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A', marginBottom: 8 },
   howItem: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   howText: { color: '#334155', flex: 1, fontSize: 14 },
