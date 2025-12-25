@@ -1,91 +1,91 @@
 import { Stack, useRouter } from 'expo-router';
 import {
-  Image,
+  AccessibilityInfo,
   ActivityIndicator,
   Alert,
   Animated,
-  AccessibilityInfo,
-  Easing,
   Dimensions,
+  Easing,
   FlatList,
+  Image,
   InteractionManager,
-  StyleSheet,
+  Platform,
+  RefreshControl,
+  Share,
   StyleProp,
-  ViewStyle,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  RefreshControl,
-  Platform,
-  Share,
+  ViewStyle,
 } from 'react-native';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { Asset } from 'expo-asset';
 import * as Location from 'expo-location';
 import { PermissionStatus } from 'expo-location';
-import { getCurrentPosition } from '../../../services/locationService';
-import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icons3D } from '../../../constants/icons3d';
-import { Asset } from 'expo-asset';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getCurrentPosition } from '../../../services/locationService';
 
+import { useAuth } from '../../../hooks/useAuth';
+import { useOverlayMessage } from '../../../hooks/useOverlayMessage';
+import { getBookingsForUser } from '../../../services/bookingService';
+import { useAndroidDialog } from '../../../hooks/useAndroidDialog';
 import {
   getOffers,
   getServiceCategories,
   getUserProfile,
   searchProvidersWithLocation,
 } from '../../../services/clientService';
-import { getBookingsForUser } from '../../../services/bookingService';
 import { canReviewBooking } from '../../../services/reviewService';
-import { useAuth } from '../../../hooks/useAuth';
-import { useOverlayMessage } from '../../../hooks/useOverlayMessage';
 
 import {
   getRecommendedProviders,
 } from '../../../services/providerService';
 
+import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { Offer } from '../../../types/backend/offers';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
-import { Service, PricingType } from '../../../types/backend/services';
+import { PricingType, Service } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
-import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 
-import { CLIENT_ROUTES } from '../../../constants/routes';
 import { AppColors, AppShadows } from '../../../constants/appStyles';
+import { CLIENT_ROUTES } from '../../../constants/routes';
+import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 // Importar o formatAddress e getNumericPriceValue
 import { formatAddress } from '../../../utils/formatters';
 import { getNumericPriceValue } from '../../../utils/service-helpers';
 // --- FIM DAS INTERFACES ---
 
+import ScreenContainer from '@/components/layout/ScreenContainer';
+import { useDevice } from '@/utils/responsive';
 import CarouselBannerItem from '../../../components/client/explore/home/CarouselBannerItem';
-import CategoriaCard from '../../../components/client/explore/home/CategoriaCard';
-import NewHeader from '../../../components/client/explore/home/NewHeader';
+// import CategoriaCard from '../../../components/client/explore/home/CategoriaCard';
+import DEFENSE_SOS from '../../../components/client/explore/home/DEFENSE_SOS';
 import NavBar from '../../../components/client/explore/home/NavBar';
+import NewHeader from '../../../components/client/explore/home/NewHeader';
 import PrestadorCard from '../../../components/client/explore/home/PrestadorCard';
 import RecomendacaoCard from '../../../components/client/explore/home/RecomendacaoCard';
 import SecaoContainer from '../../../components/client/explore/home/SecaoContainer';
 import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrestadores';
 import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRecomendacoes';
-import DEFENSE_SOS from '../../../components/client/explore/home/DEFENSE_SOS';
-import { HtmlCouponCard } from '../../../components/coupons/HtmlCouponCard';
-import { CouponPill } from '../../../components/coupons/CouponPill';
-import { ReferralBanner } from '../../../components/referrals/ReferralBanner';
-import { ReferralSheet } from '../../../components/referrals/ReferralSheet';
 import BottomSlideInCard from '../../../components/common/BottomSlideInCard';
 import SmartCouponNudge from '../../../components/coupons/CouponNudge';
-import ScreenContainer from '@/components/layout/ScreenContainer';
-import { useDevice } from '@/utils/responsive';
-import TutorialOverlay from '../../../components/ui/TutorialOverlay';
+import { CouponPill } from '../../../components/coupons/CouponPill';
+import { HtmlCouponCard } from '../../../components/coupons/HtmlCouponCard';
+import { ReferralBanner } from '../../../components/referrals/ReferralBanner';
+import { ReferralSheet } from '../../../components/referrals/ReferralSheet';
 import { useTutorial } from '../../../hooks/useTutorial';
 
 // Importar os novos componentes Nudge
-import SecurityNudge from '../../../components/nudges/SecurityNudge';
 import IncentiveNudge from '../../../components/nudges/IncentiveNudge';
+import SecurityNudge from '../../../components/nudges/SecurityNudge';
 
 // Fallback local: garante render do RecomendacaoCard mesmo se a API falhar
 const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
@@ -250,6 +250,10 @@ export default function ExploreClientScreen() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { showOverlay } = useOverlayMessage();
   const { isLargePhone } = useDevice();
+
+  // Variável para compensar o ajuste do NewHeader para visitantes Android
+  const isAndroidVisitor = Platform.OS === 'android' && !isAuthenticated;
+
   const navWrap: StyleProp<ViewStyle> = React.useMemo(
     () => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined),
     [isLargePhone]
@@ -315,10 +319,25 @@ export default function ExploreClientScreen() {
     (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ??
     '';
 
+  const { showDialog: showAndroidDialog, dialogElement: androidDialogElement } = useAndroidDialog();
+
   const showProductsAlert = useCallback(() => {
+    const title = 'Produtos de limpeza disponíveis?';
+    const message =
+      'Os produtos de limpeza que a diarista vai usar já estão separados e acessíveis no local?';
+    if (Platform.OS === 'android') {
+      showAndroidDialog({
+        title,
+        message,
+        cancelLabel: 'Cancelar',
+        confirmLabel: 'Aceitar',
+        onConfirm: () => {},
+      });
+      return;
+    }
     Alert.alert(
-      'Produtos de limpeza disponíveis?',
-      'Os produtos de limpeza que a diarista vai usar já estão separados e acessíveis no local?',
+      title,
+      message,
       [
         {
           text: 'Cancelar',
@@ -330,7 +349,50 @@ export default function ExploreClientScreen() {
         },
       ]
     );
-  }, []);
+  }, [showAndroidDialog]);
+
+  const renderCategoriesSection = () => (
+    <Animated.View
+      style={[
+        styles.categoriesSection,
+        {
+          opacity: categoriesAnim,
+          transform: [
+            {
+              translateY: categoriesAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-12, 0],
+              }),
+            },
+          ],
+        },
+      ]}>
+      <View style={styles.categoryTitleWrapper}>
+        <Text style={styles.categorySectionTitle} allowFontScaling={false}>
+          Acesso rápido
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.push('/client/explore/todas-categorias' as any)}
+          style={styles.viewAllButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          {/* <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />*/}
+        </TouchableOpacity>
+      </View>
+        {/* <SecaoContainer<Service>
+        titulo={t('search.all_categories')}
+        onVerTudoPress={() => router.push('/client/explore/todas-categorias' as any)}
+        data={categoriesToRender}
+        renderItem={({ item }) => {
+          if (!item || !item.name) return null;
+          return (
+            <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
+          );
+        }}
+        horizontal={true}
+        noDataText={t('search.no_results')}
+      /> */}
+    </Animated.View>
+  );
 
   useEffect(() => {
     let timeout: NodeJS.Timeout | null = null;
@@ -983,7 +1045,7 @@ export default function ExploreClientScreen() {
       // log removido para performance
     }
     } catch (error: any) {
-      Alert.alert('Erro ao Compartilhar', error.message);
+      alertUserError(error, 'Erro ao Compartilhar');
     }
     if (isMounted.current) {
       setShowReferralSheet(false);
@@ -1041,11 +1103,46 @@ export default function ExploreClientScreen() {
           ListHeaderComponent={(
             <>
               {/* NewHeader ÚNICO */}
-              <NewHeader
-                userName={userNameDisplay}
-                userAddress={addressToDisplay}
-                isVisitor={!isAuthenticated}
-              />
+              {/* Aplica o ajuste de margem inferior para visitantes Android */}
+              <View style={[styles.androidHeaderLift, isAndroidVisitor && { marginBottom: 20,   }]}>
+                <NewHeader
+                  userName={userNameDisplay}
+                  userAddress={addressToDisplay}
+                  isVisitor={!isAuthenticated}
+                />
+                {Platform.OS === 'android' && isAuthenticated && (
+                  <Animated.View
+                    style={[
+                      styles.carouselContainer,
+                      {
+                        opacity: bannerAnim,
+                        transform: [
+                          {
+                            translateY: bannerAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [-12, 0],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  >
+                    <FlatList<BannerDataItem>
+                      ref={flatListRef}
+                      data={bannerData}
+                      renderItem={renderBannerItem}
+                      keyExtractor={(item) => item.id}
+                      horizontal
+                      pagingEnabled
+                      showsHorizontalScrollIndicator={false}
+                      snapToInterval={screenWidth}
+                      decelerationRate="fast"
+                      contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }}
+                      nestedScrollEnabled={true}
+                    />
+                  </Animated.View>
+                )}
+              </View>
               {/*QA_PANEL_ENABLED && (
                 <TouchableOpacity
                   style={styles.devPanelBadge}
@@ -1060,50 +1157,21 @@ export default function ExploreClientScreen() {
               {/* NOVO BLOCO CONDICIONAL: Acesso Rápido (Logado) OU Como Funciona (Visitante) */}
               {isAuthenticated ? (
                 // Usuário LOGADO: Exibe ACESSO RÁPIDO
-                <Animated.View
-                  style={[
-                    styles.categoriesSection, // Reutilize o estilo do Acesso Rápido
-                    {
-                      opacity: categoriesAnim,
-                      transform: [
-                        {
-                          translateY: categoriesAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [-12, 0],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}>
-                  <View style={styles.categoryTitleWrapper}>
-                    <Text style={styles.categorySectionTitle} allowFontScaling={false}>
-                      Acesso rápido
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => router.push('/client/explore/todas-categorias' as any)}
-                      style={styles.viewAllButton}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />
-                    </TouchableOpacity>
-                  </View>
-                  {/* SecaoContainer do Acesso Rápido (usado duas vezes no seu código original) */}
-                  <SecaoContainer<Service>
-                    titulo={t('search.all_categories')}
-                    onVerTudoPress={() => router.push('/client/explore/todas-categorias' as any)}
-                    data={categoriesToRender}
-                    renderItem={({ item }) => {
-                      if (!item || !item.name) return null;
-                      return (
-                        <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
-                      );
-                    }}
-                    horizontal={true}
-                    noDataText={t('search.no_results')}
-                  />
-                </Animated.View>
+                Platform.OS !== 'android' && renderCategoriesSection()
               ) : (
-                
-                <View style={styles.howItWorksTutorialContainer}>
+                // Usuário VISITANTE: Exibe COMO FUNCIONA
+                // Aplique o ajuste para Android Visitor aqui
+                <View
+                  style={[
+                    styles.howItWorksTutorialContainer,
+                    Platform.OS === 'android' && !isAuthenticated && {
+                      marginTop: 10,
+                      marginBottom: 20,
+                      transform: [{ scale: 0.92 }, { translateX: 16 }],
+                      
+                    },
+                    { width: '101%', left: -26, },
+                  ]}>
                   <Text style={styles.howItWorksTitle} allowFontScaling={false}>
                     Como funciona o LimpeJá
                   </Text>
@@ -1127,6 +1195,7 @@ export default function ExploreClientScreen() {
                       </Text>
                     </View>
                   </View>
+  
                 </View>
               )}
               {/* FIM NOVO BLOCO CONDICIONAL */}
@@ -1201,12 +1270,15 @@ export default function ExploreClientScreen() {
 
                 </Animated.View>
 
+                {isAuthenticated && Platform.OS === 'android' && renderCategoriesSection()}
+
                 {/* Carrossel de Banners ÚNICO */}
-                <Animated.View
-                  style={[
-                    styles.carouselContainer,
-                    {
-                      opacity: bannerAnim,
+                {(Platform.OS !== 'android' || !isAuthenticated) && (
+                  <Animated.View
+                    style={[
+                      styles.carouselContainer,
+                      {
+                        opacity: bannerAnim,
                       transform: [
                         {
                           translateY:
@@ -1220,10 +1292,10 @@ export default function ExploreClientScreen() {
                       ],
                     },
                   ]}>
-                  <FlatList<BannerDataItem>
-                    ref={flatListRef}
-                    data={bannerData}
-                    renderItem={renderBannerItem}
+                    <FlatList<BannerDataItem>
+                      ref={flatListRef}
+                      data={bannerData}
+                      renderItem={renderBannerItem}
                     keyExtractor={(item) => item.id}
                     horizontal
                     pagingEnabled
@@ -1232,8 +1304,9 @@ export default function ExploreClientScreen() {
                     decelerationRate="fast"
                     contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }}
                     nestedScrollEnabled={true} // Melhora scroll aninhado no Android
-                  />
-                </Animated.View>
+                    />
+                  </Animated.View>
+                )}
 
                 {/* REMOVER OS DOIS BLOCOS DE ACESSO RÁPIDO DO FINAL DO contentWrapper */}
                 {/* Os blocos de "Acesso rápido" para visitante e logado foram movidos para a lógica condicional acima e removidos daqui. */}
@@ -1383,13 +1456,10 @@ export default function ExploreClientScreen() {
         />
 
 
-        <TutorialOverlay
-          visible={exploreTutorialVisible}
-          title="Explore à vontade"
-          subtitle="Navegue pelos profissionais disponíveis e use as categorias para filtrar sua busca."
-          iconName="compass-outline"
-          onConfirm={markExploreTutorialSeen}
-        />
+        {androidDialogElement}
+
+
+        
       </ScreenContainer>
     </SafeAreaView>
   );
@@ -1433,7 +1503,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
-    elevation: 12,
+    elevation: 0,
   },
   couponCardImageStyle: {
     borderRadius: 15,
@@ -1527,6 +1597,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F1F2F2',
     marginHorizontal: 5,
+    paddingTop: Platform.OS === 'android' ? 2 : undefined,
+  },
+  androidHeaderLift: {
+    marginTop: Platform.OS === 'android' ? 0 : 0,
   },
   scrollViewArea: {
     flex: 1,
@@ -1591,12 +1665,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   navBarContainer: {
-    position: 'absolute',
-    bottom: -30, // AJUSTADO: De -28 para 0
-    left: 0,
-    right: 0,
-    zIndex: 200,
-  },
+  position: 'absolute',
+  bottom: Platform.OS === 'android' ? 2 : -30,
+  left: 0,
+  right: 0,
+  zIndex: 200,
+},
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1660,8 +1734,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DDE3EB',
     zIndex: 300,
-    elevation: 6,
-    ...AppShadows.small,
+    elevation: 0,
+    
   },
   devFabText: {
     fontSize: 12,
@@ -1687,7 +1761,7 @@ const styles = StyleSheet.create({
         shadowRadius: 3.84,
       },
       android: {
-        elevation: 5,
+        elevation: 0,
       },
     }),
   },
@@ -1761,19 +1835,19 @@ const styles = StyleSheet.create({
   },
   howItWorksTutorialContainer: {
     marginHorizontal: 11,
-    marginBottom: 12,
-    paddingVertical: 12,
+    marginBottom: Platform.OS === 'android' ? 18 : 12, // Este valor será sobrescrito condicionalmente
+    paddingVertical: Platform.OS === 'android' ? 12 : 12,
     paddingHorizontal: 29,
     borderRadius: 18,
     backgroundColor: '#ffffffff',
-    borderWidth: 1,
+    borderWidth: Platform.OS === 'android' ? 0 : 1,
     borderColor: COR_BORDA_SUAVE,
-    ...AppShadows.small,
+    
   },
   howItWorksTitle: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 14 : 16,
     fontFamily: 'Montserrat-Regular',
-    fontWeight: '700',
+    fontWeight: Platform.OS === 'android' ? '300' : '700',
     color: AppColors.textTitle,
     marginBottom: 10,
   },
@@ -1808,7 +1882,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    ...AppShadows.small,
+    
   },
   reviewNudgeLeft: {
     flexDirection: 'row',
