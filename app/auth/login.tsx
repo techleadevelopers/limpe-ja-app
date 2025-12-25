@@ -1,12 +1,12 @@
 import { Link, Stack, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
     Dimensions,
-    Easing as RNEasing,
     KeyboardAvoidingView,
     Platform,
+    Easing as RNEasing,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -33,8 +33,8 @@ import Toast from 'react-native-toast-message';
 
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
 import { InputWithIcon } from '../../components/auth/components/InputWithIcon';
-import { CLIENT_ROUTES, PROVIDER_ROUTES } from '../routes';
 import { showUserError } from '../_shared/errors/userError';
+import { CLIENT_ROUTES, PROVIDER_ROUTES } from '../routes';
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
 
@@ -75,9 +75,9 @@ function BubblesRN({
     countMax = 44,
     bubbleMin = 6,
     bubbleMax = 16,
-    bubbleColor = 'rgba(3,112,255,0.85)',
-    bubbleBorderColor = 'rgba(29, 175, 242, 1)',  // Default para borda azul
-    bubbleBorderWidth = 2,  // Default para espessura da borda
+    bubbleColor = Platform.OS === 'android' ? 'rgba(15,143,255,0.72)' : 'rgba(3,112,255,0.85)',
+    bubbleBorderColor = Platform.OS === 'android' ? 'rgba(21,100,220,0.9)' : 'rgba(29, 175, 242, 0.14)',  // Default para borda azul
+    bubbleBorderWidth = 2,  // Default para espessura da borda
     style,
     pointerEvents = 'none',
 }: BubblesRNProps) {
@@ -362,28 +362,34 @@ export default function LoginScreen() {
     }
 
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.keyboardAvoidingContainer}
-        >
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.keyboardAvoidingContainer}
+            >
             <StatusBar barStyle="dark-content" backgroundColor={styles.scrollView.backgroundColor} />
 
             <LinearGradient
-                colors={['#F0F4F8', '#E2E8F0', '#F7FAFC']}
+                colors={
+                    Platform.OS === 'android'
+                        ? ['transparent', 'transparent', 'transparent']
+                        : ['#F0F4F8', '#E2E8F0', '#F7FAFC']
+                }
                 style={StyleSheet.absoluteFillObject}
             />
 
-            {/* Bubbles background: transparente, apenas bolhas azuis */}
+            {/* Bubbles background: transparente, apenas bolhas azuis (somente iOS) */}
+            {Platform.OS === 'ios' && (
             <BubblesRN
               countMin={52}
               countMax={65}
               bubbleMin={6}
               bubbleMax={16}
               bubbleColor={'rgba(29, 118, 242, 0.11)'}
-              bubbleBorderColor = {'rgba(29, 93, 242, 0.18)'}
-              bubbleBorderWidth ={0.5}
-              style={{ ...StyleSheet.absoluteFillObject, zIndex: 0 }}
+              bubbleBorderColor={'rgba(29, 93, 242, 0.18)'}
+              bubbleBorderWidth={0.5}
+              style={{ ...StyleSheet.absoluteFillObject, zIndex: 0 , backgroundColor: 'transparent'}}
             />
+            )}
 
             <ScrollView
                 style={styles.scrollView}
@@ -493,24 +499,27 @@ const styles = StyleSheet.create({
     },
     scrollView: {
         flex: 1,
-        backgroundColor: 'transparent', // alterado para transparente conforme pedido
+        backgroundColor: Platform.OS === 'ios' ? '#f1f2f1' : 'transparent',
     },
     scrollContentContainer: {
         flexGrow: 1,
         justifyContent: 'center',
-        paddingBottom: 10,
+        paddingBottom: Platform.OS === 'ios' ? -10 : 10,
     },
     contentWrapper: {
         paddingHorizontal: 49,
-        paddingTop: Platform.OS === 'ios' ? 60 : 100,
+        paddingTop: Platform.OS === 'ios' ? 60 : 0,
+        
         bottom: 100,
+        
         zIndex: 2, // garante estar acima das bolhas
         backgroundColor: 'transparent',
     },
 
     logoContainer: {
-        top: 90,
+        top: Platform.OS === 'ios' ? 90 : 150,
         right: 10,
+        
         alignItems: 'center',
     },
     logo: {
@@ -528,25 +537,26 @@ const styles = StyleSheet.create({
         color: '#8A94A6',
         textAlign: 'center',
         marginBottom: 50,
-        bottom: 42,
+        bottom: Platform.OS === 'ios' ? 42 : -29,
     },
     loginInput: {
         height: 34,
+        bottom: Platform.OS === 'ios' ? 0 : 2,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor:  '#FFFFFF',
         borderRadius: 28,
         // **ALTERAÇÃO AQUI: 44 * 0.95 = 41.8**
         height: 41.8, 
-        bottom: 55,
+        bottom: Platform.OS === 'ios' ? 55 : 55,
         marginBottom: 10,
         shadowColor: 'rgba(100, 100, 150, 0.15)',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 1,
         shadowRadius: 15,
-        elevation: 5,
+        elevation: 0,
         paddingLeft: 5,
         paddingRight: 15,
     },
@@ -557,7 +567,7 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: Platform.OS === 'android' ? '#85d0fc34' :'#FFFFFF',
         marginRight: 10,
     },
   input: {
@@ -565,6 +575,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#2D3748',
     paddingVertical: 0,
+    
     height: 44,  // <- altura fixa funcionando em TODOS devices
 },
     eyeIconTouchable: {
@@ -583,6 +594,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(64, 192, 240, 0.85)',
         borderRadius: 28,
         paddingVertical: 8,
+        top: Platform.OS === 'ios' ? 0 : 2,
         width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
@@ -593,7 +605,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 8,
+        elevation: 0,
     },
     buttonDisabled: {
         backgroundColor: '#A0CFFF',
@@ -609,7 +621,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        bottom: 40,
+        bottom: Platform.OS === 'android' ? 8 : 40,
         paddingBottom: 18,
         paddingTop: 15,
     },
@@ -626,7 +638,7 @@ const styles = StyleSheet.create({
     forgotPasswordContainer: {
         alignItems: 'center',
         marginBottom: 20,
-        bottom: 45,
+        bottom:Platform.OS === 'android' ? 8 : 45,
     },
     forgotPasswordLink: {
         fontSize: 14,
