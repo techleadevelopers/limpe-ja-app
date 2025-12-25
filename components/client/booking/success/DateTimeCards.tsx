@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     minHeight: 80, // Touch target confortável
     overflow: 'hidden',
     position: 'relative',
-    ...AppShadows.medium, // Usando AppShadows
+    
   },
   gradientBackground: {
     ...StyleSheet.absoluteFillObject,
