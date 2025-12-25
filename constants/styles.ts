@@ -32,7 +32,7 @@ export const commonStyles = StyleSheet.create({
     shadowOpacity: 0.08, 
     shadowRadius: 8, 
     shadowOffset: { width: 0, height: 4 }, 
-    elevation: 2, 
+    elevation: 0, 
     flexDirection: 'row', 
     alignItems: 'center', 
     gap: 10, 
