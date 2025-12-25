@@ -1,16 +1,16 @@
 // app/components/Bubble.tsx
-import React, { useEffect } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  withRepeat,
-  Easing,
-  withSequence,
-} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect } from 'react';
+import { Dimensions, StyleSheet } from 'react-native';
+import Animated, {
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withRepeat,
+    withSequence,
+    withTiming,
+} from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 15,
-    elevation: 8,
+    elevation: 0,
     overflow: 'hidden',
     backgroundColor: 'transparent',
   },
