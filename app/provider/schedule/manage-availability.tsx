@@ -1,37 +1,37 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  Platform,
-  Animated,
-  Alert,
-  Switch,
-  Easing,
-  AccessibilityInfo,
-} from 'react-native';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import Slider from '@react-native-community/slider';
-import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    AccessibilityInfo,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Easing,
+    Platform,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { useAuth } from '../../../hooks/useAuth';
-import NotificationUIService from '../../../services/notificationUIService';
 import { getPricingConfig } from '../../../services/configService';
+import NotificationUIService from '../../../services/notificationUIService';
+import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 // Importações de serviços e tipos do backend
-import {
-  getMyProviderAvailability,
-  updateMyProviderAvailability,
-} from '../../../services/providerService';
 import { getBookingsForUser } from '../../../services/bookingService';
-import { ProviderAvailability, UpdateAvailabilityData } from '../../../types/backend/providers';
+import {
+    getMyProviderAvailability,
+    updateMyProviderAvailability,
+} from '../../../services/providerService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
+import { ProviderAvailability, UpdateAvailabilityData } from '../../../types/backend/providers';
 
-import { saveProviderSettings, getProviderSettings } from '../../../services/providerSettingsService';
+import { getProviderSettings, saveProviderSettings } from '../../../services/providerSettingsService';
 
 // Definição manual da interface Theme (baseada na doc oficial da lib)
 interface Theme {
@@ -1121,7 +1121,7 @@ export default function ManageAvailabilityScreen() {
       } else {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       }
-      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível salvar sua disponibilidade. Tente novamente.');
+      alertUserError(error, 'Erro ao salvar disponibilidade');
     } finally {
       setIsSaving(false);
       loadData();
@@ -1717,7 +1717,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 12,
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
@@ -1756,7 +1756,7 @@ const styles = StyleSheet.create({
   },
   segmentActive: {
     backgroundColor: Colors.surface,
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 }, android: { elevation: 3 } }),
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 }, android: { elevation: 0 } }),
   },
   segmentText: {
     color: Colors.textMuted,
@@ -1835,7 +1835,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 4,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   infoIcon: {
@@ -1860,7 +1860,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 12,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   dayHeader: {
@@ -1902,7 +1902,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: Colors.border,
     alignItems: 'flex-start',
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 }, android: { elevation: 2 } }),
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 }, android: { elevation: 0 } }),
     gap: 3,
   },
   quickTileText: {
@@ -1919,7 +1919,7 @@ const styles = StyleSheet.create({
   // Period toggles inside day card
   periodRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: Platform.OS === 'android' ? 'nowrap' : 'wrap',
     // Garantir 3 cards na primeira linha (sem quebra do "Noite")
     gap: 0,
     justifyContent: 'space-between',
@@ -1934,8 +1934,10 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: Colors.border,
     // 3 colunas fixas no topo: ManhAL, Tarde, Noite
-    width: '32%',
-    minWidth: 96,
+    ...Platform.select({
+      ios: { width: '32%', minWidth: 96 },
+      android: { width: '30%', minWidth: 84 },
+    }),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2039,7 +2041,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 2,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   timeSlotText: {
@@ -2103,7 +2105,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 2,
       },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   actionButtonIcon: {
@@ -2127,7 +2129,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: Spacing.md,
-    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16 }, android: { elevation: 10 } }),
+    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16 }, 
+      android: { elevation: 0 } }),
   },
   stickySummaryText: {
     color: Colors.textMuted,
@@ -2161,7 +2164,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 12,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   calendarOverrideStyle: {
@@ -2181,7 +2184,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 12,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   overrideTitle: {
@@ -2268,7 +2271,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: Radii.md,
     padding: Spacing.md,
-    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 18 }, android: { elevation: 12 } }),
+    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 18 }, android: { elevation: 0 } }),
   },
   modalTitle: {
     fontSize: 16,
