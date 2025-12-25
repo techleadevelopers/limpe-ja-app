@@ -1,10 +1,8 @@
 // components/client/explore/provider/BookServiceButton.tsx
-import React from 'react';
-import { Animated, Text, TouchableOpacity, Platform, StyleSheet, View, Alert, ToastAndroid } from 'react-native';
 import { type Router } from 'expo-router';
+import React from 'react';
+import { Alert, Animated, Platform, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
-import NotificationUIService from '../../../../services/notificationUIService';
-import { formatBRL } from '../../../../utils/formatters';
 
 interface BookServiceButtonProps {
   providerId: string;
@@ -155,16 +153,16 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     marginBottom: -38,
     backgroundColor: AppColors.white,
-    ...AppShadows.medium,
+    
   },
   btn: {
     backgroundColor: AppColors.primaryInteractive,
-    paddingVertical: 14,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 13,
+    bottom: Platform.OS === 'ios' ? 0 : 2,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    ...AppShadows.medium,
     borderRightWidth: 0,
     borderRightColor: '#45484b56',
     borderTopStartRadius: 44,
@@ -179,11 +177,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: -1, height: 1 },
     shadowOpacity: 3.55,
     shadowRadius: 35,
-    elevation: 6,
+    elevation: 0,
   },
   text: {
     color: AppColors.white,
-    fontSize: 15,
+    fontSize: Platform.OS === 'android' ? 16.5 : 15,
     fontWeight: '700',
   },
 });
