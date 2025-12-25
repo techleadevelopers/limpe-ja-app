@@ -1,15 +1,14 @@
-import React from 'react';
-import {
-  View,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  Text,
-  Dimensions,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { UnifiedTheme } from '@/constants/UnifiedTheme';
+import { Ionicons } from '@expo/vector-icons';
+import {
+    Dimensions,
+    Image,
+    Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -62,7 +61,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EDF4FF',
     padding: 6,
     borderRadius: 20,
-    elevation: 2,
+    elevation: 0,
   },
   couponImage: {
     width: width * 0.7,
