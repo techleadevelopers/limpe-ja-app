@@ -18,6 +18,6 @@ export const radius = { xs: 6, sm: 10, md: 12, lg: 16, xl: 20, pill: 999 };
 export const shadow = {
   card: {
     ios: { shadowColor: colors.shadowCard, shadowOffset: {width:0, height:3}, shadowOpacity: 0.08, shadowRadius: 5 },
-    android: { elevation: 4 },
+    android: { elevation: 0 },
   },
 };
