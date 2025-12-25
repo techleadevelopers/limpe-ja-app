@@ -1,8 +1,8 @@
 // app/provider/components/dashboard/DashboardHeader.tsx
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState } from 'react';
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 // Supondo que você tenha um hook useAuth para pegar o nome do provedor
 // import { useAuth } from '../../../../contexts/AuthContext'; // Ajuste o caminho conforme necessário
 
@@ -72,14 +72,14 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
 const styles = StyleSheet.create({
   customHeader: {
-    paddingTop: Platform.OS === 'ios' ? 90 : 30, // Ajuste para status bar
+    paddingTop: Platform.OS === 'ios' ? 90 : -3, // Ajuste para status bar
     paddingBottom: 15,
     paddingHorizontal: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 0,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -93,12 +93,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greetingText: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 12 : 14,
     color: '#E0EFFF', // Um branco azulado mais suave
     fontWeight: 'normal',
   },
   providerNameText: {
-    fontSize: 20,
+    fontSize: Platform.OS === 'android' ? 18 : 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     height: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: Platform.OS === 'android' ? 0 : 1,
     borderColor: '#FFFFFF',
   },
   notificationBadgeText: {
