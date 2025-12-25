@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: -10,
     marginBottom: -5,
-    ...AppShadows.medium,
+    ,
   },
   gradientBackground: {
     padding: 20,
