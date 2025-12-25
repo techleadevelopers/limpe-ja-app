@@ -13,7 +13,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from './theme/colors';
 import { typography } from './theme/typography';
-import { shadows } from './theme/shadows'; // Certifique-se de que shadows está definido
+import { inputBase, shadow, textBase } from '../../app/_shared/ui/parity';
 
 interface TextInputWithIconProps extends TextInputProps {
   iconName?: string;
@@ -109,7 +109,7 @@ const TextInputWithIcon: React.FC<TextInputWithIconProps> = ({
         </View>
       )}
       <TextInput
-        style={styles.input}
+        style={[textBase(styles.input), inputBase()]}
         placeholderTextColor={colors.textPlaceholder}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
-    ...shadows.card, // Sombra sutil para o círculo do ícone
+    ...shadow(1), // Sombra sutil para o círculo do ícone
   },
   input: {
     flex: 1,
