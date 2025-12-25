@@ -1,21 +1,21 @@
-import React, { useEffect, useRef } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    Switch,
-    Alert,
-    ScrollView,
-    TouchableOpacity,
-    Platform,
-    Linking, // Para abrir URLs
-    Animated, // Importar Animated para animações
-    Easing, // Importar Easing
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { useAppContext } from '../../contexts/AppContext'; // Usando o AppContext
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants'; // Para pegar a versão do app
+import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import {
+    Alert, // Para abrir URLs
+    Animated, // Importar Animated para animações
+    Easing,
+    Linking,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { useAppContext } from '../../contexts/AppContext'; // Usando o AppContext
 
 // Componente reutilizável para um item de configuração com switch
 interface SettingSwitchItemProps {
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
-        elevation: 5,
+        elevation: 0,
     },
     headerBackButton: {
         marginRight: 15,
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         ...Platform.select({
             ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 5 },
-            android: { elevation: 2, borderWidth: 0.5, borderColor: '#E0E0E0' },
+            android: { elevation: 0, borderWidth: 0.5, borderColor: '#E0E0E0' },
         }),
     },
     sectionTitle: {
