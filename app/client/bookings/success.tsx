@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ScrollView, Animated, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Animated, Platform, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import SecurityInfoSection from '../../../components/client/booking/success/Secu
 import LoyaltyTeaserSection from '../../../components/client/booking/success/LoyaltyTeaserSection';
 import { ReturnCouponCard } from '../../../components/client/booking/success/ReturnCouponCard';
 import SuccessLoadingError from '../../../components/client/booking/success/SuccessLoadingError';
+import PaymentConfirmationCard from '../../../components/client/booking/success/PaymentConfirmationCard';
 
 import { fetchPaymentIntent, createPixCharge } from '../../../services/paymentService';
 import { getBookingDetails } from '../../../services/bookingService';
@@ -25,10 +26,11 @@ import NotificationUIService from '../../../services/notificationUIService';
 import { formatAddressLine1, formatAddressLine2 } from '../../../utils/address';
 import { AppColors } from '../../../constants/appStyles';
 
-import { PaymentIntentStatus, PixChargeResponseDto } from '../../../types/backend/payments';
+import { PaymentIntent, PaymentIntentStatus, PixChargeResponseDto } from '../../../types/backend/payments';
 import { BookingDetails } from '../../../types/backend/bookings';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
 import { Offer } from '../../../types/backend/offers';
+import { textFix } from '../../_shared/ui/parity';
 
 type SuccessRouteParams = {
   bookingId?: string | string[];
@@ -53,6 +55,29 @@ const extractFirst = (value?: string | string[]): string | undefined => {
 const HEADER_PRIMARY_COLOR = AppColors.primaryInteractive;
 const HEADER_SECONDARY_COLOR = AppColors.primaryDark;
 const SUCCESS_COLOR = AppColors.successStandard;
+const FINAL_PAYMENT_INTENT_STATUSES: PaymentIntentStatus[] = [
+  PaymentIntentStatus.EXPIRED,
+  PaymentIntentStatus.REFUNDED,
+  PaymentIntentStatus.CHARGEBACK,
+];
+const isPaymentIntentFinal = (status?: PaymentIntentStatus) =>
+  !!status && FINAL_PAYMENT_INTENT_STATUSES.includes(status);
+
+const buildPixChargeFallback = (
+  intent: PaymentIntent,
+  booking: BookingDetails,
+): PixChargeResponseDto => ({
+  transactionId: intent.externalChargeId ?? intent.externalOrderId ?? intent.id,
+  status: intent.status,
+  brCode: intent.qrCodeText ?? '',
+  qrCodeImage: intent.qrCodeUrl ?? '',
+  expiresAt: intent.expiresAt ?? new Date().toISOString(),
+  amount: intent.amount ?? booking.totalPrice,
+  description: booking.serviceName || `Agendamento ${booking.id}`,
+  bookingId: booking.id,
+  providerId: booking.providerId,
+  paymentIntent: intent,
+});
 
 export default function BookingSuccessScreen() {
   const insets = useSafeAreaInsets();
@@ -66,6 +91,7 @@ export default function BookingSuccessScreen() {
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [provider, setProvider] = useState<ProviderDisplayInfo | null>(null);
   const [pixCharge, setPixCharge] = useState<PixChargeResponseDto | null>(null);
+  const [paymentIntent, setPaymentIntent] = useState<PaymentIntent | null>(null);
   const [loyaltyBalance, setLoyaltyBalance] = useState<LoyaltyBalance | null>(null);
   const [returnCoupon, setReturnCoupon] = useState<ReturnCouponData | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>(paymentMethodParam || 'PIX');
@@ -79,6 +105,7 @@ export default function BookingSuccessScreen() {
   const pollAttemptsRef = useRef<number>(0);
   const onceRef = useRef(false);
   const unauthorizedHandledRef = useRef(false);
+  const paymentToastIntentRef = useRef<string | null>(null);
 
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const contentTranslateY = useRef(new Animated.Value(24)).current;
@@ -163,26 +190,54 @@ export default function BookingSuccessScreen() {
         .catch(() => {});
 
       if (normalizedPaymentMethod === 'PIX' && user?.id) {
+        let existingIntent: PaymentIntent | null = null;
         try {
-          const pixResponse = await createPixCharge(user.id, {
-            amount: bookingDetails.totalPrice,
-            description: bookingDetails.serviceName || `Agendamento ${bookingDetails.id}`,
-            bookingId: bookingDetails.id,
-            providerId: bookingDetails.providerId,
-          });
-          setPixCharge(pixResponse ?? null);
-          const intentStatus = pixResponse?.paymentIntent?.status;
-          if (intentStatus === PaymentIntentStatus.PAID) {
-            setPaid(true);
-            setShouldPollIntent(false);
-          } else {
+          existingIntent = await fetchPaymentIntent(bookingId);
+        } catch (intentError: any) {
+          const statusCode = intentError?.status ?? intentError?.response?.status;
+          if (statusCode === 401) {
+            throw intentError;
+          }
+        }
+        setPaymentIntent(existingIntent);
+        const existingStatus = existingIntent?.status;
+        if (existingIntent) {
+          setPaid(existingStatus === PaymentIntentStatus.PAID);
+          setShouldPollIntent(existingStatus !== PaymentIntentStatus.PAID);
+        } else {
+          setPaid(false);
+        }
+        const shouldReuseIntent =
+          Boolean(existingIntent && existingStatus && !isPaymentIntentFinal(existingStatus));
+        if (shouldReuseIntent && existingIntent) {
+          setPixCharge(buildPixChargeFallback(existingIntent, bookingDetails));
+        } else {
+          setPixCharge(null);
+          setPaid(false);
+          try {
+            const pixResponse = await createPixCharge(user.id, {
+              amount: bookingDetails.totalPrice,
+              description: bookingDetails.serviceName || `Agendamento ${bookingDetails.id}`,
+              bookingId: bookingDetails.id,
+              providerId: bookingDetails.providerId,
+            });
+            setPixCharge(pixResponse ?? null);
+            const newIntent = pixResponse?.paymentIntent ?? null;
+            setPaymentIntent(newIntent);
+            const intentStatus = newIntent?.status;
+            if (intentStatus === PaymentIntentStatus.PAID) {
+              setPaid(true);
+              setShouldPollIntent(false);
+            } else {
+              setShouldPollIntent(true);
+            }
+          } catch {
             setShouldPollIntent(true);
           }
-        } catch {
-          setShouldPollIntent(true);
         }
       } else {
         setPixCharge(null);
+        setPaymentIntent(null);
         setShouldPollIntent(false);
         if (normalizedPaymentMethod !== 'PIX') {
           setPaid(true);
@@ -205,6 +260,21 @@ export default function BookingSuccessScreen() {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [loadData]);
+
+  useEffect(() => {
+    if (paymentIntent?.status === PaymentIntentStatus.PAID) {
+      const intentKey = paymentIntent.id ?? booking?.id ?? 'paid';
+      if (paymentToastIntentRef.current !== intentKey) {
+        NotificationUIService.showInfo(
+          'Pagamento confirmado. Seu atendimento está garantido.',
+          'Pagamento confirmado',
+        );
+        paymentToastIntentRef.current = intentKey;
+      }
+    } else {
+      paymentToastIntentRef.current = null;
+    }
+  }, [paymentIntent, booking?.id]);
 
   const startPolling = useCallback(() => {
     if (!bookingId || !shouldPollIntent) return;
@@ -324,6 +394,7 @@ export default function BookingSuccessScreen() {
         providerId: booking.providerId,
       });
       setPixCharge(pixResponse ?? null);
+      setPaymentIntent(pixResponse?.paymentIntent ?? null);
       onceRef.current = false;
       pollAttemptsRef.current = 0;
       if (pixResponse?.paymentIntent?.status === PaymentIntentStatus.PAID) {
@@ -380,18 +451,27 @@ export default function BookingSuccessScreen() {
           headerSecondaryColor={HEADER_SECONDARY_COLOR}
         />
 
-        <SuccessLoadingError
-          isLoading={isLoading}
-          error={error}
-          headerPrimaryColor={HEADER_PRIMARY_COLOR}
-          onRetryPress={loadData}
-        />
+            <SuccessLoadingError
+              isLoading={isLoading}
+              error={error}
+              headerPrimaryColor={HEADER_PRIMARY_COLOR}
+              onRetryPress={loadData}
+            />
 
-        {!isLoading && !error && booking ? (
-          <>
-            <BookingSummaryCard
-              booking={booking}
-              provider={provider}
+            {!isLoading && !error && booking ? (
+              <>
+                {paymentMethod === 'PIX' && (
+                  <View style={styles.paymentStatusContainer}>
+                    {paymentIntent?.status === PaymentIntentStatus.PAID ? (
+                      <PaymentConfirmationCard onPressCta={handleGoToBookings} />
+                    ) : (
+                      <Text style={styles.pendingStatusText}>Aguardando confirmação</Text>
+                    )}
+                  </View>
+                )}
+                <BookingSummaryCard
+                  booking={booking}
+                  provider={provider}
               providerRating={providerRating}
               pixChargeDetails={pixCharge}
               paymentMethod={paymentMethod}
@@ -467,6 +547,17 @@ const createStyles = (insetsTop: number) =>
       paddingTop: Platform.OS === 'android' ? 24 : 10, // Android extra spacing
       paddingBottom: 50,
     },
+    paymentStatusContainer: {
+      width: '100%',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    pendingStatusText: {
+      ...textFix({ fontSize: 16, fontWeight: '600', lineHeight: 20 }),
+      color: AppColors.textBody,
+      textAlign: 'center',
+      marginBottom: 6,
+    },
     bottomSpacer: {
       height: 32,
     },
@@ -481,8 +572,7 @@ const createStyles = (insetsTop: number) =>
       alignSelf: 'center',
     },
     devChipText: {
+      ...textFix({ fontWeight: '700', fontSize: 13 }),
       color: HEADER_PRIMARY_COLOR,
-      fontWeight: '700',
-      fontSize: 13,
     },
   });
