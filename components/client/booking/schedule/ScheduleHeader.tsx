@@ -1,8 +1,8 @@
 // LimpeJaApp/components/client/booking/schedule/ScheduleHeader.tsx
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { Animated, Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AppColors } from '../../../../constants/appStyles'; // Removido AppShadows se não usado
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window'); // Removido height se não necessário
@@ -16,7 +16,7 @@ interface ScheduleHeaderProps {
     // Removido showBackButton para forçar exibição sempre
 }
 
-const HEADER_TOP = Platform.OS === 'ios' ? 52 : 22;
+const HEADER_TOP = Platform.OS === 'ios' ? 52 : 32;
 
 const HERO_GRADIENT_START = '#FFFFFF';
 const HERO_GRADIENT_MIDDLE = '#FFFFFF';
@@ -72,20 +72,18 @@ const styles = StyleSheet.create({
     headerGradient: {
         // Configurações otimizadas para produção: bordas arredondadas suaves, sombra cross-platform
         paddingBottom: 0,
-        borderBottomLeftRadius: 34,
-        borderBottomRightRadius: 34,
-        borderTopLeftRadius: 4,
-        borderTopRightRadius: 4,
+        
+        
         paddingHorizontal: 20,
         width: '100%',
         left: 0,
         overflow: 'hidden',
         // Sombra cross-platform (iOS nativa, Android via elevation)
-        shadowColor: '#000', // Cor neutra para produção
+        shadowColor: '#0000004b', // Cor neutra para produção
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4, // Equivalente Android
+        shadowRadius: 92,
+        elevation: 0, // Equivalente Android
     },
     headerRow: {
         flexDirection: 'row',
