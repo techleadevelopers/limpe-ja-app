@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef } from 'react';
-import { Image, StyleSheet, Text, View, Animated, Easing } from 'react-native';
-import { VerificationStatus } from '../../../../types/backend/auth';
-import { BookingAddress } from '../../../../types/backend/bookings';
-import { AppColors } from '../../../../constants/appStyles';
+import { useCallback, useEffect, useRef } from 'react';
+import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
+import { AppColors } from '../../../../../constants/appStyles';
+import { VerificationStatus } from '../../../../../types/backend/auth';
+import { BookingAddress } from '../../../../../types/backend/bookings';
 
 interface ProviderDetails {
   id: string;
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: -1, height: 1 },
     shadowOpacity: 1.05,
     shadowRadius: 9,
-    elevation: 6,
+    elevation: 0,
   },
   photo: { width: 58, height: 58, borderRadius: 29, marginRight: 10, borderWidth: 2, borderColor: '#E7F0FF' },
   photoPlaceholder: { width: 58, height: 58, borderRadius: 29, marginRight: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   ratingStarIcon: {
     marginRight: 1,
   },
-  skeleton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18, marginHorizontal: 16, marginTop: 14, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 4, height: 96 },
+  skeleton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18, marginHorizontal: 16, marginTop: 14, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 0, height: 96 },
   skelImg: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#E6EEF9', marginRight: 12 },
   skelLineLg: { height: 16, width: '80%', backgroundColor: '#E6EEF9', borderRadius: 6, marginBottom: 8 },
   skelLineSm: { height: 14, width: '60%', backgroundColor: '#E6EEF9', borderRadius: 6, marginBottom: 8 },
