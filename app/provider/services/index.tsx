@@ -4,23 +4,24 @@ import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  FlatList,
-  Image,
-  ImageSourcePropType,
-  Platform,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Animated,
+    FlatList,
+    Image,
+    ImageSourcePropType,
+    Platform,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import ServiceItemSkeleton from '../../../components/ServiceItemSkeleton';
 import ToastMessage from '../../../components/ui/ToastMessage';
-import { formatDate } from '../../../utils/helpers';
 import Colors from '../../../constants/Colors';
 import { PROVIDER_ROUTES } from '../../../constants/routes';
 import NotificationUIService from '../../../services/notificationUIService';
+import { formatDate } from '../../../utils/helpers';
+import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 // --- Importações de SERVIÇOS e TIPAGENS REAIS do BACKEND ---
 import { getBookingsForUser, updateBookingStatus } from '../../../services/bookingService';
@@ -294,7 +295,7 @@ export default function ProviderServicesScreen() {
         if (refreshing) setToastMessage({ message: "Serviços atualizados!", type: "success" });
       } catch (err: any) {
         console.error("[ProviderServicesScreen] Erro ao buscar serviços:", err.response?.data || err.message);
-        NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar seus serviços.", "Erro");
+        toastUserError(err, 'Erro ao carregar serviços');
         setToastMessage({ message: "Erro ao carregar serviços.", type: "error" });
       } finally {
         setIsLoading(false);
@@ -498,7 +499,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 4,
+    elevation: 0,
   },
   headerRow: {
     flexDirection: 'row',
@@ -523,7 +524,7 @@ const styles = StyleSheet.create({
     }),
     includeFontPadding: false,
   },
-  simpleHeader: { paddingTop: 80, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  simpleHeader: { paddingTop: Platform.OS === 'android' ? 40 : 80, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   simpleHeaderTitle: { fontSize: 17, fontWeight: '800' },
   filterContainer: {
     flexDirection: 'row',
@@ -544,10 +545,10 @@ const styles = StyleSheet.create({
   },
   filterButtonActive: {
     backgroundColor: '#6395f1e2',
-    ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 }, android: { elevation: 2 } }),
+    ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 }, android: { elevation: 0 } }),
   },
   filterButtonText: {
-    fontSize: 15,
+    fontSize: Platform.OS === 'android' ?  14 : 15,
     fontWeight: '600',
     color: '#27292cff',
   },
@@ -569,7 +570,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.07)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   // Novo container para card + badge absoluto
@@ -696,7 +697,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptySubText: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ?  13 : 14,
     color: '#6C757D',
     marginTop: 5,
     textAlign: 'center',
@@ -712,12 +713,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,122,255,0.3)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 4 },
-      android: { elevation: 5 },
+      android: { elevation: 0 },
     }),
   },
   emptyStateButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ?  14 : 16,
     fontWeight: '600',
     marginLeft: 8,
   },
