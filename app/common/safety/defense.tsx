@@ -1,26 +1,26 @@
 // LimpeJaApp/app/common/safety/defense.tsx
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Platform,
-  ScrollView,
-  Animated,
-  Easing,
-  TouchableOpacity,
-  Linking,
-  useColorScheme,
-  Image, // <= adicionado para ícones 3D
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    Animated,
+    Easing,
+    Image,
+    Linking,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useColorScheme,
+    View,
+} from 'react-native';
 
-import Colors from '../../../constants/Colors';
-import Card from '../../../components/common/Card';
 import Button from '../../../components/common/Button';
+import Card from '../../../components/common/Card';
 import PanicBannerComponent from '../../../components/safety/PanicBanner'; // já usado no chat
+import Colors from '../../../constants/Colors';
 
 // -------- Theming --------
 function useTheme() {
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.16,
         shadowRadius: 6,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
     flexDirection: 'row',
     alignItems: 'center',
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.18,
         shadowRadius: 16,
       },
-      android: { elevation: 8 },
+      android: { elevation: 0 },
     }),
   },
   bannerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.12,
         shadowRadius: 10,
       },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#111827' },
