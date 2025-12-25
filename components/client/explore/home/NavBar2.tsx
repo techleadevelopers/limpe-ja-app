@@ -1,10 +1,10 @@
 // NavBar.tsx
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Image } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter, usePathname } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { usePathname, useRouter } from 'expo-router';
+import React from 'react';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Definindo tipos mais específicos para os itens da barra de navegação
 interface NavItemBase {
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.25,
         shadowRadius: 10,
-        elevation: 10,
+        elevation: 0,
     },
     // Novo estilo para os grupos de navegação
     navGroup: {
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.35,
         shadowRadius: 12,
-        elevation: 15,
+        elevation: 0,
     },
     centralButtonGradient: {
         width: 32,
