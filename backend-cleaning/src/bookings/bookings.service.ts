@@ -1102,7 +1102,7 @@ export class BookingsService {
       );
     }
 
-    if (userRole === UserRole.ADMIN) {
+    if (userRole === UserRole.ADMIN || userRole === UserRole.SYSTEM) {
       canUpdate = true;
       this.logger.log(
         `[BookingsService] updateStatus - ADMIN bypass de transição para booking ${id}.`,
@@ -1591,6 +1591,16 @@ export class BookingsService {
     );
 
     return updatedBooking;
+  }
+
+  async systemChangeStatus(
+    bookingId: string,
+    newStatus: BookingStatus,
+  ): Promise<BookingWithDetailsRelations> {
+    this.logger.log(
+      `[BookingsService] systemChangeStatus: forcando transição ${bookingId} -> ${newStatus}.`,
+    );
+    return this.updateStatus(bookingId, newStatus, UserRole.SYSTEM);
   }
 
   async findUpcomingBookings(
