@@ -2,8 +2,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Animated, Easing, Platform } from 'react-native';
-import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
-import { sanitizeText } from '../../../../utils/formatters'; // Importar sanitizeText
+import { AppColors } from '../../../../../constants/appStyles'; // Importe AppColors
+import { sanitizeText } from '../../../../../utils/formatters'; // Importar sanitizeText
 
 interface BookingDetailSectionProps {
   serviceName: string;
