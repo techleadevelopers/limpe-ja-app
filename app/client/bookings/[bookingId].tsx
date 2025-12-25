@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -24,6 +24,7 @@ import { getProviderDetails } from '../../../services/providerService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
+import { alertUserError, setSafeError } from '../../_shared/errors/uiFeedback';
 
 import { useDevice } from '@/utils/responsive';
 import { AppColors } from '../../../constants/appStyles';
@@ -446,7 +447,7 @@ export default function BookingDetailsScreen() {
       if (completed && !alreadyReviewed) setShowReviewSheet(true);
     } catch (err: any) {
       console.error('Erro ao carregar agendamento:', err);
-      setError(sanitizeText(err?.message || 'Não foi possível carregar os detalhes do agendamento.'));
+      setSafeError(setError, err);
     } finally {
       setIsLoading(false);
     }
@@ -490,17 +491,17 @@ export default function BookingDetailsScreen() {
         {
           text: 'Sim, cancelar',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsLoading(true);
-              await cancelBooking(booking.id);
-              setBooking((prev) => (prev ? { ...prev, status: BookingStatus.CANCELLED } : prev));
-            } catch (err: any) {
-              Alert.alert('Erro', sanitizeText(err?.message || 'Não foi possível cancelar o agendamento.'));
-            } finally {
-              setIsLoading(false);
-            }
-          },
+            onPress: async () => {
+              try {
+                setIsLoading(true);
+                await cancelBooking(booking.id);
+                setBooking((prev) => (prev ? { ...prev, status: BookingStatus.CANCELLED } : prev));
+              } catch (err: any) {
+                alertUserError(err, 'Erro ao cancelar o agendamento');
+              } finally {
+                setIsLoading(false);
+              }
+            },
         },
       ],
     );
@@ -676,7 +677,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
       },
       android: {
-        elevation: 1.5,
+        elevation: 0.5,
       },
     }),
   },
@@ -723,7 +724,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
       },
       android: {
-        elevation: 1.5,
+        elevation: 0.5,
       },
     }),
   },
@@ -792,7 +793,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
       },
       android: {
-        elevation: 1.5,
+        elevation: 0.5,
       },
     }),
   },
@@ -912,7 +913,7 @@ const premium = StyleSheet.create({
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 4 },
       },
-      android: { elevation: 1.5 },
+      android: { elevation: 0.5 },
     }),
   },
 
