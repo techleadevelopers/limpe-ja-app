@@ -1,31 +1,32 @@
 // app/client/support/index.tsx
-import React, { useCallback, useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  KeyboardAvoidingView,
-  Linking,
-  Platform,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  Modal,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    KeyboardAvoidingView,
+    Linking,
+    Modal,
+    Platform,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
 
 // =============================================================
 // API
 // =============================================================
 import { api } from '../../../services/api';
 import NotificationUIService from '../../../services/notificationUIService';
+import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 // =============================================================
 // STYLES (Movido para o topo para resolver erros de referência 'styles' antes da definição)
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
       },
       android: {
-        elevation: 1,
+        elevation: 0,
       },
     }),
   },
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
@@ -191,7 +192,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    elevation: 0,
   },
   formCard: {
     backgroundColor: 'rgba(255,255,255,0.92)',
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    elevation: 0,
   },
   formTitle: {
     fontSize: 20,
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     color: '#1E293B',
     fontSize: 15,
-    elevation: 1,
+    elevation: 0,
   },
   primaryBtn: {
     marginTop: 20,
@@ -261,7 +262,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    elevation: 0,
   },
   primaryBtnTxt: {
     color: '#FFFFFF',
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    elevation: 0,
   },
   whatsappIconWrap: {
     width: 24,
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    elevation: 0,
   },
   chatBtnTxt: {
     color: '#FFFFFF',
@@ -375,7 +376,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    elevation: 0,
   },
   emptyTitle: {
     fontWeight: '800',
@@ -557,7 +558,7 @@ export default function SupportIndex() {
       setTickets(items);
       setMeta(m);
     } catch (e: any) {
-      NotificationUIService.showError(e?.message || 'Não foi possível carregar o suporte.', 'Erro');
+      toastUserError(e, 'Erro ao carregar o suporte');
     } finally {
       setLoading(false);
     }
@@ -595,7 +596,7 @@ export default function SupportIndex() {
       NotificationUIService.showSuccess('Seu ticket foi criado com sucesso.', 'Enviado');
     } catch (e: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      NotificationUIService.showError(e?.response?.data?.message || 'Tente novamente.', 'Erro ao enviar');
+      toastUserError(e, 'Erro ao enviar');
     } finally {
       setSubmitting(false);
     }
