@@ -1,14 +1,14 @@
-import React, { useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Dimensions,
-} from "react-native";
-import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { useEffect, useRef } from "react";
+import {
+    Animated,
+    Dimensions,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import { AppColors } from "../constants/appStyles";
 
 const { width, height } = Dimensions.get("window");
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
+    elevation: 0,
   },
   title: {
     fontSize: 20,
