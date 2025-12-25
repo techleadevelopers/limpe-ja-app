@@ -15,12 +15,12 @@ import ProviderInfoSection from './ProviderInfoSection';
 import SuccessPixInfo from './SuccessPixInfo';
 
 // Importar tipos
-import { BookingDetails } from '../../../../types/backend/bookings';
-import { PixChargeResponseDto } from '../../../../types/backend/payments';
-import { ProviderDisplayInfo } from '../../../../types/backend/providers';
+import { BookingDetails } from '../../../../../types/backend/bookings';
+import { PixChargeResponseDto } from '../../../../../types/backend/payments';
+import { ProviderDisplayInfo } from '../../../../../types/backend/providers';
 // Importar utilitários de formatação e sanitização
-import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../../utils/formatters';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../../../utils/formatters';
+import { AppColors, AppShadows } from '../../../../../constants/appStyles';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SUMMARY_CARD_MAX_WIDTH = 520;
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 12,
     alignSelf: 'center',
-    ...AppShadows.medium,
+    
   },
   cardContentNew: {
     padding: 25, // Padding interno premium (confortável, 44px+ touch)
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    ...AppShadows.small, // Sombra leve para elevação
+    
   },
   totalLabel: {
     fontSize: 16,
