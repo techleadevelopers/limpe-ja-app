@@ -38,6 +38,8 @@ const NavBar: React.FC<NavBarProps> = ({
     { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/common/support' },
     { name: 'Perfil', icon: 'person', route: '/client/profile' },
   ];
+  const BASE_ICON_SIZE = 24;
+  const iconSize = Platform.OS === 'android' ? BASE_ICON_SIZE * 0.95 : BASE_ICON_SIZE;
 
   const navItemAnims = useRef(navItems.map(() => new Animated.Value(1))).current;
   const rippleAnims = useRef(navItems.map(() => new Animated.Value(0))).current;
@@ -88,7 +90,7 @@ const NavBar: React.FC<NavBarProps> = ({
     <View style={styles.navBar} onLayout={onLayout}>
       {/* BACKGROUND LUXO */}
       <BlurView
-        intensity={Platform.OS === 'ios' ? 40 : 45}
+        intensity={Platform.OS === 'ios' ? 40 : 85}
         tint="light"
         style={StyleSheet.absoluteFillObject}
       />
@@ -168,7 +170,7 @@ const NavBar: React.FC<NavBarProps> = ({
                 name={
                   (isSelected ? item.icon : `${item.icon}-outline`) as any
                 }
-                size={24}
+                size={iconSize}
                 color={isSelected ? CURRENT_COLOR : INACTIVE_COLOR}
                 style={{
                   marginBottom: 3,
@@ -202,16 +204,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    height: 87,
+    fontSize: Platform.OS === 'android' ? 85 : 87,
+    fontFamily: 'Montserrat-Regular',
+    fontWeight: '600',
+    color: 'rgba(44, 62, 80, 0.85)',
+    letterSpacing: 0.5,
     borderTopLeftRadius: 38,
     borderTopRightRadius: 38,
     overflow: 'hidden',
-
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 10,
+    ...(Platform.OS === 'android'
+      ? {
+          height: 82,
+          top: 8,
+          paddingTop: 12,
+          paddingBottom: 12,
+        }
+      : undefined),
   },
 
   navItem: {
@@ -241,8 +249,8 @@ const styles = StyleSheet.create({
 
   ripple: {
     position: 'absolute',
-    width: 38,
-    height: 38,
+    width: Platform.OS === 'android' ? 36 : 38,
+    height: Platform.OS === 'android' ? 38 : 38,
     borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.35)',
     zIndex: -2,
