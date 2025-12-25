@@ -8,13 +8,13 @@ import {
   ViewStyle,
   TouchableOpacityProps,
   Animated,
-  NativeSyntheticEvent, // Importe NativeSyntheticEvent
-  NativeTouchEvent,     // Importe NativeTouchEvent
+  NativeSyntheticEvent,
+  NativeTouchEvent,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from './theme/colors';
 import { typography } from './theme/typography';
-import { shadows } from './theme/shadows';
+import { pressableBase, shadow, textBase } from '../../app/_shared/ui/parity';
 
 // Estenda TouchableOpacityProps para herdar todas as propriedades padrão
 interface PrimaryButtonProps extends TouchableOpacityProps {
@@ -39,6 +39,7 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   ...rest // Captura todas as outras props, incluindo as de TouchableOpacity
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const pressableParity = pressableBase();
 
   // 1. Aceite o argumento 'event' aqui
   const handlePressIn = (event: NativeSyntheticEvent<NativeTouchEvent>) => {
@@ -83,6 +84,7 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
         disabled={loading || disabled}
         onPressIn={handlePressIn} // Use o handler interno
         onPressOut={handlePressOut} // Use o handler interno
+        style={pressableParity.style}
         {...rest} // Passa todas as outras props para o TouchableOpacity
       >
         <LinearGradient
@@ -94,7 +96,7 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
           {loading ? (
             <ActivityIndicator color={colors.textWhite} />
           ) : (
-            <Text style={styles.buttonText}>{title}</Text>
+            <Text style={textBase(styles.buttonText)}>{title}</Text>
           )}
           {children} {/* Renderiza children se houver */}
         </LinearGradient>
@@ -106,7 +108,7 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
 const styles = StyleSheet.create({
   buttonContainer: {
     borderRadius: 28,
-    ...shadows.button,
+    ...shadow(3),
     overflow: 'hidden',
   },
   gradient: {
