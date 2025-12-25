@@ -9,7 +9,7 @@ import {
   View,
   ViewToken,
 } from 'react-native';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import { AppColors, AppShadows } from '../../../../../constants/appStyles';
 
 interface ServiceDetailsDto {
   id: string;
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: 'transparent',
     borderWidth: 0,
-    ...AppShadows.small,
+    
   },
   howItWorksTitle: {
     fontSize: 16,
