@@ -1,43 +1,45 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  TextInput,
-    Animated,
-  Alert,
-    ActivityIndicator,
-  Easing,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { saveProviderSettings, bulkSetAvailability, TimeRange } from '../../../services/providerSettingsService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Easing,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    Platform,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { bulkSetAvailability, saveProviderSettings, TimeRange } from '../../../services/providerSettingsService';
 
 // IMPORTAÇÃO DO COMPONENTE PREMIUM SERVICE CHIP (Assumindo o caminho fornecido)
 import { PremiumServiceChip } from '../../../components/auth/PremiumServiceChip';
 
+import ServiceDetailsStep5Premium from '../../../components/auth/ServiceDetailsStep5Premium';
 import { useAuth } from '../../../hooks/useAuth';
-import { VerificationStatus } from '../../../types/backend/auth';
 import {
-  updateMyProviderProfile,
-  addProviderServiceOffering,
-  updateProviderServiceOffering,
-  getProviderServicesOffered,
-  listAllServices,
+    addProviderServiceOffering,
+    getProviderServicesOffered,
+    listAllServices,
+    updateMyProviderProfile,
+    updateProviderServiceOffering,
 } from '../../../services/providerService';
 import verificationService from '../../../services/verificationService';
-import axios, { isAxiosError } from 'axios';
-import ServiceDetailsStep5Premium from '../../../components/auth/ServiceDetailsStep5Premium';
-import { AUTH_ROUTES } from '../../routes';
+import { VerificationStatus } from '../../../types/backend/auth';
 import { showUserError } from '../../_shared/errors/userError';
+import { AUTH_ROUTES } from '../../routes';
+
+const MIN_HOURLY_DURATION = 240;
 
 const SERVICE_OPTIONS = [
   { id: 'residencial', label: 'Residencial', icon: 'home', set: 'ion' },
@@ -499,10 +501,14 @@ if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
           continue;
         }
 
+        let durationMinutes = 60;
+        if (formData.priceUnit === 'hora') {
+          durationMinutes = MIN_HOURLY_DURATION;
+        }
         let serviceData: any = {
           serviceId: serviceId,
           description: formData.description,
-          durationMinutes: 60,
+          durationMinutes,
         };
 
         const basePriceValue = parseFloat(formData.basePrice.replace(',', '.'));
@@ -637,11 +643,11 @@ if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
   };
   const getSubStepTitle = () => {
   switch (currentServiceSubStep) {
-    case 1: return '1. Foto e Descrição';
+    case 1: return '';
     case 2: return '2. Experiência e Especialidades';
     case 3: return '3. Preço e Unidade';
     case 4: return '4. Chave PIX e Áreas de Atendimento';
-    default: return 'Detalhes do Serviço';
+    default: return '';
   }
 };
 
@@ -656,8 +662,8 @@ const getMicrocopyText = () => {
 };
 
   const getBackButtonText = () => {
-    if (currentServiceSubStep === 1) return 'Voltar para Cadastro';
-    return 'Voltar';
+    if (currentServiceSubStep === 1) return '';
+    return '';
   };
 
   return (
@@ -690,13 +696,13 @@ const getMicrocopyText = () => {
               <Text style={styles.headerTitle}>Detalhes do Serviço</Text>
             </View>
             
-            {/* Progress Bar */}
+            {/* Progress Bar 
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
               </View>
               <Text style={styles.progressText}>{`Etapa ${currentServiceSubStep} de ${totalSteps}`}</Text>
-            </View>
+            </View>*/}
 
             <Text style={styles.headerSubtitle}>
               {getSubStepTitle()}
@@ -766,7 +772,7 @@ const getMicrocopyText = () => {
                   <Text style={styles.sectionTitle}>
                     <Ionicons name="home-outline" size={16} color="#2C3E50" /> Tipo de Serviço
                   </Text>
-                  <View style={styles.serviceTypeGrid}>
+                  <View style={[styles.serviceTypeGrid, Platform.OS === 'android' && styles.serviceTypeGridAndroidScale]}>
                     {serviceOptions.map((s, index) => {
                         const animationStyle = {
                             opacity: chipAnimations[index],
@@ -814,7 +820,7 @@ const getMicrocopyText = () => {
                   <View style={styles.priceTypeGrid}>
                     {[
                       { id: 'hora', label: 'Por Hora' },
-                      { id: 'quarto', label: 'Por Quarto' },
+                      { id: 'quarto', label: 'Fixo' },
                       { id: 'metragem', label: 'Por m²' }
                     ].map((priceOption) => (
                       <TouchableOpacity
@@ -998,7 +1004,7 @@ const btn = StyleSheet.create({
   primary: {
     paddingVertical: 12, paddingHorizontal: 18, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center', flexDirection: 'row',
-    shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 5,
+    shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 0,
     minHeight: 48,
   },
   primaryGlow: {
@@ -1023,7 +1029,9 @@ const styles = StyleSheet.create({
   headerGradient: {
     ...StyleSheet.absoluteFillObject as any,
   },
-  stepTitle: { fontWeight: '700', color: '#1E293B', fontSize: 15 },
+  stepTitle: { fontWeight: '700', color: '#1E293B', fontSize: 15,
+    
+   },
   stepSubtitle: { color: '#64748B', fontSize: 13, marginTop: 4 },
   sliderWrap: {
     backgroundColor: 'rgba(255,255,255,0.25)',
@@ -1079,20 +1087,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
+    
     paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
-    marginTop: 70,
+    marginTop: Platform.OS === 'android' ? 40 : 70,
     justifyContent: 'center',
     position: 'relative',
   },
   backButtonHeader: {
     position: 'absolute',
     left: 0,
-    bottom: 50,
+    bottom: Platform.OS === 'android' ? -14 : 50,
     padding: 5,
     zIndex: 1,
     flexDirection: 'row',
@@ -1106,26 +1115,29 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   headerTitle: {
+    bottom: Platform.OS === 'android' ? 50 : 0,
     fontSize: 18,
+    left: Platform.OS === 'android' ? 2 : 0,
     fontWeight: '700',
     color: '#2C3E50',
-    marginBottom: 12,
+    marginBottom: Platform.OS === 'android' ? -69 : 12,
     marginTop: 10,
     textAlign: 'center',
     flex: 1,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 16 : 14,
     color: '#6C757D',
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 8,
+    marginTop:  Platform.OS === 'android' ? 26 : 0,
+    marginBottom: Platform.OS === 'android' ? 1 : 8,
   },
   microcopyText: {
-    fontSize: 13,
+    fontSize:  Platform.OS === 'android' ? 14 : 13,
     color: '#6C757D',
     textAlign: 'center',
-    marginBottom: 19,
+    marginBottom: Platform.OS === 'android' ? -2 : 19,
     paddingHorizontal: 10,
   },
   progressContainer: {
@@ -1198,9 +1210,11 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     marginBottom: 30,
+    top: Platform.OS === 'android' ? 30 : 0,
   },
   inputSection: {
-    marginBottom: 20,
+    marginBottom: Platform.OS === 'android' ? 10 : 20,
+    top: Platform.OS === 'android' ? 0 : 0,
   },
   inputLabel: {
     fontSize: 16,
@@ -1215,7 +1229,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -1242,6 +1256,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
+  serviceTypeGridAndroidScale: {
+    ...Platform.select({
+      android: {
+        transform: [{ scale: 0.92 }],
+        marginTop: -2,
+      },
+      default: {},
+    }),
+  },
   priceTypeContainer: {
     marginBottom: 30,
   },
@@ -1262,7 +1285,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
     minHeight: 48,
     justifyContent: 'center',
   },
