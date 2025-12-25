@@ -1,9 +1,9 @@
 // app/provider/components/dashboard/RecentReviewsSection.tsx
-import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Image, FlatList } from 'react-native'; // Import FlatList
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient'; // Adicionado para efeito Glassmorphic sutil
 import { BlurView } from 'expo-blur'; // Adicionado para efeito Glassmorphic sutil
+import { LinearGradient } from 'expo-linear-gradient'; // Adicionado para efeito Glassmorphic sutil
+import React, { useEffect, useRef } from 'react';
+import { Animated, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'; // Import FlatList
 
 // 1. Importe ProviderReview do seu local central de tipos.
 //    Ajuste o caminho se a sua pasta 'types' não estiver na raiz do projeto.
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   sectionTitle: {
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   reviewCardTouchable: {
