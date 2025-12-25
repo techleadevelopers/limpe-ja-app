@@ -1,7 +1,7 @@
 // app/provider/schedule/components/BlockDateSection.tsx
-import React, { useRef, useEffect } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { Alert, Animated, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 interface BlockDateSectionProps {
   animation: Animated.Value;
@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   specialSectionCard: { marginTop: 20 },
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     borderColor: '#CED4DA',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   blockDateButtonText: {
