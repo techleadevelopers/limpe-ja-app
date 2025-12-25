@@ -1,6 +1,6 @@
 // components/DetailsContent.tsx
 import React from 'react';
-import { Text, View, StyleSheet } from 'react-native'; // Adicionado StyleSheet
+import { StyleSheet, Text, View } from 'react-native'; // Adicionado StyleSheet
 // import { ProviderDetails } from '../../../../../types/types'; // REMOVER esta importação
 
 // Definindo a interface para o serviço oferecido, conforme o DTO do backend
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
     marginBottom: 15,
   },
   sectionTitle: {
