@@ -11,6 +11,7 @@ export interface AppNotification {
   navigateTo?: string | null; // optional for compatibility with legacy components
   // optional type to support provider icon mapping without changing UI
   type?: string;
+  meta?: Record<string, unknown>;
 }
 
 export async function getMyNotifications(): Promise<AppNotification[]> {
@@ -31,6 +32,14 @@ export const toAppNotification = (raw: any): AppNotification => ({
   createdAt: raw?.createdAt ?? raw?.timestamp ?? new Date().toISOString(),
   deeplink: raw?.deeplink ?? raw?.targetUrl ?? raw?.navigateTo ?? undefined,
   type: raw?.type,
+  meta:
+    raw?.meta ??
+    raw?.payload ??
+    raw?.data ??
+    raw?.actionButtons?.payload ??
+    raw?.actionButtons?.primary?.data ??
+    raw?.actionButtons?.secondary?.data ??
+    undefined,
 });
 
 export async function markAllNotificationsAsRead(): Promise<{ success: boolean }> {
