@@ -2,17 +2,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Image,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import verificationService from '../../../../services/verificationService';
 
@@ -373,7 +372,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 15,
-    elevation: 10,
+    elevation: 0,
     marginTop: 20,
   },
   submitButtonText: {
@@ -457,7 +456,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 5,
+    elevation: 0,
   },
   uploadButtonText: {
     color: '#FFFFFF',
