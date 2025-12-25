@@ -1,6 +1,6 @@
 import { BookingStatus } from '@prisma/client';
 
-export const BLOCKED_BOOKING_STATUSES = Object.freeze([
+export const BLOCKED_BOOKING_STATUSES: BookingStatus[] = [
   BookingStatus.PENDING,
   BookingStatus.PENDING_PROVIDER_CONFIRMATION,
   BookingStatus.CONFIRMED,
@@ -8,4 +8,4 @@ export const BLOCKED_BOOKING_STATUSES = Object.freeze([
   BookingStatus.ARRIVED,
   BookingStatus.STARTED,
   BookingStatus.RESCHEDULED,
-]);
+];
