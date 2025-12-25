@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Platform } from 'react-native';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 
 interface SecaoRecomendacoesProps {
@@ -141,7 +142,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: -29,
+    marginTop: Platform.OS === 'android' ? -35 : -29,
     marginBottom: -10,
     paddingHorizontal: 6,
     backgroundColor: 'transparent',
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   sectionTitle: {
-    fontSize: 15.5,
+    fontSize: Platform.OS === 'android' ? 14 : 15.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '600',
     color: 'rgba(44, 62, 80, 0.85)',
