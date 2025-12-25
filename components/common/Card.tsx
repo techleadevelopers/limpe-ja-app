@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle, useColorScheme } from 'react-native'; // Adicionado useColorScheme e StyleProp
 import Colors from '../../constants/Colors'; // Assumindo que Colors.ts está em constants/Colors
+import { shadow } from '../../app/_shared/ui/parity';
 
 // Hook para acessar as cores do tema atual (reutilizado dos outros componentes)
 function useTheme() {
@@ -22,15 +23,9 @@ const Card: React.FC<CardProps> = ({ children, style }) => {
   const dynamicStyles = StyleSheet.create({
     themedCard: {
       backgroundColor: theme.cardBackground, // Usa theme.cardBackground
-      // Assumindo que shadowColorCard está definido em Colors.ts para sombras
+      ...shadow(2),
+      // Mantém a cor personalizada do card mesmo quando a sombra vem do helper
       shadowColor: theme.shadowColorCard,
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25, // Esses valores podem precisar de ajuste com base na sua definição de 'shadows.card'
-      shadowRadius: 3.84,
-      elevation: 5, // Para Android
     },
   });
 
