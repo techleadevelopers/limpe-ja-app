@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
-    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,18 +17,15 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
-import Constants from 'expo-constants';
 import { useAuth } from '../../contexts/AuthContext';
 import { CreateAddressDto, RegisterClientDto } from '../../types/backend/auth';
 
-import * as Location from 'expo-location';
-import { ensureLocationPermission } from '../../services/locationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchApi } from '../../services/api';
-import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
+import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context'; // Imported but not used directly in JSX
+import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
+import { fetchApi } from '../../services/api';
+import { ensureLocationPermission } from '../../services/locationService';
 import { CLIENT_ROUTES } from '../routes';
 
 import AnimatedReanimated, {
@@ -38,7 +37,7 @@ import AnimatedReanimated, {
     withRepeat,
     withTiming,
 } from 'react-native-reanimated';
-import { AuthFieldErrorMap, showUserError } from '../_shared/errors/userError';
+import { FieldErrorMap, showUserError } from '../_shared/errors/userError';
 
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
@@ -169,7 +168,7 @@ export default function ClientRegisterScreen() {
   const [stateError, setStateError] = useState<string | null>(null);
   const [complementError, setComplementError] = useState<string | null>(null);
 
-  const applyClientFieldErrors = (fieldErrors?: AuthFieldErrorMap) => {
+  const applyClientFieldErrors = (fieldErrors?: FieldErrorMap) => {
     if (!fieldErrors) return;
     const setterMap: Record<string, React.Dispatch<React.SetStateAction<string | null>>> = {
       email: setEmailError,
@@ -1566,28 +1565,28 @@ export default function ClientRegisterScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: 'transparent',
+        backgroundColor: Platform.OS === 'android' ? '#ffffff' :'transparent',
     },
     keyboardAvoidingContainer: {
         flex: 1,
     },
     scrollView: {
         flex: 1,
-        backgroundColor: 'transparent', // alterado para transparente conforme pedido
+        backgroundColor: Platform.OS === 'android' ? '#ffffff' :'transparent', // alterado para transparente conforme pedido
     },
     scrollContentContainer: {
         flexGrow: 1,
         justifyContent: 'center', // Centraliza verticalmente o conteúdo todo
         alignItems: 'center',
-        paddingBottom: 60,
-        paddingTop: 20,
+        paddingBottom: Platform.OS === 'android' ? 0 : 60,
+        paddingTop: Platform.OS === 'android' ? 0 : 20,
     },
     contentWrapper: {
         flex: 1,
         width: '100%',
         maxWidth: 380, // Ajustado para centralização perfeita em telas médias
         paddingHorizontal: 40, // Padding menor para centro exato
-        paddingTop: Platform.OS === 'ios' ? 20 : 15,
+        paddingTop: Platform.OS === 'ios' ? 20 : 0,
         alignItems: 'center',
         bottom: 80,
     },
@@ -1602,7 +1601,7 @@ const styles = StyleSheet.create({
     logoContainer: {
         alignItems: 'center',
         marginBottom: 20, // Logo mais próxima
-        top: 110,
+        top: Platform.OS === 'android' ? 130 : 110,
         right: 10,
     },
     logo: {
@@ -1643,16 +1642,11 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: Platform.OS === 'android' ? '#85d0fc10' : '#FFFFFF',
         borderRadius: 28,
-        height: 45,
+        height: Platform.OS === 'android' ? 39 :  45,
         bottom: 10,
         marginBottom: 10, // Espaço mínimo para o erro ficar colado abaixo
-        shadowColor: 'rgba(100, 100, 150, 0.15)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
-        elevation: 4,
         paddingHorizontal: 0,
         borderWidth: 1,
         borderColor: 'transparent',
@@ -1665,18 +1659,14 @@ const styles = StyleSheet.create({
     },
     iconCircle: {
         width: 45,
-        height: 45,
+        height: Platform.OS === 'android' ? 39 : 45,
         right: 3,
         borderRadius: 80,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#F0F8FF',
+        backgroundColor: Platform.OS === 'android' ? '#85d0fc10' :'#F0F8FF',
         marginRight: 12,
-        shadowColor: '#00BCD4',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 3,
+        
     },
     input: {
         flex: 1,
@@ -1704,7 +1694,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 14,
+        paddingVertical: Platform.OS === 'android' ? 10 : 14,
         paddingHorizontal: 24,
         borderRadius: 28,
         minWidth: 120,
@@ -1723,7 +1713,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 6,
+        elevation: 0,
     },
     navButtonTextBack: {
         color: '#00BCD4',
