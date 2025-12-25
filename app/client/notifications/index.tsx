@@ -2,26 +2,28 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  FlatList,
-  Image,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Platform,
-} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
-  getMyNotifications,
-  markAllNotificationsAsRead,
-  markNotificationAsRead,
-  AppNotification,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    FlatList,
+    Image,
+    Platform,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import {
+    AppNotification,
+    getMyNotifications,
+    markAllNotificationsAsRead,
+    markNotificationAsRead,
 } from '../../../services/notificationService';
+import { formatDateTime, formatPriceBRL } from '../../../utils/formatters';
+import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 const formatNotificationTimestamp = (isoTimestamp: string, t: any): string => {
   const now = new Date();
@@ -39,6 +41,14 @@ const formatNotificationTimestamp = (isoTimestamp: string, t: any): string => {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 };
 
+type PaymentConfirmedMeta = {
+  bookingId: string;
+  providerName?: string;
+  scheduledAt?: string;
+  amount?: number;
+  paymentMethod?: string;
+};
+
 const getNotificationIcon = (
   type?: string
 ): { name: string; color: string; library: 'Ionicons' | 'MaterialCommunityIcons' } => {
@@ -49,6 +59,8 @@ const getNotificationIcon = (
       return { name: 'chatbubble-ellipses-outline', color: '#4CAF50', library: 'Ionicons' };
     case 'PAGAMENTO':
       return { name: 'cash-outline', color: '#FF9500', library: 'Ionicons' };
+    case 'PAYMENT_CONFIRMED':
+      return { name: 'check-circle', color: '#10B981', library: 'MaterialCommunityIcons' };
     case 'BOOKING_CONFIRMED':
       return { name: 'check-circle-outline', color: '#2E7D32', library: 'MaterialCommunityIcons' };
     case 'NEW_MESSAGE':
@@ -90,6 +102,22 @@ const AnimatedNotificationItem: React.FC<{
 
   const iconInfo = getNotificationIcon(item.type);
   const isRead = !!item.isRead;
+  const normalizedType = item.type?.toString().toUpperCase() ?? '';
+  const paymentMeta = item.meta as PaymentConfirmedMeta | undefined;
+  const showPaymentMeta =
+    normalizedType === 'PAYMENT_CONFIRMED' && Boolean(paymentMeta?.bookingId);
+  const scheduledLabel = paymentMeta?.scheduledAt
+    ? formatDateTime(paymentMeta.scheduledAt, undefined, {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : 'Horário pendente';
+  const amountLabel =
+    typeof paymentMeta?.amount === 'number'
+      ? formatPriceBRL(paymentMeta.amount)
+      : undefined;
 
   return (
     <Animated.View
@@ -124,6 +152,22 @@ const AnimatedNotificationItem: React.FC<{
           <Text style={[styles.notificationBody, !isRead && styles.unreadTextLight]} numberOfLines={2}>
             {item.body}
           </Text>
+          {showPaymentMeta && (
+            <View style={styles.paymentMetaWrapper}>
+              <Text style={styles.paymentMetaName}>{paymentMeta?.providerName ?? 'Prestador'}</Text>
+              <Text style={styles.paymentMetaSubtitle}>
+                {scheduledLabel}
+                {amountLabel ? ` • ${amountLabel}` : ''}
+              </Text>
+              <TouchableOpacity
+                style={styles.paymentMetaCta}
+                onPress={() => onPress(item)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.paymentMetaCtaText}>Ver agendamento</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <Text style={styles.notificationTimestamp}>{formatNotificationTimestamp(item.createdAt, t)}</Text>
         </View>
         {!!item.deeplink && <Ionicons name="chevron-forward-outline" size={22} color="#C7C7CC" style={styles.chevron} />}
@@ -173,7 +217,7 @@ export default function ClientNotificationsScreen() {
             setNotifications(sorted.length > 0 ? sorted : fallback);
       if (refreshing) Alert.alert(t('common.success', 'Sucesso'), t('notifications.notifications_updated', 'Notificações atualizadas'));
     } catch (err: any) {
-      Alert.alert(t('common.error', 'Erro'), err?.response?.data?.message || t('common.network_error', 'Falha de rede.'));
+      alertUserError(err, t('common.error', 'Erro'));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -186,14 +230,24 @@ export default function ClientNotificationsScreen() {
   }, [loadNotifications]);
 
   const handleNotificationPress = async (item: AppNotification) => {
-    if (item.isRead) return;
-    try {
-      await markNotificationAsRead(item.id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === item.id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n))
-      );
-    } catch {
-      Alert.alert(t('common.error', 'Erro'), t('notifications.mark_read_error', 'Não foi possível marcar como lida.'));
+    if (!item.isRead) {
+      try {
+        await markNotificationAsRead(item.id);
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === item.id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n,
+          ),
+        );
+      } catch {
+        Alert.alert(t('common.error', 'Erro'), t('notifications.mark_read_error', 'Não foi possível marcar como lida.'));
+      }
+    }
+    const paymentMeta = item.meta as PaymentConfirmedMeta | undefined;
+    const targetBooking = paymentMeta?.bookingId
+      ? `/client/bookings/${paymentMeta.bookingId}`
+      : item.deeplink;
+    if (targetBooking) {
+      router.push(targetBooking as any);
     }
   };
 
@@ -278,7 +332,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef6ff',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   markAllText: { color: '#2563eb', fontSize: 10, fontWeight: '700' },
@@ -295,7 +349,7 @@ const styles = StyleSheet.create({
     borderColor: '#E9EEF5',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
-      android: { elevation: 2 },
+      android: { elevation: 0 },
     }),
   },
   unreadItem: {
@@ -315,6 +369,35 @@ const styles = StyleSheet.create({
   contentContainer: { flex: 1, marginLeft: 8 },
   notificationTitle: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
   notificationBody: { fontSize: 12, color: '#475569', marginTop: 2 },
+  paymentMetaWrapper: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+  },
+  paymentMetaName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  paymentMetaSubtitle: {
+    fontSize: 12,
+    color: '#475569',
+    marginBottom: 8,
+  },
+  paymentMetaCta: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#2563EB',
+  },
+  paymentMetaCtaText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   notificationTimestamp: { fontSize: 11, color: '#94a3b8', marginTop: 6 },
   unreadText: { color: '#0f172a' },
   unreadTextLight: { color: '#1e293b' },
