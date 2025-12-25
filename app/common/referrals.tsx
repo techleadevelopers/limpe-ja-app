@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Animated, Easing, Platform } from 'react-native'; // Adicionado 'Platform'
-import ScreenContainer from '../../components/common/ScreenContainer';
-import Header from '../../components/common/Header';
-import PrimaryButton from '../../components/common/PrimaryButton';
-import { colors } from '../../components/common/theme/colors';
-import { typography } from '../../components/common/theme/typography';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { api } from '../../services/api';
-import { useAuth } from '../../hooks/useAuth';
 import * as Haptics from 'expo-haptics';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native'; // Adicionado 'Platform'
+import Header from '../../components/common/Header';
+import PrimaryButton from '../../components/common/PrimaryButton';
+import ScreenContainer from '../../components/common/ScreenContainer';
+import { colors } from '../../components/common/theme/colors';
+import { typography } from '../../components/common/theme/typography';
+import { useAuth } from '../../hooks/useAuth';
+import { api } from '../../services/api';
 import NotificationUIService from '../../services/notificationUIService';
 
 type ReferredUser = { name: string; status: string; date: string };
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
