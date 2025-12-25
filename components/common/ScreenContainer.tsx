@@ -1,68 +1,102 @@
-// src/components/ScreenContainer.tsx
 import React from 'react';
-import { View, StyleSheet, StatusBar, ScrollView, ViewStyle, Platform } from 'react-native'; // Adicionado Platform
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  View,
+  StyleSheet,
+  StatusBar,
+  ScrollView,
+  ViewStyle,
+  Platform,
+  KeyboardAvoidingView,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from './theme/colors';
+
+const DEFAULT_VERTICAL_PADDING = 20;
 
 interface ScreenContainerProps {
   children: React.ReactNode;
   scrollable?: boolean;
   style?: ViewStyle;
-  statusBarColor?: string; // Permite customizar a cor da StatusBar
-  statusBarStyle?: 'dark-content' | 'light-content'; // Permite customizar o estilo da StatusBar
-  contentContainerStyle?: ViewStyle; // Permite customizar o estilo do conteúdo (ScrollView ou View)
+  statusBarColor?: string;
+  statusBarStyle?: 'dark-content' | 'light-content';
+  contentContainerStyle?: ViewStyle;
 }
 
 const ScreenContainer: React.FC<ScreenContainerProps> = ({
   children,
   scrollable = true,
   style,
-  statusBarColor = colors.background, // Padrão para a cor de fundo
-  statusBarStyle = 'dark-content', // Padrão para dark-content
+  statusBarColor = colors.background,
+  statusBarStyle = 'dark-content',
   contentContainerStyle,
 }) => {
   const insets = useSafeAreaInsets();
+  const scrollPaddingBottom = insets.bottom + DEFAULT_VERTICAL_PADDING;
 
   const content = scrollable ? (
     <ScrollView
-      contentContainerStyle={[styles.scrollViewContent, contentContainerStyle]}
+      contentContainerStyle={[
+        styles.scrollViewContent,
+        contentContainerStyle,
+        { paddingBottom: scrollPaddingBottom },
+      ]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
-      // Adiciona um bounce suave para iOS, típico de apps premium
       bounces={Platform.OS === 'ios'}
+      contentInsetAdjustmentBehavior="automatic"
+      scrollIndicatorInsets={{ top: insets.top, bottom: insets.bottom }}
     >
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.nonScrollableContent, contentContainerStyle]}>{children}</View>
+    <View
+      style={[
+        styles.nonScrollableContent,
+        contentContainerStyle,
+        { paddingBottom: Math.max(scrollPaddingBottom, insets.bottom) },
+      ]}
+    >
+      {children}
+    </View>
   );
 
+  const keyboardVerticalOffset =
+    Platform.OS === 'ios' ? insets.top + 44 : (StatusBar.currentHeight ?? 0) + insets.top;
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }, style]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: statusBarColor }, style]}>
       <StatusBar
         barStyle={statusBarStyle}
         backgroundColor={statusBarColor}
-        translucent={true} // Torna a StatusBar transparente para que o conteúdo possa ir atrás dela
+        translucent={true}
       />
-      {content}
-    </View>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoiding}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={keyboardVerticalOffset}
+      >
+        {content}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: colors.background, // Fundo principal da tela
+  },
+  keyboardAvoiding: {
+    flex: 1,
   },
   scrollViewContent: {
-    flexGrow: 1, // Garante que o conteúdo preencha a tela e permita rolagem
-    paddingHorizontal: 20, // Padding lateral padrão para um visual limpo
-    paddingVertical: 20, // Padding vertical padrão
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingVertical: DEFAULT_VERTICAL_PADDING,
   },
   nonScrollableContent: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: DEFAULT_VERTICAL_PADDING,
   },
 });
 
