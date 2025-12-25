@@ -1,29 +1,36 @@
-import NotificationUIService from '../../services/notificationUIService';
+import NotificationUIService from '../../../services/notificationUIService';
 
-export type AuthFieldErrorMap = Record<string, string>;
+export type FieldErrorMap = Record<string, string>;
 
 export interface UserFacingError {
   title?: string;
   message: string;
-  fieldErrors?: AuthFieldErrorMap;
+  fieldErrors?: FieldErrorMap;
 }
 
 const FALLBACK_MESSAGE = 'Não foi possível continuar. Tente novamente.';
-const NETWORK_MESSAGE = 'Sem conexão. Tente novamente.';
+const NETWORK_MESSAGE = 'Sem conexão. Verifique sua internet.';
 const UNAUTHORIZED_MESSAGE = 'E-mail ou senha incorretos.';
 const CONFLICT_MESSAGE = 'Este e-mail já está cadastrado.';
+const DEFAULT_TITLE = 'Erro';
 
 const NETWORK_PATTERNS =
   /(timeout|timed out|network request failed|network error|sem conexao|conexão|internet|offline|ECONNABORTED)/i;
 
-const toFieldErrorMap = (data: unknown): AuthFieldErrorMap | undefined => {
+const SERVER_MESSAGE_PATTERNS: Array<{ pattern: RegExp; response: string }> = [
+  { pattern: /(timeout|timed out|network request failed|network error)/i, response: NETWORK_MESSAGE },
+  { pattern: /(401|unauthorized|invalid credentials|token|autentic)/i, response: UNAUTHORIZED_MESSAGE },
+  { pattern: /(409|already exists|já está cadastrado|está cadastrado)/i, response: CONFLICT_MESSAGE },
+];
+
+const toFieldErrorMap = (data: unknown): FieldErrorMap | undefined => {
   if (!data || typeof data !== 'object') return undefined;
   const payload =
     (data as Record<string, unknown>)?.fieldErrors ??
     (data as Record<string, unknown>)?.errors;
 
   if (payload && typeof payload === 'object') {
-    const normalized: AuthFieldErrorMap = {};
+    const normalized: FieldErrorMap = {};
     for (const [key, value] of Object.entries(payload)) {
       if (typeof value === 'string' && value.trim().length > 0) {
         normalized[key] = value.trim();
@@ -44,12 +51,31 @@ const hasNetworkSignal = (error: unknown): boolean => {
     const code = String(err.code ?? '').toLowerCase();
     if (NETWORK_PATTERNS.test(code)) return true;
     const msg = String(err.message ?? '').toLowerCase();
-    return NETWORK_PATTERNS.test(msg);
+    if (NETWORK_PATTERNS.test(msg)) return true;
+    const dataMessage = String((err.response as Record<string, unknown>)?.data?.message ?? '');
+    return NETWORK_PATTERNS.test(dataMessage);
   }
   return false;
 };
 
-export function normalizeAuthError(error: unknown): UserFacingError {
+const sanitizeServerMessage = (message: string): string => {
+  const normalized = message.trim().replace(/\s+/g, ' ');
+  if (normalized.length === 0) return FALLBACK_MESSAGE;
+
+  for (const entry of SERVER_MESSAGE_PATTERNS) {
+    if (entry.pattern.test(normalized)) {
+      return entry.response;
+    }
+  }
+
+  if (/[^\s\wÀ-ÿ]/.test(normalized)) {
+    return FALLBACK_MESSAGE;
+  }
+
+  return FALLBACK_MESSAGE;
+};
+
+export function normalizeAppError(error: unknown): UserFacingError {
   const response = (error as Record<string, unknown>)?.response as
     | { status?: number; data?: unknown }
     | undefined;
@@ -75,12 +101,7 @@ export function normalizeAuthError(error: unknown): UserFacingError {
     data !== null &&
     typeof (data as Record<string, unknown>)?.message === 'string'
   ) {
-    const msg = ((data as Record<string, unknown>)?.message as string)
-      .trim()
-      .replace(/\s+/g, ' ');
-    if (msg.length > 0 && !NETWORK_PATTERNS.test(msg)) {
-      message = msg;
-    }
+    message = sanitizeServerMessage((data as Record<string, unknown>).message as string);
   } else if (status && status >= 500) {
     message = FALLBACK_MESSAGE;
   }
@@ -94,10 +115,10 @@ export function normalizeAuthError(error: unknown): UserFacingError {
 }
 
 export function showUserError(error: unknown, title?: string): UserFacingError {
-  const normalized = normalizeAuthError(error);
+  const normalized = normalizeAppError(error);
   NotificationUIService.showError(
     normalized.message,
-    title ?? normalized.title ?? 'Erro',
+    title ?? normalized.title ?? DEFAULT_TITLE,
   );
   return normalized;
 }
