@@ -1,8 +1,16 @@
 // LimpeJaApp/src/components/common/Button.tsx
 import React, { useMemo } from 'react';
-import { Pressable, Text, StyleSheet, ViewStyle, TextStyle, StyleProp } from 'react-native';
-import { useColorScheme } from 'react-native';
-import Colors from '../../constants/Colors'; // Importe Colors
+import {
+  Pressable,
+  Text,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+  StyleProp,
+  useColorScheme,
+} from 'react-native';
+import Colors from '../../constants/Colors';
+import { pressableBase, shadow, textBase } from '../../app/_shared/ui/parity';
 
 interface ButtonProps {
   title: string;
@@ -12,16 +20,13 @@ interface ButtonProps {
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   disabled?: boolean;
-  // ADICIONADO: A propriedade 'kind' para definir variantes do botão
   kind?: 'primary' | 'secondary' | 'ghost';
 }
 
-// Hook para acessar as cores do tema atual
 function useTheme() {
   const scheme = useColorScheme?.() || 'light';
-  // Colors é um default export com chaves light/dark
   const theme = (Colors as any)[scheme] || (Colors as any).light;
-  return theme as typeof Colors.light; // Garante que o tipo retornado é o do tema light para inferência
+  return theme as typeof Colors.light;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -32,11 +37,10 @@ const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   disabled,
-  kind = 'primary', // Define 'primary' como o tipo padrão do botão
+  kind = 'primary',
 }) => {
   const theme = useTheme();
 
-  // Calcula os estilos específicos da variante do botão usando useMemo para otimização
   const variantStyles = useMemo(() => {
     switch (kind) {
       case 'secondary':
@@ -44,39 +48,39 @@ const Button: React.FC<ButtonProps> = ({
           button: {
             backgroundColor: theme.secondary,
             borderColor: theme.secondary,
-            borderWidth: 1, // Garante que a borda esteja presente
+            borderWidth: 1,
           },
           text: {
-            color: '#FFF', // Texto branco para botões sólidos secundários
+            color: '#FFF',
           },
         };
       case 'ghost':
         return {
           button: {
             backgroundColor: 'transparent',
-            // Usa interactivePrimary para a cor da borda e do texto em botões ghost,
-            // ou primary como fallback se interactivePrimary não estiver disponível.
             borderColor: theme.interactivePrimary || theme.primary,
-            borderWidth: 1, // Botões ghost geralmente têm borda
+            borderWidth: 1,
           },
           text: {
-            color: theme.interactivePrimary || theme.primary, // Texto com a cor primária interativa
+            color: theme.interactivePrimary || theme.primary,
           },
         };
-      case 'primary': // Caso padrão
+      case 'primary':
       default:
         return {
           button: {
             backgroundColor: theme.primary,
             borderColor: theme.primary,
-            borderWidth: 1, // Garante que a borda esteja presente
+            borderWidth: 1,
           },
           text: {
-            color: '#FFF', // Texto branco para botões sólidos primários
+            color: '#FFF',
           },
         };
     }
-  }, [kind, theme]); // Recalcula apenas se kind ou theme mudarem
+  }, [kind, theme]);
+
+  const pressableParity = pressableBase();
 
   return (
     <Pressable
@@ -84,19 +88,17 @@ const Button: React.FC<ButtonProps> = ({
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       disabled={disabled}
+      android_ripple={pressableParity.androidRipple}
       style={({ pressed }) => [
-        styles.baseButton, // Estilos base comuns a todos os botões (padding, border-radius, etc.)
-        variantStyles.button, // Estilos específicos da variante (cor de fundo, borda)
-        pressed && styles.buttonPressed, // Efeito de pressionado
-        disabled && styles.buttonDisabled, // Estilos para botão desabilitado
-        style, // Estilos fornecidos pelo usuário (último na ordem para permitir sobrescrever)
+        styles.baseButton,
+        pressableParity.style,
+        variantStyles.button,
+        pressed && styles.buttonPressed,
+        disabled && styles.buttonDisabled,
+        style,
       ]}
     >
-      <Text style={[
-        styles.baseButtonText, // Estilos base do texto do botão (tamanho da fonte, peso)
-        variantStyles.text, // Cor do texto específica da variante
-        textStyle, // Estilos de texto fornecidos pelo usuário
-      ]}>
+      <Text style={[textBase(styles.baseButtonText), variantStyles.text, textStyle]}>
         {title}
       </Text>
     </Pressable>
@@ -104,21 +106,22 @@ const Button: React.FC<ButtonProps> = ({
 };
 
 const styles = StyleSheet.create({
-  baseButton: { // Estilos comuns a todos os tipos de botões
+  baseButton: {
+    ...shadow(2),
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 120, // Opcional: define uma largura mínima para botões
+    minWidth: 120,
   },
   buttonPressed: {
-    opacity: 0.8, // Reduz a opacidade quando o botão é pressionado
+    opacity: 0.8,
   },
   buttonDisabled: {
-    opacity: 0.5, // Reduz a opacidade e desabilita interações quando o botão está desabilitado
+    opacity: 0.5,
   },
-  baseButtonText: { // Estilos comuns para o texto do botão
+  baseButtonText: {
     fontSize: 16,
     fontWeight: '600',
   },
