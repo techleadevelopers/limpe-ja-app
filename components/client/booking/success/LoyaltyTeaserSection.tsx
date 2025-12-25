@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: 20,
     alignItems: 'center',
-    ...AppShadows.medium,
+    
     overflow: 'hidden',
     borderWidth: 0,
   },
