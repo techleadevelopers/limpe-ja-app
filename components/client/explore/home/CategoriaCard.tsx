@@ -252,21 +252,21 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardContainerWrapper: {
-    width:  48,
-    height: 45 + 25,
+    width:  Platform.OS === 'android' ? 40 : 48,
+    height: Platform.OS === 'android' ? 60 : 45 + 20,
     marginRight: 11,
     right: 18,
     marginLeft: 4,
     bottom: 2,
     borderRadius: 45,
-    marginBottom: -14,
-    marginTop: 14,
+    marginBottom: Platform.OS === 'android' ? -5 : -14,
+    marginTop:  Platform.OS === 'android' ? 10 : 14,
     alignItems: 'center',
     
   },
   touchableSurface: {
     width: '100%',
-    height: 48,
+    height: Platform.OS === 'android' ? 40 : 48,
     borderRadius: 45,
     overflow: 'hidden',
     borderWidth: BORDER_WIDTH,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   categoriaTexto: {
     fontSize: 10,
     color: '#788fa7ff',
-    fontWeight: '300',
+    fontWeight: Platform.OS === 'android' ? '100' : '300',
     textAlign: 'center',
     marginTop: 7,
     
