@@ -1,9 +1,9 @@
 // LimpeJaApp/components/client/booking/schedule/ScheduleHeader.tsx
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppColors } from '../../../../constants/appStyles'; // Removido AppShadows se não usado
+import React from 'react';
+import { Animated, Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AppColors } from '../../../../../constants/appStyles'; // Removido AppShadows se não usado
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window'); // Removido height se não necessário
 
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 4, // Equivalente Android
+        elevation: 0, // Equivalente Android
     },
     headerRow: {
         flexDirection: 'row',
