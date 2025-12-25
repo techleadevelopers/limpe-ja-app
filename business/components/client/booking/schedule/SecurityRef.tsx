@@ -10,7 +10,7 @@ import {
   View,
   Easing
 } from 'react-native';
-import { Icons3D } from '../../../../constants/icons3d'; // << ícones 3D (docCheck)
+import { Icons3D } from '../../../../../constants/icons3d'; // << ícones 3D (docCheck)
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
