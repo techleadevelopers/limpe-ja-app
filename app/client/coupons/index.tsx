@@ -1,12 +1,13 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Platform, ActivityIndicator, FlatList, Image } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import Colors from '../../../constants/Colors';
 import { getMyCoupons as getMyCouponsService, MyCouponListItem } from '../../../services/couponService';
 import NotificationUIService from '../../../services/notificationUIService';
+import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 enum CouponType {
   PERCENTAGE = 'percentage',
@@ -158,7 +159,7 @@ export default function ClientCouponsScreen() {
       setAllCoupons(mapped);
     } catch (error: any) {
       console.error('Erro ao buscar cupons do cliente:', error?.response?.data || error?.message);
-      NotificationUIService.showError(error?.response?.data?.message || t('common.network_error', { defaultValue: 'Falha de rede.' }), t('common.error', { defaultValue: 'Erro' }));
+      toastUserError(error, 'Erro ao buscar cupons');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },
