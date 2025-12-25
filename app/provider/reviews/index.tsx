@@ -1,17 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  FlatList,
-  Platform,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    FlatList,
+    Platform,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { getMyProviderDashboard } from '../../../services/dashboardService';
@@ -333,7 +333,7 @@ const localStyles = StyleSheet.create({
     justifyContent: 'space-between',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     }),
   },
   headerBackButton: {
@@ -365,7 +365,7 @@ const localStyles = StyleSheet.create({
     marginBottom: Spacing.md,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 12 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     }),
   },
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
