@@ -6,7 +6,8 @@ import {
   IsUUID,
   IsOptional,
   IsObject,
-} from 'class-validator'; // Added IsObject
+  IsISO8601,
+} from 'class-validator'; // Added IsObject, IsISO8601
 
 export class CreateNotificationDto {
   @ApiProperty({
@@ -80,4 +81,20 @@ export class CreateNotificationDto {
   @IsOptional()
   @IsString()
   category?: string; // NEW: Added category for better filtering/UI handling
+
+  @ApiPropertyOptional({
+    description: 'Chave idempotente para evitar duplicação em webhooks/queues',
+    example: 'payment_confirmed:booking-123',
+  })
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'Data/hora do serviço confirmado (ex: para banners e filtros)',
+    example: '2025-12-25T14:30:00.000Z',
+  })
+  @IsOptional()
+  @IsISO8601()
+  scheduledAt?: string;
 }
