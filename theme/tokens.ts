@@ -18,11 +18,11 @@ export const tokens = {
   shadows: {
     low: {
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
     },
     medium: {
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.17, shadowRadius: 9 },
-      android: { elevation: 6 },
+      android: { elevation: 0 },
     },
   },
   // Accent por categoria (exemplo; mapeie por categoryId)
