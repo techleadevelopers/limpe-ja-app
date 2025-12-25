@@ -1,19 +1,19 @@
 // LimpeJaApp/components/missions/MissionItem.tsx
-import React, { useRef, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
+    ActivityIndicator,
     Animated,
     Easing,
-    ActivityIndicator,
     Platform,
-    useColorScheme, // Importado para theming
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useColorScheme,
+    View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { MissionItem as MissionItemType } from '../../services/missionService';
 import Colors from '../../constants/Colors'; // Importa o arquivo de cores
+import { MissionItem as MissionItemType } from '../../services/missionService';
 
 // Hook para acessar as cores do tema atual
 function useTheme() {
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 8,
             },
             android: {
-                elevation: 6,
+                elevation: 0,
             },
         }),
     },
