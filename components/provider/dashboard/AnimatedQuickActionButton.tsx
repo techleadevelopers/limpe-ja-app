@@ -1,7 +1,7 @@
 // app/provider/components/dashboard/AnimatedQuickActionButton.tsx
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 interface AnimatedQuickActionButtonProps {
   label: string;
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-      android: { elevation: 3 },
+      android: { elevation: 0 },
     }),
   },
   quickActionButton: {
