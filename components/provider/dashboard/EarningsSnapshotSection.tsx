@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ProviderEarningsSummary } from '../../../../types'; // Ajuste o caminho
+import { ProviderEarningsSummary } from '../../../types'; // Ajuste o caminho
 import Toast from 'react-native-toast-message'; // Para ToastMessages
 
 // REMOVIDO: A importação condicional do SkeletonPlaceholder foi removida.
