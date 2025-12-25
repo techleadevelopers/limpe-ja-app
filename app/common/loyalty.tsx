@@ -1,15 +1,15 @@
 // LimpeJaApp/app/common/loyalty.tsx
 import React, { useEffect, useRef } from 'react';
-import { Text, StyleSheet, ScrollView, Alert, Animated, Easing, Platform } from 'react-native'; // Adicionado 'Platform'
-import ScreenContainer from '../../components/common/ScreenContainer';
+import { Alert, Animated, Easing, Platform, ScrollView, StyleSheet, Text } from 'react-native'; // Adicionado 'Platform'
 import Header from '../../components/common/Header';
+import ScreenContainer from '../../components/common/ScreenContainer';
 import { colors } from '../../components/common/theme/colors'; // Cores ainda são usadas nos estilos locais
 import { typography } from '../../components/common/theme/typography'; // Tipografia ainda é usada nos estilos locais
 
 // Importa os novos componentes
+import HowToEarnSection from '../../components/common/loyalty/HowToEarnSection';
 import LoyaltySummaryCard from '../../components/common/loyalty/LoyaltySummaryCard';
 import RewardItem from '../../components/common/loyalty/RewardItem';
-import HowToEarnSection from '../../components/common/loyalty/HowToEarnSection';
 
 // Define interfaces para a estrutura dos dados
 interface Reward {
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 0,
       },
     }),
   },
