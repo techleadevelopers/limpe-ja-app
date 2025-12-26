@@ -15,8 +15,15 @@ import {
   CouponTarget,
   CouponStatus,
 } from '@prisma/client';
+import { assertTestDatabaseUrl } from '../../scripts/assert-test-env';
 
-const prisma = new PrismaClient();
+const testDatabaseUrl = process.env.DATABASE_URL_TEST;
+assertTestDatabaseUrl(testDatabaseUrl);
+const prisma = new PrismaClient({
+  datasources: {
+    db: { url: testDatabaseUrl },
+  },
+});
 
 async function getSeedUsers() {
   const clientUser = await prisma.user.findUnique({ where: { email: 'indicador@teste.com' } });
