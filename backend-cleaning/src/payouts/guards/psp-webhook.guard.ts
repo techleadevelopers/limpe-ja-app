@@ -36,12 +36,28 @@ export class PspWebhookGuard implements CanActivate {
     this.enforceTimestampWindow(request, eventId);
 
     const signature = this.getHeader(request, 'x-signature');
-    const secret = this.configService.get<string>('psp.webhookSecret');
+    const source = this.resolveSource(request);
+    const isPixWebhook = source === 'psp:pix';
+    const allowInsecure =
+      String(this.configService.get<string>('ALLOW_INSECURE_WEBHOOKS') || '')
+        .toLowerCase() === 'true';
+
+    const secret = isPixWebhook
+      ? this.configService.get<string>('PIX_WEBHOOK_SECRET')
+      : this.configService.get<string>('psp.webhookSecret');
     if (!secret) {
-      this.logger.error('PSP webhook secret not configured.');
-      throw new ForbiddenException(
-        'Webhook signature validation is not configured.',
-      );
+      if (isPixWebhook && allowInsecure) {
+        this.logger.warn(
+          'PIX webhook secret not configured but ALLOW_INSECURE_WEBHOOKS=true. Skipping signature validation.',
+        );
+      } else {
+        this.logger.error(
+          `${isPixWebhook ? 'PIX' : 'PSP'} webhook secret not configured.`,
+        );
+        throw new ForbiddenException(
+          `${isPixWebhook ? 'PIX' : 'PSP'} webhook secret not configured.`,
+        );
+      }
     }
 
     const payload =
@@ -49,13 +65,10 @@ export class PspWebhookGuard implements CanActivate {
         ? request.rawBody
         : JSON.stringify(request.body ?? '');
 
-    if (!verifyPspSignature(signature, payload, secret)) {
+    if (secret && !verifyPspSignature(signature, payload, secret)) {
       this.logger.warn(`Invalid PSP webhook signature for ${eventId}.`);
       throw new ForbiddenException('Invalid webhook signature.');
     }
-
-    const source = this.resolveSource(request);
-    const isPixWebhook = source === 'psp:pix';
 
     if (isPixWebhook) {
       const existingReplay = await this.prisma.webhookReplay.findFirst({
