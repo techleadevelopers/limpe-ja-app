@@ -1,0 +1,34 @@
+version: '3.9'
+services:
+  postgres-test:
+    image: postgres:15
+    container_name: relax-app-postgres-test
+    restart: unless-stopped
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_DB: app_test
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    volumes:
+      - pgdata_test:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "app", "-d", "app_test", "-h", "localhost", "-p", "5432"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+
+  redis-test:
+    image: redis:7
+    container_name: relax-app-redis-test
+    restart: unless-stopped
+    ports:
+      - '6380:6379'
+    healthcheck:
+      test: ["CMD", "redis-cli", "-h", "localhost", "-p", "6379", "ping"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+
+volumes:
+  pgdata_test:
