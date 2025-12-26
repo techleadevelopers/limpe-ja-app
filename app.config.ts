@@ -17,7 +17,8 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     userInterfaceStyle: 'automatic',
 
     splash: {
-      resizeMode: 'contain',
+      image: './assets/images/splash.png',
+      resizeMode: 'cover',
       backgroundColor: '#ffffff',
     },
 
@@ -49,6 +50,11 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
         backgroundColor: '#ffffff35',
       },
       package: 'com.techleadevelopers.limpeja',
+      splash: {
+        image: './assets/images/splash.png',
+        resizeMode: 'cover', // <- mantém igual ao global
+        backgroundColor: '#ffffff',
+      },
     },
 
     web: {
@@ -61,16 +67,12 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
       'expo-router',
       'expo-localization',
       'expo-secure-store',
-      // ✅ Corrige: FirebaseAuth/FirebaseAuthInterop exigem module maps quando integrados como static libs.
-      // useFrameworks: "dynamic" (como você já usa) + useModularHeaders: true resolve o erro de pods Swift.
       [
         'expo-build-properties',
         {
           ios: {
             useFrameworks: 'dynamic',
             useModularHeaders: true,
-            // newArchEnabled pode permanecer padrão (false) se não estiver migrando
-            // newArchEnabled: false,
           },
         },
       ],
@@ -83,8 +85,8 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     extra: {
       ...config.extra,
       backendApiUrl:
-        // Prefer env when provided; fallback to the new cloud URL
-        process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://limpeja-backend-production-edfa.up.railway.app',
+        process.env.EXPO_PUBLIC_API_BASE_URL ??
+        'https://limpeja-backend-production-edfa.up.railway.app',
       environment: process.env.NODE_ENV || 'production',
       router: {},
       eas: {
