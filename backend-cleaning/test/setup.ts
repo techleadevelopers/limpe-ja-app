@@ -6,6 +6,9 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { QueuesService } from '../src/queues/queues.service';
 import { RedisLockService } from '../src/common/locks/redis-lock.service';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+import { assertTestDatabaseUrl, assertTestRedisUrl } from '../scripts/assert-test-env';
 
 jest.setTimeout(120_000);
 
@@ -43,6 +46,22 @@ const createNoopQueuesService = (): QueuesService =>
     },
   ) as unknown as QueuesService;
 
+const ensureTestEnvLoaded = () => {
+  if (process.env.NODE_ENV !== 'test') {
+    return;
+  }
+  const testEnvPath = resolve(process.cwd(), '.env.test');
+  config({ path: testEnvPath, override: false });
+  const testDbUrl = process.env.DATABASE_URL_TEST;
+  const testRedisUrl = process.env.REDIS_URL_TEST;
+  assertTestDatabaseUrl(testDbUrl);
+  assertTestRedisUrl(testRedisUrl);
+  process.env.DATABASE_URL = testDbUrl;
+  process.env.REDIS_URL = testRedisUrl;
+};
+
+ensureTestEnvLoaded();
+
 export interface TestAppContext {
   app: INestApplication;
   request: request.SuperTest<request.Test>;
@@ -56,15 +75,15 @@ export async function bootstrapTestApp(
 ): Promise<TestAppContext> {
   const seedEnv: Record<string, string | undefined> = {
     NODE_ENV: process.env.NODE_ENV ?? 'test',
-    DATABASE_URL:
-      process.env.DATABASE_URL ??
-      'postgresql://postgres:postgres@localhost:5432/relax_test',
+    DATABASE_URL: process.env.DATABASE_URL,
+    DATABASE_URL_TEST: process.env.DATABASE_URL_TEST,
     JWT_SECRET: process.env.JWT_SECRET ?? 'test-jwt-secret',
     JWT_EXPIRATION_TIME: process.env.JWT_EXPIRATION_TIME ?? '1h',
     PIX_WEBHOOK_SECRET: process.env.PIX_WEBHOOK_SECRET ?? 'pix-secret',
     PSP_WEBHOOK_SECRET: process.env.PSP_WEBHOOK_SECRET ?? 'psp-secret',
     MIN_SERVICE_MINUTES: process.env.MIN_SERVICE_MINUTES ?? '15',
-    REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
+    REDIS_URL: process.env.REDIS_URL,
+    REDIS_URL_TEST: process.env.REDIS_URL_TEST,
     CACHE_TTL_SECONDS: process.env.CACHE_TTL_SECONDS ?? '600',
     API_BASE_URL: process.env.API_BASE_URL ?? 'http://localhost',
   };
