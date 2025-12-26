@@ -2,8 +2,17 @@
 import { PrismaClient, UserRole, Prisma, VerificationStatus, BookingStatus, TransactionType, PricingType, CouponType, CouponTarget, CouponStatus, MissionAudience, MissionKind, RewardType, MissionStatus, LoyaltyTransactionType, OfferTarget, OfferStatus, SupportTicketStatus, SupportTicketCategory, DisputeReason, DisputeStatus, IncidentType, IncidentStatus, SubscriptionFrequency, SubscriptionStatus, ClaimStatus, PaymentIntentStatus, PixKeyType, LedgerEntryType, PayoutStatus, Service, // Importado para tipagem de createdServices
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { assertTestDatabaseUrl } from '../../scripts/assert-test-env';
 
-const prisma = new PrismaClient();
+const testDatabaseUrl = process.env.DATABASE_URL_TEST;
+assertTestDatabaseUrl(testDatabaseUrl);
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: testDatabaseUrl,
+    },
+  },
+});
 
 // Helper para adicionar dias a uma data
 const addDays = (date: Date, days: number): Date => {
