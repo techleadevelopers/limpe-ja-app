@@ -13,6 +13,7 @@ import {
 import { Request, Response } from 'express';
 import { PaymentsService } from './payments.service';
 import { PspWebhookGuard } from '../payouts/guards/psp-webhook.guard';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 type RawWebhookRequest = Request & {
   rawBody?: Buffer | string;
@@ -23,12 +24,13 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
 @Controller('payments/webhook')
-@UseGuards(PspWebhookGuard)
+@UseGuards(ThrottlerGuard, PspWebhookGuard)
 export class PaymentsWebhooksController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Header('Content-Type', 'application/json')
   @HttpCode(HttpStatus.OK)
+  @Throttle(30, 60)
   @Post('pix')
   public async handlePixWebhook(
     @Req() req: RawWebhookRequest,
@@ -55,6 +57,7 @@ export class PaymentsWebhooksController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @Throttle(20, 60)
   @Post('withdrawal')
   public async handleWithdrawalWebhook(
     @Headers('x-signature') signature: string,
