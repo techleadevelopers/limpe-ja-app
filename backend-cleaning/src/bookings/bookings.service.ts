@@ -47,6 +47,9 @@ import { I18nService } from '../common/i18n/i18n.service';
 import { Request } from 'express';
 
 import { RedisLockService } from '../common/locks/redis-lock.service';
+import { CacheService } from '../cache/cache.service';
+
+export const IDEMPOTENCY_TTL_SECONDS = 10 * 60;
 
 const DEFAULT_BOOKING_DETAILS_INCLUDE = {
   client: { include: { user: true } },
@@ -142,6 +145,7 @@ export class BookingsService {
 
     private readonly i18n: I18nService,
     private readonly redisLockService: RedisLockService,
+    private readonly cacheService: CacheService,
   ) {}
 
   private getExpectedEnd(booking: Booking): Date {
@@ -154,6 +158,28 @@ export class BookingsService {
       );
     const dur = booking.durationMinutes ?? 60;
     return new Date(base.getTime() + dur * 60 * 1000);
+  }
+
+  private buildIdempotencyCacheKey(key: string): string {
+    return `idempo:bookings:create:${key}`;
+  }
+
+  private extractIdempotencyKey(request?: Request): string | undefined {
+    if (!request) {
+      return undefined;
+    }
+    const rawHeader =
+      request.headers['idempotency-key'] ??
+      request.headers['Idempotency-Key'];
+    if (!rawHeader) {
+      return undefined;
+    }
+    const value = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : undefined;
   }
 
   // =========================
@@ -377,6 +403,24 @@ export class BookingsService {
     );
 
     const locale = (request as any)?.locale || 'pt-BR';
+
+    const idempotencyKey = this.extractIdempotencyKey(request);
+    const idempotencyNodeKey = idempotencyKey
+      ? this.buildIdempotencyCacheKey(idempotencyKey)
+      : undefined;
+
+    if (idempotencyNodeKey) {
+      const cachedBooking =
+        await this.cacheService.get<BookingWithDetailsRelations>(
+          idempotencyNodeKey,
+        );
+      if (cachedBooking) {
+        this.logger.log(
+          `[BookingsService] create - Idempotency cache hit for key ${idempotencyKey}`,
+        );
+        return cachedBooking;
+      }
+    }
 
     const lockKey = `booking:creation:${clientUserId}:${createBookingDto.providerId}:${createBookingDto.scheduledDate}:${createBookingDto.scheduledTime}`;
     const lockValue = `${clientUserId}_${Date.now()}`;
@@ -654,6 +698,14 @@ export class BookingsService {
 
         if (couponId) {
           await this.couponsService.markCouponAsUsed(couponId);
+        }
+
+        if (idempotencyNodeKey) {
+          await this.cacheService.set(
+            idempotencyNodeKey,
+            createdBooking,
+            IDEMPOTENCY_TTL_SECONDS,
+          );
         }
 
         return createdBooking;
