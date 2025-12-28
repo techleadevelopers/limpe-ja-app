@@ -51,12 +51,14 @@ export class PspWebhookGuard implements CanActivate {
           'PIX webhook secret not configured but ALLOW_INSECURE_WEBHOOKS=true. Skipping signature validation.',
         );
       } else {
-        this.logger.error(
-          `${isPixWebhook ? 'PIX' : 'PSP'} webhook secret not configured.`,
-        );
-        throw new ForbiddenException(
-          `${isPixWebhook ? 'PIX' : 'PSP'} webhook secret not configured.`,
-        );
+        const msg = `${isPixWebhook ? 'PIX' : 'PSP'} webhook secret not configured.`;
+        const isProd = process.env.NODE_ENV === 'production';
+        if (isProd) {
+          this.logger.error(msg);
+        } else {
+          this.logger.warn(msg);
+        }
+        throw new ForbiddenException(msg);
       }
     }
 
