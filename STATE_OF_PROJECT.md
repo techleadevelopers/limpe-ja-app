@@ -3,6 +3,7 @@
 
 ## 0) TL;DR (1 pagina)
 - Status geral: O backend NestJS entrega autenticacao JWT/roles, bookings (slots, regras minimas e state machine), payments PIX com webhooks e observabilidade (Prometheus, OTEL e health), enquanto o frontend Expo Router ja percorre explore, bookings e provider pages; o ciclo esta pronto para um beta controlado, mas depende de ajustes de configuracao (PIX/PSP secrets, rate limiting e consistencia de constantes).
+- Testes unitários: `npx jest --config test/jest-unit.json --runInBand` agora passa todas as 30 suites (incluindo os dois testes restaurados em `test/unit/`), usando a nova configuração `test/jest-unit.json`, ajustando `AppController/AppService` e `PspWebhookGuard`, e cobrindo o novo comportamento de throttling nos endpoints de bookings/pagamentos e webhooks. Os warnings visíveis ocorrem apenas porque os secrets de webhook/PIX e o PSP token ainda faltam na `.env`.
 - Top 10 riscos:
   1. `backend-cleaning/src/payments/payments.service.ts:198`  sem `PIX_WEBHOOK_SECRET`, `validateHmac` sempre falha e `handlePaymentWebhook` responde `ForbiddenException`, impedindo confirmacoes de PIX.
   2. `backend-cleaning/src/payouts/guards/psp-webhook.guard.ts:29`  quando `psp.webhookSecret` nao esta configurado o guard lanca `ForbiddenException` e bloqueia todos os webhooks PSP.
