@@ -156,7 +156,7 @@ let prismaService: any;
       guard.canActivate(mockExecutionContext(request)),
     ).resolves.toBe(true);
     expect(cacheService.setIfNotExists).toHaveBeenCalledWith(
-      'webhook:psp:event-123',
+      'webhook:psp:unknown:event-123',
       true,
       60,
     );
@@ -172,7 +172,7 @@ let prismaService: any;
       guard.canActivate(mockExecutionContext(request)),
     ).resolves.toBe(true);
     expect(cacheService.setIfNotExists).toHaveBeenCalledWith(
-      'webhook:psp:payload-event-456',
+      'webhook:psp:unknown:payload-event-456',
       true,
       60,
     );
