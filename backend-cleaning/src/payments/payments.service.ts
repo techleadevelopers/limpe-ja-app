@@ -1,12 +1,14 @@
 ﻿import {
   BadRequestException,
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
+  Inject,
   InternalServerErrorException,
   Logger,
   NotFoundException,
-  Inject,
   forwardRef,
-  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -40,6 +42,7 @@ import { ConnectService } from '../connect/connect.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateNotificationDto } from '../notifications/dto/create-notification.dto';
 import { PaymentIntentLocker } from './payment-intent-locker';
+import { canTransition, PaymentIntentState } from './payment.state-machine';
 
 // 1. Definição do Tipo (Recomendado para corrigir o Erro 2339)
 // Este tipo é usado para garantir a tipagem correta ao incluir relações aninhadas do Prisma.
@@ -111,6 +114,23 @@ type PixWebhookPayload = {
   order_id?: string;
   order?: PagSeguroOrder;
   resource_id?: string;
+};
+
+const mapPaymentIntentStatusToState = (
+  status?: PaymentIntentStatus | null,
+): PaymentIntentState => {
+  switch (status) {
+    case PaymentIntentStatus.PAID:
+      return 'CONFIRMED';
+    case PaymentIntentStatus.EXPIRED:
+      return 'EXPIRED';
+    case PaymentIntentStatus.REFUNDED:
+    case PaymentIntentStatus.CHARGEBACK:
+      return 'CANCELLED';
+    case PaymentIntentStatus.PENDING:
+    default:
+      return 'PENDING';
+  }
 };
 
 type PagBankLink = { rel?: string; href?: string };
@@ -271,6 +291,15 @@ export class PaymentsService {
         });
 
         if (intent && intent.status !== PaymentIntentStatus.PAID) {
+          const currentState = mapPaymentIntentStatusToState(intent.status);
+          const desiredState: PaymentIntentState = 'CONFIRMED';
+
+          if (!canTransition(currentState, desiredState)) {
+            this.logger.warn(
+              `[PaymentsService] PaymentIntent ${intent.id} não pode transitar de ${currentState} para ${desiredState}; ignorando.`,
+            );
+            return { message: 'Webhook processado com sucesso' };
+          }
           // Inicia uma transação para garantir atomicidade das atualizações
           await this.prisma.$transaction(async (tx) => {
             await tx.paymentIntent.update({
@@ -350,11 +379,16 @@ export class PaymentsService {
           });
           shouldNotifyPaymentConfirmed = true;
           bookingForNotification = intent.booking;
-        } else if (!intent) {
-          this.logger.warn(
-            `[PaymentsService] Webhook para ref ${externalRef} recebido, mas PaymentIntent não encontrado.`,
-          );
-        }
+        } else if (intent) {
+          this.logger.log(
+            `[PaymentsService] PaymentIntent ${intent.id} j? estava CONFIRMED; ignorando webhook duplicado.`,
+          );
+          return { message: 'Webhook processado com sucesso' };
+        } else {
+          this.logger.warn(
+            `[PaymentsService] Webhook para ref ${externalRef} recebido, mas PaymentIntent nao encontrado.`,
+          );
+        }
         if (bookingIdToConfirm) {
           try {
             await this.bookingsService.systemChangeStatus(
@@ -588,61 +622,121 @@ export class PaymentsService {
     }
   }
 
-
-  async confirmPixPayment(referenceId: string) {
-    this.logger.log('>>> CONFIRMANDO PIX PARA REFERENCE:', referenceId);
-
-    if (!referenceId) {
-      this.logger.warn('confirmPixPayment chamado sem referenceId');
-      return;
-    }
-
-    const intent = await this.prisma.paymentIntent.findFirst({
-      where: {
-        OR: [
-          { externalOrderId: referenceId },
-          { externalChargeId: referenceId },
-        ],
-      },
-    });
-
-    if (!intent) {
-      this.logger.warn(
-        'Nenhum PaymentIntent encontrado para referencia:',
-        referenceId,
-      );
-      return;
-    }
-
-    // A lógica de ledger foi movida para handlePaymentWebhook para generalidade.
-    // Aqui, apenas confirmamos o booking, se ainda nao estiver confirmado.
-    const booking = await this.prisma.booking.findUnique({
-      where: { id: intent.bookingId },
-      select: { status: true }, // Apenas o status para verificar
-    });
-
-    if (booking && booking.status !== BookingStatus.CONFIRMED) {
-      try {
+
+
+  async confirmPixPayment(referenceId: string) {
+
+    this.logger.log('>>> CONFIRMANDO PIX PARA REFERENCE:', referenceId);
+
+
+
+    if (!referenceId) {
+
+      this.logger.warn('confirmPixPayment chamado sem referenceId');
+
+      return;
+
+    }
+
+
+
+    const intent = await this.prisma.paymentIntent.findFirst({
+
+      where: {
+
+        OR: [
+
+          { externalOrderId: referenceId },
+
+          { externalChargeId: referenceId },
+
+        ],
+
+      },
+
+    });
+
+
+
+    if (!intent) {
+
+      this.logger.warn(
+
+        'Nenhum PaymentIntent encontrado para referencia:',
+
+        referenceId,
+
+      );
+
+      return;
+
+    }
+
+
+
+    // A lógica de ledger foi movida para handlePaymentWebhook para generalidade.
+
+    // Aqui, apenas confirmamos o booking, se ainda nao estiver confirmado.
+
+    const booking = await this.prisma.booking.findUnique({
+
+      where: { id: intent.bookingId },
+
+      select: { status: true }, // Apenas o status para verificar
+
+    });
+
+
+
+    const currentState = mapPaymentIntentStatusToState(intent.status);
+    const desiredState: PaymentIntentState = 'CONFIRMED';
+    if (!canTransition(currentState, desiredState)) {
+      this.logger.warn(
+        `[PaymentsService] PaymentIntent ${intent.id} in state ${currentState} cannot transition to ${desiredState}; skipping confirmation.`,
+      );
+      return;
+    }
+
+    if (booking && booking.status !== BookingStatus.CONFIRMED) {
+
+      try {
+
         await this.bookingsService.systemChangeStatus(
           intent.bookingId,
           BookingStatus.CONFIRMED,
         );
-        this.logger.log('? Booking confirmado via PIX:', intent.bookingId);
-      } catch (err) {
-        this.logger.warn(
-          `[PaymentsService] Falha ao confirmar booking ${intent.bookingId} via BookingsService: ${err?.message || err}`,
-        );
-      }
-    } else if (booking) {
-      this.logger.log(
-        `Booking ${intent.bookingId} já está CONFIRMED. Nenhuma açao necessária.`,
-      );
-    } else {
-      this.logger.warn(
-        `Booking ${intent.bookingId} nao encontrado ao tentar confirmar PIX.`,
-      );
-    }
-  }
+        this.logger.log('? Booking confirmado via PIX:', intent.bookingId);
+
+      } catch (err) {
+
+        this.logger.warn(
+
+          `[PaymentsService] Falha ao confirmar booking ${intent.bookingId} via BookingsService: ${err?.message || err}`,
+
+        );
+
+      }
+
+    } else if (booking) {
+
+      this.logger.log(
+
+        `Booking ${intent.bookingId} já está CONFIRMED. Nenhuma açao necessária.`,
+
+      );
+
+    } else {
+
+      this.logger.warn(
+
+        `Booking ${intent.bookingId} nao encontrado ao tentar confirmar PIX.`,
+
+      );
+
+    }
+
+  }
+
 
   // Admin: listar transações com filtros básicos
   async listTransactions(type?: string, status?: string) {
@@ -901,6 +995,9 @@ export class PaymentsService {
     idempotencyKey?: string,
   ): Promise<PixChargeResponseDto> {
     const { description, bookingId, providerId } = dto; // amount sempre derivado do booking
+    if (!this.pagseguroApiToken || !this.appBaseUrl) {
+      throw new HttpException('PSP not configured', HttpStatus.SERVICE_UNAVAILABLE);
+    }
 
     if (!providerId) throw new BadRequestException('providerId é obrigatório.');
     if (!bookingId) throw new BadRequestException('bookingId é obrigatório.');
