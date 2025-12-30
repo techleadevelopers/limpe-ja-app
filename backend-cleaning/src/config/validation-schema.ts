@@ -20,6 +20,11 @@ export const validationSchema = Joi.object({
   // 🔥 ADICIONADO: Secrets para validação de webhooks
   PIX_WEBHOOK_SECRET: Joi.string().optional(),
   PSP_WEBHOOK_SECRET: Joi.string().optional(),
+  PSP_WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS: Joi.number()
+    .default(60)
+    .description(
+      'Tolerance window (seconds) for PSP webhook timestamps; production clamps to [10,300], dev/test clamps max 300.',
+    ),
 
   // Throttle
   THROTTLE_TTL: Joi.number()
@@ -28,6 +33,15 @@ export const validationSchema = Joi.object({
   THROTTLE_LIMIT: Joi.number()
     .default(10)
     .description('Limite de requests por TTL'),
+
+  NOTIFICATIONS_DEDUPE_WINDOW_SECONDS: Joi.number()
+    .min(30)
+    .default(180)
+    .description('Janela (segundos) para deduplicar AppEvents com mesmo dedupeKey.'),
+  NOTIFICATIONS_DEFAULT_TTL_SECONDS: Joi.number()
+    .min(60)
+    .default(300)
+    .description('TTL padrão (segundos) para AppEvents enviados no stream.'),
 
   // Redis: aceita interno (REDIS_URL) ou público (REDIS_URL_PUBLIC)
   REDIS_URL: Joi.string()
