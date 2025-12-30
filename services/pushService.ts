@@ -54,3 +54,10 @@ export async function registerDevicePushToken(): Promise<{ ok: true } | null> {
   }
 }
 
+export async function unregisterDevicePushToken(): Promise<void> {
+  try {
+    await api.post('/auth/logout-device', undefined);
+  } catch {
+    // best-effort cleanup; ignore failures
+  }
+}
