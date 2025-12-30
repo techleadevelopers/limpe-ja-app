@@ -31,7 +31,7 @@ export class AdminDashboardController {
     name: 'months',
     required: false,
     example: 12,
-    description: 'Quantidade de meses para o hist�rico (1-24)',
+    description: 'Quantidade de meses para o histórico (1-24)',
   })
   async getRevenueTrend(
     @Query('months', new DefaultValuePipe(12), ParseIntPipe) months: number,
