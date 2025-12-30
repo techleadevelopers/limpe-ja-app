@@ -13,6 +13,7 @@ import {
   Post,
   UnauthorizedException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { MarkAsReadDto } from './dto/mark-as-read.dto';
@@ -117,6 +118,37 @@ export class NotificationsController {
     return notifications.map((n) => new NotificationEntity(n));
   }
 
+  @Get('stream')
+  @ApiOperation({
+    summary: 'Stream de eventos (AppEvents) desde um timestamp para reconciliação',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista ordenada de AppEvents.',
+    type: [NotificationEntity],
+  })
+  async stream(
+    @Req() req: RequestWithUser,
+    @Query('since') since?: string,
+  ): Promise<NotificationEntity[]> {
+    const userId = req.user?.userId ?? req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    let sinceDate: Date | undefined;
+    if (since) {
+      sinceDate = new Date(since);
+      if (Number.isNaN(sinceDate.getTime())) {
+        throw new BadRequestException('Invalid timestamp for since parameter');
+      }
+    }
+
+    const notifications =
+      await this.notificationsService.getUserNotificationStream(userId, sinceDate);
+    return notifications.map((n) => new NotificationEntity(n));
+  }
+
   @Patch('me/mark-as-read')
   @ApiOperation({
     summary: 'Marcar notificações como lidas para o usuário logado',
@@ -167,6 +199,29 @@ export class NotificationsController {
         userId,
       );
     return new NotificationEntity(updatedNotification);
+  }
+
+  @Post(':id/ack')
+  @ApiOperation({ summary: 'Confirmar recebimento (ack) de um AppEvent/notification' })
+  @ApiResponse({
+    status: 200,
+    description: 'Notificação marcada como lida/ack.',
+    type: NotificationEntity,
+  })
+  async ackNotification(
+    @Req() req: RequestWithUser,
+    @Param('id') notificationId: string,
+  ): Promise<NotificationEntity> {
+    const userId = req.user?.userId ?? req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    const acked = await this.notificationsService.ackNotification(
+      notificationId,
+      userId,
+    );
+    return new NotificationEntity(acked);
   }
 
   @Delete(':id')
