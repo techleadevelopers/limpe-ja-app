@@ -1,5 +1,15 @@
 import { Request } from 'express';
-import { Prisma, BookingStatus } from '@prisma/client';
+import {
+  Prisma,
+  BookingStatus,
+  ProviderService,
+  VerificationStatus,
+} from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { CacheService } from '../cache/cache.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import {
@@ -8,6 +18,13 @@ import {
   IDEMPOTENCY_TTL_SECONDS,
 } from './bookings.service';
 import { calculateServiceTotalPrice } from './pricing/price-calculator';
+import { BookingQuoteRequestDto } from './dto/quote-request.dto';
+import {
+  InsurancePlanProposal,
+  InsuranceService,
+} from '../insurance/insurance.service';
+import { InsurancePlanId } from '../insurance/insurance.constants';
+import { ProviderWithCalculatedRating } from '../providers/providers.service';
 
 jest.mock('./pricing/price-calculator', () => ({
   calculateServiceTotalPrice: jest.fn(),
@@ -44,11 +61,24 @@ const createRequest = (idempotencyKey?: string): Request =>
     locale: 'pt-BR',
   } as unknown as Request);
 
-const createServiceWithMocks = () => {
+const createServiceWithMocks = (options?: {
+  dynamicPrice?: number;
+  providerServiceOverrides?: Partial<ProviderService>;
+  providerOverrides?: Partial<
+    ProviderWithCalculatedRating & { verificationStatus: VerificationStatus }
+  >;
+  clientCompletedBookingsCount?: number;
+  providerCompletedBookingsCount?: number;
+  providerRating?: number;
+  insuranceService?: InsuranceService;
+}) => {
   const cacheService = {
     get: jest.fn(),
     set: jest.fn(),
-  } as unknown as CacheService;
+  } as unknown as CacheService & {
+    get: jest.Mock;
+    set: jest.Mock;
+  };
 
   calculateServiceTotalPriceMock.mockResolvedValue({
     calculatedTotalPrice: new Prisma.Decimal(150),
@@ -80,8 +110,10 @@ const createServiceWithMocks = () => {
       subscription: null,
       incidents: [],
       guaranteeClaims: [],
+      bookingProofs: [],
       coupon: null,
       paymentIntent: null,
+      bookingInsurance: null,
     } as unknown as BookingWithDetailsRelations);
 
   const prismaMock = {
@@ -99,23 +131,60 @@ const createServiceWithMocks = () => {
     releaseLock: jest.fn().mockResolvedValue(undefined),
   };
 
-  const service = new BookingsService(
-    prismaMock as any,
-    { findClientByUserId: jest.fn().mockResolvedValue({ id: 'client-id', userId: 'client-user' }) } as any,
-    { findOne: jest.fn().mockResolvedValue({ id: 'provider-id' }) } as any,
-    { findOne: jest.fn().mockResolvedValue({ id: 'provider-service-id', durationMinutes: 60, serviceId: 'service' }) } as any,
-    {} as any,
-    {} as any,
-    { calculatePrice: jest.fn().mockResolvedValue({ finalPrice: 120 }) } as any,
-    { applyCoupon: jest.fn().mockResolvedValue({ coupon: null }) } as any,
-    {} as any,
-    {} as any,
-    { trackEvent: jest.fn().mockResolvedValue(undefined) } as any,
-    {} as any,
-    { translate: jest.fn().mockResolvedValue('translated') } as any,
-    redisLockService as any,
-    cacheService,
-  );
+  const provider = {
+    id: 'provider-id',
+    verificationStatus: VerificationStatus.APPROVED,
+    averageRating: options?.providerRating ?? 5,
+    completedBookingsCount: options?.providerCompletedBookingsCount ?? 0,
+    ...options?.providerOverrides,
+  };
+
+  const providerService = {
+    id: 'provider-service-id',
+    durationMinutes: 60,
+    serviceId: 'service',
+    ...options?.providerServiceOverrides,
+  };
+
+    const clientMock = {
+      id: 'client-id',
+      userId: 'client-user',
+      completedBookingsCount: options?.clientCompletedBookingsCount ?? 0,
+    };
+
+    const insuranceServiceInstance =
+      options?.insuranceService ?? new InsuranceService();
+
+    const schedulerService = {
+      scheduleBookingReminders: jest.fn().mockResolvedValue(undefined),
+      cancelPendingSchedules: jest.fn().mockResolvedValue(undefined),
+      notifyJobStarted: jest.fn().mockResolvedValue(undefined),
+      notifyJobEnded: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    const service = new BookingsService(
+      prismaMock as any,
+      { findClientByUserId: jest.fn().mockResolvedValue(clientMock) } as any,
+      { findOne: jest.fn().mockResolvedValue(provider) } as any,
+      { findOne: jest.fn().mockResolvedValue(providerService) } as any,
+      {} as any,
+      {} as any,
+      {
+        calculatePrice: jest
+          .fn()
+          .mockResolvedValue({ finalPrice: options?.dynamicPrice ?? 120 }),
+      } as any,
+      { applyCoupon: jest.fn().mockResolvedValue({ coupon: null }) } as any,
+      insuranceServiceInstance,
+      {} as any,
+      {} as any,
+      { trackEvent: jest.fn().mockResolvedValue(undefined) } as any,
+      {} as any,
+      { translate: jest.fn().mockResolvedValue('translated') } as any,
+      redisLockService as any,
+      cacheService,
+      schedulerService,
+    );
 
   return {
     service,
@@ -126,9 +195,37 @@ const createServiceWithMocks = () => {
   };
 };
 
+const buildInsurancePlan = (
+  overrides?: Partial<InsurancePlanProposal>,
+): InsurancePlanProposal => ({
+  id: InsurancePlanId.PREMIUM,
+  name: 'Premium',
+  basePriceCents: 5990,
+  coverageCents: 350000,
+  deductibleCents: 30000,
+  proofRequired: false,
+  finalPriceCents: 5990,
+  eligible: true,
+  reasons: [],
+  riskMultiplierBps: 1000,
+  ...overrides,
+});
+
 describe('BookingsService (idempotency cache)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('throws when provider is not approved', async () => {
+    const { service, prismaMock } = createServiceWithMocks({
+      providerOverrides: { verificationStatus: VerificationStatus.PENDING_MANUAL_REVIEW },
+    });
+
+    await expect(
+      service.create('client-user', buildCreateBookingDto(), createRequest()),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prismaMock.address.create).not.toHaveBeenCalled();
+    expect(prismaMock.booking.create).not.toHaveBeenCalled();
   });
 
   it('returns cached booking when idempotency key hits', async () => {
@@ -175,5 +272,99 @@ describe('BookingsService (idempotency cache)', () => {
     expect(cacheService.get).not.toHaveBeenCalled();
     expect(cacheService.set).not.toHaveBeenCalled();
     expect(prismaMock.booking.create).toHaveBeenCalled();
+  });
+});
+
+describe('BookingsService quote & mismatch detection', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('returns a quote response with the computed final price', async () => {
+    const { service } = createServiceWithMocks({ dynamicPrice: 180 });
+    const quoteRequest: BookingQuoteRequestDto = {
+      providerId: 'provider-id',
+      providerServiceId: 'provider-service-id',
+      scheduledDate: '2025-12-31',
+      scheduledTime: '10:00',
+      address: {
+        latitude: -23.55,
+        longitude: -46.63,
+        city: 'SAO PAULO',
+        state: 'SP',
+        cep: '01001000',
+      },
+    };
+
+    const response = await service.quotePrice(
+      'client-user',
+      quoteRequest,
+      createRequest(),
+    );
+
+    expect(response.finalPrice).toBe(180);
+    expect(response.subtotal).toBe(180);
+    expect(response.quoteHash).toBeTruthy();
+    expect(response.breakdown[0].amount).toBe(180);
+  });
+
+  it('throws PRICE_MISMATCH when the quote hash diverges', async () => {
+    const { service } = createServiceWithMocks();
+    const dto = buildCreateBookingDto();
+    dto.quoteHash = 'invalid-hash';
+
+    await expect(
+      service.create('client-user', dto, createRequest()),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+});
+
+describe('BookingsService (insurance persistence)', () => {
+  it('persists booking insurance snapshot when plan is eligible', async () => {
+    const plan = buildInsurancePlan();
+    const insuranceService = {
+      getPlans: jest.fn().mockReturnValue([plan]),
+    } as unknown as InsuranceService;
+
+    const { service, prismaMock } = createServiceWithMocks({
+      insuranceService,
+    });
+
+    const dto = buildCreateBookingDto();
+    dto.insurancePlanId = plan.id;
+
+    await expect(
+      service.create('client-user', dto, createRequest()),
+    ).resolves.toBeDefined();
+
+    const bookingCreateCall = prismaMock.booking.create.mock.calls[0][0];
+    expect(bookingCreateCall.data.bookingInsurance?.create).toEqual({
+      planId: plan.id,
+      priceCents: plan.finalPriceCents,
+      coverageCents: plan.coverageCents,
+      deductibleCents: plan.deductibleCents,
+      riskMultiplierBps: plan.riskMultiplierBps,
+      proofRequired: plan.proofRequired,
+    });
+  });
+
+  it('rejects booking creation when requested insurance plan is not eligible', async () => {
+    const plan = buildInsurancePlan({ eligible: false });
+    const insuranceService = {
+      getPlans: jest.fn().mockReturnValue([plan]),
+    } as unknown as InsuranceService;
+
+    const { service, prismaMock } = createServiceWithMocks({
+      insuranceService,
+    });
+
+    const dto = buildCreateBookingDto();
+    dto.insurancePlanId = plan.id;
+
+    await expect(
+      service.create('client-user', dto, createRequest()),
+    ).rejects.toThrow('insurance-plan-not-eligible');
+
+    expect(prismaMock.booking.create).not.toHaveBeenCalled();
   });
 });
