@@ -20,6 +20,20 @@ class NotificationUIService {
     }
   }
 
+  private dedupeHistory = new Map<string, number>();
+  private readonly dedupeWindowMs = 15_000;
+
+  private shouldDeduplicate(dedupeKey?: string): boolean {
+    if (!dedupeKey) return false;
+    const now = Date.now();
+    const last = this.dedupeHistory.get(dedupeKey) ?? 0;
+    if (now - last < this.dedupeWindowMs) {
+      return true;
+    }
+    this.dedupeHistory.set(dedupeKey, now);
+    return false;
+  }
+
   show(options: ToastOptions) {
     const type = options.type;
     const title = this.safeString(options.title);
@@ -178,6 +192,23 @@ class NotificationUIService {
     }
 
     this.show({ type: 'error', title, message: finalMessage });
+  }
+
+  showAppEvent(event: {
+    dedupeKey?: string;
+    title: string;
+    message: string;
+    type?: ToastOptions['type'];
+    deepLink?: string;
+  }) {
+    if (this.shouldDeduplicate(event.dedupeKey)) {
+      return;
+    }
+    this.show({
+      type: event.type ?? 'info',
+      title: event.title,
+      message: event.message,
+    });
   }
 }
 
