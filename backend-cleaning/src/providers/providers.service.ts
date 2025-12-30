@@ -120,6 +120,7 @@ export type ProviderWithCalculatedRating = {
   yearsOfExperience: number | null;
   fiveStarReviewCount: number;
   monthlyBookingsCount: number;
+  completedBookingsCount: number;
   cpf: string | null;
   dateOfBirth: string | null;
   createdAt: string;
@@ -162,6 +163,7 @@ export interface ProviderMetrics {
 export class ProvidersService {
   private readonly logger = new Logger(ProvidersService.name);
   private readonly PROVIDERS_CACHE_KEY = 'all_approved_providers';
+  private readonly PUBLIC_PROVIDERS_CACHE_TTL_SECONDS = 60;
 
   constructor(
     private prisma: PrismaService,
@@ -342,12 +344,14 @@ export class ProvidersService {
         (sum, review) => sum + review.rating,
         0,
       ) || 0;
-    const averageRating =
-      provider.reviewsReceived?.length > 0
-        ? parseFloat((totalRating / provider.reviewsReceived.length).toFixed(1))
-        : 0;
+  const averageRating =
+    provider.reviewsReceived?.length > 0
+      ? parseFloat((totalRating / provider.reviewsReceived.length).toFixed(1))
+      : 0;
 
-    const formattedDateOfBirth = provider.dateOfBirth
+  const completedBookingsCount = provider.bookings?.length ?? 0;
+
+  const formattedDateOfBirth = provider.dateOfBirth
       ? provider.dateOfBirth.toISOString()
       : null;
     const formattedCreatedAt = provider.createdAt.toISOString();
@@ -405,6 +409,7 @@ export class ProvidersService {
       yearsOfExperience: provider.yearsOfExperience || 0,
       fiveStarReviewCount: provider.fiveStarReviewCount || 0,
       monthlyBookingsCount: provider.monthlyBookingsCount || 0,
+      completedBookingsCount,
       cpf: provider.cpf,
       dateOfBirth: formattedDateOfBirth,
       createdAt: formattedCreatedAt,
@@ -600,7 +605,11 @@ export class ProvidersService {
       provider.nextAvailable = await this.calculateNextAvailable(
         prismaProvider.id,
       ); // Calcula nextAvailable
-      await this.cacheService.set(cacheKey, provider);
+      await this.cacheService.set(
+        cacheKey,
+        provider,
+        this.PUBLIC_PROVIDERS_CACHE_TTL_SECONDS,
+      );
       this.logger.log(
         `[ProvidersService] findOne: Provedor ${id} adicionado ao cache.`,
       );
@@ -665,7 +674,11 @@ export class ProvidersService {
       provider.nextAvailable = await this.calculateNextAvailable(
         prismaProvider.id,
       ); // Calcula nextAvailable
-      await this.cacheService.set(cacheKey, provider);
+      await this.cacheService.set(
+        cacheKey,
+        provider,
+        this.PUBLIC_PROVIDERS_CACHE_TTL_SECONDS,
+      );
       this.logger.log(
         `[ProvidersService] findByUserId: Provedor para userId ${userId} adicionado ao cache.`,
       );
@@ -1367,7 +1380,11 @@ export class ProvidersService {
           (a, b) => (a.distance || Infinity) - (b.distance || Infinity),
         );
       }
-      await this.cacheService.set(cacheKey, providersWithDistance);
+      await this.cacheService.set(
+        cacheKey,
+        providersWithDistance,
+        this.PUBLIC_PROVIDERS_CACHE_TTL_SECONDS,
+      );
       this.logger.log(
         `[ProvidersService] search: Resultados da busca complexa adicionados ao cache.`,
       );
@@ -1483,7 +1500,11 @@ export class ProvidersService {
       );
     }
 
-    await this.cacheService.set(cacheKey, filteredProviders);
+    await this.cacheService.set(
+      cacheKey,
+      filteredProviders,
+      this.PUBLIC_PROVIDERS_CACHE_TTL_SECONDS,
+    );
     this.logger.log(
       `[ProvidersService] search: Resultados da busca complexa (fallback) adicionados ao cache.`,
     );
@@ -1831,7 +1852,11 @@ export class ProvidersService {
       longitude,
     );
 
-    await this.cacheService.set(cacheKey, radiusFiltered);
+    await this.cacheService.set(
+      cacheKey,
+      radiusFiltered,
+      this.PUBLIC_PROVIDERS_CACHE_TTL_SECONDS,
+    );
     this.logger.log(
       `[ProvidersService] findTopRatedOrExperiencedProviders: Resultados adicionados ao cache.`,
     );
