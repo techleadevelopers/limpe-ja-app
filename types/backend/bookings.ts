@@ -23,6 +23,15 @@ export enum BookingStatus {
   PENDING_PROVIDER_CONFIRMATION = 'PENDING_PROVIDER_CONFIRMATION', // Adicionado
 }
 
+export type BookingAction =
+  | 'CONTACT_SUPPORT'
+  | 'CANCEL'
+  | 'OPEN_DISPUTE'
+  | 'START_SERVICE'
+  | 'COMPLETE_SERVICE'
+  | 'CONFIRM'
+  | 'REJECT';
+
 /**
  * @interface BookingAddress
  * Representa o endereço de um agendamento.
@@ -56,7 +65,15 @@ export interface CreateBookingDto {
   requestedDurationMinutes?: number;
   requestedSquareMeters?: number;
   requestedRoomCount?: number;
-  couponCode?: string; // NOVO: Adicionado para permitir o envio do código do cupom
+  couponCode?: string; // NOVO: Adicionado para permitir o envio do cA3digo do cupom
+  subscriptionId?: string;
+  addons?: BookingAddon[];
+  insurancePlanId?: InsurancePlanId;
+  quoteId?: string;
+  quoteHash?: string;
+}
+
+
 }
 
 /**
@@ -80,6 +97,8 @@ export interface BookingDetails {
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
+
+  allowedActions?: BookingAction[];
 
   // Dados do Cliente
   clientId: string;
@@ -116,6 +135,38 @@ export interface BookingDetails {
   guaranteeClaims?: any[];
   couponId?: string | null; // NOVO: ID do cupom aplicado
   discountAmount?: number | null; // NOVO: Valor do desconto aplicado pelo cupom
+  insurance?: BookingInsuranceSnapshot | null;
+  proofs?: BookingProof[];
+}
+
+export interface BookingInsuranceSnapshot {
+  planId: InsurancePlanId;
+  priceCents: number;
+  coverageCents: number;
+  deductibleCents: number;
+  riskMultiplierBps: number;
+  proofRequired: boolean;
+  createdAt: string;
+}
+
+export type BookingProofType = 'CHECKIN' | 'CHECKOUT';
+
+export interface BookingProof {
+  id: string;
+  type: BookingProofType;
+  photos: string[];
+  videoUrl?: string | null;
+  hashes?: Record<string, unknown> | null;
+  timestamps?: Record<string, unknown> | null;
+  userId: string;
+  createdAt: string;
+}
+
+export interface BookingProofPayload {
+  photos: string[];
+  videoUrl?: string;
+  hashes?: Record<string, unknown>;
+  timestamps?: Record<string, unknown>;
 }
 
 /**
@@ -146,3 +197,66 @@ export type BookingPricing = {
   total: number;
   appliedCoupon?: AppliedCoupon;
 };
+
+export type BookingAddon = {
+  id: string;
+  quantity?: number;
+};
+
+export type InsurancePlanId = 'ESSENCIAL' | 'PREMIUM' | 'TOTAL';
+
+export interface InsurancePlanDefinition {
+  id: InsurancePlanId;
+  name: string;
+  basePriceCents: number;
+  coverageCents: number;
+  deductibleCents: number;
+  proofRequired: boolean;
+}
+
+export interface InsurancePlanProposal extends InsurancePlanDefinition {
+  finalPriceCents: number;
+  eligible: boolean;
+  reasons: string[];
+  riskMultiplierBps: number;
+}
+
+export interface BookingQuoteRequest {
+  providerId: string;
+  providerServiceId: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  durationMinutes?: number;
+  squareMeters?: number;
+  roomCount?: number;
+  couponCode?: string;
+  subscriptionId?: string;
+  addons?: BookingAddon[];
+  address: BookingAddress;
+  insurancePlanId?: InsurancePlanId;
+}
+
+export interface BookingQuoteBreakdownItem {
+  label: string;
+  amount: number;
+  type?: string;
+}
+
+export interface BookingQuoteResponse {
+  finalPrice: number;
+  subtotal: number;
+  discountAmount: number;
+  platformFee: number;
+  providerNet: number;
+  couponApplied: boolean;
+  couponCode?: string;
+  minMinutesApplied?: number;
+  quoteId: string;
+  quoteHash: string;
+  expiresAt: string;
+  totalCents: number;
+  insuranceFeeCents: number;
+  insuranceOptions: InsurancePlanProposal[];
+  selectedInsurance?: InsurancePlanProposal | null;
+  breakdown: BookingQuoteBreakdownItem[];
+}
