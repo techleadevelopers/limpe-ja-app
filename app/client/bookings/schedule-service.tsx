@@ -27,14 +27,21 @@ import { useAuth } from '../../../hooks/useAuth';
 import { createBooking } from '../../../services/bookingService';
 import { getProviderAvailability, getProviderDetails } from '../../../services/providerService';
 
-import { BookingAddress, BookingDetails, CreateBookingDto } from '../../../types/backend/bookings';
+import {
+  BookingAddress,
+  BookingDetails,
+  CreateBookingDto,
+  InsurancePlanId,
+} from '../../../types/backend/bookings';
 import { ProviderAvailability, ProviderDisplayInfo, ProviderServiceOffering } from '../../../types/backend/providers';
 import { PricingType } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
+import { VerificationStatus } from '../../../types/backend/auth';
 import { formatBRL } from '../../../utils/formatters';
 
 import { generateDailySlots } from '../../../utils/timeSlots';
-import { useBookingPricing } from '../../../utils/useBookingPricing';
+import axios from 'axios';
+import { useBookingQuote } from '../../../hooks/useBookingQuote';
 import { useCouponValidation } from '../../../utils/useCouponValidation';
 
 import AddressSection from '../../../components/client/booking/schedule/AddressSection';
@@ -45,6 +52,8 @@ import ConfirmBookingButton from '../../../components/client/booking/schedule/Co
 import NotesInputSection from '../../../components/client/booking/schedule/NotesInputSection';
 import ScheduleCalendar from '../../../components/client/booking/schedule/ScheduleCalendar';
 import ScheduleHeader from '../../../components/client/booking/schedule/ScheduleHeader';
+import VerificationNotice from '../../../components/client/explore/provider/VerificationNotice';
+import { InsuranceOptionsCard } from './components/InsuranceOptionsCard';
 
 import { useDevice } from '@/utils/responsive';
 import { AppColors, AppDurations, AppShadows, SCREEN_WIDTH } from '../../../constants/appStyles';
@@ -99,6 +108,7 @@ interface BookingSummaryPreviewProps {
   subtotal: number;
   discountAmount: number;
   finalPrice: number;
+  insuranceFeeCents: number;
   onShowCancellationPolicy: () => void;
   t: any;
   notes: string;
@@ -129,6 +139,7 @@ const BookingSummaryPreview = ({
   subtotal,
   discountAmount,
   finalPrice,
+  insuranceFeeCents,
   onShowCancellationPolicy,
   t,
   notes,
@@ -454,6 +465,15 @@ const BookingSummaryPreview = ({
           </View>
         )}
 
+        {insuranceFeeCents > 0 && (
+          <View style={styles.priceSummary}>
+            <Text style={styles.priceLabel}>
+              {t('schedule_service.insurance_fee', { defaultValue: 'Seguro' })}
+            </Text>
+            <Text style={styles.priceValue}>{formatBRL(insuranceFeeCents / 100)}</Text>
+          </View>
+        )}
+
         <View style={styles.totalPriceSummary}>
           <Text style={styles.totalPriceLabel}>{t('schedule_service.total_to_pay', { defaultValue: 'Total a Pagar' })}</Text>
           <Animated.Text
@@ -484,11 +504,11 @@ const BookingSummaryPreview = ({
         </TouchableOpacity>
       </Animated.View>
 
-      <Animated.View style={[styles.compactSection, styles.notesFinalSection, notesSectionAnim]}>
-        <NotesInputSection notes={notes} setNotes={setNotes} compactMode={true} showTitle={false} />
-      </Animated.View>
-    </Animated.View>
-  );
+  <Animated.View style={[styles.compactSection, styles.notesFinalSection, notesSectionAnim]}>
+    <NotesInputSection notes={notes} setNotes={setNotes} compactMode={true} showTitle={false} />
+  </Animated.View>
+</Animated.View>
+);
 };
 
 // PREMIUM: Cache com TTL (expira >1h) para dados frescos e gerenciamento de memória
@@ -539,6 +559,7 @@ export default function ScheduleServiceScreen() {
   const [notes, setNotes] = useState<string>('');
   const [durationInMinutes, setDurationInMinutes] = useState<number | null>(null);
   const [squareMeters, setSquareMeters] = useState<number | null>(null);
+  const [insurancePlanId, setInsurancePlanId] = useState<InsurancePlanId | null>(null);
   const [minHourlyMinutes, setMinHourlyMinutes] = useState(DEFAULT_MIN_HOURLY_MINUTES);
 
   useEffect(() => {
@@ -574,17 +595,7 @@ export default function ScheduleServiceScreen() {
     };
   }, []);
 
-  const {
-    couponCode,
-    setCouponCode,
-    discountAmount,
-    isApplyingCoupon,
-    couponInputAnim,
-    couponFeedbackAnim,
-    couponFeedbackColor,
-    couponFeedbackIcon,
-    handleApplyCoupon,
-  } = useCouponValidation(initialCouponCodeString);
+  const [couponCode, setCouponCode] = useState(initialCouponCodeString ?? '');
 
   const [isLoading, setIsLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
@@ -659,12 +670,51 @@ export default function ScheduleServiceScreen() {
     return durationInMinutes;
   }, [selectedProviderService?.pricingType, selectedSlots.length, durationInMinutes]);
 
-  const { calculatedSubtotal, finalCalculatedPrice } = useBookingPricing({
-    selectedProviderService,
-    durationInMinutes: effectiveDurationInMinutes,
+  const scheduledDateKey = useMemo(
+    () => selectedDate?.toISOString().split('T')[0] ?? null,
+    [selectedDate],
+  );
+
+  const { quote, refreshQuote } = useBookingQuote({
+    providerId: provider?.id,
+    providerServiceId: selectedProviderService?.id,
+    scheduledDate: scheduledDateKey,
+    scheduledTime: selectedTime,
+    address,
+    durationMinutes: effectiveDurationInMinutes,
     squareMeters,
-    discountAmount,
-    slotCount: selectedSlots.length,
+    roomCount: undefined,
+    couponCode,
+    insurancePlanId,
+  });
+
+  const fallbackFinalPrice =
+    resolvedServicePrice ?? (selectedProviderService?.price ?? 0);
+  const displaySubtotal = quote?.subtotal ?? fallbackFinalPrice;
+  const displayDiscount = quote?.discountAmount ?? 0;
+  const insuranceFeeCents = quote?.insuranceFeeCents ?? 0;
+  const finalCalculatedPrice =
+    quote?.totalCents != null
+      ? quote.totalCents / 100
+      : quote?.finalPrice ?? fallbackFinalPrice;
+
+  const handleInsurancePlanChange = useCallback(
+    (planId: InsurancePlanId | null) => {
+      setInsurancePlanId(planId);
+    },
+    [],
+  );
+
+  const {
+    isApplyingCoupon,
+    couponInputAnim,
+    couponFeedbackAnim,
+    couponFeedbackColor,
+    couponFeedbackIcon,
+    handleApplyCoupon,
+  } = useCouponValidation({
+    couponCode,
+    onApplyCoupon: refreshQuote,
   });
 
   const totalHours = useMemo(() => {
@@ -1263,6 +1313,16 @@ export default function ScheduleServiceScreen() {
       return;
     }
 
+    if (providerNeedsApproval) {
+      NotificationUIService.showError(
+        t('schedule_service.provider_pending_message', {
+          defaultValue: 'Este profissional ainda está em verificação. Aguarde aprovação para agendar.',
+        }),
+        t('schedule_service.provider_pending_title', { defaultValue: 'Provedor em verificação' }),
+      );
+      return;
+    }
+
     if (
       selectedProviderService?.pricingType === PricingType.HOURLY &&
       (effectiveDurationInMinutes === null || effectiveDurationInMinutes === undefined || effectiveDurationInMinutes <= 0)
@@ -1313,34 +1373,66 @@ export default function ScheduleServiceScreen() {
         },
         ...(selectedProviderService.pricingType === PricingType.HOURLY && { requestedDurationMinutes }),
         ...(selectedProviderService.pricingType === PricingType.BY_SIZE && { requestedSquareMeters }),
-        couponCode: discountAmount > 0 ? couponCode : undefined,
+        couponCode: quote?.couponApplied ? couponCode : undefined,
+        quoteId: quote?.quoteId,
+        quoteHash: quote?.quoteHash,
+        insurancePlanId: insurancePlanId ?? undefined,
       };
 
       const newBooking: BookingDetails = await createBooking(bookingData);
       if (!isMounted.current) return;
 
-      router.replace({
-        pathname: '/client/bookings/success',
-        params: {
-          bookingId: newBooking.id,
-          totalPrice: newBooking.totalPrice.toString(),
-          paymentMethod: 'PIX',
-          couponApplied: discountAmount > 0 ? 'true' : 'false',
-          couponCode: discountAmount > 0 ? couponCode : undefined,
-        },
-      });
+        router.replace({
+          pathname: '/client/bookings/success',
+          params: {
+            bookingId: newBooking.id,
+            totalPrice: newBooking.totalPrice.toString(),
+            paymentMethod: 'PIX',
+            couponApplied: quote?.couponApplied ? 'true' : 'false',
+            couponCode: quote?.couponApplied ? couponCode : undefined,
+          },
+        });
 
       NotificationUIService.showSuccess(
         t('schedule_service.booking_success_message', { defaultValue: 'Agendamento realizado com sucesso!' }),
         t('common.success', { defaultValue: 'Sucesso' }),
       );
     } catch (error: any) {
-      if (isMounted.current) {
-        NotificationUIService.showError(
-          error.response?.data?.message || t('common.network_error', { defaultValue: 'Erro de rede.' }),
-          t('common.error', { defaultValue: 'Erro' }),
-        );
+      if (!isMounted.current) {
+        return;
       }
+
+      const isProviderDenied =
+        error?.message === 'provider-not-approved' ||
+        error?.response?.data?.message === 'provider-not-approved';
+
+      if (isProviderDenied) {
+        NotificationUIService.showError(
+          t('schedule_service.provider_pending_message', {
+            defaultValue: 'Este profissional ainda está em verificação. Aguarde aprovação para agendar.',
+          }),
+          t('schedule_service.provider_pending_title', { defaultValue: 'Provedor em verificação' }),
+        );
+        return;
+      }
+
+      if (
+        axios.isAxiosError(error) &&
+        error.response?.status === 409 &&
+        error.response.data?.message === 'PRICE_MISMATCH'
+      ) {
+        await refreshQuote();
+        NotificationUIService.showInfo(
+          t('schedule_service.quote_price_updated', { defaultValue: 'Preço atualizado' }),
+          t('common.success', { defaultValue: 'Sucesso' }),
+        );
+        return;
+      }
+
+      NotificationUIService.showError(
+        error.response?.data?.message || t('common.network_error', { defaultValue: 'Erro de rede.' }),
+        t('common.error', { defaultValue: 'Erro' }),
+      );
     } finally {
       if (isMounted.current) setIsBooking(false);
     }
@@ -1356,9 +1448,11 @@ export default function ScheduleServiceScreen() {
     squareMeters,
     finalCalculatedPrice,
     couponCode,
-    discountAmount,
+    quote,
+    refreshQuote,
     t,
     effectiveDurationInMinutes,
+    providerNeedsApproval,
   ]);
 
   useEffect(() => {
@@ -1762,6 +1856,10 @@ export default function ScheduleServiceScreen() {
     return false;
   }, [currentStep, selectedSlots, address, selectedProviderService?.pricingType]);
 
+  const providerNeedsApproval =
+    provider?.verificationStatus !== undefined &&
+    provider.verificationStatus !== VerificationStatus.APPROVED;
+
   const isConfirmButtonDisabled = useMemo(() => {
     if (!selectedProviderService) return true;
 
@@ -1782,8 +1880,8 @@ export default function ScheduleServiceScreen() {
       return baseDisabled || !squareMeters || squareMeters <= 0;
     }
 
-    return baseDisabled;
-  }, [selectedSlots, address, selectedProviderService, durationInMinutes, squareMeters, isBooking]);
+    return baseDisabled || providerNeedsApproval;
+  }, [selectedSlots, address, selectedProviderService, durationInMinutes, squareMeters, isBooking, providerNeedsApproval]);
 
   const selectedHoursLabel = useMemo(() => {
     if (selectedProviderService?.pricingType === PricingType.HOURLY && totalHours && totalHours > 0) {
@@ -2005,9 +2103,16 @@ export default function ScheduleServiceScreen() {
               }}
             >
               {selectedProviderService && (
-                <Animated.View style={{ transform: [{ scale: serviceDetailsAnim }], opacity: serviceDetailsAnim, marginTop: 0 }}>
-                  {/* (mantido vazio como no original) */}
-                </Animated.View>
+                <>
+                  <Animated.View style={{ transform: [{ scale: serviceDetailsAnim }], opacity: serviceDetailsAnim, marginTop: 0 }}>
+                    {/* (mantido vazio como no original) */}
+                  </Animated.View>
+                  <InsuranceOptionsCard
+                    insuranceOptions={quote?.insuranceOptions ?? []}
+                    selectedPlanId={insurancePlanId}
+                    onSelectPlan={handleInsurancePlanChange}
+                  />
+                </>
               )}
 
               <BookingSummaryPreview
@@ -2018,8 +2123,9 @@ export default function ScheduleServiceScreen() {
                 address={address}
                 durationInMinutes={effectiveDurationInMinutes}
                 squareMeters={squareMeters}
-                subtotal={calculatedSubtotal}
-                discountAmount={discountAmount}
+                subtotal={displaySubtotal}
+                discountAmount={displayDiscount}
+                insuranceFeeCents={insuranceFeeCents}
                 finalPrice={finalCalculatedPrice}
                 onShowCancellationPolicy={showCancellationPolicy}
                 t={t}
@@ -2090,6 +2196,13 @@ export default function ScheduleServiceScreen() {
               {timeSelectionSummaryLabel}
             </Text>
           </View>
+        )}
+
+        {currentStep === 2 && providerNeedsApproval && (
+          <VerificationNotice
+            status={provider?.verificationStatus}
+            onLearnMore={() => router.push('/client/explore/security' as any)}
+          />
         )}
 
         {currentStep === 2 && (
