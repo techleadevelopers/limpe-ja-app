@@ -15,11 +15,16 @@ Swagger/OpenAPI: Ferramentas para documentação e teste de APIs, gerando uma do
 Sentry: Ferramenta de monitoramento de erros e performance, integrada para capturar exceções e rastrear o desempenho da aplicação em tempo real. (src/instrument.ts, src/app.module.ts)
 
 Observabilidade e Telemetria (novidades):
-- Métricas Prometheus expostas em `/metrics/prometheus` (histograma e contador HTTP). Consultas sugeridas em `documentation/monitoring-promql.md`.
+- M?tricas Prometheus expostas em `/metrics/prometheus` (histograma e contador HTTP). Consultas sugeridas em `documentation/monitoring-promql.md`.
 - Health checks: `/health/liveness` e `/health/readiness` (valida DB e cache).
 - Tracing OpenTelemetry: interceptor global (`TracingInterceptor`) gerando spans HTTP; inicializador em `src/tracing/otel.ts` exporta via OTLP/HTTP.
 - Env vars: `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `OTEL_DEBUG`.
 - Exemplos de configs para Prometheus/Alertmanager/Tempo/Jaeger: `documentation/observability-setup.md`, `documentation/prometheus.example.yml`, `documentation/rules/backend-alerts.yml`, `documentation/alertmanager.example.yml`.
+
+C. Meta de Status e A??es Permitidas
+- `GET /meta/statuses` entrega metadados de status (`labelClient`, `labelProvider`, `severity`, `requiresAction`) e transi??es v?lidas por papel (CLIENT, PROVIDER, ADMIN).
+- `BookingDetailsDto` exp?e o array `allowedActions[]`, calculado considerando status, papel e m?quina de estados, mantendo o frontend sincronizado com a l?gica real.
+
 C. Estrutura Geral dos Módulos e Interconexões
 O backend é organizado em módulos coesos, cada um com responsabilidades bem definidas, promovendo a separação de preocupações e a manutenibilidade do código. A injeção de dependências do NestJS facilita a comunicação entre os módulos.
 
