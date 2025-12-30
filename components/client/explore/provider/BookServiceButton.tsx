@@ -1,8 +1,19 @@
 // components/client/explore/provider/BookServiceButton.tsx
 import { type Router } from 'expo-router';
 import React from 'react';
-import { Alert, Animated, Platform, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import {
+  Alert,
+  Animated,
+  Platform,
+  StyleSheet,
+  Text,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { AppColors } from '../../../../constants/appStyles';
+import { VerificationStatus } from '../../../../types/backend/auth';
+import VerificationNotice from './VerificationNotice';
 
 interface BookServiceButtonProps {
   providerId: string;
@@ -14,6 +25,7 @@ interface BookServiceButtonProps {
   safeBottomInset?: number;
   isAuthenticated: boolean;
   requireAuthOrRedirect?: (actionName?: string) => boolean;
+  verificationStatus?: VerificationStatus;
 }
 
 const BookServiceButton: React.FC<BookServiceButtonProps> = ({
@@ -26,8 +38,17 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
   safeBottomInset = 0,
   isAuthenticated,
   requireAuthOrRedirect,
+  verificationStatus,
 }) => {
   const baseBottomPadding = Platform.OS === 'ios' ? 34 : 20;
+
+  const shouldBlockBooking =
+    verificationStatus !== undefined && verificationStatus !== VerificationStatus.APPROVED;
+  const handleLearnMore = () => {
+    try {
+      router.push('/client/explore/security' as any);
+    } catch {}
+  };
 
   const handlePress = () => {
     if (requireAuthOrRedirect && !requireAuthOrRedirect('book_service')) {
@@ -66,6 +87,10 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
       return;
     }
 
+    if (shouldBlockBooking) {
+      return;
+    }
+
     router.push({
       pathname: '/client/bookings/schedule-service',
       params: {
@@ -77,15 +102,25 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
   };
   const label =
     servicePrice != null && typeof servicePrice === 'number' && Number.isFinite(servicePrice)
-      ? `Agendar • R$ ${servicePrice.toFixed(2).replace('.', ',')}/h`
+      ? `Agendar à R$ ${servicePrice.toFixed(2).replace('.', ',')}/h`
       : 'Agendar serviço';
 
-  const content = (
-    <TouchableOpacity style={styles.btn} onPress={handlePress} activeOpacity={0.9}>
-      <Text style={styles.text}>{label}</Text>
-    </TouchableOpacity>
+  const buttonBlock = (
+    <View style={styles.buttonBlock}>
+      <TouchableOpacity
+        style={[styles.btn, shouldBlockBooking && styles.btnDisabled]}
+        onPress={handlePress}
+        activeOpacity={0.9}
+        disabled={shouldBlockBooking}
+        testID="book-service-button"
+      >
+        <Text style={styles.text}>{label}</Text>
+      </TouchableOpacity>
+      {shouldBlockBooking && (
+        <VerificationNotice status={verificationStatus} onLearnMore={handleLearnMore} />
+      )}
+    </View>
   );
-
   if (!sticky) {
     return (
       <Animated.View
@@ -104,7 +139,7 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
           },
         ]}
       >
-        {content}
+        {buttonBlock}
       </Animated.View>
     );
   }
@@ -131,7 +166,7 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
           ],
         }}
       >
-        {content}
+        {buttonBlock}
       </Animated.View>
     </View>
   );
@@ -143,6 +178,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '90%',
     maxWidth: 420,
+  },
+  buttonBlock: {
+    alignItems: 'center',
   },
   wrap: {
     position: 'absolute',
@@ -178,6 +216,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 3.55,
     shadowRadius: 35,
     elevation: 0,
+  },
+  btnDisabled: {
+    backgroundColor: AppColors.primaryInteractive + '88',
   },
   text: {
     color: AppColors.white,
