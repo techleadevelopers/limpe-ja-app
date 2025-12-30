@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsObject,
   IsISO8601,
+  IsInt,
 } from 'class-validator'; // Added IsObject, IsISO8601
 
 export class CreateNotificationDto {
@@ -89,6 +90,40 @@ export class CreateNotificationDto {
   @IsOptional()
   @IsString()
   idempotencyKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'Chave de deduplicação do AppEvent (ex: type:bookingId:userId)',
+    example: 'BOOKING_UPDATED:booking-123:client-456',
+  })
+  @IsOptional()
+  @IsString()
+  dedupeKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'Identificador de entidade relacionada (bookingId, messageId, etc.)',
+    example: 'booking-123',
+  })
+  @IsOptional()
+  @IsString()
+  relatedId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Carga adicional de metadados (payload do AppEvent)',
+    type: 'object',
+    example: { bookingId: 'booking-123', channel: 'chat' },
+    additionalProperties: true,
+  })
+  @IsOptional()
+  @IsObject()
+  payload?: Record<string, unknown>;
+
+  @ApiPropertyOptional({
+    description: 'TTL em segundos do AppEvent (para stream/fallback)',
+    example: 300,
+  })
+  @IsOptional()
+  @IsInt()
+  ttlSeconds?: number;
 
   @ApiPropertyOptional({
     description: 'Data/hora do serviço confirmado (ex: para banners e filtros)',
