@@ -601,7 +601,7 @@ export async function main() {
     },
     include: { client: true },
   });
-  console.log(`Usu�rio Cliente 'Cliente Caroline Reviewer' criado/atualizado.`);
+  console.log(`Usuário Cliente 'Cliente Caroline Reviewer' criado/atualizado.`);
 
   const clientMariaReviewerAddress = await upsertAddress({
     cep: '01001004',
