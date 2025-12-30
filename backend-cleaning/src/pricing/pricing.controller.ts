@@ -19,6 +19,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { Request } from 'express';
+import { MIN_HOURLY_MINUTES } from '../common/constants/pricing';
 
 type RequestWithUser = Request & {
   user?: {
@@ -77,5 +78,13 @@ export class PricingController {
   async deleteRule(@Req() req: RequestWithUser, @Param('id') id: string) {
     const actorUserId = req.user?.userId ?? 'unknown';
     return this.pricingService.deleteRule(id, actorUserId);
+  }
+
+  @Get('config')
+  async getPublicPricingConfig() {
+    return {
+      minHourlyMinutes: MIN_HOURLY_MINUTES,
+      currency: 'BRL',
+    };
   }
 }
