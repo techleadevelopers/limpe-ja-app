@@ -74,6 +74,26 @@ export class NotificationEntity implements PrismaNotification {
   scheduledAt: Date | null;
   priority: number | null;
   readAt: Date | null;
+  @ApiPropertyOptional({
+    description: 'Key used to deduplicate notifications',
+    example: 'booking-123:BOOKING_REMINDER:24H',
+  })
+  dedupeKey: string | null;
+  @ApiPropertyOptional({
+    description: 'Additional JSON payload for clients',
+    example: { bookingId: 'booking-123' },
+  })
+  payload: Prisma.JsonValue | null;
+  @ApiPropertyOptional({
+    description: 'Suggested TTL in seconds',
+    example: 3600,
+  })
+  ttlSeconds: number | null;
+  @ApiPropertyOptional({
+    description: 'Timestamp when notification was acknowledged',
+    example: '2025-06-01T11:00:00.000Z',
+  })
+  acknowledgedAt: Date | null;
 
   constructor(partial: Partial<PrismaNotification>) {
     Object.assign(this, partial);
