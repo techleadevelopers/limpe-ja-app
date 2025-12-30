@@ -435,7 +435,7 @@ export default function BookingSuccessScreen() {
   const nextRewardName = loyaltyBalance?.nextReward?.name ?? null;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="booking-success-screen">
       <Stack.Screen options={{ title: 'Pagamento', headerShown: false }} />
       <LinearGradient
         colors={['#f2f2f2', '#ffffff']}
@@ -445,33 +445,39 @@ export default function BookingSuccessScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <SuccessHeader
+        <View testID="booking-success-title">
+          <SuccessHeader
           successColor={SUCCESS_COLOR}
           headerPrimaryColor={HEADER_PRIMARY_COLOR}
           headerSecondaryColor={HEADER_SECONDARY_COLOR}
-        />
+          />
+        </View>
 
-            <SuccessLoadingError
-              isLoading={isLoading}
-              error={error}
-              headerPrimaryColor={HEADER_PRIMARY_COLOR}
-              onRetryPress={loadData}
-            />
+        <View testID="booking-success-loader">
+          <SuccessLoadingError
+            isLoading={isLoading}
+            error={error}
+            headerPrimaryColor={HEADER_PRIMARY_COLOR}
+            onRetryPress={loadData}
+          />
+        </View>
 
-            {!isLoading && !error && booking ? (
+        {!isLoading && !error && booking ? (
               <>
                 {paymentMethod === 'PIX' && (
                   <View style={styles.paymentStatusContainer}>
                     {paymentIntent?.status === PaymentIntentStatus.PAID ? (
-                      <PaymentConfirmationCard onPressCta={handleGoToBookings} />
+                      <View testID="booking-success-primary-cta">
+                        <PaymentConfirmationCard onPressCta={handleGoToBookings} />
+                      </View>
                     ) : (
                       <Text style={styles.pendingStatusText}>Aguardando confirmação</Text>
                     )}
                   </View>
                 )}
-                <BookingSummaryCard
-                  booking={booking}
-                  provider={provider}
+            <BookingSummaryCard
+              booking={booking}
+              provider={provider}
               providerRating={providerRating}
               pixChargeDetails={pixCharge}
               paymentMethod={paymentMethod}
@@ -484,6 +490,7 @@ export default function BookingSuccessScreen() {
               formattedAddressLine2={formattedAddressLine2}
               onRegeneratePix={paymentMethod === 'PIX' ? handleRegeneratePix : undefined}
               isRegeneratingPix={isRegeneratingPix}
+              insurance={booking.insurance}
             />
 
             <ImmediateActionButtons
