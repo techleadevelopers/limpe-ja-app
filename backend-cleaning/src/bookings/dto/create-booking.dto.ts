@@ -13,10 +13,35 @@ import {
   ValidateNested,
   IsInt,
   IsDefined,
+  IsArray,
+  IsIn,
 } from 'class-validator'; // <-- Adicione IsDefined aqui!
 import { Type } from 'class-transformer';
 import { CreateAddressDto } from '../../common/dto/create-address.dto';
 import { MIN_HOURLY_MINUTES } from '../../common/constants/pricing';
+import {
+  InsurancePlanId,
+  INSURANCE_PLAN_IDS,
+} from '../../insurance/insurance.constants';
+
+class BookingAddonDto {
+  @ApiProperty({
+    description: 'ID do adicional',
+    example: 'addon-cleaning',
+  })
+  @IsString()
+  @IsNotEmpty()
+  id: string;
+
+  @ApiPropertyOptional({
+    description: 'Quantidade do adicional',
+    example: 1,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  quantity?: number;
+}
 
 export class CreateBookingDto {
   @ApiProperty({
@@ -109,4 +134,46 @@ export class CreateBookingDto {
   @IsOptional()
   @IsString()
   couponCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Assinatura associada ao agendamento, quando aplicável',
+    example: 'subscription-id',
+  })
+  @IsOptional()
+  @IsUUID()
+  subscriptionId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Adicionais selecionados para o agendamento',
+    type: [BookingAddonDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BookingAddonDto)
+  addons?: BookingAddonDto[];
+
+  @ApiPropertyOptional({
+    description: 'Plano de seguro selecionado para o agendamento',
+    enum: INSURANCE_PLAN_IDS,
+  })
+  @IsOptional()
+  @IsIn(INSURANCE_PLAN_IDS)
+  insurancePlanId?: InsurancePlanId;
+
+  @ApiPropertyOptional({
+    description: 'Quote ID retornado por /bookings/quote',
+    example: 'quote-123',
+  })
+  @IsOptional()
+  @IsString()
+  quoteId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Hash determinístico da cotação utilizada',
+    example: 'fc5e038d2f14b01b...',
+  })
+  @IsOptional()
+  @IsString()
+  quoteHash?: string;
 }
