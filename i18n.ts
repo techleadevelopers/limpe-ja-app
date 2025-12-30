@@ -4,35 +4,50 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 
-// Importe seus arquivos JSON completos
-// Ajuste o caminho conforme a estrutura real do seu projeto
 import ptBRTranslation from './i18n/locales/pt-BR.json';
 import enUSTranslation from './i18n/locales/en-US.json';
 
 const resources = {
-  // Use as chaves que correspondem aos seus arquivos JSON
-  // Por exemplo, se o arquivo é pt-BR.json, use 'pt-BR' como chave
   'en-US': enUSTranslation,
   'pt-BR': ptBRTranslation,
 };
 
+const isDev =
+  typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production';
+const isTest = process.env.NODE_ENV === 'test';
+
+const silentLogger = {
+  log: () => {},
+  warn: () => {},
+  error: () => {},
+};
+
+const detectLanguage = () => {
+  const loc = Localization.getLocales?.()[0];
+  const tag = (loc?.languageTag || loc?.languageCode || 'pt-BR') as string;
+  if (tag.startsWith('pt')) return 'pt-BR';
+  if (tag.startsWith('en')) return 'en-US';
+  return 'pt-BR';
+};
+
 i18n
-  .use(initReactI18next) // Passa a instância do i18n para react-i18next
+  .use(initReactI18next)
   .init({
-    resources, // Agora 'resources' contém todos os seus dados de tradução importados
-    // Define o idioma inicial. Tenta usar o idioma do dispositivo.
-    // É importante que o 'lng' inicial (e 'fallbackLng') corresponda a uma das chaves em 'resources' ('en-US' ou 'pt-BR').
-    lng: (() => { const loc = Localization.getLocales?.()[0]; const tag = (loc?.languageTag || loc?.languageCode || 'pt-BR') as string; if (tag.startsWith('pt')) return 'pt-BR'; if (tag.startsWith('en')) return 'en-US'; return 'pt-BR'; })(), // Tenta 'en-US' como padrão se nada for detectado
+    resources,
+    lng: detectLanguage(),
     fallbackLng: 'pt-BR',
-    supportedLngs: ['pt-BR','pt','pt-br','en-US','en','en-us','dev'],
-    nonExplicitSupportedLngs: true, // Idioma de fallback se a tradução não for encontrada
-    debug: __DEV__,
+    supportedLngs: ['pt-BR', 'pt', 'pt-br', 'en-US', 'en', 'en-us', 'dev'],
+    nonExplicitSupportedLngs: true,
+    debug: isDev && !isTest,
+    logger: isTest ? silentLogger : undefined,
+    saveMissing: !isTest,
     lowerCaseLng: false,
-    load: 'currentOnly', // Habilita o modo debug apenas em desenvolvimento
+    load: 'currentOnly',
     interpolation: {
-      escapeValue: false, // Não escapa HTML, já que React já faz isso
+      escapeValue: false,
     },
-    compatibilityJSON: 'v4', // Mantido 'v4'
+    compatibilityJSON: 'v4',
+    missingKeyHandler: isTest ? () => undefined : undefined,
   });
 
 export default i18n;
