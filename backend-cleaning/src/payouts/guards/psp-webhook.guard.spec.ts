@@ -40,6 +40,9 @@ describe('PspWebhookGuard', () => {
     },
   });
 
+  const timestampHeader = (overrideMs?: number) =>
+    (overrideMs ?? Date.now()).toString();
+
   const mockResponse = () => ({
     status: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
@@ -58,7 +61,7 @@ let prismaService: any;
           return '60';
         }
         if (key === 'PSP_WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS') {
-          return '300';
+          return '60';
         }
         if (key === 'psp.webhookSecret') {
           return secret;
@@ -97,6 +100,7 @@ let prismaService: any;
     const request = buildRequest({
       'x-signature': signature,
       'x-event-id': eventId,
+      'x-event-time': timestampHeader(),
     });
     await expect(
       guard.canActivate(mockExecutionContext(request)),
@@ -108,6 +112,7 @@ let prismaService: any;
     const request = buildRequest({
       'x-signature': 'wrong',
       'x-event-id': eventId,
+      'x-event-time': timestampHeader(),
     });
     await expect(
       guard.canActivate(mockExecutionContext(request)),
@@ -121,7 +126,9 @@ let prismaService: any;
       if (key === 'psp.webhookSecret') return secret;
       return undefined;
     });
-    const past = (Date.now() - 10 * 60 * 1000).toString();
+    const now = 1_700_000_000_000;
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    const past = (now - 10 * 60 * 1000).toString();
     const request = buildRequest({
       'x-signature': signature,
       'x-event-id': eventId,
@@ -130,6 +137,128 @@ let prismaService: any;
     await expect(
       guard.canActivate(mockExecutionContext(request)),
     ).rejects.toThrow(BadRequestException);
+    nowSpy.mockRestore();
+  });
+
+  it('rejects requests without timestamp information', async () => {
+    (cacheService.setIfNotExists as jest.Mock).mockResolvedValue(true);
+    const request = buildRequest({
+      'x-signature': signature,
+      'x-event-id': eventId,
+    });
+    await expect(
+      guard.canActivate(mockExecutionContext(request)),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('rejects invalid timestamp formats', async () => {
+    const request = buildRequest({
+      'x-signature': signature,
+      'x-event-id': eventId,
+      'x-event-time': 'not-a-time',
+    });
+    await expect(
+      guard.canActivate(mockExecutionContext(request)),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('accepts timestamps expressed in seconds', async () => {
+    const now = 1_700_000_000_000;
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    (cacheService.setIfNotExists as jest.Mock).mockResolvedValue(true);
+    const seconds = Math.floor(now / 1000).toString();
+    const request = buildRequest({
+      'x-signature': signature,
+      'x-event-id': eventId,
+      'x-event-time': seconds,
+    });
+    await expect(
+      guard.canActivate(mockExecutionContext(request)),
+    ).resolves.toBe(true);
+    nowSpy.mockRestore();
+  });
+
+  it('accepts ISO timestamp strings', async () => {
+    const now = 1_700_000_000_000;
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    (cacheService.setIfNotExists as jest.Mock).mockResolvedValue(true);
+    const iso = new Date(now).toISOString();
+    const request = buildRequest({
+      'x-signature': signature,
+      'x-event-id': eventId,
+      'x-event-time': iso,
+    });
+    await expect(
+      guard.canActivate(mockExecutionContext(request)),
+    ).resolves.toBe(true);
+    nowSpy.mockRestore();
+  });
+
+  it('enforces production minimum tolerance clamp', async () => {
+    const previousEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    (configService.get as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'PSP_WEBHOOK_REPLAY_TTL_SECONDS') return '60';
+      if (key === 'PSP_WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS') return '1';
+      if (key === 'psp.webhookSecret') return secret;
+      return undefined;
+    });
+    const now = 1_700_000_000_000;
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    (cacheService.setIfNotExists as jest.Mock).mockResolvedValue(true);
+    const request = buildRequest({
+      'x-signature': signature,
+      'x-event-id': eventId,
+      'x-event-time': (now - 9_000).toString(),
+    });
+    await expect(
+      guard.canActivate(mockExecutionContext(request)),
+    ).resolves.toBe(true);
+    nowSpy.mockRestore();
+    process.env.NODE_ENV = previousEnv;
+  });
+
+  it('rejects delta outside clamped production tolerance', async () => {
+    const previousEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    (configService.get as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'PSP_WEBHOOK_REPLAY_TTL_SECONDS') return '60';
+      if (key === 'PSP_WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS') return '1';
+      if (key === 'psp.webhookSecret') return secret;
+      return undefined;
+    });
+    const now = 1_700_000_000_000;
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    const request = buildRequest({
+      'x-signature': signature,
+      'x-event-id': eventId,
+      'x-event-time': (now - 11_000).toString(),
+    });
+    await expect(
+      guard.canActivate(mockExecutionContext(request)),
+    ).rejects.toThrow(BadRequestException);
+    nowSpy.mockRestore();
+    process.env.NODE_ENV = previousEnv;
+  });
+
+  it('limits tolerance to 300s even when config asks for more', async () => {
+    (configService.get as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'PSP_WEBHOOK_REPLAY_TTL_SECONDS') return '60';
+      if (key === 'PSP_WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS') return '9999';
+      if (key === 'psp.webhookSecret') return secret;
+      return undefined;
+    });
+    const now = 1_700_000_000_000;
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    const request = buildRequest({
+      'x-signature': signature,
+      'x-event-id': eventId,
+      'x-event-time': (now - 400_000).toString(),
+    });
+    await expect(
+      guard.canActivate(mockExecutionContext(request)),
+    ).rejects.toThrow(BadRequestException);
+    nowSpy.mockRestore();
   });
 
   it('responds 200 when replay detected', async () => {
@@ -138,6 +267,7 @@ let prismaService: any;
     const request = buildRequest({
       'x-signature': signature,
       'x-event-id': eventId,
+      'x-event-time': timestampHeader(),
     });
     await expect(
       guard.canActivate(mockExecutionContext(request, response)),
@@ -151,6 +281,7 @@ let prismaService: any;
     const request = buildRequest({
       'x-signature': signature,
       'x-event-id': '  EVENT-123  ',
+      'x-event-time': timestampHeader(),
     });
     await expect(
       guard.canActivate(mockExecutionContext(request)),
@@ -165,7 +296,10 @@ let prismaService: any;
   it('falls back to payload id', async () => {
     (cacheService.setIfNotExists as jest.Mock).mockResolvedValue(true);
     const request = buildRequest(
-      { 'x-signature': signature },
+      {
+        'x-signature': signature,
+        'x-event-time': timestampHeader(),
+      },
       { transaction: { id: 'payload-event-456' } },
     );
     await expect(
