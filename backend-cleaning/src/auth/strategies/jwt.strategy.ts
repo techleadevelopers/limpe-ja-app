@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserRole } from '../../common/constants/roles.enum';
 import { User } from '@prisma/client';
+import { AuthErrorCode } from '../../common/constants/auth-error-code';
 
 interface RequestUserPayload {
   userId: string;
@@ -43,7 +44,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       this.logger.error(
         '[JwtStrategy] validate: Payload JWT não contém "sub" (ID do usuário).',
       );
-      throw new UnauthorizedException('Token inválido: ID do usuário ausente.');
+      throw new UnauthorizedException({
+        message: 'Token inválido: ID do usuário ausente.',
+        code: AuthErrorCode.UNAUTHORIZED,
+      });
     }
 
     let user:
@@ -66,16 +70,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         `[JwtStrategy] validate: Erro ao buscar usuário no DB para ID ${payload.sub}: ${message}`,
         stack,
       );
-      throw new UnauthorizedException(
-        'Erro de validação de token: Falha no acesso ao usuário.',
-      );
+      throw new UnauthorizedException({
+        message: 'Erro de validação de token: Falha no acesso ao usuário.',
+        code: AuthErrorCode.UNAUTHORIZED,
+      });
     }
 
     if (!user) {
       this.logger.warn(
         `[JwtStrategy] validate: Usuário com ID ${payload.sub} não encontrado ou inativo no DB.`,
       );
-      throw new UnauthorizedException('Usuário não encontrado ou inativo.');
+      throw new UnauthorizedException({
+        message: 'Usuário não encontrado ou inativo.',
+        code: AuthErrorCode.TOKEN_REVOKED,
+      });
     }
 
     const userPayload: RequestUserPayload = {
