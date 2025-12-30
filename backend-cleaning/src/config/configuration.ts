@@ -53,6 +53,17 @@ export default () => ({
     limit: toInt(process.env.THROTTLE_LIMIT, 10),
   },
 
+  notifications: {
+    dedupeWindowSeconds: toInt(
+      process.env.NOTIFICATIONS_DEDUPE_WINDOW_SECONDS,
+      180,
+    ),
+    defaultTtlSeconds: toInt(
+      process.env.NOTIFICATIONS_DEFAULT_TTL_SECONDS,
+      300,
+    ),
+  },
+
   // Redis (Bull, Locks, Cache)
   redis: {
     url: pickRedisUrl(),
