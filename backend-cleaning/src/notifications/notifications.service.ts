@@ -5,6 +5,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { Notification } from '@prisma/client';
 import { MarkAsReadDto } from './dto/mark-as-read.dto';
@@ -17,6 +18,8 @@ import axios from 'axios';
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+  private readonly dedupeWindowSeconds: number;
+  private readonly defaultAppEventTtl: number;
 
   private formatError(err: unknown): string {
     if (err instanceof Error) return err.message;
@@ -31,7 +34,16 @@ export class NotificationsService {
   constructor(
     private prisma: PrismaService,
     private readonly i18n: I18nService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.dedupeWindowSeconds =
+      this.configService.get<number>(
+        'notifications.dedupeWindowSeconds',
+        180,
+      );
+    this.defaultAppEventTtl =
+      this.configService.get<number>('notifications.defaultTtlSeconds', 300);
+  }
 
   /**
    * Cria uma nova notificação.
@@ -59,6 +71,24 @@ export class NotificationsService {
         return existing;
       }
     }
+
+    const dedupeKey = dto.dedupeKey ?? this.buildDedupeKey(dto);
+    const ttlSeconds = dto.ttlSeconds ?? this.defaultAppEventTtl;
+
+    if (dedupeKey) {
+      const since = new Date(Date.now() - this.dedupeWindowSeconds * 1000);
+      const duplicate = await this.prisma.notification.findFirst({
+        where: {
+          userId,
+          dedupeKey,
+          createdAt: { gte: since },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (duplicate) {
+        return duplicate;
+      }
+    }
     const scheduledAtDate = scheduledAt ? new Date(scheduledAt) : undefined;
     try {
       const notification = await this.prisma.notification.create({
@@ -74,14 +104,23 @@ export class NotificationsService {
           idempotencyKey,
           scheduledAt: scheduledAtDate,
           isRead: false,
-        },
-      });
+          dedupeKey,
+          payload: (dto.payload as any) ?? null,
+          ttlSeconds,
+          },
+        });
+      const appEvent = this.toAppEvent(notification);
       // Optionally, send push notification immediately after creating DB entry
       this.sendPushNotification(userId, title || message, message, {
         type,
         notificationId: notification.id,
         targetUrl,
         category,
+        idempotencyKey,
+        dedupeKey,
+        ttlSeconds,
+        payload: (dto.payload as any) ?? null,
+        appEvent,
         ...actionButtons, // Pass action buttons data to push notification payload
       }).catch((e) =>
         this.logger.error(
@@ -100,6 +139,61 @@ export class NotificationsService {
       Sentry.captureException(error); // NEW: Capture exception with Sentry
       throw error;
     }
+  }
+
+  private toAppEvent(notification: Notification) {
+    return {
+      id: notification.id,
+      userId: notification.userId,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      targetUrl: notification.targetUrl,
+      category: notification.category,
+      actionButtons: notification.actionButtons,
+      imageUrl: notification.imageUrl,
+      dedupeKey: notification.dedupeKey ?? undefined,
+      payload: notification.payload ?? undefined,
+      ttlSeconds: notification.ttlSeconds ?? undefined,
+      createdAt: notification.createdAt,
+      readAt: notification.readAt ?? undefined,
+      acknowledgedAt: notification.acknowledgedAt ?? undefined,
+    };
+  }
+
+  private buildDedupeKey(dto: CreateNotificationDto): string | null {
+    if (!dto.type || !dto.userId) {
+      return null;
+    }
+    const reference =
+      dto.relatedId ?? this.extractReferenceFromPayload(dto.payload);
+    if (!reference) {
+      return null;
+    }
+    return `${dto.type}:${reference}:${dto.userId}`;
+  }
+
+  private extractReferenceFromPayload(
+    payload?: Record<string, unknown>,
+  ): string | undefined {
+    if (!payload) {
+      return undefined;
+    }
+    const candidates = [
+      'bookingId',
+      'booking_id',
+      'referenceId',
+      'id',
+      'targetId',
+      'userId',
+    ];
+    for (const key of candidates) {
+      const value = payload[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
+    return undefined;
   }
 
   /**
@@ -130,6 +224,50 @@ export class NotificationsService {
     }
   }
 
+  async getUserNotificationStream(
+    userId: string,
+    since?: Date,
+    limit = 200,
+  ): Promise<Notification[]> {
+    const where: any = { userId };
+    if (since) {
+      where.createdAt = { gt: since };
+    }
+    return this.prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: 'asc' },
+      take: limit,
+    });
+  }
+
+  async ackNotification(
+    notificationId: string,
+    userId: string,
+  ): Promise<Notification> {
+    const notification = await this.prisma.notification.findUnique({
+      where: { id: notificationId },
+    });
+
+    if (!notification || notification.userId !== userId) {
+      throw new NotFoundException(
+        await this.i18n.translate('notification.notFound'),
+      );
+    }
+
+    if (notification.acknowledgedAt) {
+      return notification;
+    }
+
+    return this.prisma.notification.update({
+      where: { id: notificationId },
+      data: {
+        isRead: true,
+        readAt: notification.readAt ?? new Date(),
+        acknowledgedAt: new Date(),
+      },
+    });
+  }
+
   /**
    * Marca notificações como lidas.
    * @param userId ID do usuário.
@@ -151,9 +289,11 @@ export class NotificationsService {
             userId: userId,
             isRead: false,
           },
-          data: {
-            isRead: true,
-          },
+        data: {
+          isRead: true,
+          readAt: new Date(),
+          acknowledgedAt: new Date(),
+        },
         });
         return { count: result.count };
       } else {
@@ -162,9 +302,11 @@ export class NotificationsService {
             userId: userId,
             isRead: false,
           },
-          data: {
-            isRead: true,
-          },
+        data: {
+          isRead: true,
+          readAt: new Date(),
+          acknowledgedAt: new Date(),
+        },
         });
         return { count: result.count };
       }
@@ -205,7 +347,11 @@ export class NotificationsService {
     try {
       return this.prisma.notification.update({
         where: { id: notificationId },
-        data: { isRead: true },
+        data: {
+          isRead: true,
+          readAt: new Date(),
+          acknowledgedAt: new Date(),
+        },
       });
     } catch (error) {
       this.logger.error(
@@ -470,6 +616,19 @@ export class NotificationsService {
         );
         throw e;
       }
+    }
+  }
+
+  async unregisterDeviceToken(userId: string): Promise<void> {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { fcmToken: null },
+      });
+    } catch (error: unknown) {
+      this.logger.warn(
+        `unregisterDeviceToken(${userId}) falhou: ${this.formatError(error)}`,
+      );
     }
   }
 }
