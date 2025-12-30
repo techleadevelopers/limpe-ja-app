@@ -13,6 +13,7 @@ import BookingDetailSection from './BookingDetailSection';
 import DateTimeCards from './DateTimeCards';
 import ProviderInfoSection from './ProviderInfoSection';
 import SuccessPixInfo from './SuccessPixInfo';
+import InsuranceSummary from '../../../booking/InsuranceSummary';
 
 // Importar tipos
 import { BookingDetails } from '../../../../types/backend/bookings';
@@ -40,6 +41,7 @@ interface BookingSummaryCardProps {
   formattedAddressLine2: string;
   onRegeneratePix?: () => void;
   isRegeneratingPix?: boolean;
+  insurance?: BookingDetails['insurance'] | null;
 }
 
 export default function BookingSummaryCard({
@@ -57,6 +59,7 @@ export default function BookingSummaryCard({
   formattedAddressLine2,
   onRegeneratePix,
   isRegeneratingPix,
+  insurance,
 }: BookingSummaryCardProps) {
   const { t } = useTranslation();
   const {
@@ -151,6 +154,8 @@ export default function BookingSummaryCard({
             notes={notes}
             iconColor={AppColors.primaryInteractive}
           />
+
+          {insurance && <InsuranceSummary insurance={insurance} />}
 
           <DateTimeCards
             formattedBookingDate={formattedBookingDate}
