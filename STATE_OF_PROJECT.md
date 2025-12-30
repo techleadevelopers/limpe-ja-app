@@ -1,29 +1,33 @@
 # STATE OF PROJECT
-> Data: 2025-12-21 | Commit: 47db0db2 | Branch: main
+> Data: 2025-12-28 | Commit: 95ebd7ff | Branch: main
 
 ## 0) TL;DR (1 pagina)
-- Status geral: O backend NestJS entrega autenticacao JWT/roles, bookings (slots, regras minimas e state machine), payments PIX com webhooks e observabilidade (Prometheus, OTEL e health), enquanto o frontend Expo Router ja percorre explore, bookings e provider pages; o ciclo esta pronto para um beta controlado, mas depende de ajustes de configuracao (PIX/PSP secrets, rate limiting e consistencia de constantes).
-- Testes unitários: `npx jest --config test/jest-unit.json --runInBand` agora passa todas as 30 suites (incluindo os dois testes restaurados em `test/unit/`), usando a nova configuração `test/jest-unit.json`, ajustando `AppController/AppService` e `PspWebhookGuard`, e cobrindo o novo comportamento de throttling nos endpoints de bookings/pagamentos e webhooks. Os warnings visíveis ocorrem apenas porque os secrets de webhook/PIX e o PSP token ainda faltam na `.env`.
-- Top 10 riscos:
-  1. `backend-cleaning/src/payments/payments.service.ts:198`  sem `PIX_WEBHOOK_SECRET`, `validateHmac` sempre falha e `handlePaymentWebhook` responde `ForbiddenException`, impedindo confirmacoes de PIX.
-  2. `backend-cleaning/src/payouts/guards/psp-webhook.guard.ts:29`  quando `psp.webhookSecret` nao esta configurado o guard lanca `ForbiddenException` e bloqueia todos os webhooks PSP.
-  3. `backend-cleaning/src/payments/payments.service.ts:157`  a ausencia de `PAGSEGURO_API_TOKEN` ou `API_BASE_URL` coloca o servico em modo placeholder, mas `/payments/pix-charge` continua exposto entregando QRs que nunca chegam ao PSP.
-  4. `backend-cleaning/src/payments/payment.state-machine.ts:1`  o arquivo esta vazio, de forma que estados de pagamento sao tratados de forma ad hoc e correcoes futuras podem quebrar a consistencia do ledger.
-  5. `backend-cleaning/src/bookings/bookings.service.ts:452`  tipos de precificacao desconhecidos usam o `totalPrice` enviado pelo cliente, permitindo manipular valores ate o backend suportar o novo tipo.
-  6. `backend-cleaning/src/app.module.ts:68` e `backend-cleaning/src/bookings/bookings.controller.ts:86`  apenas Auth e Disputes recebem `ThrottlerGuard`, deixando `/bookings` e `/payments/pix-charge` expostos a DoS/brute-force.
-  7. `app/client/bookings/schedule-service.tsx:53` vs `backend-cleaning/src/common/constants/pricing.ts:1`  o minimo de 4h e duplicado no front, sem uma fonte compartilhada, entao qualquer alteracao no backend quebra o UI sem aviso.
-  8. `backend-cleaning/src/bookings/bookings.service.ts:583`  o check de conflito considera apenas os statuses `[PENDING..RESCHEDULED]`, ignorando `PENDING_PROVIDER_CONFIRMATION`, o que permite bookings sobrepostos.
-  9. `backend-cleaning/src/auth/dto/auth-response.dto.ts:1`  o login retorna apenas `accessToken` e nao ha rota de refresh, forcando re-logins quando o token expira.
-  10. `backend-cleaning/src/metrics/metrics.controller.ts:8`  todas as metricas ficam atras de `JwtAuthGuard`, obrigando ferramentas externas a obter um JWT valido.
+- Status geral: O backend NestJS entrega autenticacao JWT/roles, bookings (slots, regras minimas e state machine), payments PIX com webhooks e observabilidade (Prometheus, OTEL e health), enquanto o frontend Expo Router ja percorre explore, bookings e provider pages; o ciclo esta pronto para um beta controlado, mas depende de ajustes de configuracao (PIX/PSP secrets, rate limiting e consistencia de constantes), o bootstrap de producao valida `PIX_WEBHOOK_SECRET`, `psp.webhookSecret`, `PAGSEGURO_API_TOKEN` e `API_BASE_URL` e aborta o startup se algum secret critico faltar, e os testes Jest agora silenciam `Logger.log/debug/verbose` para manter o CI limpo.
+- Pós-booking reminders + detecção de provedor atrasado + push delivery: SchedulerService persiste NotificationSchedule e dispara BOOKING_REMINDER/PROVIDER_LATE/JOB_STARTED/JOB_ENDED enquanto o front re-registra tokens ao voltar do foreground para garantir que toasts/pushes persistam (backend-cleaning/src/scheduler/scheduler.service.ts:1-230; backend-cleaning/src/bookings/bookings.service.ts:1930-2090; hooks/usePushRegistration.ts:1-32; contexts/AuthContext.tsx:200-330).
+- Testes unitários: `npx jest --config test/jest-unit.json --runInBand` agora passa 14 suites e 39 testes; o novo controller `/pricing/config` também inclui especificação no PR #3, que hardenou pricing (derrubando fallback de `totalPrice` e garantindo `BadRequest` para `pricingType` inválido) e confirmou que conflitos já respeitam `PENDING_PROVIDER_CONFIRMATION`.
+- PR #3 finalizado: endpoint público GET `/pricing/config` (mina `minHourlyMinutes` + `currency`), forte validação de pricingType e verificação que o backend ignora `dto.totalPrice`, e o conflito de bookings engloba o status `PENDING_PROVIDER_CONFIRMATION` via `BLOCKED_BOOKING_STATUSES`.
+- Environment behavior (prod vs dev/test):
+| Concern | Production | Dev/Test |
+| --- | --- | --- |
+| Missing secrets (`PIX_WEBHOOK_SECRET`, `psp.webhookSecret`, `PAGSEGURO_API_TOKEN`, `API_BASE_URL`) | bootstrap throws `Missing production secrets` and app never starts | `logMissingConfigOnce` warns once per key and the app keeps running so manual testing remains possible |
+| `/payments/pix-charge` | never reached when PSP secrets missing (fails fast) | handler still returns `HttpException('PSP not configured', 503)` so requests fail fast despite placeholder mode |
+| Logger output | normal Nest logger for all levels; production uses log/warn/error | Jest setup file overrides `Logger.log/debug/verbose` (see `test/jest.setup.ts`) so unit output stays focused on WARN/ERROR |
+
+- Operacoes Ads-safe: `docs/RUNBOOK_ADS_SAFE.md` centraliza o checklist de pre-deploy, smoke tests, observabilidade, rollback e ondas de expansao para o trafego pago.
+
+Top risks:
+  1. `backend-cleaning/src/payments/payments.service.ts:198`  em dev/test a falta de `PIX_WEBHOOK_SECRET` ainda impede globais PIX (o fail-fast prod bloqueia subidas), então monitorar o config continua chave para evitar rejects de webhook.
+  2. `backend-cleaning/src/payouts/guards/psp-webhook.guard.ts:29`  idem para `psp.webhookSecret` nos ambientes controlados.
+  3. `backend-cleaning/src/metrics/metrics.controller.ts:8`  todas as metricas ficam atras de `JwtAuthGuard`, obrigando ferramentas externas a obter um JWT valido.
 - Top 10 proximos passos:
   1. Validar `PIX_WEBHOOK_SECRET` durante o bootstrap e abortar se faltar (`backend-cleaning/src/payments/payments.service.ts:198`).
   2. Garantir que `psp.webhookSecret` esteja presente antes de aceitar webhooks (`backend-cleaning/src/payouts/guards/psp-webhook.guard.ts:29`).
-  3. Impedir `/payments/pix-charge` quando `PAGSEGURO_API_TOKEN`/`API_BASE_URL` estiverem ausentes (`backend-cleaning/src/payments/payments.service.ts:157`).
-  4. Implementar `payments/payment.state-machine.ts` e reaproveita-lo nas transicoes de `PaymentIntent` para manter o ledger previsivel (arquivo atual vazio).
+  3. Documentar e monitorar `PAGSEGURO_API_TOKEN`/`API_BASE_URL`: `/payments/pix-charge` responde `HttpException('PSP not configured', 503)` enquanto essas chaves estiverem ausentes (`backend-cleaning/src/payments/payments.service.ts:1016-1033`).
+  4. Garantir que `payments/payment.state-machine.ts` (que agora declara estados, transições e `canTransition`) continue a ser utilizado nos fluxos de `PaymentIntent` e que a cobertura de `payment.state-machine.spec.ts` evolua quando novos estados surgirem.
   5. Substituir o fallback para `CreateBookingDto.totalPrice` por manipuladores explicitos para cada `pricingType` (`backend-cleaning/src/bookings/bookings.service.ts:452`).
-  6. Cobrir `/bookings` e `/payments/pix-charge` com `ThrottlerGuard` ou registrar o guard globalmente (`backend-cleaning/src/app.module.ts:68`, `backend-cleaning/src/bookings/bookings.controller.ts:86`).
-  7. Publicar `minHourlyMinutes` via API ou config compartilhada para que `app/client/bookings/schedule-service.tsx:53` nao duplique `backend-cleaning/src/common/constants/pricing.ts:1`.
-  8. Ampliar o check de conflito para considerar `PENDING_PROVIDER_CONFIRMATION` e outras flags pendentes (`backend-cleaning/src/bookings/bookings.service.ts:583`).
+  6. Verificar que o `ThrottlerGuard` global (configurado com `APP_GUARD` em `AppModule`) continue protegendo `/bookings` e `/payments/pix-charge`, ajustando limites via `@Throttle` quando necessário (`backend-cleaning/src/app.module.ts:90-155`, `backend-cleaning/src/bookings/bookings.controller.ts:82`, `backend-cleaning/src/payments/payments.controller.ts:65`).
+  7. Documentar `GET /pricing/config` como fonte única para `minHourlyMinutes` e `currency`, mantendo `MIN_HOURLY_MINUTES` centralizado em `backend-cleaning/src/common/constants/pricing.ts` (`backend-cleaning/src/pricing/pricing.controller.ts:83-88`, `backend-cleaning/src/pricing/pricing.controller.spec.ts:1-17`).
+  8. Manter `BLOCKED_BOOKING_STATUSES` atualizado (atualmente inclui `PENDING_PROVIDER_CONFIRMATION`) e expandir os testes de conflito sempre que novos status forem introduzidos (`backend-cleaning/src/bookings/bookings.constants.ts:1-8`, `backend-cleaning/src/bookings/bookings.service.spec.ts:152-167`).
   9. Introduzir refresh tokens/rota `/auth/refresh` para evitar re-logins forcados (`backend-cleaning/src/auth/dto/auth-response.dto.ts:1`).
   10. Disponibilizar metricas sem login ou com credencial de servico para facilitar monitoramento (`backend-cleaning/src/metrics/metrics.controller.ts:8`).
 
@@ -46,21 +50,22 @@
 
 ### 2.2 Bookings & Schedule
 - [OK] `POST /bookings` e `/bookings/schedule-and-pay` estao protegidos por JWT/roles (`backend-cleaning/src/bookings/bookings.controller.ts:86`, `:110`), `CreateBookingDto` exige endereco e duracao obrigatorios (`backend-cleaning/src/bookings/dto/create-booking.dto.ts:18`) e o `BookingsService` usa o `BookingStateMachine` (`backend-cleaning/src/bookings/states/booking.state-machine.ts:61`) junto com o `AvailabilityService` (`backend-cleaning/src/availability/availability.service.ts:110`) para validar o slot.
-- [WARN] O minimo de 240 minutos aparece em `backend-cleaning/src/common/constants/pricing.ts:1`, mas o front repete `MIN_HOURLY_MINUTES` em `app/client/bookings/schedule-service.tsx:53`, aumentando o risco de divergencia quando a regra mudar.
+- [INFO] O backend centraliza `MIN_HOURLY_MINUTES = 240` em `backend-cleaning/src/common/constants/pricing.ts:1` e disponibiliza esse valor (mais a `currency: 'BRL'`) via GET `/pricing/config` (`backend-cleaning/src/pricing/pricing.controller.ts:83-88`, `backend-cleaning/src/pricing/pricing.controller.spec.ts:1-17`), garantindo uma fonte única para o mínimo de duração.
 - [MISSING] `backend-cleaning/src/bookings/booking.policy.ts:1` continua um placeholder sem policy documentada para transicoes.
-- [RISK] `BookingsService.create` cai em `CreateBookingDto.totalPrice` quando encontra um `pricingType` desconhecido (`backend-cleaning/src/bookings/bookings.service.ts:452`) e o check de conflito revisa apenas `[PENDING..RESCHEDULED]` (`backend-cleaning/src/bookings/bookings.service.ts:583`), deixando brechas para bookings sobrepostos com `PENDING_PROVIDER_CONFIRMATION`.
-- [FIX] Completar o policy file, tratar cada `pricingType` separadamente e estender o check de conflitos a todas as flags pendentes (prioridade P1).
+- [RISK] `BookingsService.create` ainda depende de um policy documentado para novas transições e precisa manter cobertura total sobre os `pricingType`s existentes antes de abrir espaço para variantes adicionais.
+- [FIX] Continuar evoluindo o policy file e documentar as transições de booking enquanto estabilizamos os novos handlers de pricing e a state machine (prioridade P1).
 
 ### 2.3 Payments (PIX) & Webhooks
--  `/payments/pix-charge` existe em `backend-cleaning/src/payments/payments.controller.ts:26`, `PaymentsService.createPixCharge` chama PagSeguro com injecao de `PaymentIntentLocker` (`backend-cleaning/src/payments/payment-intent-locker.ts:1`) e o webhook `payments/webhook/pix` passa pelo guard antes do `handlePixWebhook` (`backend-cleaning/src/payments/payments.webhooks.controller.ts:1`, `backend-cleaning/src/payments/payments.service.ts:459`).
--  A validacao HMAC depende de `PIX_WEBHOOK_SECRET`; na falta dele `validateHmac` retorna false e `handlePaymentWebhook` lanca `ForbiddenException` (`backend-cleaning/src/payments/payments.service.ts:198`).
--  `backend-cleaning/src/payments/payment.state-machine.ts:1` esta vazio, entao nao ha uma camada unica para manter o fluxo de estados de pagamento.
--  A ausencia de `PAGSEGURO_API_TOKEN`/`API_BASE_URL` mantem o QR exposto mesmo sem integracao ativa (`backend-cleaning/src/payments/payments.service.ts:157`).
--  Falhar rapido sem esses secrets, implementar a state machine e adicionar testes de webhook sao correcoes P0/P1.
+-  `/payments/pix-charge` existe em `backend-cleaning/src/payments/payments.controller.ts:26`, `PaymentsService.createPixCharge` chama PagSeguro com injecao de `PaymentIntentLocker` (`backend-cleaning/src/payments/payment-intent-locker.ts:1`) e o webhook `payments/webhook/pix` passa pelo guard antes do `handlePixWebhook` (`backend-cleaning/src/payments/payments.webhooks.controller.ts:1`, `backend-cleaning/src/payments/payments.service.ts:459`). Quando `PAGSEGURO_API_TOKEN` ou `API_BASE_URL` estao ausentes o handler retorna `HttpException('PSP not configured', HttpStatus.SERVICE_UNAVAILABLE)` antes de gerar qualquer QR, garantindo que o endpoint fique inacessivel enquanto a integracao nao esta configurada (`backend-cleaning/src/payments/payments.service.ts:1016-1033`).
+-  A validacao HMAC depende de `PIX_WEBHOOK_SECRET`; na falta dele `validateHmac` retorna false e `handlePaymentWebhook` lanca `ForbiddenException`. O guard `PspWebhookGuard` repete o check e registra `ForbiddenException` se o secret nao existe, exceto quando `ALLOW_INSECURE_WEBHOOKS=true` e o webhook for PIX (`backend-cleaning/src/payments/payments.service.ts:198-260`, `backend-cleaning/src/payouts/guards/psp-webhook.guard.ts:37-70`).
+-  [INFO] O bootstrap em `backend-cleaning/src/main.ts:45-90` valida `PIX_WEBHOOK_SECRET`, `psp.webhookSecret`, `PAGSEGURO_API_TOKEN` e `API_BASE_URL` quando `NODE_ENV=production`, e lança `Error` antes de ouvir a porta se algum secret critico estiver ausente para evitar fluxos de PSP incompletos.
+-  `backend-cleaning/src/payments/payment.state-machine.ts:1-34` ja declara `PaymentIntentState`, o mapa `PAYMENT_TRANSITIONS` e as funcoes `canTransition`, `assertTransition` e `applyTransition`. O `PaymentsService` importa `canTransition` (`backend-cleaning/src/payments/payments.service.ts:46`) e usa o helper em `handlePaymentWebhook` e em confirmacoes manuais (`backend-cleaning/src/payments/payments.service.ts:311`, `:707`), enquanto `payment.state-machine.spec.ts:1-17` cobre as transicoes validas e invalidas.
+-  `logMissingConfigOnce` deduplica os avisos sobre secrets ausentes em ambientes de desenvolvimento/teste, mas em producao os logs ainda sao emitidos a cada evento. `PaymentsService` e `PspWebhookGuard` usam essa funcao para avisar sobre `PAGSEGURO_API_TOKEN`, `API_BASE_URL`, `PIX_WEBHOOK_SECRET` e `psp.webhookSecret` faltando (`backend-cleaning/src/common/logging/missing-config.logger.ts:1-10`, `backend-cleaning/src/payments/payments.service.ts:220-237`, `backend-cleaning/src/payouts/guards/psp-webhook.guard.ts:41-70`).
 
 ### 2.4 Providers & Services
 -  `ProvidersService` filtra apenas providers aprovados (`backend-cleaning/src/providers/providers.service.ts:1038`) e `BookingsService.create` busca o provider antes de criar um booking (`backend-cleaning/src/bookings/bookings.service.ts:419`).
 -  As queries no providers service carregam muitos includes (reviews, availability, services) sem cache, o que pode degradar payloads conforme o volume aumenta (`backend-cleaning/src/providers/providers.service.ts:314`).
+-  [INFO] `GET /providers` (search/list) e `GET /providers/:id` reutilizam `CacheService` por 60s (`backend-cleaning/src/providers/providers.service.ts:1015-1505`, `:604-613`, `:1499-1505`); as chaves seguem o padrão `all_approved_providers:search:<JSON dto>` (ex.: `...:"limit":5,"offset":10,"city":"Campinas"...`) e `all_approved_providers:<providerId>`, entregando respostas públicas para Ads-heavy traffic sem recarregar o Postgres.
 -  `BookingsService.create` nao verifica se o provider esta `VerificationStatus.APPROVED` antes de aceitar o booking, portanto um prestador pendente ainda pode ser agendado se o front nao bloquear.
 -  Isso expoe atendimentos a prestadores em revisao, o que impacta compliance.
 -  Validar `verificationStatus === APPROVED` antes de criar o booking e aplicar caches seletivos nos includes volumosos (prioridade P1).
@@ -72,6 +77,11 @@
 -  A readiness check toca Redis e Postgres e lanca `ServiceUnavailable` se qualquer dependencia falhar (`backend-cleaning/src/health/health.controller.ts:16`).
 -  Criar um service account para metricas publicas e alertas de health pode melhorar a operacao (prioridade P1).
 
+## Operacao (Ads-safe)
+-  [INFO] `docs/RUNBOOK_ADS_SAFE.md` concentra o checklist de pre-deploy, smoke tests, observabilidade, rollback, ondas de expansao e politicas de mudanca para o lancamento Ads-safe.
+-  [INFO] A secao de pre-deploy valida secretos criticos, conexoes de health, throttling global, pricing config e integracoes PagSeguro; o smoke testa booking -> schedule-and-pay, `pix-charge` com PSP ativo e desligado, webhooks e idempotencia.
+-  [INFO] Observabilidade foca em WARN/ERROR, metricas de latencia/4xx/5xx, cache de providers TTL 60s e uso do `HttpMetricsMiddleware`; os rollbacks obedecem a limites de 5xx ou falhas no pix-charge.
+
 ## 3) Frontend (Expo)
 
 ### 3.1 Rotas (Expo Router)
@@ -79,13 +89,14 @@
 -  `frontend_routes.json` esta disponivel mas nao e consumido automaticamente, entao ha duplicacao de strings nas telas.
 -  Nao ha validacao tipada para garantir que o `CLIENT_ROUTES.PROVIDER_DETAILS` seja sempre atualizado junto ao nome da rota.
 -  `_layout.tsx` injeta widgets como `NotificationUIService` e responde ao estado de um booking ativo, podendo falhar ao buscar bookings (`app/_layout.tsx:34`, `:86`).
+- `useNotificationsSocket` agora interpreta AppEvent (type + dedupeKey + payload), manda ack silencioso para `/notifications/:id/ack` e reconcilia eventos faltantes via `/notifications/stream` ao reconectar/retornar do background.
 -  Fortalecer tipos das rotas e documentar o padrao de redirecionamento ajudaria novos devs a usar o router sem errar (prioridade P2).
 
 ### 3.2 Fluxo de booking (UI)
 -  `app/client/bookings/schedule-service.tsx` invoca `getProviderAvailability`, `getProviderDetails`, `generateDailySlots` e o `createBooking`/`createBookingAndPixCharge` (`app/client/bookings/schedule-service.tsx:35`, `:638`, `:1569`), e `services/bookingService.ts:1` encapsula as chamadas REST.
--  O subtotal e calculado localmente pelo hook `useBookingPricing` (`utils/useBookingPricing.ts:1`), sem garantir sincronizacao com o `dynamicFinalPrice` calculado no backend (`backend-cleaning/src/bookings/bookings.service.ts:500`).
--  O front nao confirma com o backend o valor final antes de gerar o QR, entao mudancas nas regras de preco podem rejeitar o pagamento no ultimo momento.
--  `MIN_HOURLY_MINUTES` e replicado em `app/client/bookings/schedule-service.tsx:53`, tornando o UI quebravel se o backend alterar o minimo (`backend-cleaning/src/common/constants/pricing.ts:1`).
+-  `app/client/bookings/schedule-service.tsx` agora usa `useBookingQuote` + `services/quoteService` para chamar `POST /bookings/quote` (debounce 300ms) e exibir sempre o subtotal/total retornado pelo backend, mantendo `createBooking` alinhado com `totalPrice` calculado e enviando `quoteId`/`quoteHash`.
+-  O backend verifica `quoteHash` no `POST /bookings` e responde 409 `PRICE_MISMATCH` com a nova cotação quando detecta divergencia, enquanto o front re-quotta automaticamente, exibe o toast “Preço atualizado” e libera o botão para o cliente reconfirmar.
+-  O backend centraliza `MIN_HOURLY_MINUTES = 240` em `backend-cleaning/src/common/constants/pricing.ts:1` e publica esse valor via GET `/pricing/config`, que retorna `minHourlyMinutes` e `currency` (`backend-cleaning/src/pricing/pricing.controller.ts:83-88`, `backend-cleaning/src/pricing/pricing.controller.spec.ts:1-17`). Incentivar o frontend a consultar este endpoint evita divergencias de regra de negocio.
 -  Buscar o minimo e o valor final via API/config compartilhada antes de habilitar o botao de agendar reduz discrepancias (prioridade P1).
 
 ### 3.3 Provider UI (ProviderID / icones / confianca)
@@ -98,8 +109,16 @@
 ## 4) Seguranca (pontos criticos)
 - Webhooks (assinatura + timestamp + replay):  `PaymentsService.validateHmac` e `PspWebhookGuard` validam assinatura e janela de tempo (`backend-cleaning/src/payments/payments.service.ts:198`, `backend-cleaning/src/payouts/guards/psp-webhook.guard.ts:29`).  Ambas as validacoes dependem de secrets de ambiente; sem eles o fluxo inteiro trava.  A cache de replay utiliza Redis e registra `webhookReplay` no banco, limitando replays (`backend-cleaning/src/payouts/guards/psp-webhook.guard.ts:65`).
 - Autorizacao por role:  `RolesGuard` aplica `@Roles` e e usado em controllers criticos (`backend-cleaning/src/auth/guards/roles.guard.ts:1`, `backend-cleaning/src/bookings/bookings.controller.ts:86`).  Nao ha refresh tokens, entao revogar acesso forcado fica limitado.
-- Rate limiting:  `ThrottlerModule` e configurado em `app.module.ts:68`, mas  apenas `AuthController` e `DisputeController` adicionam `ThrottlerGuard` (`backend-cleaning/src/auth/auth.controller.ts:86`, `backend-cleaning/src/disputes/dispute.controller.ts:31`), deixando o resto do trafego sem protecao.
+- Rate limiting:  `ThrottlerModule` e configurado via `forRootAsync` em `AppModule` e o `ThrottlerGuard` e registrado como `APP_GUARD`, de forma que todos os endpoints compartilham a guard default enquanto controllers como `AuthController`, `DisputeController`, `PaymentsController` e `BookingsController` usam `@Throttle` para ajustar limites especificos (`backend-cleaning/src/app.module.ts:90-155`, `backend-cleaning/src/auth/auth.controller.ts:86`, `backend-cleaning/src/disputes/dispute.controller.ts:31`, `backend-cleaning/src/payments/payments.controller.ts:65`, `backend-cleaning/src/bookings/bookings.controller.ts:82`). Em especial, `POST /bookings` usa `@Throttle({ limit: 20, ttl: 60 })`, `POST /bookings/schedule-and-pay` usa `@Throttle({ limit: 15, ttl: 60 })` e `POST /payments/pix-charge` usa `@Throttle({ limit: 18, ttl: 60 })`, complementando o limite global default (`throttle.limit`, `throttle.ttl` em `CustomConfigModule`) para manter o tráfego pago seguro sem impactar dev/test.
 - Dados sensiveis em logs:  os logs do `AuthService` mostram IDs e roles, nao senhas (`backend-cleaning/src/auth/auth.service.ts:80`).  E preciso manter esse padrao ao adicionar novos logs ou telemetria.
+
+### 4.1 Production secrets (fail-fast)
+| Secret | Validado no bootstrap | Enforce runtime |
+| --- | --- | --- |
+| `PIX_WEBHOOK_SECRET` | `backend-cleaning/src/main.ts:45-90` (fail-fast quando `NODE_ENV=production`) | `PaymentsService.validateHmac` + `PspWebhookGuard` para WEBHOOK PIX |
+| `psp.webhookSecret` | `backend-cleaning/src/main.ts:45-90` (fail-fast) | `PspWebhookGuard` + `Payouts` webhooks que assinaturas PSP |
+| `PAGSEGURO_API_TOKEN` | `backend-cleaning/src/main.ts:45-90` (fail-fast) | `PaymentsService.createPixCharge` retorna 503 quando ausente e impede criação de QR |
+| `API_BASE_URL` | `backend-cleaning/src/main.ts:45-90` (fail-fast) | `PaymentsService.createPixCharge` depende de `appBaseUrl` e o webhook de PIX usa esse host para callbacks outdoors |
 
 ## 5) Gap analysis (Docs vs Codigo)
 | Regra/feature | Doc | Codigo | Status | Prioridade |
@@ -114,14 +133,14 @@
 
 ## 6) Plano de acao
 - P0 (24-72h)
-  1. Validar `PIX_WEBHOOK_SECRET` e `psp.webhookSecret` no bootstrap para nao subir sem essas secrets (`backend-cleaning/src/payments/payments.service.ts:198`, `backend-cleaning/src/payouts/guards/psp-webhook.guard.ts:29`).
-  2. Bloquear `/payments/pix-charge` quando `PAGSEGURO_API_TOKEN`/`API_BASE_URL` nao estiverem configurados (`backend-cleaning/src/payments/payments.service.ts:157`).
-  3. Cobrir `/bookings` e `/payments/pix-charge` com `ThrottlerGuard` ou registrar o guard globalmente (`backend-cleaning/src/app.module.ts:68`, `backend-cleaning/src/bookings/bookings.controller.ts:86`).
+  1. *DONE*: o bootstrap já valida `PIX_WEBHOOK_SECRET`, `psp.webhookSecret`, `PAGSEGURO_API_TOKEN` e `API_BASE_URL` em producao e aborta se faltar (`backend-cleaning/src/main.ts:45-90`); manter alertas/monitoramento para esses launches.
+  2. Documentar o comportamento de `/payments/pix-charge` quando `PAGSEGURO_API_TOKEN`/`API_BASE_URL` estiverem ausentes (resposta `HttpException('PSP not configured', HttpStatus.SERVICE_UNAVAILABLE)`), para que o time saiba habilitar o PSP apenas quando os segredos existirem (`backend-cleaning/src/payments/payments.service.ts:1016-1033`).
+  3. Garantir que o `ThrottlerGuard` global (`APP_GUARD` em `AppModule`) continue ativo e que os `@Throttle` de `Auth`, `Dispute`, `Payments` e `Bookings` ajustem limites pontuais (`backend-cleaning/src/app.module.ts:90-155`, `backend-cleaning/src/auth/auth.controller.ts:86`, `backend-cleaning/src/disputes/dispute.controller.ts:31`, `backend-cleaning/src/payments/payments.controller.ts:65`, `backend-cleaning/src/bookings/bookings.controller.ts:82`).
 - P1 (1-2 semanas)
-  1. Implementar a state machine do pagamento em `payments/payment.state-machine.ts` e reaproveitar nas atualizacoes de `PaymentIntent` (`backend-cleaning/src/payments/payment.state-machine.ts:1`).
+  1. Garantir que `payments/payment.state-machine.ts` continue a documentar e testar as transicoes atuais (`canTransition`, `assertTransition`, `applyTransition`) e que quaisquer novos estados alimentem `payment.state-machine.spec.ts` (`backend-cleaning/src/payments/payment.state-machine.ts:1-34`, `backend-cleaning/src/payments/payment.state-machine.spec.ts:1-17`).
   2. Tratar cada `pricingType` em `BookingsService.create` e eliminar o fallback para `CreateBookingDto.totalPrice` (`backend-cleaning/src/bookings/bookings.service.ts:452`).
-  3. Publicar o valor minimo (4h) via API/config comum para que o front nao duplique a constante (`backend-cleaning/src/common/constants/pricing.ts:1`, `app/client/bookings/schedule-service.tsx:53`).
-  4. Expandir o check de conflito para incluir `PENDING_PROVIDER_CONFIRMATION` e outras flags pendentes (`backend-cleaning/src/bookings/bookings.service.ts:583`).
+  3. Documentar `GET /pricing/config` como a fonte de `minHourlyMinutes` e `currency` para os clientes, usando a constante `MIN_HOURLY_MINUTES` de `backend-cleaning/src/common/constants/pricing.ts:1` (`backend-cleaning/src/pricing/pricing.controller.ts:83-88`).
+  4. Manter `BLOCKED_BOOKING_STATUSES` sincronizado (inclui `PENDING_PROVIDER_CONFIRMATION`) e expandir os testes de conflito quando novos status forem adicionados (`backend-cleaning/src/bookings/bookings.constants.ts:1-8`, `backend-cleaning/src/bookings/bookings.service.spec.ts:152-167`).
 - P2 (backlog)
   1. Documentar as regras de review mencionadas em `BUSINESS_RULES_SPEC.md:102` e implementa-las no backend.
   2. Enriquecer a UI do provider com badges reais de `verificationStatus` (`app/client/explore/[providerId].tsx:1209`, `components/client/explore/provider/SideIcon.tsx`).
