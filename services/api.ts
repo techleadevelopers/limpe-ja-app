@@ -6,9 +6,12 @@ import { createLocalConsole } from './logging';
 const console = createLocalConsole();
 import i18n from '../i18n';
 import * as Sentry from '@sentry/react-native';
+import { appQueryClient } from '../components/provider/query-client-provider';
+import { AuthErrorCode } from '../types/backend/auth-error-code';
+import { AuthEventType, emitAuthEvent } from './authEvents';
 
 // --- Callback disparado em 401 ---
-type UnauthorizedHandler = (context: { originalRequest: AxiosRequestConfig }) => Promise<void>;
+type UnauthorizedHandler = (context: { originalRequest: AxiosRequestConfig; error?: AxiosError }) => Promise<void>;
 let onUnauthorizedCallback: UnauthorizedHandler | null = null;
 export const setUnauthorizedCallback = (callback: UnauthorizedHandler) => {
   onUnauthorizedCallback = callback;
@@ -116,11 +119,141 @@ const buildUnifiedError = (error: AxiosError) => {
   };
 };
 
+const AUTH_STORAGE_KEYS = ['auth_token', 'user_role', 'user_id', 'user_profile'];
+export const cleanupAxios = axios.create({ baseURL: API_BASE_URL, timeout: 5000 });
+
+let revocationPromise: Promise<void> | null = null;
+let revocationUnauthorizedCallbackCalled = false;
+
+const attemptRevokedCleanup = async (token?: string) => {
+  if (revocationPromise) {
+    await revocationPromise;
+    return;
+  }
+
+  revocationPromise = (async () => {
+    try {
+      if (token) {
+        await cleanupAxios.post('/auth/logout-device', undefined, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    } catch {
+      // best-effort cleanup; ignore
+    }
+    try {
+      await AsyncStorage.multiRemove(AUTH_STORAGE_KEYS);
+    } catch {
+      // ignore
+    }
+    try {
+      delete api.defaults.headers.common['Authorization'];
+    } catch {
+      // ignore
+    }
+    try {
+      appQueryClient.clear();
+    } catch {
+      // ignore
+    }
+    Toast.show({
+      type: 'error',
+      text1: i18n.t('common.error'),
+      text2: i18n.t('common.session_revoked', {
+        defaultValue: 'Sua sessão foi encerrada por segurança.',
+      }),
+    });
+    emitAuthEvent(AuthEventType.SESSION_REVOKED, undefined);
+  })();
+
+  try {
+    await revocationPromise;
+  } finally {
+    revocationPromise = null;
+  }
+};
+
+const notifyUnauthorizedCallback = async (
+  config: AxiosRequestConfig,
+  axiosError: AxiosError,
+) => {
+  if (!onUnauthorizedCallback || revocationUnauthorizedCallbackCalled) {
+    return;
+  }
+  revocationUnauthorizedCallbackCalled = true;
+  try {
+    await onUnauthorizedCallback({ originalRequest: config, error: axiosError });
+  } catch (callbackError) {
+    Sentry.captureException(callbackError, { tags: { scope: 'auth' } });
+  }
+  revocationUnauthorizedCallbackCalled = false;
+};
+
+export const resetRevocationCallbackFlag = () => {
+  revocationUnauthorizedCallbackCalled = false;
+};
+
+type AuthHandlerResult = {
+  handled: true;
+  result?: Promise<unknown>;
+};
+
+const handleAuthError = async (
+  status: number | undefined,
+  config: AxiosRequestConfig,
+  axiosError: AxiosError,
+): Promise<AuthHandlerResult | null> => {
+  if (status !== 401) {
+    return null;
+  }
+
+  const requestUrl = String(config.url ?? '');
+  const isRefreshRequest = requestUrl.includes('/auth/refresh');
+  const errorCode = axiosError.response?.data?.code as AuthErrorCode | undefined;
+  const configWithMeta =
+    config as AxiosRequestConfig & { _refreshAttempted?: boolean };
+
+    if (errorCode === AuthErrorCode.TOKEN_EXPIRED && !isRefreshRequest) {
+      if (configWithMeta._refreshAttempted) {
+        return null;
+      }
+      configWithMeta._refreshAttempted = true;
+    try {
+      const { default: authService } = await import('./authService');
+      const authData = await authService.refreshSession();
+      emitAuthEvent(AuthEventType.SESSION_REFRESHED, authData);
+        config.headers = config.headers ?? {};
+        config.headers.Authorization = `Bearer ${authData.accessToken}`;
+        revocationUnauthorizedCallbackCalled = false;
+        return { handled: true, result: api(config) };
+    } catch (refreshError) {
+      Sentry.captureException(refreshError, { tags: { scope: 'auth' } });
+        const storedToken = await AsyncStorage.getItem('auth_token');
+        await attemptRevokedCleanup(storedToken ?? undefined);
+        await notifyUnauthorizedCallback(config, axiosError);
+        return { handled: true };
+      }
+    }
+
+    if (
+      errorCode === AuthErrorCode.TOKEN_REVOKED ||
+      (isRefreshRequest && errorCode === AuthErrorCode.TOKEN_EXPIRED)
+    ) {
+      const token = await AsyncStorage.getItem('auth_token');
+      await attemptRevokedCleanup(token ?? undefined);
+      await notifyUnauthorizedCallback(config, axiosError);
+      return { handled: true };
+    }
+
+  return null;
+};
+
 api.interceptors.response.use(
   response => response,
   async error => {
     const axiosError = error as AxiosError & { config: AxiosRequestConfig & { __tries?: number; _isRetryRequest?: boolean; meta?: { silent?: boolean } } };
     const config = axiosError.config;
+    const status = axiosError.response?.status;
     config.__tries = (config.__tries ?? 0) + 1;
 
     // Special-case: allow guest fallback for GET /users/me when requested
@@ -165,6 +298,14 @@ api.interceptors.response.use(
       return api(config);
     }
 
+    const authHandling = await handleAuthError(status, config, axiosError);
+    if (authHandling) {
+      if (authHandling.result) {
+        return authHandling.result;
+      }
+      return Promise.reject(axiosError);
+    }
+
     const headers = (config?.headers ?? {}) as Record<string, unknown>;
     const silentHeader = headers['x-silent'] ?? headers['X-Silent'];
     const isSilent = silentHeader === '1' || silentHeader === 1 || silentHeader === true;
@@ -197,8 +338,7 @@ api.interceptors.response.use(
       config._isRetryRequest = true;
       if (onUnauthorizedCallback) {
         try {
-          await onUnauthorizedCallback({ originalRequest: config });
-          return api(config);
+          await onUnauthorizedCallback({ originalRequest: config, error: axiosError });
         } catch (refreshError) {
           Sentry.captureException(refreshError, { tags: { scope: 'auth' } });
         }
