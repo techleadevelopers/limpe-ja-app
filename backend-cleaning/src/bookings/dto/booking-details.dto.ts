@@ -7,14 +7,175 @@ import {
   IsUUID,
   IsEnum,
   ValidateNested,
+  IsBoolean,
+  IsInt,
+  IsArray,
+  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { BookingStatus, PaymentIntentStatus } from '@prisma/client';
+import {
+  BookingStatus,
+  PaymentIntentStatus,
+  InsurancePlanId,
+  BookingProofType,
+  Prisma,
+} from '@prisma/client';
 import { AddressDetailsDto } from '../../common/dto/address-details.dto';
 import { Decimal } from '@prisma/client/runtime/library';
+import { BookingAction, BOOKING_ACTIONS } from '../booking-actions.helper';
 
 function isDecimal(value: any): value is Decimal {
   return value instanceof Decimal;
+}
+
+const toStringArray = (value: Prisma.JsonValue): string[] => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => (typeof entry === 'string' ? entry : String(entry)));
+  }
+  return [];
+};
+
+const toRecord = (
+  value?: Prisma.JsonValue | null,
+): Record<string, unknown> | null => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+};
+
+class BookingInsuranceSnapshotDto {
+  @ApiProperty({
+    description: 'Identificador do plano de seguro contratado',
+    example: 'PREMIUM',
+  })
+  @IsEnum(InsurancePlanId)
+  planId: InsurancePlanId;
+
+  @ApiProperty({
+    description: 'Valor cobrado pelo seguro em centavos',
+    example: 5990,
+  })
+  @IsInt()
+  priceCents: number;
+
+  @ApiProperty({
+    description: 'Cobertura do plano em centavos',
+    example: 350000,
+  })
+  @IsInt()
+  coverageCents: number;
+
+  @ApiProperty({
+    description: 'Franquia em centavos',
+    example: 30000,
+  })
+  @IsInt()
+  deductibleCents: number;
+
+  @ApiProperty({
+    description: 'Multiplicador de risco aplicado (em basis points)',
+    example: 1000,
+  })
+  @IsInt()
+  riskMultiplierBps: number;
+
+  @ApiProperty({
+    description: 'Indica se o plano exige apresentação de comprovantes',
+    example: false,
+  })
+  @IsBoolean()
+  proofRequired: boolean;
+
+  @ApiProperty({
+    description: 'Timestamp de quando o registro foi criado',
+    example: '2025-07-01T09:00:00.000Z',
+  })
+  @IsString()
+  createdAt: string;
+
+  constructor(data: {
+    planId: InsurancePlanId;
+    priceCents: number;
+    coverageCents: number;
+    deductibleCents: number;
+    riskMultiplierBps: number;
+    proofRequired: boolean;
+    createdAt: Date | string;
+  }) {
+    this.planId = data.planId;
+    this.priceCents = data.priceCents;
+    this.coverageCents = data.coverageCents;
+    this.deductibleCents = data.deductibleCents;
+    this.riskMultiplierBps = data.riskMultiplierBps;
+    this.proofRequired = data.proofRequired;
+    this.createdAt =
+      data.createdAt instanceof Date
+        ? data.createdAt.toISOString()
+        : data.createdAt;
+  }
+}
+
+class BookingProofSnapshotDto {
+  @ApiProperty({ description: 'Identificador do comprovante', example: 'proof-123' })
+  @IsString()
+  id: string;
+
+  @ApiProperty({
+    description: 'Tipo de comprovante',
+    enum: BookingProofType,
+  })
+  @IsEnum(BookingProofType)
+  type: BookingProofType;
+
+  @ApiProperty({ description: 'Fotos enviadas', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  photos: string[];
+
+  @ApiPropertyOptional({ description: 'Vídeo enviado (se houver)', example: 'https://...' })
+  @IsOptional()
+  @IsString()
+  videoUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'Hashes associados', type: 'object', additionalProperties: true })
+  @IsOptional()
+  @IsObject()
+  hashes?: Record<string, unknown> | null;
+
+  @ApiPropertyOptional({ description: 'Timestamps registrados', type: 'object', additionalProperties: true })
+  @IsOptional()
+  @IsObject()
+  timestamps?: Record<string, unknown> | null;
+
+  @ApiProperty({ description: 'ID do usuário que enviou', example: 'user-123' })
+  @IsString()
+  userId: string;
+
+  @ApiProperty({ description: 'Momento da criação', example: '2025-01-01T09:00:00.000Z' })
+  @IsString()
+  createdAt: string;
+
+  constructor(data: {
+    id: string;
+    type: BookingProofType;
+    photos: Prisma.JsonValue;
+    videoUrl?: string | null;
+    hashes?: Prisma.JsonValue | null;
+    timestamps?: Prisma.JsonValue | null;
+    userId: string;
+    createdAt: Date | string;
+  }) {
+    this.id = data.id;
+    this.type = data.type;
+    this.photos = toStringArray(data.photos);
+    this.videoUrl = data.videoUrl ?? null;
+    this.hashes = toRecord(data.hashes ?? null);
+    this.timestamps = toRecord(data.timestamps ?? null);
+    this.userId = data.userId;
+    this.createdAt =
+      data.createdAt instanceof Date ? data.createdAt.toISOString() : data.createdAt;
+  }
 }
 
 export class BookingDetailsDto {
@@ -70,6 +231,15 @@ export class BookingDetailsDto {
   @IsOptional()
   @IsString()
   statusLabel?: string;
+
+  @ApiPropertyOptional({
+    description: 'Ações liberadas para o usuário logado.',
+    example: ['CANCEL', 'CONTACT_SUPPORT'],
+    enum: BOOKING_ACTIONS,
+    isArray: true,
+  })
+  @IsOptional()
+  allowedActions?: BookingAction[];
 
   @ApiProperty({ description: 'Preço total do serviço', example: 120.5 })
   @IsNumber()
@@ -137,6 +307,24 @@ export class BookingDetailsDto {
   @IsOptional()
   @IsNumber()
   discountAmount?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Dados do seguro aplicado ao agendamento',
+    type: BookingInsuranceSnapshotDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => BookingInsuranceSnapshotDto)
+  insurance?: BookingInsuranceSnapshotDto | null;
+
+  @ApiPropertyOptional({
+    description: 'Comprovantes associados ao agendamento',
+    type: [BookingProofSnapshotDto],
+  })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => BookingProofSnapshotDto)
+  proofs?: BookingProofSnapshotDto[];
 
   // Campos achatados do cliente/provedor/serviço para facilitar o consumo no frontend
   @ApiPropertyOptional({
@@ -329,6 +517,25 @@ export class BookingDetailsDto {
     couponId?: string | null;
     coupon?: { code: string } | null;
     discountAmount?: Decimal | number | null;
+    bookingInsurance?: {
+      planId: InsurancePlanId;
+      priceCents: number;
+      coverageCents: number;
+      deductibleCents: number;
+      riskMultiplierBps: number;
+      proofRequired: boolean;
+      createdAt: Date | string;
+    } | null;
+    bookingProofs?: {
+      id: string;
+      type: BookingProofType;
+      photos: Prisma.JsonValue;
+      videoUrl?: string | null;
+      hashes?: Prisma.JsonValue | null;
+      timestamps?: Prisma.JsonValue | null;
+      userId: string;
+      createdAt: Date | string;
+    }[] | null;
     review?: {
       id: string;
       rating: number | Decimal;
@@ -364,6 +571,7 @@ export class BookingDetailsDto {
     paymentIntent?: {
       status?: PaymentIntentStatus;
     } | null;
+    allowedActions?: BookingAction[];
   }) {
     const statusLabelMap: Record<string, string> = {
       PENDING: 'Pendente',
@@ -395,6 +603,7 @@ export class BookingDetailsDto {
     this.scheduledTime = data.scheduledTime;
     this.status = data.status;
     this.statusLabel = statusLabelMap[data.status] || data.status;
+    this.allowedActions = data.allowedActions ?? [];
     this.scheduledStart = data.scheduledStart
       ? data.scheduledStart instanceof Date
         ? data.scheduledStart.toISOString()
@@ -447,6 +656,14 @@ export class BookingDetailsDto {
         : isDecimal(data.discountAmount)
           ? data.discountAmount.toNumber()
           : data.discountAmount;
+
+    this.insurance = data.bookingInsurance
+      ? new BookingInsuranceSnapshotDto(data.bookingInsurance)
+      : null;
+
+    this.proofs = data.bookingProofs
+      ? data.bookingProofs.map((proof) => new BookingProofSnapshotDto(proof))
+      : [];
 
     if (data.client) {
       this.clientFullName = data.client.fullName;
