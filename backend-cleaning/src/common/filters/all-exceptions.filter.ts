@@ -10,6 +10,7 @@ import {
 import { Request, Response } from 'express';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { I18nService } from '../i18n/i18n.service'; // Importar o serviço de i18n
+import { AuthErrorCode } from '../constants/auth-error-code';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -27,28 +28,28 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let error: string;
     let i18nKey: string | null = null;
     let i18nArgs: Record<string, any> = {};
+    let responseObject: Record<string, any> = {};
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const responseBody = exception.getResponse();
 
       if (typeof responseBody === 'string') {
-        message = responseBody;
-        error = HttpStatus[status];
-      } else {
-        // Se a resposta for um objeto, podemos ter 'message' e 'error'
-        message = (responseBody as any).message || 'Erro inesperado.';
-        error = (responseBody as any).error || HttpStatus[status];
+        responseObject.message = responseBody;
+        responseObject.error = HttpStatus[status];
+      } else if (Array.isArray(responseBody)) {
+        responseObject.message = responseBody.join(', ');
+        responseObject.error = HttpStatus[status];
+      } else if (responseBody && typeof responseBody === 'object') {
+        responseObject = responseBody as Record<string, any>;
+      }
 
-        // Tenta extrair chave de i18n se a mensagem for um objeto com 'key'
-        if (
-          (responseBody as any).message &&
-          typeof (responseBody as any).message === 'object' &&
-          (responseBody as any).message.key
-        ) {
-          i18nKey = (responseBody as any).message.key;
-          i18nArgs = (responseBody as any).message.args || {};
-        }
+      message = responseObject.message || 'Erro inesperado.';
+      error = responseObject.error || HttpStatus[status];
+
+      if (responseObject.message && typeof responseObject.message === 'object' && responseObject.message.key) {
+        i18nKey = responseObject.message.key;
+        i18nArgs = responseObject.message.args || {};
       }
     } else if (exception instanceof PrismaClientKnownRequestError) {
       status = HttpStatus.BAD_REQUEST; // Default para erros do Prisma
@@ -68,10 +69,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
           message = `Violação de chave estrangeira.`;
           i18nKey = 'error.prisma.foreignKeyConstraintFailed';
           break;
-        case 'P2000': // Value too long for column
-          message = `Valor muito longo para um campo.`;
-          i18nKey = 'error.prisma.valueTooLong';
-          break;
+      case 'P2000': // Value too long for column
+        message = `Valor muito longo para um campo.`;
+        i18nKey = 'error.prisma.valueTooLong';
+        break;
         default:
           message = `Erro no banco de dados: ${exception.message}`;
           i18nKey = 'error.prisma.generic';
@@ -99,10 +100,40 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ? await this.i18n.translate(i18nKey, lang, i18nArgs)
       : message;
 
-    response.status(status).json({
+    const codeFromBody =
+      typeof responseObject.code === 'string'
+        ? responseObject.code
+        : undefined;
+    const code =
+      codeFromBody ??
+      (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN
+        ? AuthErrorCode.UNAUTHORIZED
+        : undefined);
+    const requestId =
+      responseObject.requestId ??
+      request.headers['x-request-id'] ??
+      request.headers['X-Client-Request-Id'] ??
+      undefined;
+
+    const finalMessage = translatedMessage || message || 'Erro inesperado.';
+    const baseResponse: Record<string, any> = {
       statusCode: status,
-      message: translatedMessage,
-      error: error,
+      message: finalMessage,
+      code,
+    };
+    if (requestId) {
+      baseResponse.requestId = requestId;
+    }
+
+    const unauthorizedStatuses = [HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN];
+    if (unauthorizedStatuses.includes(status)) {
+      response.status(status).json(baseResponse);
+      return;
+    }
+
+    response.status(status).json({
+      ...baseResponse,
+      error,
       timestamp: new Date().toISOString(),
       path: request.url,
     });
