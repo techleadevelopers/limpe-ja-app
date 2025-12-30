@@ -38,6 +38,7 @@ import { PaymentIntentResponseDto } from './dto/payment-intent-response.dto';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 import { CouponsService } from '../coupons/coupons.service';
 import { PayoutsService } from '../payouts/payouts.service';
+import { logMissingConfigOnce } from '../common/logging/missing-config.logger';
 import { ConnectService } from '../connect/connect.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateNotificationDto } from '../notifications/dto/create-notification.dto';
@@ -175,6 +176,11 @@ export class PaymentsService {
     );
     this.appBaseUrl =
       this.configService.get<string>('API_BASE_URL') || undefined;
+    const nodeEnv =
+      this.configService.get<string>('NODE_ENV') ||
+      process.env.NODE_ENV ||
+      'development';
+    const isProd = nodeEnv === 'production';
 
     try {
       const certPath = this.configService.get<string>(
@@ -210,14 +216,22 @@ export class PaymentsService {
     }
 
     if (!this.pagseguroApiToken) {
-      this.logger.warn(
-        'PAGSEGURO_API_TOKEN ausente. Integração real com PSP desativada (modo placeholder).',
-      );
+      const msg =
+        'PAGSEGURO_API_TOKEN ausente. Integração real com PSP desativada (modo placeholder).';
+      if (isProd) {
+        this.logger.warn(msg);
+      } else {
+        logMissingConfigOnce('PAGSEGURO_API_TOKEN', msg);
+      }
     }
     if (!this.appBaseUrl) {
-      this.logger.warn(
-        'API_BASE_URL ausente. Webhooks de PSP podem não funcionar externamente.',
-      );
+      const msg =
+        'API_BASE_URL ausente. Webhooks de PSP podem nao funcionar externamente.';
+      if (isProd) {
+        this.logger.warn(msg);
+      } else {
+        logMissingConfigOnce('API_BASE_URL', msg);
+      }
     }
     this.intentLocker = new PaymentIntentLocker(this.prisma);
   }
@@ -379,16 +393,26 @@ export class PaymentsService {
           });
           shouldNotifyPaymentConfirmed = true;
           bookingForNotification = intent.booking;
-        } else if (intent) {
-          this.logger.log(
-            `[PaymentsService] PaymentIntent ${intent.id} j? estava CONFIRMED; ignorando webhook duplicado.`,
-          );
-          return { message: 'Webhook processado com sucesso' };
-        } else {
-          this.logger.warn(
-            `[PaymentsService] Webhook para ref ${externalRef} recebido, mas PaymentIntent nao encontrado.`,
-          );
-        }
+        } else if (intent) {
+
+          this.logger.log(
+
+            `[PaymentsService] PaymentIntent ${intent.id} j? estava CONFIRMED; ignorando webhook duplicado.`,
+
+          );
+
+          return { message: 'Webhook processado com sucesso' };
+
+        } else {
+
+          this.logger.warn(
+
+            `[PaymentsService] Webhook para ref ${externalRef} recebido, mas PaymentIntent nao encontrado.`,
+
+          );
+
+        }
+
         if (bookingIdToConfirm) {
           try {
             await this.bookingsService.systemChangeStatus(
