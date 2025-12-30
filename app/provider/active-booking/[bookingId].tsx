@@ -16,10 +16,19 @@ import {
 import { useAuth } from '../../../hooks/useAuth';
 import { useProviderBookings } from '../../../hooks/useProviderBookings';
 import { getBookingDetails } from '../../../services/bookingService';
+import { submitCheckinProof, submitCheckoutProof } from '../../../services/proofService';
 import NotificationUIService from '../../../services/notificationUIService';
-import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
+import ProofCaptureSheet from '../../../components/provider/ProofCaptureSheet';
+import {
+  BookingDetails,
+  BookingStatus,
+  BookingProofPayload,
+  BookingProofType,
+  InsurancePlanId,
+} from '../../../types/backend/bookings';
 import { PaymentIntentStatus } from '../../../types/backend/payments';
 import { toastUserError } from '../../_shared/errors/uiFeedback';
+import { useBookingStatusMeta } from '../../../hooks/useBookingStatusMeta';
 
 const PRIMARY = '#007AFF';
 const BG = '#F8F9FA';
@@ -89,11 +98,19 @@ export default function ActiveBookingDetails() {
   const router = useRouter();
   const { fade, slide } = useAnimatedMount();
   const { user } = useAuth();
+  const { statusMap } = useBookingStatusMeta();
+  const statusLabel =
+    statusMap[booking?.status ?? '']?.labelProvider ||
+    booking?.status ||
+    'Em atualização';
   const { start, complete } = useProviderBookings();
 
   const [booking, setBooking] = useState<BookingDetailsWithPaymentIntent | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<'NONE' | 'START' | 'COMPLETE'>('NONE');
+  const [proofSheetVisible, setProofSheetVisible] = useState(false);
+  const [proofSheetType, setProofSheetType] = useState<BookingProofType | null>(null);
+  const [proofSubmitting, setProofSubmitting] = useState(false);
 
   const providerId =
     (user as any)?.providerDetails?.id ||
@@ -158,22 +175,32 @@ export default function ActiveBookingDetails() {
     return { withinWindow, minutesToStart };
   }, [scheduledStart]);
 
-  const canStart = useMemo(() => {
-    const isOwner = !!providerId && booking?.providerId === providerId;
-    return isOwner && booking?.status === BookingStatus.CONFIRMED && nowInfo.withinWindow;
-  }, [booking?.providerId, booking?.status, nowInfo.withinWindow, providerId]);
+  const hasStartPermission = useMemo(() => {
+    return booking?.allowedActions?.includes('START_SERVICE') ?? false;
+  }, [booking?.allowedActions]);
 
-  const canComplete = useMemo(() => {
-    const isOwner = !!providerId && booking?.providerId === providerId;
-    // O erro '2339' está aqui. Corrigido com a tipagem temporária acima.
-    const isPaid = booking?.paymentIntent?.status === PaymentIntentStatus.PAID;
-    const hasStarted = Boolean(booking?.startedAt);
-    return isOwner && booking?.status === BookingStatus.IN_PROGRESS && isPaid && hasStarted;
-  }, [booking?.paymentIntent?.status, booking?.providerId, booking?.startedAt, booking?.status, providerId]);
+  const hasCompletePermission = useMemo(() => {
+    return booking?.allowedActions?.includes('COMPLETE_SERVICE') ?? false;
+  }, [booking?.allowedActions]);
+
+  const checkinProof = booking?.proofs?.find((proof) => proof.type === 'CHECKIN');
+  const checkoutProof = booking?.proofs?.find((proof) => proof.type === 'CHECKOUT');
+  const proofRequired = booking?.insurance?.proofRequired ?? false;
+  const requiresCheckoutVideo =
+    booking?.insurance?.planId === 'PREMIUM' ||
+    booking?.insurance?.planId === 'TOTAL';
+  const startBlocked = proofRequired && !checkinProof;
+  const completeBlocked =
+    proofRequired &&
+    (!checkoutProof || (requiresCheckoutVideo && !checkoutProof.videoUrl));
+  const startDisabled =
+    !hasStartPermission || submitting !== 'NONE' || startBlocked;
+  const completeDisabled =
+    !hasCompletePermission || submitting !== 'NONE' || completeBlocked;
 
   const handleStart = useCallback(async () => {
     if (!booking || !bookingId) return;
-    if (!canStart) {
+    if (!hasStartPermission || startBlocked) {
       NotificationUIService.showError('Nao e possivel iniciar este atendimento agora.');
       return;
     }
@@ -188,11 +215,11 @@ export default function ActiveBookingDetails() {
     } finally {
       setSubmitting('NONE');
     }
-  }, [booking, bookingId, canStart, start]);
+  }, [booking, bookingId, hasStartPermission, startBlocked, start]);
 
   const handleComplete = useCallback(async () => {
     if (!booking || !bookingId) return;
-    if (!canComplete) {
+    if (!hasCompletePermission || completeBlocked) {
       NotificationUIService.showError('Nao e possivel concluir: verifique status, inicio e pagamento.');
       return;
     }
@@ -234,7 +261,36 @@ export default function ActiveBookingDetails() {
     } finally {
       setSubmitting('NONE');
     }
-  }, [booking, bookingId, canComplete, complete, fetchDetails]);
+  }, [booking, bookingId, hasCompletePermission, completeBlocked, complete, fetchDetails]);
+
+  const openProofSheet = useCallback((type: BookingProofType) => {
+    setProofSheetType(type);
+    setProofSheetVisible(true);
+  }, []);
+
+  const handleProofSubmit = useCallback(
+    async (payload: BookingProofPayload) => {
+      if (!bookingId || !proofSheetType) return;
+      setProofSubmitting(true);
+      try {
+        if (proofSheetType === 'CHECKIN') {
+          await submitCheckinProof(bookingId, payload);
+        } else {
+          await submitCheckoutProof(bookingId, payload);
+        }
+        await fetchDetails();
+        NotificationUIService.showSuccess('Comprovante enviado', 'O comprovante foi registrado com sucesso.');
+        setProofSheetVisible(false);
+        setProofSheetType(null);
+      } catch (error) {
+        toastUserError(error, 'Erro ao enviar comprovante');
+        throw error;
+      } finally {
+        setProofSubmitting(false);
+      }
+    },
+    [bookingId, fetchDetails, proofSheetType],
+  );
 
   const handleSupportPress = useCallback(() => {
     Alert.alert(
@@ -283,19 +339,6 @@ export default function ActiveBookingDetails() {
 
   const isInProgress = booking.status === BookingStatus.IN_PROGRESS;
   const isCompleted = booking.status === BookingStatus.COMPLETED;
-  const statusLabelMap: Record<string, string> = {
-    [BookingStatus.PENDING]: 'Pendente',
-    [BookingStatus.CONFIRMED]: 'Confirmado',
-    [BookingStatus.IN_PROGRESS]: 'Em andamento',
-    [BookingStatus.COMPLETED]: 'Concluido',
-    [BookingStatus.CANCELLED]: 'Cancelado',
-    [BookingStatus.REJECTED]: 'Recusado',
-  };
-  const getStatusLabel = (status: any) => {
-    const key = String(status || '').toUpperCase();
-    return statusLabelMap[key] || String(status || '');
-  };
-
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ 
@@ -344,31 +387,71 @@ export default function ActiveBookingDetails() {
         )}
 
         {!isCompleted && (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.btn, styles.btnOutline, (!canStart || submitting !== 'NONE') && styles.btnDisabled]}
-              onPress={handleStart}
-              disabled={!canStart || submitting !== 'NONE'}
-              accessibilityLabel="Iniciar Servico"
-            >
-              <Ionicons name="play-circle-outline" size={18} color={canStart ? PRIMARY : MUTED} />
-              <Text style={[styles.btnTextPrimary, { color: canStart ? PRIMARY : MUTED }]}>Iniciar</Text>
-            </TouchableOpacity>
+          <>
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.btn, styles.btnOutline, startDisabled && styles.btnDisabled]}
+                onPress={handleStart}
+                disabled={startDisabled}
+                accessibilityLabel="Iniciar Servico"
+              >
+                <Ionicons name="play-circle-outline" size={18} color={startDisabled ? MUTED : PRIMARY} />
+                <Text style={[styles.btnTextPrimary, { color: startDisabled ? MUTED : PRIMARY }]}>Iniciar</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.btn, styles.btnPrimary, (!canComplete || submitting !== 'NONE') && styles.btnDisabledPrimary]}
-              onPress={handleComplete}
-              disabled={!canComplete || submitting !== 'NONE'}
-              accessibilityLabel="Concluir Servico" // Corrigido a acessibilidade
-            >
-              {submitting === 'COMPLETE' ? (
-                <ActivityIndicator color={WHITE} size="small" />
-              ) : (
-                <Ionicons name="stop-circle-outline" size={18} color={WHITE} />
-              )}
-              <Text style={styles.btnTextWhite}>Concluir</Text> 
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[styles.btn, styles.btnPrimary, completeDisabled && styles.btnDisabledPrimary]}
+                onPress={handleComplete}
+                disabled={completeDisabled}
+                accessibilityLabel="Concluir Servico"
+              >
+                {submitting === 'COMPLETE' ? (
+                  <ActivityIndicator color={WHITE} size="small" />
+                ) : (
+                  <Ionicons name="stop-circle-outline" size={18} color={WHITE} />
+                )}
+                <Text style={styles.btnTextWhite}>Concluir</Text> 
+              </TouchableOpacity>
+            </View>
+            {proofRequired && (
+              <View style={styles.proofSection}>
+                <Text style={styles.proofHint}>
+                  {startBlocked
+                    ? 'Envie o comprovante de check-in antes de iniciar.'
+                    : 'Check-in registrado.'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.proofButton}
+                  onPress={() => openProofSheet('CHECKIN')}
+                  accessibilityLabel="Enviar comprovante de check-in"
+                >
+                  <Text style={styles.proofButtonText}>
+                    {startBlocked
+                      ? 'Enviar comprovante de check-in'
+                      : 'Atualizar comprovante de check-in'}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={styles.proofHint}>
+                  {completeBlocked
+                    ? requiresCheckoutVideo
+                      ? 'Envie o checkout (vídeo obrigatório) para concluir.'
+                      : 'Envie o checkout para concluir.'
+                    : 'Checkout registrado.'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.proofButton}
+                  onPress={() => openProofSheet('CHECKOUT')}
+                  accessibilityLabel="Enviar comprovante de checkout"
+                >
+                  <Text style={styles.proofButtonText}>
+                    {completeBlocked
+                      ? 'Enviar comprovante de checkout'
+                      : 'Atualizar comprovante de checkout'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
         )}
 
         {booking.status === BookingStatus.CONFIRMED && !nowInfo.withinWindow && (
@@ -380,7 +463,7 @@ export default function ActiveBookingDetails() {
 
         <View style={{ height: 4 }} />
         <Text style={[styles.muted, { fontSize: 12 }]}>
-          Status: {getStatusLabel(booking.status)}
+          Status: {statusLabel}
         </Text>
         <TouchableOpacity style={styles.supportLink} onPress={handleSupportPress} accessibilityRole="button" accessibilityLabel="Acionar suporte ou ajuda">
           <Ionicons name="help-circle-outline" size={16} color={PRIMARY} style={{ marginRight: 6 }} />
@@ -389,6 +472,17 @@ export default function ActiveBookingDetails() {
           </Text>
         </TouchableOpacity>
       </Animated.View>
+      <ProofCaptureSheet
+        visible={proofSheetVisible}
+        type={proofSheetType ?? 'CHECKIN'}
+        planId={booking?.insurance?.planId ?? null}
+        onClose={() => {
+          setProofSheetVisible(false);
+          setProofSheetType(null);
+        }}
+        onSubmit={handleProofSubmit}
+        isSubmitting={proofSubmitting}
+      />
     </View>
   );
 }
@@ -413,6 +507,33 @@ const styles = StyleSheet.create({
     marginTop: 6,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  proofSection: {
+    marginTop: 14,
+    backgroundColor: WHITE,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 12,
+  },
+  proofHint: {
+    fontSize: 13,
+    color: TEXT,
+    marginBottom: 6,
+  },
+  proofButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: PRIMARY,
+    marginBottom: 10,
+  },
+  proofButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: PRIMARY,
   },
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
   btn: { flex: 1, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
