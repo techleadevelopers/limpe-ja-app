@@ -30,7 +30,7 @@ export class PaymentsWebhooksController {
 
   @Header('Content-Type', 'application/json')
   @HttpCode(HttpStatus.OK)
-  @Throttle(30, 60)
+  @Throttle({ default: { limit: 30, ttl: 60 } })
   @Post('pix')
   public async handlePixWebhook(
     @Req() req: RawWebhookRequest,
@@ -57,7 +57,7 @@ export class PaymentsWebhooksController {
   }
 
   @HttpCode(HttpStatus.OK)
-  @Throttle(20, 60)
+  @Throttle({ default: { limit: 20, ttl: 60 } })
   @Post('withdrawal')
   public async handleWithdrawalWebhook(
     @Headers('x-signature') signature: string,
