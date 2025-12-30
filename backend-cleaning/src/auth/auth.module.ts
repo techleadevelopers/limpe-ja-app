@@ -14,6 +14,7 @@ import { WsAuthGuard } from './guards/ws-auth.guard';
 import { EmailModule } from '../common/modules/email.module';
 import { GeocodingModule } from '../common/modules/geocoding.module';
 import { ReferralsModule } from '../referrals/referrals.module'; // NOVO: Importar ReferralsModule
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ReferralsModule } from '../referrals/referrals.module'; // NOVO: Import
     EmailModule,
     GeocodingModule,
     forwardRef(() => ReferralsModule), // NOVO: Adicionar forwardRef para ReferralsModule
+    forwardRef(() => NotificationsModule),
   ],
   controllers: [AuthController],
   providers: [AuthService, LocalStrategy, JwtStrategy, WsAuthGuard],
