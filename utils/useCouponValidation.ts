@@ -1,128 +1,105 @@
-﻿// hooks/useCouponValidation.ts
-import { useState, useRef, useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Animated, Easing } from 'react-native';
 import { useTranslation } from 'react-i18next';
-
 import NotificationUIService from '../services/notificationUIService';
-import { resolveCoupon as resolveCouponGlobal } from '../services/couponService';
-import { formatBRL } from '../utils/formatters';
 import { AppColors, AppDurations } from '../constants/appStyles';
 
-interface UseCouponValidationResult {
-    couponCode: string;
-    setCouponCode: React.Dispatch<React.SetStateAction<string>>;
-    discountAmount: number;
-    isApplyingCoupon: boolean;
-    couponInputAnim: Animated.Value;
-    couponFeedbackAnim: Animated.Value;
-    couponFeedbackColor: string;
-    couponFeedbackIcon: string;
-    handleApplyCoupon: () => Promise<void>;
+interface UseCouponValidationOptions {
+  couponCode: string;
+  onApplyCoupon?: () => Promise<void>;
 }
 
-type CouponBookingData = {
-    originalPrice?: number;
-    clientId?: string;
-    providerServiceId?: string;
-    providerId?: string;
-    scheduledDate?: string;
-};
+interface UseCouponValidationResult {
+  isApplyingCoupon: boolean;
+  couponInputAnim: Animated.Value;
+  couponFeedbackAnim: Animated.Value;
+  couponFeedbackColor: string;
+  couponFeedbackIcon: string;
+  handleApplyCoupon: () => Promise<void>;
+}
 
 export const useCouponValidation = (
-    initialCouponCode?: string,
-    opts?: { bookingId?: string; bookingData?: CouponBookingData }
+  options: UseCouponValidationOptions,
 ): UseCouponValidationResult => {
-    const { t } = useTranslation();
+  const { couponCode, onApplyCoupon } = options;
+  const { t } = useTranslation();
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const couponInputAnim = useRef(new Animated.Value(0)).current;
+  const couponFeedbackAnim = useRef(new Animated.Value(0)).current;
+  const [couponFeedbackColor, setCouponFeedbackColor] = useState(
+    AppColors.successStandard,
+  );
+  const [couponFeedbackIcon, setCouponFeedbackIcon] = useState('checkmark-circle');
 
-    const [couponCode, setCouponCode] = useState<string>(initialCouponCode || '');
-    const [discountAmount, setDiscountAmount] = useState<number>(0);
-    const [isApplyingCoupon, setIsApplyingCoupon] = useState<boolean>(false);
-    const couponInputAnim = useRef(new Animated.Value(0)).current;
-    const couponFeedbackAnim = useRef(new Animated.Value(0)).current;
-    const [couponFeedbackColor, setCouponFeedbackColor] = useState(AppColors.successStandard);
-    const [couponFeedbackIcon, setCouponFeedbackIcon] = useState('checkmark-circle');
+  const animateFeedback = useCallback(() => {
+    Animated.timing(couponFeedbackAnim, {
+      toValue: 1,
+      duration: AppDurations.sm,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start(() => {
+      setTimeout(() => {
+        Animated.timing(couponFeedbackAnim, {
+          toValue: 0,
+          duration: AppDurations.sm,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }).start();
+      }, 3000);
+    });
+  }, [couponFeedbackAnim]);
 
-    const handleApplyCoupon = useCallback(async () => {
-        if (!couponCode) {
-            NotificationUIService.showInfo(t('offers.invalid_coupon'), t('common.error'));
-            return;
-        }
-        setIsApplyingCoupon(true);
-        couponFeedbackAnim.setValue(0); // Reset animation before starting
+  const handleApplyCoupon = useCallback(async () => {
+    if (!couponCode) {
+      NotificationUIService.showInfo(
+        t('offers.invalid_coupon'),
+        t('common.error'),
+      );
+      return;
+    }
 
-        try {
-            let newDiscount = 0;
+    if (!onApplyCoupon) {
+      NotificationUIService.showInfo(
+        t('offers.coupon_requires_context', {
+          defaultValue: 'Informe o agendamento para validar o cupom.',
+        }),
+        t('common.info'),
+      );
+      return;
+    }
 
-            if (opts?.bookingData) {
-                const result = await resolveCouponGlobal(couponCode, opts.bookingData);
-                newDiscount = (result as any).discountPreview || (result as any).discountAmount || result.discountValue || 0;
-            } else {
-                NotificationUIService.showInfo(
-                    t('offers.coupon_requires_context', 'Informe o agendamento para validar o cupom.'),
-                    t('common.info')
-                );
-                setIsApplyingCoupon(false);
-                return;
-            }
+    setIsApplyingCoupon(true);
+    couponFeedbackAnim.setValue(0);
 
-            setDiscountAmount(newDiscount);
-            setCouponFeedbackColor(AppColors.successStandard);
-            setCouponFeedbackIcon('checkmark-circle');
-            NotificationUIService.showSuccess(t('offers.coupon_applied_success', { discountValue: formatBRL(newDiscount) }), t('common.success'));
+    try {
+      await onApplyCoupon();
+      setCouponFeedbackColor(AppColors.successStandard);
+      setCouponFeedbackIcon('checkmark-circle');
+      NotificationUIService.showSuccess(
+        t('offers.coupon_applied_success', {
+          defaultValue: 'Cupom solicitado. Atualizamos a cotação.',
+        }),
+        t('common.success'),
+      );
+    } catch (error: any) {
+      setCouponFeedbackColor(AppColors.errorRed);
+      setCouponFeedbackIcon('close-circle');
+      NotificationUIService.showError(
+        error?.response?.data?.message || t('offers.invalid_coupon'),
+        t('common.error'),
+      );
+    } finally {
+      setIsApplyingCoupon(false);
+      animateFeedback();
+    }
+  }, [couponCode, onApplyCoupon, t, couponFeedbackAnim, animateFeedback]);
 
-            Animated.timing(couponFeedbackAnim, {
-                toValue: 1,
-                duration: AppDurations.sm,
-                easing: Easing.out(Easing.ease),
-                useNativeDriver: true,
-            }).start(() => {
-                setTimeout(() => {
-                    Animated.timing(couponFeedbackAnim, {
-                        toValue: 0,
-                        duration: AppDurations.sm,
-                        easing: Easing.in(Easing.ease),
-                        useNativeDriver: true,
-                    }).start();
-                }, 3000);
-            });
-
-        } catch (error: any) {
-            console.error("Erro ao aplicar cupom:", error.response?.data || error.message);
-            setDiscountAmount(0);
-            setCouponFeedbackColor(AppColors.errorRed);
-            setCouponFeedbackIcon('close-circle');
-            NotificationUIService.showError(error.response?.data?.message || t('offers.invalid_coupon'), t('common.error'));
-            Animated.timing(couponFeedbackAnim, {
-                toValue: 1,
-                duration: AppDurations.sm,
-                easing: Easing.out(Easing.ease),
-                useNativeDriver: true,
-            }).start(() => {
-                setTimeout(() => {
-                    Animated.timing(couponFeedbackAnim, {
-                        toValue: 0,
-                        duration: AppDurations.sm,
-                        easing: Easing.in(Easing.ease),
-                        useNativeDriver: true,
-                    }).start();
-                }, 3000);
-            });
-        } finally {
-            setIsApplyingCoupon(false);
-        }
-    }, [couponCode, couponFeedbackAnim, t, opts]);
-
-    return {
-        couponCode,
-        setCouponCode,
-        discountAmount,
-        isApplyingCoupon,
-        couponInputAnim,
-        couponFeedbackAnim,
-        couponFeedbackColor,
-        couponFeedbackIcon,
-        handleApplyCoupon,
-    };
+  return {
+    isApplyingCoupon,
+    couponInputAnim,
+    couponFeedbackAnim,
+    couponFeedbackColor,
+    couponFeedbackIcon,
+    handleApplyCoupon,
+  };
 };
-
-
