@@ -1,4 +1,4 @@
-// LimpeJaApp/babel.config.js
+﻿// LimpeJaApp/babel.config.js
 module.exports = function (api) {
   api.cache(true);
   return {
@@ -32,14 +32,15 @@ module.exports = function (api) {
           ],
         },
       ],
-      // Remove consoles no build de produção (mantém error/warn)
+      // Remove consoles in production but keep error/warn
       ...(process.env.NODE_ENV === 'production'
         ? [[
             'babel-plugin-transform-remove-console',
             { exclude: ['error', 'warn'] },
           ]]
         : []),
-      'react-native-reanimated/plugin', // deixe por último
+      'babel-plugin-dynamic-import-node',
+      'react-native-reanimated/plugin', // keep last
     ],
   };
 };
