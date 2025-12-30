@@ -86,6 +86,9 @@ export function normalizeBooking(raw: any): BookingDetails {
     guaranteeClaims: raw?.guaranteeClaims || [],
     couponId: raw?.couponId || null,
     discountAmount: raw?.discountAmount || null,
+    insurance: raw?.insurance ?? null,
+    proofs: raw?.proofs || [],
+    allowedActions: raw?.allowedActions || [],
   };
 }
 
