@@ -19,13 +19,17 @@
                                        "not_found":  "Not found",
                                        "network_error":  "Network or server error",
                                        "unauthorized_error":  "Unauthorized. Please log in again.",
+                                       "session_revoked":  "Your session has been ended for security reasons.",
                                        "generic_error":  "An unexpected error occurred. Please try again later.",
                                        "per_hour_short":  "/hr",
                                        "per_sqm_short":  "/sqm",
                                        "per_room_short":  "/room",
                                        "or":  "or",
                                        "info":  "Notice",
-                                       "user":  "User"
+                                       "user":  "User",
+                                       "verification_pending":  "Under review",
+                                       "verification_waiting_approval":  "Awaiting approval",
+                                       "verification_learn_more":  "Learn about verification"
                                    },
                         "explore_section":  {
                                                 "title":  "Explore"
@@ -117,14 +121,48 @@
                                               "mark_read_error":  "Could not mark notification as read.",
                                               "mark_all_read_success":  "All notifications marked as read.",
                                               "mark_all_read_error":  "Could not mark all notifications as read.",
-                                              "navigation_error":  "Navigation Error",
-                                              "navigation_error_message":  "Could not open this notification.",
-                                              "now":  "Just now",
-                                              "minutes_ago":  "{{count}} min ago",
-                                              "hours_ago":  "{{count}} hr ago",
-                                              "yesterday":  "Yesterday",
-                                              "days_ago":  "{{count}} days ago"
-                                          },
+                        "navigation_error":  "Navigation Error",
+                        "navigation_error_message":  "Could not open this notification.",
+                        "now":  "Just now",
+                        "minutes_ago":  "{{count}} min ago",
+                        "hours_ago":  "{{count}} hr ago",
+                        "yesterday":  "Yesterday",
+                        "days_ago":  "{{count}} days ago"
+                    },
+                    "notification":  {
+                                          "reminder":  {
+                                                          "t24h":  {
+                                                                     "title":  "Reminder: service tomorrow",
+                                                                     "body":  "Your service is scheduled for tomorrow at {{time}}."
+                                                                 },
+                                                          "t2h":  {
+                                                                     "title":  "Reminder: 2 hours to go",
+                                                                     "body":  "Get ready — the service starts in 2 hours at {{time}}."
+                                                                 },
+                                                          "t30m":  {
+                                                                      "title":  "Reminder: 30 minutes left",
+                                                                      "body":  "The service begins at {{time}}. Please be prepared."
+                                                                    }
+                                                      },
+                                          "late":  {
+                                                       "title":  "Provider delayed",
+                                                       "body":  "The provider still hasn't started the service scheduled for {{time}}."
+                                                     },
+                                          "job":  {
+                                                     "started":  {
+                                                                    "title":  "Service started",
+                                                                    "body":  "The provider has begun the service. Track the progress in the app."
+                                                                  },
+                                                     "ended":  {
+                                                                  "title":  "Service completed",
+                                                                  "body":  "The service has been finalized. Thank you for using us!"
+                                                                }
+                                                   }
+                                        },
+                        "bookings":  {
+                                       "success_title":  "Booking confirmed",
+                                       "confirmation_message":  "Your booking was created. The provider will confirm the details soon."
+                                   },
                         "schedule_service":  {
                                                  "header_title":  "Schedule",
                                                  "progress_step_date_time":  "Date \u0026 Time",
@@ -150,6 +188,7 @@
                                                  "booking_error_message":  "Please fill in all necessary fields for the booking, including the full address and select a time slot.",
                                                  "booking_error_duration_size":  "Please enter the service {{field}}.",
                                                  "booking_success_message":  "Booking successful!",
+                                                 "quote_price_updated":  "Price updated",
                                                  "loading_initial_data":  "Loading initial data...",
                                                  "navigation_error_essential_data":  "Essential data missing. Please try again.",
                                                  "service_not_available":  "The selected service is not available for this provider.",
@@ -161,7 +200,9 @@
                                                  "select_date_time_address":  "Select Date, Time, and Address",
                                                  "available_times":  "Available Times",
                                                  "preferred_times":  "Preferred Times",
-                                                 "no_slots":  "No time slots available for this date."
+                                                 "no_slots":  "No time slots available for this date.",
+                                                 "provider_pending_title":  "Provider under review",
+                                                 "provider_pending_message":  "This professional is still under review. Wait for approval before booking."
                                              },
                         "provider_details":  {
                                                  "loading":  "Loading...",
