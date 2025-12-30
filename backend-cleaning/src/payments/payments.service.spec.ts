@@ -112,10 +112,25 @@ describe('PaymentsService handlePixWebhook state machine', () => {
     paymentIntent: { findFirst: jest.Mock };
     booking: { findUnique: jest.Mock };
   };
+  let transactionMock: {
+    paymentIntent: { update: jest.Mock };
+    ledgerEntry: {
+      findFirst: jest.Mock;
+      createMany: jest.Mock;
+    };
+  };
 
   beforeEach(() => {
+    transactionMock = {
+      paymentIntent: { update: jest.fn() },
+      ledgerEntry: {
+        findFirst: jest.fn(async () => null),
+        createMany: jest.fn(),
+      },
+    };
+
     prismaMock = {
-      $transaction: jest.fn(),
+      $transaction: jest.fn(async (callback) => callback(transactionMock)),
       paymentIntent: {
         findFirst: jest.fn(),
       },
@@ -207,9 +222,9 @@ describe('PaymentsService handlePixWebhook state machine', () => {
     await paymentsService.handlePixWebhook(webhookPayload, undefined);
     const secondResult = await paymentsService.handlePixWebhook(webhookPayload, undefined);
 
-    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+    expect(prismaMock.paymentIntent.findFirst).toHaveBeenCalledTimes(2);
     expect(secondResult).toMatchObject({
-      message: 'Webhook processado com sucesso',
+      ok: true,
     });
   });
 });
