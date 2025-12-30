@@ -1,8 +1,15 @@
 import { Prisma, BookingStatus } from '@prisma/client';
 import { BookingsService } from '../../src/bookings/bookings.service';
+import { InsuranceService } from '../../src/insurance/insurance.service';
 
-const createService = (prismaMock: any, queuesService: any) =>
-  new BookingsService(
+const createService = (prismaMock: any, queuesService: any) => {
+  const schedulerService = {
+    scheduleBookingReminders: jest.fn().mockResolvedValue(undefined),
+    cancelPendingSchedules: jest.fn().mockResolvedValue(undefined),
+    notifyJobStarted: jest.fn().mockResolvedValue(undefined),
+    notifyJobEnded: jest.fn().mockResolvedValue(undefined),
+  } as any;
+  return new BookingsService(
     prismaMock,
     {} as any,
     {} as any,
@@ -11,6 +18,7 @@ const createService = (prismaMock: any, queuesService: any) =>
     queuesService,
     {} as any,
     {} as any,
+    new InsuranceService(),
     {} as any,
     {} as any,
     {} as any,
@@ -18,7 +26,9 @@ const createService = (prismaMock: any, queuesService: any) =>
     { translate: jest.fn().mockResolvedValue('translated') } as any,
     {} as any,
     {} as any,
+    schedulerService,
   );
+};
 
 const buildBooking = (overrides: Partial<any> = {}) => ({
   id: 'booking-1',
