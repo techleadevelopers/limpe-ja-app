@@ -17,9 +17,12 @@ import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { LocalAuthGuard } from '../auth/guards/local-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { User } from '@prisma/client';
 import { Request as ExpressRequest } from 'express';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AuthErrorCode } from '../common/constants/auth-error-code';
 
 type AuthenticatedRequest = ExpressRequest & { user?: User };
 const maskEmail = (email?: string) => {
@@ -44,6 +47,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // Existing register/client - Mantido
@@ -102,6 +106,29 @@ export class AuthController {
     `[AuthController] login: tentativa recebida para userId=${user.id}`,
     );
     return this.authService.login(user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout-device')
+  @ApiOperation({ summary: 'Deslogar o dispositivo atual e remover o push token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Push token removido do dispositivo.',
+    type: MessageResponseDto,
+  })
+  async logoutDevice(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<MessageResponseDto> {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException({
+        message: 'Usuário não autenticado.',
+        code: AuthErrorCode.UNAUTHORIZED,
+      });
+    }
+
+    await this.notificationsService.unregisterDeviceToken(userId);
+    return { message: 'Token do dispositivo removido com sucesso.' };
   }
 
   // Existing forgot-password - Mantido
