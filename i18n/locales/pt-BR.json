@@ -19,6 +19,7 @@
       "not_found": "Não encontrado",
       "network_error": "Erro de rede ou servidor",
       "unauthorized_error": "Não autorizado. Por favor, faça login novamente.",
+      "session_revoked": "Sua sessão foi encerrada por segurança.",
       "generic_error": "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.",
       "per_hour_short": "/h",
       "per_sqm_short": "/m²",
@@ -39,8 +40,11 @@
       "evening": "Noite",
       "or": "ou",
       "user": "Usuário",
-  "view_all": "Ver todos"
-},
+      "view_all": "Ver todos",
+      "verification_pending": "Em verificação",
+      "verification_waiting_approval": "Aguardando aprovação",
+      "verification_learn_more": "Entenda a verificação"
+    },
     "explore_section": {
       "title": "Explore mais Serviços"
     },
@@ -131,6 +135,10 @@
       }
     },
     "wallet": {"view_all":"Ver tudo","rewards_all_title":"Recompensas","filter_all":"Todos","filter_coupons":"Cupons","cashback_title":"Pontos e Cashback","current_points":"Seus pontos","recent_points":"Movimentações recentes","no_history":"Nenhuma movimentação por enquanto.","use_points":"Usar pontos","earn_points":"Ganhar pontos","rewards_title":"Resgates disponíveis","redeem":"Resgatar","redeem_success":"Resgate concluído! Cupom gerado.","redeem_error":"Não foi possível concluir o resgate."},
+    "bookings": {
+      "success_title": "Agendamento confirmado",
+      "confirmation_message": "Seu agendamento foi criado. Em breve o prestador confirmará os detalhes."
+    },
     "notifications": {
       "title": "Notificações",
       "mark_all_read": "Marcar Todas como Lidas",
@@ -149,6 +157,36 @@
       "hours_ago": "Há {{count}} h",
       "yesterday": "Ontem",
       "days_ago": "Há {{count}} dias"
+    },
+    "notification": {
+      "reminder": {
+        "t24h": {
+          "title": "Lembrete: serviço amanhã",
+          "body": "Seu serviço está marcado para amanhã às {{time}}."
+        },
+        "t2h": {
+          "title": "Lembrete: faltam 2 horas",
+          "body": "Prepare-se, o serviço começa em 2 horas às {{time}}."
+        },
+        "t30m": {
+          "title": "Lembrete: faltam 30 minutos",
+          "body": "O serviço começa às {{time}}. Fique atento!"
+        }
+      },
+      "late": {
+        "title": "Prestador atrasado",
+        "body": "O prestador ainda não iniciou o serviço marcado para {{time}}."
+      },
+      "job": {
+        "started": {
+          "title": "Serviço iniciado",
+          "body": "O prestador começou o atendimento. Acompanhe os detalhes no app."
+        },
+        "ended": {
+          "title": "Serviço finalizado",
+          "body": "O atendimento foi concluído com sucesso. Aproveite!"
+        }
+      }
     },
     "schedule_service": {
       "header_title": "Agendar",
@@ -174,6 +212,7 @@
       "booking_error_message": "Por favor, preencha todos os campos necessários para o agendamento, incluindo o endereço completo e selecione um horário.",
       "booking_error_duration_size": "Por favor, insira a {{field}} do serviço.",
       "booking_success_message": "Agendamento realizado com sucesso!",
+      "quote_price_updated": "Preço atualizado",
       "loading_initial_data": "Carregando dados iniciais...",
       "navigation_error_essential_data": "Dados essenciais ausentes. Tente novamente.",
       "service_not_available": "O serviço selecionado não está disponível para este provedor.",
@@ -198,7 +237,9 @@
       "no_slots_title": "Buscando Horários",
       "found_available_date": "Horários encontrados!",
       "error_fetching_slots_day": "Erro ao carregar horários para este dia. Tente novamente.",
-      "no_available_nearby": "Nenhum horário nos próximos 7 dias. Selecione outra data no calendário."
+      "no_available_nearby": "Nenhum horário nos próximos 7 dias. Selecione outra data no calendário.",
+      "provider_pending_title": "Provedor em verificação",
+      "provider_pending_message": "Este profissional ainda está em verificação. Aguarde aprovação para agendar."
     },
     "provider_details": {
       "loading": "Carregando...",
