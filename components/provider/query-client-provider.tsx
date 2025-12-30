@@ -3,7 +3,7 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Crie uma instância do QueryClient
-const queryClient = new QueryClient({
+export const appQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // Dados "stale" após 5 minutos
@@ -20,7 +20,7 @@ interface AppQueryClientProviderProps {
 
 const AppQueryClientProvider: React.FC<AppQueryClientProviderProps> = ({ children }) => {
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={appQueryClient}>
       {children}
     </QueryClientProvider>
   );
