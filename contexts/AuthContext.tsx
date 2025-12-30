@@ -1,19 +1,22 @@
 // LimpeJaApp/contexts/AuthContext.tsx
-import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { AuthResponse, RegisterClientDto, RegisterProviderDto, UserRole } from '../types/backend/auth';
 import authService from '../services/authService';
-import { registerDevicePushToken } from '../services/pushService';
-import { setUnauthorizedCallback } from '../services/api';
+import { registerDevicePushToken, unregisterDevicePushToken } from '../services/pushService';
+import { setUnauthorizedCallback, resetRevocationCallbackFlag } from '../services/api';
+import { AuthEventType, onAuthEvent } from '../services/authEvents';
 import { UserProfile } from '../types/backend/users';
 import userService from '../services/userService';
 import axios from 'axios';
-import type { AxiosRequestConfig } from 'axios';
+import { io, Socket } from 'socket.io-client';
+import { appQueryClient } from '../components/provider/query-client-provider';
+import { fetchPaymentIntent } from '../services/paymentService';
+import { ackNotification } from '../services/notificationService';
+import { resolveSocketUrl } from '../utils/socket';
+import type { AxiosError, AxiosRequestConfig } from 'axios';
 import { router } from 'expo-router';
 import { AUTH_ROUTES } from '../constants/routes';
-
-// 🔥 IMPORTAÇÃO DO SOCKET.IO
-import io from "socket.io-client";
-const socket = io("https://limpeja-backend-production-edfa.up.railway.app");
+import { usePushRegistration } from '../hooks/usePushRegistration';
 
 
 // utils de log sem recursão
@@ -32,6 +35,78 @@ const debugWarn = (...args: unknown[]) => {
 };
 const debugError = (...args: unknown[]) => {
   if (__DEV__) console.error('[Auth]', ...args.map(safeString));
+};
+
+type PaymentPayload = Record<string, unknown>;
+
+const normalizeId = (value: unknown): string | undefined => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+    return undefined;
+  }
+  if (typeof value === 'number' && !Number.isNaN(value)) {
+    return String(value);
+  }
+  return undefined;
+};
+
+const getBookingIdFromPayload = (payload: PaymentPayload): string | undefined => {
+  const candidate =
+    payload.bookingId ??
+    payload.booking?.id ??
+    payload.payload?.bookingId ??
+    payload.payload?.booking?.id ??
+    payload.data?.bookingId ??
+    payload.data?.booking?.id ??
+    payload._id;
+  return normalizeId(candidate);
+};
+
+const getNotificationIdFromPayload = (payload: PaymentPayload): string | undefined => {
+  const candidate = payload.notificationId ?? payload.id;
+  return normalizeId(candidate);
+};
+
+export const runPaymentPostActions = (payload: PaymentPayload) => {
+  const bookingId = getBookingIdFromPayload(payload);
+  const notificationId = getNotificationIdFromPayload(payload);
+
+  if (notificationId) {
+    ackNotification(notificationId).catch(() => {});
+  }
+
+  if (bookingId) {
+    appQueryClient.invalidateQueries({ queryKey: ['booking', bookingId] });
+    void fetchPaymentIntent(bookingId).catch(() => {});
+  }
+};
+
+export const createPaymentConfirmedHandler = (
+  setVisible: React.Dispatch<React.SetStateAction<boolean>>,
+  runPostActions: (payload: PaymentPayload) => void,
+) => {
+  let hideTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  const handler = (data: unknown) => {
+    setVisible(true);
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+    }
+    const payload =
+      typeof data === 'object' && data !== null ? (data as PaymentPayload) : {};
+    hideTimeout = setTimeout(() => setVisible(false), 3500);
+    runPostActions(payload);
+  };
+
+  const cleanup = () => {
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      hideTimeout = null;
+    }
+  };
+
+  return { handler, cleanup };
 };
 
 interface AuthDataFromStorage {
@@ -83,24 +158,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // 🔥 NOVO: controle do overlay
   const [paymentOverlayVisible, setPaymentOverlayVisible] = useState(false);
+  const paymentSocketRef = useRef<Socket | null>(null);
 
   // ----------------------------------------------------------------------------
   // 🔥 WEBSOCKET LISTENER — PAGAMENTO PIX CONFIRMADO
   // ----------------------------------------------------------------------------
-  useEffect(() => {
-    console.log("🔌 Conectando ao WebSocket para pagamentos...");
+      useEffect(() => {
+      if (!user?.token) {
+        paymentSocketRef.current?.disconnect();
+        paymentSocketRef.current = null;
+        return;
+      }
 
-    socket.on("pixPaymentConfirmed", (data) => {
-      console.log("🔥 PAGAMENTO CONFIRMADO - SOCKET.IO", data);
-      setPaymentOverlayVisible(true);
+      console.log("?? Conectando ao WebSocket para pagamentos...");
 
-      setTimeout(() => setPaymentOverlayVisible(false), 3500);
-    });
+      const clientSocket = io(resolveSocketUrl(), {
+        transports: ['websocket'],
+        auth: { token: user.token },
+      });
 
-    return () => {
-      socket.off("pixPaymentConfirmed");
-    };
-  }, []);
+      let hideTimeout: ReturnType<typeof setTimeout> | null = null;
+
+      const { handler: handlePix, cleanup: clearPaymentTimeout } =
+        createPaymentConfirmedHandler(setPaymentOverlayVisible, runPaymentPostActions);
+
+      clientSocket.on('pixPaymentConfirmed', handlePix);
+
+      paymentSocketRef.current?.disconnect();
+      paymentSocketRef.current = clientSocket;
+
+      return () => {
+        clearPaymentTimeout();
+        clientSocket.off('pixPaymentConfirmed', handlePix);
+        clientSocket.disconnect();
+        if (paymentSocketRef.current === clientSocket) {
+          paymentSocketRef.current = null;
+        }
+      };
+    }, [user?.token]);
 
   // ----------------------------------------------------------------------------
 
@@ -120,7 +215,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const handleUnauthorized = useCallback(
-    async ({ originalRequest }: { originalRequest: AxiosRequestConfig }) => {
+    async ({
+      originalRequest,
+    }: {
+      originalRequest: AxiosRequestConfig;
+      error?: AxiosError;
+    }) => {
       const headers = (originalRequest.headers ?? {}) as Record<string, unknown>;
       const silentHeader = headers['x-silent'] ?? headers['X-Silent'];
       const isSilent = silentHeader === '1' || silentHeader === 1 || silentHeader === true;
@@ -144,16 +244,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 
   useEffect(() => {
-    setUnauthorizedCallback(handleUnauthorized as any);
+    setUnauthorizedCallback(handleUnauthorized);
     loadStoredData();
   }, [handleUnauthorized]);
 
+  usePushRegistration(Boolean(user?.id));
+
   useEffect(() => {
-    if (user?.id) {
-      debugLog('[AuthContext] Reforçando registro do push token para', user.id);
-      registerDevicePushToken().catch(() => {});
-    }
-  }, [user?.id]);
+    const removeRefreshListener = onAuthEvent(
+      AuthEventType.SESSION_REFRESHED,
+      (authData) => {
+        const refreshedUser: AuthenticatedUserProfile = {
+          ...authData.user,
+          token: authData.accessToken,
+        };
+        setUser(refreshedUser);
+        setRole(authData.user.role as UserRole);
+        resetRevocationCallbackFlag();
+        registerDevicePushToken().catch(() => {});
+      },
+    );
+
+    const removeRevokedListener = onAuthEvent(AuthEventType.SESSION_REVOKED, () => {
+      unregisterDevicePushToken().catch(() => {});
+      setUser(null);
+      setRole(null);
+      setIsRegistrationInProgress(false);
+      try {
+        paymentSocketRef.current?.disconnect();
+        paymentSocketRef.current = null;
+      } catch {
+        // ignore
+      }
+    });
+
+    return () => {
+      removeRefreshListener();
+      removeRevokedListener();
+    };
+  }, []);
 
   const updateAuthState = (authData: AuthDataFromStorage) => {
     if (authData.token && authData.role && authData.id && authData.user) {
@@ -193,6 +322,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
+      resetRevocationCallbackFlag();
       registerDevicePushToken().catch(() => {});
     } catch (error) {
       debugError('[AuthContext | login] Erro de login:', error);
@@ -269,6 +399,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(latestUserProfile.role as UserRole);
+      resetRevocationCallbackFlag();
       registerDevicePushToken().catch(() => {});
     } catch (error: any) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -317,6 +448,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
+      resetRevocationCallbackFlag();
       registerDevicePushToken().catch(() => {});
     } catch (error) {
       debugError('[AuthContext | setAuthData] Erro ao definir dados de autenticação:', error);
