@@ -8,7 +8,7 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 export class PayoutsWebhookController {
   constructor(private readonly payoutsService: PayoutsService) {}
 
-  @Throttle(30, 60)
+  @Throttle({ default: { limit: 30, ttl: 60 } })
   @Post('gateway')
   async handleGatewayWebhook(
     @Headers('x-signature') signature: string,
