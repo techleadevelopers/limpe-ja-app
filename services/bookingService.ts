@@ -21,8 +21,16 @@ export const createBooking = async (data: CreateBookingDto): Promise<BookingDeta
         if (__DEV__) {
             console.warn('Erro ao criar agendamento (dev only):', error.response?.data || error.message);
         }
-        if (axios.isAxiosError(error) && error.response) {
-            throw new Error(error.response.data.message || 'Erro ao criar agendamento.');
+        if (axios.isAxiosError(error)) {
+            if (error.response) {
+                const responseMessage = error.response.data?.message;
+                if (responseMessage === 'provider-not-approved') {
+                    const providerError = new Error('provider-not-approved');
+                    (providerError as any).response = error.response;
+                    throw providerError;
+                }
+            }
+            throw error;
         }
         throw new Error('Erro de rede ou servidor ao criar agendamento.');
     }
