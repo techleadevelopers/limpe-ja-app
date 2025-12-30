@@ -13,17 +13,22 @@ import {
   BadRequestException,
   HttpCode,
   HttpStatus,
-  Throttle,
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingDetailsDto } from './dto/booking-details.dto';
 import { BookingAndPixResponseDto } from './dto/booking-and-pix-response.dto';
+import { BookingQuoteRequestDto } from './dto/quote-request.dto';
+import { BookingQuoteResponseDto } from './dto/quote-response.dto';
+import {
+  BookingProofResponseDto,
+  SubmitBookingProofDto,
+} from './dto/booking-proof.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { BookingStatus, UserRole } from '@prisma/client';
+import { BookingStatus, UserRole, BookingProofType } from '@prisma/client';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -34,7 +39,7 @@ import { Request } from 'express';
 import { ReportDisputeDto } from './dto/report-dispute.dto';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { I18nService } from '../common/i18n/i18n.service';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 type RequestWithUser = Request & {
   user: {
@@ -79,7 +84,7 @@ export class BookingsController {
   }
 
   @Post()
-  @Throttle({ limit: 20, ttl: 60 }) // Limita criação de bookings para evitar spikes sem bloquear fluxo legítimo
+  @Throttle({ default: { limit: 20, ttl: 60 } }) // Limita criação de bookings para evitar spikes sem bloquear fluxo legítimo
   @Roles(UserRole.CLIENT)
   @UseGuards(ThrottlerGuard, JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
@@ -107,11 +112,39 @@ export class BookingsController {
       createBookingDto,
       req,
     );
-    return new BookingDetailsDto(booking);
+    const bookingWithActions = this.bookingsService.withAllowedActions(
+      booking,
+      UserRole.CLIENT,
+      userId,
+    );
+    return new BookingDetailsDto(bookingWithActions);
+  }
+
+  @Post('quote')
+  @Throttle({ default: { limit: 30, ttl: 60 } })
+  @Roles(UserRole.CLIENT)
+  @UseGuards(ThrottlerGuard, JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Gerar cotação de preço para o booking' })
+  @ApiResponse({
+    status: 200,
+    description: 'Detalhes da cotação de preço.',
+    type: BookingQuoteResponseDto,
+  })
+  async quote(
+    @Req() req: RequestWithUser,
+    @Body() bookingQuoteRequestDto: BookingQuoteRequestDto,
+  ): Promise<BookingQuoteResponseDto> {
+    const userId = req.user.userId;
+    return this.bookingsService.quotePrice(
+      userId,
+      bookingQuoteRequestDto,
+      req,
+    );
   }
 
   @Post('schedule-and-pay')
-  @Throttle({ limit: 15, ttl: 60 }) // Cobrança via PIX merece limite moderado para evitar DoS de QRs
+  @Throttle({ default: { limit: 15, ttl: 60 } }) // Cobrança via PIX merece limite moderado para evitar DoS de QRs
   @Roles(UserRole.CLIENT)
   @UseGuards(ThrottlerGuard, JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
@@ -146,9 +179,55 @@ export class BookingsController {
       );
 
     return {
-      booking: new BookingDetailsDto(booking),
-      pixCharge: pixCharge,
+      booking,
+      pixCharge,
     };
+  }
+
+  @Post(':id/proof/checkin')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 201,
+    description: 'Comprovante de check-in registrado.',
+    type: BookingProofResponseDto,
+  })
+  async submitCheckinProof(
+    @Req() req: RequestWithUser,
+    @Param('id') bookingId: string,
+    @Body() proofDto: SubmitBookingProofDto,
+  ): Promise<BookingProofResponseDto> {
+    const proof = await this.bookingsService.submitProof(
+      bookingId,
+      req.user.userId,
+      BookingProofType.CHECKIN,
+      proofDto,
+    );
+    return new BookingProofResponseDto(proof);
+  }
+
+  @Post(':id/proof/checkout')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 201,
+    description: 'Comprovante de checkout registrado.',
+    type: BookingProofResponseDto,
+  })
+  async submitCheckoutProof(
+    @Req() req: RequestWithUser,
+    @Param('id') bookingId: string,
+    @Body() proofDto: SubmitBookingProofDto,
+  ): Promise<BookingProofResponseDto> {
+    const proof = await this.bookingsService.submitProof(
+      bookingId,
+      req.user.userId,
+      BookingProofType.CHECKOUT,
+      proofDto,
+    );
+    return new BookingProofResponseDto(proof);
   }
 
   @Get('me')
@@ -216,7 +295,9 @@ export class BookingsController {
       );
     }
 
-    return new BookingDetailsDto(booking);
+    return new BookingDetailsDto(
+      this.bookingsService.withAllowedActions(booking, userRole, userId),
+    );
   }
 
   @Patch(':id/status')
@@ -266,7 +347,9 @@ export class BookingsController {
       userRole,
       req,
     );
-    return new BookingDetailsDto(updatedBooking);
+    return new BookingDetailsDto(
+      this.bookingsService.withAllowedActions(updatedBooking, userRole, userId),
+    );
   }
 
   @Patch(':id/cancel')
@@ -308,7 +391,13 @@ export class BookingsController {
       UserRole.CLIENT,
       req,
     );
-    return new BookingDetailsDto(updatedBooking);
+    return new BookingDetailsDto(
+      this.bookingsService.withAllowedActions(
+        updatedBooking,
+        UserRole.CLIENT,
+        userId,
+      ),
+    );
   }
 
   @Get('check-active-chat/:clientId/:providerId')
@@ -366,7 +455,9 @@ export class BookingsController {
       reason,
       req,
     );
-    return new BookingDetailsDto(updatedBooking);
+    return new BookingDetailsDto(
+      this.bookingsService.withAllowedActions(updatedBooking, userRole, userId),
+    );
   }
 
   @Post(':id/dispute')
@@ -449,7 +540,15 @@ export class BookingsController {
       newStatus,
       req,
     );
-    return new BookingDetailsDto(updatedBooking);
+    const actorUserId = req.user.userId;
+    const actorRole = req.user.role;
+    return new BookingDetailsDto(
+      this.bookingsService.withAllowedActions(
+        updatedBooking,
+        actorRole,
+        actorUserId,
+      ),
+    );
   }
 
   @Post(':id/on-the-way')
@@ -470,7 +569,13 @@ export class BookingsController {
   async onTheWay(@Req() req: RequestWithUser, @Param('id') id: string) {
     const userId = req.user.userId;
     const booking = await this.bookingsService.onTheWayService(id, userId);
-    return new BookingDetailsDto(booking);
+    return new BookingDetailsDto(
+      this.bookingsService.withAllowedActions(
+        booking,
+        UserRole.PROVIDER,
+        userId,
+      ),
+    );
   }
 
   @Post(':id/arrived')
@@ -491,7 +596,13 @@ export class BookingsController {
   async arrive(@Req() req: RequestWithUser, @Param('id') id: string) {
     const userId = req.user.userId;
     const booking = await this.bookingsService.arriveAtLocation(id, userId);
-    return new BookingDetailsDto(booking);
+    return new BookingDetailsDto(
+      this.bookingsService.withAllowedActions(
+        booking,
+        UserRole.PROVIDER,
+        userId,
+      ),
+    );
   }
 
   @Post(':id/start')
@@ -507,7 +618,13 @@ export class BookingsController {
   async start(@Req() req: RequestWithUser, @Param('id') id: string) {
     const userId = req.user.userId;
     const booking = await this.bookingsService.startService(id, userId);
-    return new BookingDetailsDto(booking);
+    return new BookingDetailsDto(
+      this.bookingsService.withAllowedActions(
+        booking,
+        UserRole.PROVIDER,
+        userId,
+      ),
+    );
   }
 
   @Post(':id/complete')
@@ -523,7 +640,13 @@ export class BookingsController {
   async complete(@Req() req: RequestWithUser, @Param('id') id: string) {
     const userId = req.user.userId;
     const booking = await this.bookingsService.completeService(id, userId);
-    return new BookingDetailsDto(booking);
+    return new BookingDetailsDto(
+      this.bookingsService.withAllowedActions(
+        booking,
+        UserRole.PROVIDER,
+        userId,
+      ),
+    );
   }
 
   @Post('auto-complete-overdue')
