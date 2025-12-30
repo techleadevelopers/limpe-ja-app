@@ -15,6 +15,7 @@ import { I18nService } from './common/i18n/i18n.service';
 import { initPrometheus } from './metrics/prometheus';
 import { TracingInterceptor } from './common/interceptors/tracing.interceptor';
 import { initTracing } from './tracing/otel';
+import { logMissingConfigOnce } from './common/logging/missing-config.logger';
 
 async function bootstrap() {
   console.time('AppStartupTotal');
@@ -45,6 +46,54 @@ async function bootstrap() {
   const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
   const isProd = nodeEnv === 'production';
   const webhookLogger = new Logger('WebhookParser');
+
+  const criticalSecrets = [
+    {
+      key: 'PAGSEGURO_API_TOKEN',
+      message:
+        'PAGSEGURO_API_TOKEN ausente. Integração real com PSP desativada (modo placeholder).',
+      label: 'PagSeguro API token',
+    },
+    {
+      key: 'API_BASE_URL',
+      message:
+        'API_BASE_URL ausente. Webhooks de PSP podem não funcionar externamente.',
+      label: 'Application base URL',
+    },
+    {
+      key: 'PIX_WEBHOOK_SECRET',
+      message:
+        'PIX webhook secret not configured. Webhooks funcionarão em modo inseguro.',
+      label: 'PIX webhook secret',
+    },
+    {
+      key: 'psp.webhookSecret',
+      message:
+        'PSP webhook secret not configured. Webhooks funcionarão em modo inseguro.',
+      label: 'PSP webhook secret',
+    },
+  ];
+
+  const missingSecrets = criticalSecrets
+    .map((secret) => ({
+      ...secret,
+      value: configService.get<string>(secret.key),
+    }))
+    .filter((secret) => !secret.value);
+
+  if (isProd && missingSecrets.length > 0) {
+    throw new Error(
+      `Missing production secrets: ${missingSecrets
+        .map((secret) => `${secret.key} (${secret.label})`)
+        .join(', ')}`,
+    );
+  }
+
+  if (!isProd) {
+    missingSecrets.forEach(({ key, message }) => {
+      logMissingConfigOnce(key, message);
+    });
+  }
 
   // ===== SENTRY =====
   if (sentryDsn) {
