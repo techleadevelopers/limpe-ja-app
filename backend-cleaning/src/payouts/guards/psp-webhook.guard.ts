@@ -12,6 +12,7 @@ import type { Request, Response } from 'express';
 import { CacheService } from '../../cache/cache.service';
 import { verifyPspSignature } from '../utils/psp-webhook-signature.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { logMissingConfigOnce } from '../../common/logging/missing-config.logger';
 
 @Injectable()
 export class PspWebhookGuard implements CanActivate {
@@ -51,12 +52,13 @@ export class PspWebhookGuard implements CanActivate {
           'PIX webhook secret not configured but ALLOW_INSECURE_WEBHOOKS=true. Skipping signature validation.',
         );
       } else {
+        const key = isPixWebhook ? 'PIX_WEBHOOK_SECRET' : 'psp.webhookSecret';
         const msg = `${isPixWebhook ? 'PIX' : 'PSP'} webhook secret not configured.`;
         const isProd = process.env.NODE_ENV === 'production';
         if (isProd) {
           this.logger.error(msg);
         } else {
-          this.logger.warn(msg);
+          logMissingConfigOnce(key, msg);
         }
         throw new ForbiddenException(msg);
       }
@@ -135,14 +137,8 @@ export class PspWebhookGuard implements CanActivate {
     request: Request & { body?: unknown },
     eventId: string,
   ): void {
-    const tolerance = parseInt(
-      this.configService.get<string>(
-        'PSP_WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS',
-        '300',
-      ),
-      10,
-    );
-    if (!tolerance) {
+    const toleranceMs = this.resolveTimestampToleranceMs();
+    if (!toleranceMs) {
       return;
     }
 
@@ -153,23 +149,73 @@ export class PspWebhookGuard implements CanActivate {
     const bodyTimestamp = this.extractTimestampFromPayload(request.body);
     const rawTimestamp = headerTimestamp ?? bodyTimestamp;
     if (!rawTimestamp) {
-      return;
+      this.logger.warn(`Missing PSP webhook timestamp for ${eventId}.`);
+      throw new BadRequestException('Webhook timestamp is required.');
     }
 
-    const timestamp = this.parseTimestamp(rawTimestamp);
+    const timestamp = this.parseTimestampToMs(rawTimestamp);
     if (timestamp === undefined) {
-      return;
+      this.logger.warn(`Invalid PSP webhook timestamp for ${eventId}.`);
+      throw new BadRequestException('Webhook timestamp is invalid.');
     }
 
-    const delta = Math.abs(Date.now() - timestamp);
-    if (delta > tolerance * 1000) {
+    const now = Date.now();
+    const deltaMs = Math.abs(now - timestamp);
+    if (deltaMs > toleranceMs) {
       this.logger.warn(
-        `PSP webhook timestamp ${rawTimestamp} for ${eventId} is outside ${tolerance}s tolerance.`,
+        `PSP webhook timestamp delta ${deltaMs}ms exceeds tolerance ${toleranceMs}ms for ${eventId}.`,
       );
       throw new BadRequestException(
         'Webhook timestamp is outside the allowed window.',
       );
     }
+  }
+
+  private resolveTimestampToleranceMs(): number {
+    const rawTolerance = this.configService.get<string>(
+      'PSP_WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS',
+      '60',
+    );
+    const parsed = Number(rawTolerance);
+    const fallbackSeconds = 60;
+    const configuredSeconds = Number.isFinite(parsed) && parsed > 0 ? parsed : fallbackSeconds;
+    const isProd = process.env.NODE_ENV === 'production';
+    const minSeconds = isProd ? 10 : 1;
+    const maxSeconds = 300;
+    const clampedSeconds = Math.min(Math.max(configuredSeconds, minSeconds), maxSeconds);
+    return clampedSeconds * 1000;
+  }
+
+  private parseTimestampToMs(value: string | number | undefined): number | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return this.normalizeTimestampValue(value);
+    }
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    const numeric = Number(trimmed);
+    if (!Number.isNaN(numeric)) {
+      return this.normalizeTimestampValue(numeric);
+    }
+    const parsed = Date.parse(trimmed);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+
+  private normalizeTimestampValue(value: number): number | undefined {
+    if (value >= 1e12) {
+      return value;
+    }
+    if (value >= 1e9) {
+      return value * 1000;
+    }
+    return undefined;
   }
 
   private resolveEventId(request: Request & { body?: unknown }): string | undefined {
@@ -220,28 +266,6 @@ export class PspWebhookGuard implements CanActivate {
     return typeof value === 'object' && value !== null
       ? (value as Record<string, unknown>)
       : undefined;
-  }
-
-  private parseTimestamp(value: string | number | undefined): number | undefined {
-    if (value === undefined || value === null) {
-      return undefined;
-    }
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return value;
-    }
-    if (typeof value !== 'string') {
-      return undefined;
-    }
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return undefined;
-    }
-    const numeric = Number(trimmed);
-    if (!Number.isNaN(numeric)) {
-      return numeric;
-    }
-    const parsed = Date.parse(trimmed);
-    return Number.isNaN(parsed) ? undefined : parsed;
   }
 
   private normalizeEventId(value: string | number | undefined): string | undefined {
