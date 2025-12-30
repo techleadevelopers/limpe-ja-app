@@ -11,12 +11,14 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { QueuesModule } from '../queues/queues.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { CouponsModule } from '../coupons/coupons.module';
+import { InsuranceModule } from '../insurance/insurance.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
 import { MissionsModule } from '../missions/missions.module';
 import { ReferralsModule } from '../referrals/referrals.module';
 import { RedisLockModule } from '../common/locks/redis-lock.module'; // NOVO: Importar RedisLockModule
 import { I18nModule } from '../common/i18n/i18n.module'; // NOVO: Importar I18nModule
 import { CacheModule } from '../cache/cache.module';
+import { SchedulerModule } from '../scheduler/scheduler.module';
 
 @Module({
   imports: [
@@ -29,12 +31,14 @@ import { CacheModule } from '../cache/cache.module';
     forwardRef(() => QueuesModule),
     forwardRef(() => PricingModule),
     forwardRef(() => CouponsModule),
+    InsuranceModule,
     LoyaltyModule,
     forwardRef(() => MissionsModule),
     forwardRef(() => ReferralsModule),
     RedisLockModule, // NOVO: Adicionar RedisLockModule
     CacheModule,
     I18nModule, // NOVO: Adicionar I18nModule
+    SchedulerModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService],
