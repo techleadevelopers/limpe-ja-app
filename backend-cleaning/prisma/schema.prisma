@@ -68,6 +68,17 @@ enum BookingStatus {
   NO_SHOW
 }
 
+enum BookingProofType {
+  CHECKIN
+  CHECKOUT
+}
+
+enum InsurancePlanId {
+  ESSENCIAL
+  PREMIUM
+  TOTAL
+}
+
 enum TransactionType {
   PAYMENT
   WITHDRAWAL
@@ -258,6 +269,19 @@ enum PricingScope {
   CITY
   CATEGORY
   PROVIDER
+}
+
+enum NotificationScheduleStatus {
+  PENDING
+  SENT
+  CANCELLED
+}
+
+enum NotificationScheduleType {
+  BOOKING_REMINDER
+  PROVIDER_LATE
+  JOB_STARTED
+  JOB_ENDED
 }
 
 // ---------------------------------
@@ -526,12 +550,16 @@ model Booking {
   subscription     Subscription?    @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
   incidents        Incident[]
   guaranteeClaims  GuaranteeClaim[]
+  insuranceClaims  InsuranceClaim[]
   couponId         String?
   coupon           Coupon?          @relation(fields: [couponId], references: [id])
   couponUsage      CouponUsage?     @relation("BookingCouponUsage")
   supportTickets   SupportTicket[]
   paymentIntent    PaymentIntent?
   ledgerEntries    LedgerEntry[]
+  bookingInsurance BookingInsurance?
+  bookingProofs    BookingProof[]
+  notificationSchedules NotificationSchedule[]
 
   // Metadata
   createdAt        DateTime         @default(now())
@@ -544,6 +572,36 @@ model Booking {
   @@index([providerId, scheduledStart, scheduledEnd]) // ✅ NOVO: overlap fast
 }
 
+model BookingInsurance {
+  id                String         @id @default(uuid())
+  bookingId         String         @unique
+  booking           Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  planId            InsurancePlanId
+  priceCents        Int
+  coverageCents     Int
+  deductibleCents   Int
+  riskMultiplierBps Int
+  proofRequired     Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+
+  @@index([bookingId])
+}
+
+model BookingProof {
+  id         String           @id @default(uuid())
+  bookingId  String
+  booking    Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId     String
+  type       BookingProofType
+  photos     Json
+  videoUrl   String?
+  hashes     Json?
+  timestamps Json?
+  createdAt  DateTime         @default(now())
+
+  @@unique([bookingId, type])
+  @@index([bookingId])
+}
 
 model Chat {
   id                String    @id @default(uuid())
@@ -592,11 +650,35 @@ model Notification {
   scheduledAt      DateTime?
   priority         Int?     @default(2)
   readAt           DateTime?
+  dedupeKey        String?
+  payload          Json?
+  ttlSeconds       Int?
+  acknowledgedAt   DateTime?
 
   // ADICIONADO: Índice para performance (listagem ordenada por user/createdAt)
   @@index([userId, createdAt])
+  @@index([userId, dedupeKey, createdAt])
   // ADICIONADO: Índice para polling por priority (recomendado para envelopes em prioridade)
   @@index([userId, priority, createdAt])
+}
+
+model NotificationSchedule {
+  id         String                      @id @default(uuid())
+  bookingId  String
+  booking    Booking                     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  runAt      DateTime
+  type       NotificationScheduleType
+  slot       String?
+  status     NotificationScheduleStatus  @default(PENDING)
+  cancelledAt DateTime?
+  dedupeKey  String
+  payload    Json
+  createdAt  DateTime                    @default(now())
+  sentAt     DateTime?
+  updatedAt  DateTime                    @updatedAt
+
+  @@index([bookingId])
+  @@index([status, runAt])
 }
 
 model Review {
@@ -888,6 +970,26 @@ model GuaranteeClaim {
   resolvedAt     DateTime?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+}
+
+model InsuranceClaim {
+  id              String          @id @default(uuid())
+  bookingId       String
+  booking         Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reporterId      String
+  description     String
+  amountCents     Int
+  attachments     String[]        @default([])
+  deductibleCents Int
+  coverageCents   Int
+  planId          InsurancePlanId
+  status          ClaimStatus     @default(PENDING)
+  rejectionReason String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([bookingId])
+  @@index([reporterId])
 }
 
 // PRICING (mantém campos atuais; acrescenta escopo opcional)
