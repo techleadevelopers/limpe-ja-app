@@ -31,9 +31,11 @@ import { AppColors } from '../../../constants/appStyles';
 import { fix } from '../../../utils/platformFix';
 
 import ProviderServicesInline from '../../../components/booking/ProviderServicesInline';
+import InsuranceSummary from '../../../components/booking/InsuranceSummary';
 import TutorialOverlay from '../../../components/ui/TutorialOverlay';
 import { useProviderServices } from '../../../hooks/useProviderServices';
 import { useTutorial } from '../../../hooks/useTutorial';
+import { useBookingStatusMeta } from '../../../hooks/useBookingStatusMeta';
 
 // =============================================================================
 // Helpers de status / cores
@@ -91,8 +93,6 @@ const getStatusMessage = (status: BookingStatus): string | null => {
   }
 };
 
-const isCancellableStatus = (s: BookingStatus) =>
-  s === BookingStatus.CONFIRMED || s === BookingStatus.PENDING || s === BookingStatus.PENDING_PROVIDER_CONFIRMATION;
 const isCompletedStatus = (s: BookingStatus) => s === BookingStatus.COMPLETED;
 
 // =============================================================================
@@ -123,6 +123,9 @@ function HeaderBar({ router, insets }: { router: any; insets: any }) {
 function ProviderCard({ booking, provider }: { booking: BookingDetails; provider: any }) {
   const status = getStatusVisual(booking.status);
   const statusMessage = getStatusMessage(booking.status);
+  const { statusMap } = useBookingStatusMeta();
+  const defaultLabel = status.label === 'Desconhecido' ? 'Em atualização' : status.label;
+  const displayLabel = statusMap[booking.status]?.labelClient || defaultLabel;
   const avatarUrl = provider?.avatarUrl || booking.providerAvatarUrl;
   const providerName = provider?.fullName || booking.providerFullName;
 
@@ -153,7 +156,7 @@ function ProviderCard({ booking, provider }: { booking: BookingDetails; provider
         <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
           <Ionicons name={status.icon} size={14} color={status.color} style={styles.iconAdjust} />
           <Text style={[styles.statusText, { color: status.color }]} numberOfLines={1}>
-            {status.label}
+            {displayLabel}
           </Text>
         </View>
       </View>
@@ -240,6 +243,12 @@ function DetailsCard({
           </View>
         </>
       )}
+      {booking.insurance && (
+        <>
+          <View style={styles.divider} />
+          <InsuranceSummary insurance={booking.insurance} />
+        </>
+      )}
     </View>
   );
 }
@@ -262,7 +271,7 @@ function ActionsCard({
   onViewProfile: () => void;
 }) {
   const firstName = booking.providerFullName.split(" ")[0];
-  const canCancel = isCancellableStatus(booking.status);
+  const canCancel = booking.allowedActions?.includes('CANCEL') ?? false;
   const canReview =
     isCompletedStatus(booking.status) &&
     !(booking.isReviewed || booking.reviewId);
