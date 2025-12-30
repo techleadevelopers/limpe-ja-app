@@ -3,6 +3,7 @@
   "preset": "ts-jest",
   "rootDir": "..",
   "testEnvironment": "node",
+  "setupFilesAfterEnv": ["<rootDir>/test/jest.setup.ts"],
   "testMatch": [
     "<rootDir>/test/unit/**/*.spec.ts",
     "<rootDir>/src/**/*.spec.ts"
