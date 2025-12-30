@@ -1212,6 +1212,7 @@ if (isAuthenticated && user?.id) {
         safeBottomInset={Platform.OS === 'ios' ? insets.bottom : 35}
         isAuthenticated={isAuthenticated}
         requireAuthOrRedirect={requireAuthOrRedirect}
+        verificationStatus={provider.verificationStatus}
       />
     </View>
   );
