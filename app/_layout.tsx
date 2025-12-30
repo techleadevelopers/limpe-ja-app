@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import * as Font from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Slot, SplashScreen, usePathname, useRouter, useSegments } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
@@ -19,7 +19,6 @@ import {
 import 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-import { io } from 'socket.io-client';
 import PaymentConfirmedOverlay from "../components/global/PaymentConfirmedOverlay"; // 🔵 ADICIONADO
 import AppQueryClientProvider from '../components/provider/query-client-provider';
 import { toastConfig } from '../components/Toast';
@@ -28,10 +27,12 @@ import { AppProvider } from '../contexts/AppContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ProviderRegistrationProvider } from '../contexts/ProviderRegistrationContext';
 import { OverlayPortal } from '../hooks/useOverlayMessage';
+import { useBookingStatusMeta } from '../hooks/useBookingStatusMeta';
 import i18n from '../i18n';
 import { getBookingsForUser } from '../services/bookingService';
 import NotificationUIService from '../services/notificationUIService';
 import { UserRole, VerificationStatus } from '../types/backend/auth';
+import { useNotificationsSocket } from '../hooks/useNotificationsSocket';
 import { BookingDetails, BookingStatus } from '../types/backend/bookings';
 // Optional local notifications setup (Android channel) â€“ safe, no-op on iOS if unavailable
 let setupNotificationsOnce: (() => Promise<void>) | null = (async () => {
@@ -90,17 +91,37 @@ function FloatingActiveServicePill({
       const list = await getBookingsForUser();
       const now = new Date();
       let candidate: BookingDetails | null = null;
-      const inProgress = list.find((b) => b.status === BookingStatus.IN_PROGRESS);
-      if (inProgress) candidate = inProgress;
+      const actionCandidate = list.find((b) =>
+        b.allowedActions?.some((action) =>
+          ['START_SERVICE', 'COMPLETE_SERVICE'].includes(action),
+        ),
+      );
+      if (actionCandidate) {
+        candidate = actionCandidate;
+      }
       if (!candidate) {
-        const candidates = list.filter((b) => b.status === BookingStatus.CONFIRMED);
-        for (const b of candidates) {
-          const start = parseDateTime(b.scheduledDate, b.scheduledTime);
-          if (Number.isNaN(start.getTime())) continue;
-          const diff = minutesBetween(start, now);
-          if (diff <= 10 && diff >= -120) { // 10 min antes atÃ© 120 min depois
-            candidate = b;
-            break;
+        const fallback = list.filter((b) => {
+          const meta = statusMap[b.status];
+          if (meta) return meta.requiresAction;
+          return (
+            b.status === BookingStatus.IN_PROGRESS ||
+            b.status === BookingStatus.CONFIRMED
+          );
+        });
+        const nextInProgress = fallback.find((b) => b.status === BookingStatus.IN_PROGRESS);
+        if (nextInProgress) {
+          candidate = nextInProgress;
+        }
+        if (!candidate) {
+          const confirmed = fallback.filter((b) => b.status === BookingStatus.CONFIRMED);
+          for (const b of confirmed) {
+            const start = parseDateTime(b.scheduledDate, b.scheduledTime);
+            if (Number.isNaN(start.getTime())) continue;
+            const diff = minutesBetween(start, now);
+            if (diff <= 10 && diff >= -120) {
+              candidate = b;
+              break;
+            }
           }
         }
       }
@@ -111,7 +132,8 @@ function FloatingActiveServicePill({
         setBooking(null);
       }
     } catch {}
-  }, []);
+  }, [statusMap]);
+
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -239,109 +261,6 @@ Sentry.init({
 
 SplashScreen.preventAutoHideAsync();
 
-function resolveSocketUrl() {
-    const envUrl = (globalThis as any)?.EXPO_PUBLIC_WS_URL
-        || (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_WS_URL : undefined)
-        || (Constants.expoConfig?.extra as any)?.wsUrl
-        || (Constants.expoConfig?.extra as any)?.backendWsUrl;
-    if (envUrl) {
-        return envUrl;
-    }
-    const apiUrl = (Constants.expoConfig?.extra as any)?.backendApiUrl || '';
-    if (typeof apiUrl === 'string' && apiUrl.startsWith('http')) {
-        return apiUrl.replace(/^http/, 'ws');
-    }
-    return 'ws://localhost:3000';
-}
-
-function useNotificationsSocket(authToken?: string | null) {
-    const isPlayingRef = useRef(false);
-
-    const playAlertSound = async () => {
-        if (isPlayingRef.current) return;
-        isPlayingRef.current = true;
-        try {
-            const ExpoAV = await import('expo-av');
-            const { Audio } = ExpoAV;
-            const sound = new Audio.Sound();
-            await sound.loadAsync(require('../assets/sounds/new-booking.mp3'));
-            let plays = 0;
-            await sound.playAsync();
-            sound.setOnPlaybackStatusUpdate((status: any) => {
-                if (status?.isLoaded && status.didJustFinish) {
-                    plays += 1;
-                    if (plays < 3) {
-                        sound.replayAsync().catch(() => {
-                            isPlayingRef.current = false;
-                            sound.unloadAsync().catch(() => {});
-                        });
-                    } else {
-                        sound.unloadAsync().catch(() => {});
-                        isPlayingRef.current = false;
-                    }
-                }
-            });
-        } catch (err) {
-            console.warn('[notifications socket] failed to play mp3 sound:', err);
-            isPlayingRef.current = false;
-        }
-    };
-
-    useEffect(() => {
-        if (!authToken) {
-            return;
-        }
-
-        const socket = io(resolveSocketUrl(), {
-            auth: { token: authToken },
-            transports: ['websocket'],
-        });
-
-        socket.on('notification', async (payload: any) => {
-            const title = payload?.title ?? 'Notificacao';
-            const message = payload?.message ?? 'Voce tem uma nova notificacao.';
-            NotificationUIService.showInfo(message, title);
-
-            // Beep para servico/agendamento (prestador): notificacao local com som padrao + mp3 no foreground.
-            const kind = (payload?.type || payload?.category || '').toString().toLowerCase();
-            const isService =
-                kind.includes('service') ||
-                kind.includes('servico') ||
-                kind.includes('agendamento') ||
-                kind.includes('booking');
-            if (isService) {
-                try {
-                    // Dispara notificação local com som default (background/foreground).
-                    const Notifications =
-                        (await import('expo-notifications')).default || (await import('expo-notifications'));
-                    await (Notifications as any)?.scheduleNotificationAsync?.({
-                        content: {
-                            title,
-                            body: message,
-                            sound: 'default',
-                            data: payload,
-                        },
-                        trigger: null,
-                    });
-                } catch (err) {
-                    console.warn('[notifications socket] failed to play sound notification:', err);
-                }
-
-                // Toca MP3 custom 3x no foreground para reforcar o alerta sonoro.
-                playAlertSound();
-            }
-        });
-
-        socket.on('mission-progress', () => {
-            NotificationUIService.showInfo('Seu progresso nas missões foi atualizado.', 'Missões');
-        });
-
-        return () => {
-            socket.disconnect();
-        };
-    }, [authToken]);
-}
-
 
 const QA_PANEL_ENABLED = typeof __DEV__ !== 'undefined' && __DEV__
   ? true
@@ -367,7 +286,12 @@ function RootLayoutContent() {
                 const Notifications = (await import('expo-notifications')).default || (await import('expo-notifications'));
                 sub = (Notifications as any).addNotificationResponseReceivedListener?.((response: any) => {
                     try {
-                        const url = response?.notification?.request?.content?.data?.url as string | undefined;
+                        const payload = response?.notification?.request?.content?.data ?? {};
+                        const url = (
+                            payload?.appEvent?.targetUrl ??
+                            payload?.url ??
+                            payload?.deeplink
+                        ) as string | undefined;
                         if (url && typeof url === 'string') {
                             (router as any)?.push?.(url);
                         }
