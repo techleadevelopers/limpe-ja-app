@@ -196,6 +196,7 @@ const styles = StyleSheet.create({
   btn: {
     backgroundColor: AppColors.primaryInteractive,
     paddingVertical: Platform.OS === 'ios' ? 14 : 13,
+    paddingHorizontal: Platform.OS === 'ios' ? 66 : 65,
     bottom: Platform.OS === 'ios' ? 0 : 2,
     borderRadius: 16,
     alignItems: 'center',
