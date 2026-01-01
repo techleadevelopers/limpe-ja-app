@@ -2,7 +2,17 @@
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Image, Platform, Animated, Alert } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Image,
+  Platform,
+  Animated,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getMyNotifications } from '../../../../services/notificationService';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useAndroidDialog } from '../../../../hooks/useAndroidDialog';
+import CategoriaCard from './CategoriaCard';
 
 interface NewHeaderProps {
   userName: string;
@@ -18,6 +29,13 @@ interface NewHeaderProps {
   hasNotifications?: boolean;
   isVisitor?: boolean;
 }
+
+const CATEGORY_ITEMS = [
+  { id: 'residencial', name: 'Residencial', icon: 'residencial' },
+  { id: 'comercial', name: 'Comercial', icon: 'comercial' },
+  { id: 'pós-obra', name: 'Pós-obra', icon: 'obra' },
+  { id: 'vidros', name: 'Vidros', icon: 'vidro' },
+];
 
 const NewHeader: React.FC<NewHeaderProps> = ({
   userName,
@@ -134,10 +152,21 @@ const NewHeader: React.FC<NewHeaderProps> = ({
             onPress={handleProfilePress}
             onPressIn={() => pressIn(avatarScale)}
             onPressOut={() => pressOut(avatarScale)}
-            style={[styles.fixedCircle, { marginRight: 4 }]}
+            style={[
+              styles.fixedCircle,
+              {
+                marginRight: 4,
+                width: Platform.OS === 'android' ? 30 : undefined,
+                height: Platform.OS === 'android' ? 30 : undefined,
+              },
+            ]}
             activeOpacity={0.9}
           >
-            <Ionicons name="add" size={21} color="#4c8fd1ff"  />
+            <Ionicons
+              name="add"
+              size={Platform.OS === 'android' ? 18 : 21}
+              color="#4c8fd1ff"
+            />
           </TouchableOpacity>
         </Animated.View>
 
@@ -160,7 +189,12 @@ const NewHeader: React.FC<NewHeaderProps> = ({
           >
             <Image
               source={require('../../../../assets/images/category2.png')}
-              style={{ width: 24, height: 24, marginLeft: 15, marginTop: 6,  }}
+              style={{
+                width: Platform.OS === 'android' ? 20 : 24,
+                height: Platform.OS === 'android' ? 20 : 24,
+                marginLeft: Platform.OS === 'android' ? 21 : 15,
+                marginTop: Platform.OS === 'android' ? 4 : 6,
+              }}
               resizeMode="contain"
             />
           </TouchableOpacity>
@@ -177,7 +211,11 @@ const NewHeader: React.FC<NewHeaderProps> = ({
           >
             <Image
               source={require('../../../../assets/images/notifi2.png')}
-              style={{ width: 43, height: 43, marginTop: 6,  }}
+              style={{
+                width: Platform.OS === 'android' ? 36 : 43,
+                height: Platform.OS === 'android' ? 36 : 43,
+                marginTop: Platform.OS === 'android' ? 4 : 6,
+              }}
               resizeMode="contain"
             />
 
@@ -213,7 +251,7 @@ const styles = StyleSheet.create({
     borderBottomStartRadius: 40,
     borderTopEndRadius: 40,
     borderTopStartRadius: 40,
-    marginBottom: Platform.OS === 'android' ? -25 : -8,
+    marginBottom: Platform.OS === 'android' ? 5 : -8,
 
     flexDirection: 'row',
     justifyContent: 'space-between',
