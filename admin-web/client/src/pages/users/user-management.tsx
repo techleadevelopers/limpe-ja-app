@@ -9,10 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Users, Search, Filter, MoreHorizontal, Calendar, Mail, Phone, MapPin, Shield, Ban, UserPlus, Edit } from "lucide-react";
+import { Users, Search, Calendar, Mail, Shield, Ban, UserPlus, Edit, MessageCircle, UserCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { fetchClients, updateClientProfile, fetchClientById, deleteUser } from "@/lib/api"; // Importar novas funções
+import { fetchClients, updateClientProfile, fetchClientById, deleteUser, sendNotification } from "@/lib/api"; // Importar novas funções
 import { Client, Address } from "@/lib/types"; // Importar o tipo Client e Address
 
 // Componente para o modal de edição de cliente
@@ -244,6 +244,30 @@ const getRoleBadge = (role?: string) => {
   }
 };
 
+function getVerificationBadge(status?: string) {
+  switch (status) {
+    case "VERIFIED":
+    case "APPROVED":
+      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+    case "PENDING_MANUAL_REVIEW":
+    case "PENDING_DOCUMENTS_UPLOAD":
+      return "bg-yellow-100 text-yellow-700 border-yellow-200";
+    case "REJECTED":
+      return "bg-red-100 text-red-700 border-red-200";
+    default:
+      return "bg-gray-100 text-gray-700 border-gray-200";
+  }
+}
+
+const getInitials = (name: string) =>
+  name
+    .split(" ")
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+
 export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -251,7 +275,8 @@ export default function UserManagement() {
   const pageSize = 10;
   const [selectedClientForEdit, setSelectedClientForEdit] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedForView, setSelectedForView] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Use a API real para buscar clientes
   const { data: clients, isLoading, isError, error } = useQuery<Client[], Error>({
@@ -286,6 +311,8 @@ export default function UserManagement() {
     active: clients?.filter(c => c.status === "active").length || 0,
     inactive: clients?.filter(c => c.status === "inactive").length || 0,
     blocked: clients?.filter(c => c.status === "blocked").length || 0,
+    verified: clients?.filter(c => ["VERIFIED", "APPROVED"].includes(c.verificationStatus ?? "")).length || 0,
+    pending: clients?.filter(c => ["PENDING_MANUAL_REVIEW", "PENDING_DOCUMENTS_UPLOAD"].includes(c.verificationStatus ?? "")).length || 0,
   };
 
   const handleOpenEditModal = (clientId: string) => {
@@ -309,10 +336,29 @@ export default function UserManagement() {
     },
   });
 
+  const notifyMutation = useMutation({
+    mutationFn: ({ clientId }: { clientId: string }) =>
+      sendNotification({
+        userId: clientId,
+        title: "Atualização importante",
+        message: "Estamos revisando seu perfil e entraremos em contato em breve.",
+      }),
+    onSuccess: () => {
+      toast({ title: "Notificação enviada", description: "O cliente recebeu a mensagem.", variant: "success" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro ao notificar", description: err?.message || "Não foi possível enviar a notificação.", variant: "destructive" });
+    },
+  });
+
 const handleDeleteUser = (id: string) => {
     if (window.confirm("Tem certeza que deseja excluir este usuário? Essa ação não pode ser desfeita.")) {
       deleteUserMutation.mutate(id);
     }
+  };
+
+  const handleNotifyClient = (clientId: string) => {
+    notifyMutation.mutate({ clientId });
   };
 
   const handleExportCsv = () => {
@@ -421,6 +467,34 @@ const handleDeleteUser = (id: string) => {
               </CardContent>
             </Card>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <Card className="shadow-floating border-0">
+              <CardContent className="pt-6">
+                <div className="flex items-center">
+                  <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+                    <UserCheck className="text-emerald-600" size={20} />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Clientes Verificados</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.verified}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-floating border-0">
+              <CardContent className="pt-6">
+                <div className="flex items-center">
+                  <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                    <Calendar className="text-yellow-600" size={20} />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Verificação Pendente</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Search and Filters */}
           <Card className="mb-6 shadow-floating border-0">
@@ -523,11 +597,19 @@ const handleDeleteUser = (id: string) => {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                          <img 
-                            src={`https://images.unsplash.com/photo-150720939${index % 10}?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=fit&w=100&h=100`}
-                            alt={client.name}
-                            className="w-16 h-16 rounded-full object-cover"
-                          />
+                          <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                            {client.avatarUrl ? (
+                              <img
+                                src={client.avatarUrl}
+                                alt={client.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-base font-semibold text-gray-600">
+                                {getInitials(client.name || client.email || "??")}
+                              </span>
+                            )}
+                          </div>
                           
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-1">
@@ -541,6 +623,11 @@ const handleDeleteUser = (id: string) => {
                               <Badge className={`text-xs px-2 py-1 border ${getLoyaltyBadge(client.loyaltyTier)}`}>
                                 {client.loyaltyTier}
                               </Badge>
+                              {client.verificationStatus && (
+                                <Badge className={`text-xs px-2 py-1 border ${getVerificationBadge(client.verificationStatus)}`}>
+                                  {client.verificationStatus.replace(/_/g, " ").toLowerCase()}
+                                </Badge>
+                              )}
                             </div>
                             
                             <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -563,6 +650,12 @@ const handleDeleteUser = (id: string) => {
                               <span className="text-orange-600">No-Show: {client.noShowCount}</span>
                               <span className="text-red-600">Cancelamentos: {client.cancellationCount}</span>
                             </div>
+                            <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                              <span className="flex items-center gap-1">
+                                <Calendar size={12} />
+                                Último login: {client.lastLogin ? formatRelativeTime(client.lastLogin) : "—"}
+                              </span>
+                            </div>
                           </div>
                         </div>
                         
@@ -575,6 +668,17 @@ const handleDeleteUser = (id: string) => {
                           >
                             <Edit size={14} className="mr-1" />
                             Ver / Editar
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-emerald-100 text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => handleNotifyClient(client.userId)}
+                            disabled={notifyMutation.isPending}
+                          >
+                            <MessageCircle size={14} className="mr-1" />
+                            Notificar
                           </Button>
                           
                           <Button
