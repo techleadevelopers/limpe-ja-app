@@ -108,24 +108,6 @@ export class CreateBookingDto {
   @Min(MIN_HOURLY_MINUTES)
   requestedDurationMinutes?: number;
 
-  @ApiPropertyOptional({
-    description: 'Metragem quadrada solicitada (se o serviço for BY_SIZE)',
-    example: 80.5,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  requestedSquareMeters?: number;
-
-  @ApiPropertyOptional({
-    description: 'Número de cômodos solicitados (se o serviço for BY_SIZE)',
-    example: 3,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  requestedRoomCount?: number;
-
   // PROPRIEDADE ADICIONADA PARA RESOLVER OS ERROS DO 'couponCode'
   @ApiPropertyOptional({
     description: 'Código do cupom de desconto, se aplicável',
