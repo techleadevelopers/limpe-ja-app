@@ -12,6 +12,8 @@ export const AppColors = {
   attentionYellow: '#FFD700',
   warningYellow: '#FFC107', // Adicionado: Cor para avisos/amarelo
   errorRed: '#D32F2F',
+  border: '#D0D2D6',
+  danger: '#D32F2F',
   backgroundLight: '#F8FAFB',
   backgroundNeutral: '#F0F2F5',
   borderNeutral: '#E0E0E0',
