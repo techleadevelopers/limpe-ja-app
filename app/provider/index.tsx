@@ -21,8 +21,10 @@ import {
 import { PROVIDER_ROUTES } from '../../constants/routes'; // Importar PROVIDER_ROUTES
 import { useAuth } from '../../hooks/useAuth';
 // Import NotificationUIService
+import { subscribeToProviderNotifications } from '../../services/notificationBus';
 import NotificationUIService from '../../services/notificationUIService'; // Added
 import { toastUserError } from '../_shared/errors/uiFeedback';
+import  ProviderNavBar  from '../../components/provider/navigation/ProviderNavBar';
 // Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/dashboardService';
@@ -32,11 +34,9 @@ import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
 // que é mais completa e usada na lógica do componente.
 // import { ProviderDashboard } from '../../types/backend/dashboard';
 import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
-import ProviderNavBar from '../../components/provider/navigation/ProviderNavBar';
 import { ProviderDashboard } from '../../types/backend/providers'; // Usar a interface correta
 // CORREÇÃO: Adicionar import para SafeAreaInsets (para alinhamento do header no iOS)
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 
 // Hook para animação de toque (reutilizável, refinado com haptics)
 const useAnimatedTouch = () => {
@@ -138,10 +138,7 @@ const DashboardHeader: React.FC<{
       headerStyles.headerContainer,
       {
         opacity: headerAnim,
-        transform: [
-          { translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
-          ...(Platform.OS === 'android' ? [{ scale: 0.95 }] : []),
-        ],
+        transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
         paddingTop: paddingTopValue // Aplicar o valor dinâmico aqui
       },
       Platform.OS === 'android' && { paddingTop: androidPaddingTopValue },
@@ -178,9 +175,10 @@ const headerStyles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.lg,
+    paddingVertical: Platform.OS === 'android' ? 8 : Spacing.lg,
     backgroundColor: WHITE,
     borderBottomLeftRadius: Radii.xl,
+    bottom: Platform.OS === 'android' ? 15 : 0,
     borderBottomRightRadius: Radii.xl,
     ...Platform.select({
       ios: {
@@ -191,18 +189,19 @@ const headerStyles = StyleSheet.create({
       },
       android: { elevation: 0 },
     }),
-    marginBottom: Spacing.lg,
+    marginBottom: Platform.OS === 'android' ? 10 : Spacing.lg,
   },
   greetingContainer: {
     flex: 1,
   },
   greetingText: {
-    fontSize: 18.8,
+    fontSize: Platform.OS === 'android' ? 17 : 18.8,
     fontWeight: 'bold',
+    top: Platform.OS === 'android' ? 5 : 0,
     color: TEXT_DARK,
   },
   providerNameText: {
-    color: ICON_PRIMARY,
+    color: TEXT_DARK,
   },
   currentDateText: {
     fontSize: 14,
@@ -274,8 +273,6 @@ const FinancialSummaryCard: React.FC<{
     inputRange: [0, 1],
     outputRange: [0, 1],
   });
-
-  
 
   const chevronRotate = expandAnim.interpolate({
     inputRange: [0, 1],
@@ -473,7 +470,7 @@ const summaryStyles = StyleSheet.create({
 
 
 // Seção isolada: apenas "Atalhos do Dia"
-  const ShortcutsGrid: React.FC<{
+const ShortcutsGrid: React.FC<{
   onViewAllServicesPress: () => void;
   onViewAllMessagesPress: () => void;
   onManageAvailability: () => void;
@@ -506,34 +503,26 @@ const summaryStyles = StyleSheet.create({
   const a7 = useAnimatedTouch();
   const a8 = useAnimatedTouch();
   const a9 = useAnimatedTouch();
-  const Item = ({ icon, label, anim, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; anim: ReturnType<typeof useAnimatedTouch>; onPress: () => void }) => {
-    const iconSize = Platform.OS === 'android' ? 24 : 27;
-    return (
-      <TouchableOpacity
-        style={[quickActionStyles.gridItem, { transform: [{ scale: anim.scaleAnim }] }]}
-        onPress={onPress}
-        onPressIn={anim.onPressIn}
-        onPressOut={anim.onPressOut}
-        accessibilityRole="button"
-        accessibilityLabel={`${label}. Toque para abrir.`}
-        accessibilityHint={`Navegue para a seção de ${label.toLowerCase()}.`}
-      >
-        <Ionicons name={icon} size={iconSize} color={ICON_PRIMARY} accessibilityHidden={true} />
-        <Text style={[quickActionStyles.gridItemText, { display: 'flex' }]} numberOfLines={1}>{label}</Text>
-      </TouchableOpacity>
-    );
-  };
-  const shortcutTransform = [
-    { translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
-    ...(Platform.OS === 'android' ? [{ scale: 0.98 }] : []),
-  ];
-
+  const Item = ({ icon, label, anim, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; anim: ReturnType<typeof useAnimatedTouch>; onPress: () => void }) => (
+    <TouchableOpacity
+      style={[quickActionStyles.gridItem, { transform: [{ scale: anim.scaleAnim }] }]}
+      onPress={onPress}
+      onPressIn={anim.onPressIn}
+      onPressOut={anim.onPressOut}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}. Toque para abrir.`}
+      accessibilityHint={`Navegue para a seção de ${label.toLowerCase()}.`}
+    >
+      <Ionicons name={icon} size={27} color={ICON_PRIMARY} accessibilityHidden={true} />
+      <Text style={[quickActionStyles.gridItemText, { display: 'flex' }]} numberOfLines={1}>{label}</Text>
+    </TouchableOpacity>
+  );
   return (
     <Animated.View style={[
       quickActionStyles.sectionContainer,
       {
         opacity: animation,
-        transform: shortcutTransform,
+        transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
       }
     ]}>
       <Text style={[quickActionStyles.sectionTitle, { display: 'flex' }]}>Atalhos do Dia</Text>
@@ -568,7 +557,7 @@ const quickActionStyles = StyleSheet.create({
     }),
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: Platform.OS === 'android' ? 15 : 20,
     fontWeight: 'bold',
     color: TEXT_DARK,
     marginBottom: Spacing.md,
@@ -592,23 +581,16 @@ const quickActionStyles = StyleSheet.create({
     borderRadius: Radii.md,
     padding: Spacing.sm,
     paddingRight: Spacing.lg, // espaço para o botão +
-    borderWidth: Platform.OS === 'android' ? 0 :  1,
+    borderWidth: 1,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: {
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-        elevation: 0,
-      },
-      android: {
         shadowColor: SHADOW_COLOR_CARD,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
       },
+      android: { elevation: 0 },
     }),
   },
   quickChipTitle: {
@@ -631,7 +613,7 @@ const quickActionStyles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.md,
     padding: Spacing.sm,
-    borderWidth:  Platform.OS === 'android' ? 0 : 1,
+    borderWidth: 1,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: {
@@ -669,7 +651,7 @@ const quickActionStyles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    borderWidth:  Platform.OS === 'android' ? 0 : 1,
+    borderWidth: 1,
     borderColor: ICON_PRIMARY,
     backgroundColor: WHITE,
     alignItems: 'center',
@@ -889,12 +871,12 @@ export default function ProviderDashboardScreen() {
   const { user, isLoading: authLoading, logout } = useAuth(); // Corrigido: usando logout em vez de signOut
   const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
   const [pendingRequests, setPendingRequests] = useState<BookingDetails[]>([]);
-  const hasPendingRequests = pendingRequests.length > 0;
   const [upcomingServices, setUpcomingServices] = useState<BookingDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [updatingIds, setUpdatingIds] = useState<Record<string, boolean>>({});
+  const [hasNewUpdates, setHasNewUpdates] = useState(false);
   // Animated Values (otimizados para reduced motion)
   const financialSummaryAnim = useRef(new Animated.Value(0)).current;
   const quickActionsAnim = useRef(new Animated.Value(0)).current;
@@ -907,6 +889,34 @@ export default function ProviderDashboardScreen() {
   // Ref para armazenar a animação composta do stagger
   const staggerAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
   const isReducedMotionEnabled = useReducedMotion(); // Global reduced motion
+  const newUpdatesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastServiceToastRef = useRef<number>(0);
+  const NEW_UPDATE_DURATION_MS = 10 * 60 * 1000;
+  const TOAST_DEBOUNCE_MS = 30 * 1000;
+  const markNewUpdates = useCallback(() => {
+    setHasNewUpdates(true);
+    if (newUpdatesTimerRef.current) {
+      clearTimeout(newUpdatesTimerRef.current);
+    }
+    newUpdatesTimerRef.current = setTimeout(() => {
+      setHasNewUpdates(false);
+      newUpdatesTimerRef.current = null;
+    }, NEW_UPDATE_DURATION_MS);
+  }, []);
+  const clearNewUpdates = useCallback(() => {
+    if (newUpdatesTimerRef.current) {
+      clearTimeout(newUpdatesTimerRef.current);
+      newUpdatesTimerRef.current = null;
+    }
+    setHasNewUpdates(false);
+  }, []);
+  const showNewServiceToast = useCallback(() => {
+    const now = Date.now();
+    if (now - lastServiceToastRef.current >= TOAST_DEBOUNCE_MS) {
+      NotificationUIService.showInfo('Novo serviço confirmado', 'Atualização');
+      lastServiceToastRef.current = now;
+    }
+  }, []);
   const fetchData = useCallback(async () => {
     console.log("[DashboardScreen] fetchData: Iniciando busca de dados.");
     if (isMounted.current) {
@@ -949,12 +959,12 @@ export default function ProviderDashboardScreen() {
       ]);
       staggerAnimationRef.current = animationSequence;
       animationSequence.start();
-      } catch (err: any) {
-        console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
-        if (isMounted.current) {
-          toastUserError(err, 'Erro ao carregar os dados do dashboard');
-        }
-      } finally {
+    } catch (err: any) {
+      console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
+      if (isMounted.current) {
+        toastUserError(err, 'Erro ao carregar os dados do dashboard');
+      }
+    } finally {
       if (isMounted.current) {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -982,6 +992,25 @@ export default function ProviderDashboardScreen() {
       }
     };
   }, [authLoading, user, fetchData]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToProviderNotifications((kind) => {
+      if (kind === 'bookingConfirmed' || kind === 'paymentConfirmed') {
+        fetchData();
+        markNewUpdates();
+        showNewServiceToast();
+      }
+    });
+    return unsubscribe;
+  }, [fetchData, markNewUpdates, showNewServiceToast]);
+
+  useEffect(() => {
+    return () => {
+      if (newUpdatesTimerRef.current) {
+        clearTimeout(newUpdatesTimerRef.current);
+      }
+    };
+  }, []);
   // ===== Header data normalization (avatar + name) injected from provider/index.tsx logic =====
   const sanitizeUrl = (v: any) => (typeof v === 'string' && v.trim().length > 0 ? v.trim() : undefined);
   const headerAvatarUrl =
@@ -1019,8 +1048,14 @@ export default function ProviderDashboardScreen() {
     router.push(PROVIDER_ROUTES.MESSAGES_LIST as any);
   };
   // Handlers de navegação para Ações Rápidas novas
-  const goRequests = () => router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=requests') as any);
-  const goUpcoming = () => router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=upcoming') as any);
+  const goRequests = () => {
+    clearNewUpdates();
+    router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=requests') as any);
+  };
+  const goUpcoming = () => {
+    clearNewUpdates();
+    router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=upcoming') as any);
+  };
   const goCompleted = () => router.push((PROVIDER_ROUTES.SERVICES_LIST + '?filter=completed') as any);
   const goNotifications = () => router.push('/provider/notifications' as any);
   const goReviews = () => router.push(PROVIDER_ROUTES.REVIEWS as any); // CORRIGIDO: Usar a constante da rota
@@ -1202,54 +1237,57 @@ export default function ProviderDashboardScreen() {
           isReducedMotionEnabled={isReducedMotionEnabled}
         />
         {/** QuickActionsSection movido para abaixo das seções de solicitações */}
-        {pendingRequests.length > 0 && (
-  <Animated.View
-    style={[
-      styles.subsectionWrapper,
-      {
-        opacity: newRequestsAnim,
-        transform: [
-          { translateY: newRequestsAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
-        ],
-      },
-    ]}
-  >
-    <View style={styles.subsectionHeader}>
-      <Text style={styles.subsectionTitle}>
-        <Ionicons name="hourglass-outline" size={20} color={ICON_PRIMARY} accessibilityHidden />
-        {' '}Novas Solicitações
-      </Text>
-
-      {pendingRequests.length > 2 && (
-        <TouchableOpacity
-          onPress={() => {
-            if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push('/provider/schedule' as any);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Ver todas as solicitações"
-          accessibilityHint="Navegue para ver todas as novas solicitações."
-        >
-          <Text style={styles.viewAllText}>Ver Todas</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-
-    {pendingRequests.slice(0, 2).map((item) => (
-      <RequestItem
-        key={item.id}
-        item={item}
-        onAccept={handleAcceptRequest}
-        onReject={handleRejectRequest}
-        onDetails={() => router.push(`/provider/active-booking/${item.id}` as any)}
-        onChat={handleChatWithClient}
-        entryAnim={newRequestsAnim} // ✅ melhor que new Animated.Value(1)
-        isReducedMotionEnabled={isReducedMotionEnabled}
-        isUpdating={!!updatingIds[item.id]}
-      />
-    ))}
-  </Animated.View>
-)}
+        <Animated.View style={[
+          styles.subsectionWrapper,
+          {
+            opacity: newRequestsAnim,
+            transform: [{ translateY: newRequestsAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+          }
+        ]}>
+          <View style={styles.subsectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.subsectionTitle}>
+                <Ionicons name="hourglass-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}Novas Solicitações
+              </Text>
+              {hasNewUpdates && (
+                <View style={styles.newBadge}>
+                  <Text style={styles.newBadgeText}>Novo</Text>
+                </View>
+              )}
+            </View>
+            {pendingRequests.length > 2 && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  clearNewUpdates();
+                  router.push('/provider/schedule' as any);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Ver todas as solicitações"
+                accessibilityHint="Navegue para ver todas as novas solicitações."
+              >
+                <Text style={styles.viewAllText}>Ver Todas</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {pendingRequests.length > 0 ? (
+            pendingRequests.slice(0, 2).map((item, index) => (
+              <RequestItem
+                key={item.id}
+                item={item}
+                onAccept={handleAcceptRequest}
+                onReject={handleRejectRequest}
+                onDetails={() => router.push(`/provider/active-booking/${item.id}` as any)}
+                onChat={handleChatWithClient}
+                entryAnim={new Animated.Value(1)} // Each item gets its own animation value
+                isReducedMotionEnabled={isReducedMotionEnabled}
+                isUpdating={!!updatingIds[item.id]}
+              />
+            ))
+          ) : (
+            renderEmptyState("Nenhuma nova solicitação de agendamento.", "checkmark-done-circle-outline")
+          )}
+        </Animated.View>
         <EditHoursSection animation={quickActionsAnim} onQuickWithdraw={goWithdraw} isReducedMotionEnabled={isReducedMotionEnabled} />
         <Animated.View style={[
           styles.subsectionWrapper,
@@ -1259,13 +1297,21 @@ export default function ProviderDashboardScreen() {
           }
         ]}>
           <View style={styles.subsectionHeader}>
-            <Text style={styles.subsectionTitle}>
-              <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}Próximos Serviços
-            </Text>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.subsectionTitle}>
+                <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}Próximos Serviços
+              </Text>
+              {hasNewUpdates && (
+                <View style={styles.newBadge}>
+                  <Text style={styles.newBadgeText}>Novo</Text>
+                </View>
+              )}
+            </View>
             {upcomingServices.length > 2 && (
               <TouchableOpacity
                 onPress={() => {
                   if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  clearNewUpdates();
                   router.push('/provider/schedule' as any);
                 }}
                 accessibilityRole="button"
@@ -1302,7 +1348,7 @@ export default function ProviderDashboardScreen() {
               <TouchableOpacity
                 onPress={() => router.push('/provider/profile/edit-services' as any)}
                 onPressIn={() => !isReducedMotionEnabled && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-                style={{ flex: 1, marginRight: Spacing.sm, backgroundColor: PRIMARY_LIGHT, borderRadius: Radii.pill, paddingVertical: Spacing.sm, alignItems: 'center', justifyContent: 'center', borderWidth:  Platform.OS === 'android' ? 0 : 1, borderColor: ICON_PRIMARY }}
+                style={{ flex: 1, marginRight: Spacing.sm, backgroundColor: PRIMARY_LIGHT, borderRadius: Radii.pill, paddingVertical: Spacing.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: ICON_PRIMARY }}
                 accessibilityRole="button"
                 accessibilityLabel="Criar Serviço"
                 accessibilityHint="Toque para cadastrar um novo serviço"
@@ -1346,8 +1392,9 @@ export default function ProviderDashboardScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
-      <ProviderNudgeContainer /> {/* Added ProviderNudgeContainer */}
       <ProviderNavBar />
+      
+      <ProviderNudgeContainer /> {/* Added ProviderNudgeContainer */}
     </View>
   );
 }
@@ -1413,7 +1460,7 @@ const styles = StyleSheet.create({
   },
   qaPanelButton: {
     alignSelf: 'flex-end',
-    borderWidth:  Platform.OS === 'android' ? 0 : 1,
+    borderWidth: 1,
     borderColor: ICON_PRIMARY,
     borderRadius: Radii.pill,
     paddingVertical: Spacing.xs,
@@ -1447,12 +1494,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.md,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Platform.OS === 'android' ? 0 : 0,
+    gap: 6,
+  },
   subsectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: Platform.OS === 'android' ? 17 : 18,
+    paddingHorizontal: Platform.OS === 'android' ? 0 : 0,
+    fontWeight: Platform.OS === 'android' ? '700' : '600',
     color: TEXT_DARK,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  newBadge: {
+    backgroundColor: '#ff5a5f',
+    borderRadius: Radii.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    alignSelf: 'flex-start',
+  },
+  newBadgeText: {
+    color: WHITE,
+    fontSize: 10,
+    fontWeight: '700',
   },
   viewAllText: {
     fontSize: 14,
@@ -1470,6 +1536,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: TEXT_MUTED,
     fontSize: 15,
+    paddingHorizontal: Platform.OS === 'android' ?  15 : 0,
     marginTop: Spacing.sm,
   },
   requestItem: {
@@ -1516,7 +1583,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.sm,
-    borderWidth:  Platform.OS === 'android' ? 0 : 1,
+    borderWidth: 1,
     borderColor: BORDER_SUBTLE,
   },
   requestServiceName: {
@@ -1580,7 +1647,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: Radii.pill,
-    borderWidth:  Platform.OS === 'android' ? 0 : 1,
+    borderWidth: 1,
     borderColor: BORDER_SUBTLE,
     paddingVertical: Spacing.xs,
     backgroundColor: BACKGROUND_ALT,
@@ -1618,7 +1685,7 @@ const styles = StyleSheet.create({
   },
   chatButton: {
     backgroundColor: WHITE,
-    borderWidth:  Platform.OS === 'android' ? 0 : 1.5,
+    borderWidth: 1.5,
     borderColor: ICON_PRIMARY,
     paddingHorizontal: Spacing.sm,
   },
@@ -1660,7 +1727,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
-    borderWidth:  Platform.OS === 'android' ? 0 : 1,
+    borderWidth: 1,
     borderColor: BORDER_SUBTLE,
     ...Platform.select({
       ios: {
@@ -1669,13 +1736,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 4
       },
-      android: {
-        shadowColor: SHADOW_COLOR_CARD,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 2,
-      },
+      android: { elevation: 0 },
     }),
   },
   serviceItemContent: {
