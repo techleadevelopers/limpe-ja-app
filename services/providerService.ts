@@ -27,7 +27,7 @@ import {
 import { ProviderServiceOffering } from '../types/backend/provider-service';
 
 // Importar Service do seu arquivo de serviços
-import { Service, PricingType } from '../types/backend/services';
+import { Service } from '../types/backend/services';
 
 // Importar ReviewEntity para tipar as avaliações
 import { ReviewEntity } from '../types/backend/reviews'; // Certifique-se de que este caminho está correto
@@ -51,7 +51,8 @@ const FALLBACK_RECOMMENDED_PROVIDERS: ProviderDisplayInfo[] = [
         providerId: 'fallback-ana',
         serviceId: 'residential-basic',
         price: 189,
-        pricingType: PricingType.FIXED_PRICE,
+        pricePerHour: 189,
+        needsReview: false,
         durationMinutes: 180,
         description: 'Pacote completo de limpeza residencial com foco em áreas sociais e quartos.',
         service: {
@@ -99,7 +100,8 @@ const FALLBACK_RECOMMENDED_PROVIDERS: ProviderDisplayInfo[] = [
         providerId: 'fallback-carlos',
         serviceId: 'office-standard',
         price: 249,
-        pricingType: PricingType.FIXED_PRICE,
+        pricePerHour: 249,
+        needsReview: false,
         durationMinutes: 210,
         description: 'Higienização comercial com foco em recepção, salas de reunião e áreas comuns.',
         service: {
@@ -147,10 +149,10 @@ const FALLBACK_RECOMMENDED_PROVIDERS: ProviderDisplayInfo[] = [
         providerId: 'fallback-mariana',
         serviceId: 'after-build',
         price: 389,
-        pricingType: PricingType.BY_SIZE,
+        pricePerHour: 389,
+        needsReview: true,
         durationMinutes: 240,
         description: 'Limpeza pesada com remoção de resíduos e polimento de superfícies.',
-        pricePerSquareMeter: 12,
         service: {
           id: 'after-build',
           name: 'Limpeza Pós-Obra Signature',
@@ -455,7 +457,9 @@ export async function deleteProviderAvailability(providerId: string, availabilit
 export async function getProviderServicesOffered(providerId: string): Promise<ProviderServiceOffering[]> {
   try {
     const response: AxiosResponse<ProviderServiceOffering[]> = await api.get(`/providers/${providerId}/services`);
-    return response.data;
+    return response.data.filter(
+      (service) => service.pricePerHour > 0 && !service.needsReview,
+    );
   } catch (error: any) {
     console.error(`Erro ao buscar serviços oferecidos pelo provedor ${providerId}:`, error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
