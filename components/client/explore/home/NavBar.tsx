@@ -38,7 +38,7 @@ const NavBar: React.FC<NavBarProps> = ({
     { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/common/support' },
     { name: 'Perfil', icon: 'person', route: '/client/profile' },
   ];
-  const BASE_ICON_SIZE = 24;
+  const BASE_ICON_SIZE = 23;
   const iconSize = Platform.OS === 'android' ? BASE_ICON_SIZE * 0.95 : BASE_ICON_SIZE;
 
   const navItemAnims = useRef(navItems.map(() => new Animated.Value(1))).current;
