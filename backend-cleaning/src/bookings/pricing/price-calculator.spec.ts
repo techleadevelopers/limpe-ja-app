@@ -9,13 +9,11 @@ const baseAddress = {
   number: '123',
   complement: '',
   neighborhood: 'Centro',
-  city: 'São Paulo',
+  city: 'Sao Paulo',
   state: 'SP',
   latitude: 0,
   longitude: 0,
 };
-
-const translate = async (key: string) => key;
 
 const buildDto = (override?: Partial<CreateBookingDto>): CreateBookingDto =>
   ({
@@ -29,17 +27,13 @@ const buildDto = (override?: Partial<CreateBookingDto>): CreateBookingDto =>
   } as CreateBookingDto);
 
 describe('calculateServiceTotalPrice', () => {
-  it('throws when pricingType is unknown', async () => {
+  it('throws when pricePerHour is missing', async () => {
     const providerService = {
       id: 'ps1',
       providerId: 'provider-1',
       serviceId: 'service-1',
       description: 'fallback',
-      pricingType: 'UNKNOWN',
-      price: new Prisma.Decimal(0),
       pricePerHour: new Prisma.Decimal(0),
-      pricePerSquareMeter: new Prisma.Decimal(0),
-      pricePerRoom: new Prisma.Decimal(0),
       durationMinutes: 60,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -50,22 +44,18 @@ describe('calculateServiceTotalPrice', () => {
         providerService,
         createBookingDto: buildDto(),
         locale: 'pt-BR',
-        translate,
+        translate: async () => 'error',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('calculates hourly totals and enforces minimum duration', async () => {
+  it('enforces minimum 4h even when requested duration is 1h', async () => {
     const providerService = {
       id: 'ps2',
       providerId: 'provider-1',
       serviceId: 'service-2',
       description: 'Hourly service',
-      pricingType: 'HOURLY',
-      price: new Prisma.Decimal(0),
       pricePerHour: new Prisma.Decimal(120),
-      pricePerSquareMeter: new Prisma.Decimal(0),
-      pricePerRoom: new Prisma.Decimal(0),
       durationMinutes: 60,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -75,39 +65,33 @@ describe('calculateServiceTotalPrice', () => {
       providerService,
       createBookingDto: buildDto({ requestedDurationMinutes: 60 }),
       locale: 'pt-BR',
-      translate,
-      minHourlyMinutes: 240,
+      translate: async () => 'error',
     });
 
     expect(result.normalizedRequestedDurationMinutes).toBe(240);
     expect(result.calculatedTotalPrice.toNumber()).toBeCloseTo(480);
   });
 
-  it('calculates fixed price and ignores totalPrice from client', async () => {
+  it('uses provider default duration when request not provided', async () => {
     const providerService = {
       id: 'ps3',
       providerId: 'provider-1',
       serviceId: 'service-3',
-      description: 'Fixed',
-      pricingType: 'FIXED_PRICE',
-      price: new Prisma.Decimal(750),
-      pricePerHour: new Prisma.Decimal(0),
-      pricePerSquareMeter: new Prisma.Decimal(0),
-      pricePerRoom: new Prisma.Decimal(0),
-      durationMinutes: 60,
+      description: 'Hourly with default',
+      pricePerHour: new Prisma.Decimal(80),
+      durationMinutes: 180,
       createdAt: new Date(),
       updatedAt: new Date(),
     } as unknown as ProviderService;
 
-    const dto = buildDto({ totalPrice: 999 });
     const result = await calculateServiceTotalPrice({
       providerService,
-      createBookingDto: dto,
+      createBookingDto: buildDto(),
       locale: 'pt-BR',
-      translate,
+      translate: async () => 'error',
     });
 
-    expect(result.calculatedTotalPrice.toNumber()).toBe(750);
-    expect(result.normalizedRequestedDurationMinutes).toBeUndefined();
+    expect(result.normalizedRequestedDurationMinutes).toBe(240);
+    expect(result.calculatedTotalPrice.toNumber()).toBeCloseTo(320);
   });
 });
