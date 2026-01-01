@@ -1,8 +1,7 @@
 // backend-cleaning/src/provider-services/dto/provider-service-details.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsEnum } from 'class-validator';
-import { ServiceEntity } from '../../services/entities/service.entity'; // <--- CORREÇÃO AQUI
-import { PricingType } from '../../common/enums/pricing-type.enum'; // Supondo que você tenha este enum no backend
+import { IsString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import { ServiceEntity } from '../../services/entities/service.entity';
 
 export class ProviderServiceDetailsDto {
   @ApiProperty({ description: 'ID do serviço oferecido pelo provedor' })
@@ -17,9 +16,9 @@ export class ProviderServiceDetailsDto {
   @IsString()
   serviceId: string;
 
-  @ApiProperty({ description: 'Preço do serviço', example: 150.0 })
+  @ApiProperty({ description: 'Preço por hora vigente', example: 150.0 })
   @IsNumber()
-  price: number;
+  pricePerHour: number;
 
   @ApiProperty({
     description: 'Duração estimada em minutos',
@@ -39,32 +38,15 @@ export class ProviderServiceDetailsDto {
   description?: string | null;
 
   @ApiProperty({
-    enum: PricingType,
-    description: 'Tipo de precificação do serviço',
-    example: PricingType.FIXED_PRICE,
+    description: 'Indica quando o valor do serviço precisa de revisão manual',
+    example: false,
   })
-  @IsEnum(PricingType)
-  pricingType: PricingType;
-
-  @ApiProperty({
-    description: 'Preço por metro quadrado (se pricingType for BY_SIZE)',
-    required: false,
-  })
-  @IsOptional()
-  @IsNumber()
-  pricePerSquareMeter?: number | null;
-
-  @ApiProperty({
-    description: 'Preço por cômodo (se pricingType for BY_SIZE)',
-    required: false,
-  })
-  @IsOptional()
-  @IsNumber()
-  pricePerRoom?: number | null;
+  @IsBoolean()
+  needsReview: boolean;
 
   @ApiProperty({
     type: () => ServiceEntity,
     description: 'Detalhes do tipo de serviço global',
-  }) // <--- CORREÇÃO AQUI
-  service: ServiceEntity; // Ou um DTO simplificado para Service, se preferir
+  })
+  service: ServiceEntity;
 }
