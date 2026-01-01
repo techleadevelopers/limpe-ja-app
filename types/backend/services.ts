@@ -3,9 +3,10 @@
 /**
  * @enum PricingType
  * Enumeração para o tipo de precificação do serviço.
+ * Atualmente o backend trabalha apenas com HOURLY (preço por hora).
  */
 export enum PricingType {
-  FIXED_PRICE = 'FIXED_PRICE', HOURLY = 'HOURLY', BY_SIZE = 'BY_SIZE', CUSTOM_QUOTE = 'CUSTOM_QUOTE'
+  HOURLY = 'HOURLY'
 }
 
 /**
