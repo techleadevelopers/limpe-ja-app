@@ -323,6 +323,7 @@ model User {
   loyaltyTransactions   LoyaltyTransaction[]
   couponUsages          CouponUsage[]
   issuedCoupons         Coupon[]           @relation("IssuedCoupons")
+  passwordResetTokens   PasswordResetToken[]
 
   // MISSIONS
   missionProgress       MissionProgress[]
@@ -343,6 +344,18 @@ model User {
   // ADICIONADO: Relações para auditoria de Booking (quem iniciou/finalizou)
   startedBookings       Booking[]          @relation("BookingStartedBy")
   completedBookings     Booking[]          @relation("BookingCompletedBy")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
 }
 
 model Client {
@@ -474,30 +487,33 @@ model ProviderService {
   id                    String         @id @default(uuid())
   providerId            String
   serviceId             String
+  /// @deprecated Legacy pricing fields; retain for Phase 1 compatibility but do not use.
   price                 Decimal?       @db.Decimal(10, 2)
-  pricePerHour          Decimal?       @db.Decimal(10, 2)
+  pricePerHour          Decimal        @db.Decimal(10, 2)
   pricePerSquareMeter   Decimal?       @db.Decimal(10, 2)
   pricePerRoom          Decimal?       @db.Decimal(10, 2)
   durationMinutes       Int?
   description           String?
   provider              Provider       @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  pricingType           PricingType    @default(FIXED_PRICE)
+  pricingType           PricingType?
+  needsReview           Boolean        @default(false)
   service               Service        @relation(fields: [serviceId], references: [id])
   bookings              Booking[]
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   subscriptions         Subscription[] @relation("ProviderServiceSubscriptions")
-  versions              ProviderServiceVersion[] // Histórico de preço/tipo; inserir versão em toda alteração na aplicação
+  versions              ProviderServiceVersion[] // Hist?rico de pre?o/tipo; inserir versao em toda altera??o na aplica??o
 
-  @@unique([providerId, serviceId, pricingType])
+  /// Unique constraint now ignores pricingType (only one hourly contract per provider/service).
+  @@unique([providerId, serviceId])
 }
 
 model ProviderServiceVersion {
   id                 String          @id @default(uuid())
   providerServiceId  String
   providerService    ProviderService @relation(fields: [providerServiceId], references: [id], onDelete: Cascade)
-  price              Decimal         @db.Decimal(10, 2)
-  pricingType        PricingType
+  pricePerHour       Decimal         @db.Decimal(10, 2)
+  pricingType        PricingType?
   note               String?
   changedAt          DateTime        @default(now())
 
