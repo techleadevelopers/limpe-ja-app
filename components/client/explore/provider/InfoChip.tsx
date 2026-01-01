@@ -8,14 +8,16 @@ interface InfoChipProps {
   iconName: keyof typeof Ionicons.glyphMap;
   text?: string | number | null;
   compact?: boolean;
+  iconSize?: number;
 }
 
-const InfoChip: React.FC<InfoChipProps> = ({ iconName, text, compact }) => {
+const InfoChip: React.FC<InfoChipProps> = ({ iconName, text, compact, iconSize }) => {
+  const size = iconSize ?? (compact ? 18 : 22);
   const resolvedText = text == null ? '' : String(text);
 
   return (
-    <View style={[styles.infoChip, compact && { paddingVertical: 6, paddingHorizontal: 10, bottom: 10, }]}>
-      <Ionicons name={iconName} size={22} color="#4A90E2" style={{ marginRight: 2 }} />
+    <View style={[styles.infoChip, compact && { paddingVertical: 6, paddingHorizontal: 10, bottom: 10 }]}>
+      <Ionicons name={iconName} size={size} color="#4A90E2" style={{ marginRight: 2 }} />
       <Text
         numberOfLines={1}
         style={[
