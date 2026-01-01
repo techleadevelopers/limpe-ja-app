@@ -10,6 +10,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
+import { BusinessRuleError } from '../common/errors/business-rule.error';
 import { CacheService } from '../cache/cache.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import {
@@ -116,14 +117,37 @@ const createServiceWithMocks = (options?: {
       bookingInsurance: null,
     } as unknown as BookingWithDetailsRelations);
 
-  const prismaMock = {
+  const bookingCountMock = jest.fn().mockResolvedValue(0);
+  const bookingCreateMock = jest.fn().mockResolvedValue(createdBooking);
+  const bookingFindFirstMock = jest.fn().mockResolvedValue(null);
+  const bookingFindUniqueMock = jest.fn().mockResolvedValue(createdBooking);
+  const bookingUpdateMock = jest.fn().mockResolvedValue(createdBooking);
+  const addressCreateMock = jest.fn().mockResolvedValue({ id: 'address-id' });
+
+  const transactionClient = {
     booking: {
-      findFirst: jest.fn().mockResolvedValue(null),
-      create: jest.fn().mockResolvedValue(createdBooking),
+      count: bookingCountMock,
+      create: bookingCreateMock,
     },
     address: {
-      create: jest.fn().mockResolvedValue({ id: 'address-id' }),
+      create: addressCreateMock,
     },
+  };
+
+  const prismaMock = {
+    booking: {
+      findFirst: bookingFindFirstMock,
+      findUnique: bookingFindUniqueMock,
+      create: bookingCreateMock,
+      count: bookingCountMock,
+      update: bookingUpdateMock,
+    },
+    address: {
+      create: addressCreateMock,
+    },
+    $transaction: jest
+      .fn()
+      .mockImplementation(async (cb) => cb(transactionClient as any)),
   };
 
   const redisLockService = {
@@ -162,10 +186,19 @@ const createServiceWithMocks = (options?: {
       notifyJobEnded: jest.fn().mockResolvedValue(undefined),
     } as any;
 
+    const clientsServiceMock = {
+      findClientByUserId: jest.fn().mockResolvedValue(clientMock),
+    } as any;
+
+    const providersServiceMock = {
+      findOne: jest.fn().mockResolvedValue(provider),
+      findByUserId: jest.fn().mockResolvedValue(provider),
+    } as any;
+
     const service = new BookingsService(
       prismaMock as any,
-      { findClientByUserId: jest.fn().mockResolvedValue(clientMock) } as any,
-      { findOne: jest.fn().mockResolvedValue(provider) } as any,
+      clientsServiceMock,
+      providersServiceMock,
       { findOne: jest.fn().mockResolvedValue(providerService) } as any,
       {} as any,
       {} as any,
@@ -192,6 +225,8 @@ const createServiceWithMocks = (options?: {
     prismaMock,
     createdBooking,
     redisLockService,
+    clientsServiceMock,
+    providersServiceMock,
   };
 };
 
@@ -272,6 +307,99 @@ describe('BookingsService (idempotency cache)', () => {
     expect(cacheService.get).not.toHaveBeenCalled();
     expect(cacheService.set).not.toHaveBeenCalled();
     expect(prismaMock.booking.create).toHaveBeenCalled();
+  });
+});
+
+describe('BookingsService weekly frequency guard', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('allows at most two bookings per week then blocks the third', async () => {
+    const { service, prismaMock } = createServiceWithMocks();
+    const bookingCount = prismaMock.booking.count as jest.Mock;
+    bookingCount
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(2);
+
+    await service.create('client-user', buildCreateBookingDto(), createRequest());
+    await service.create('client-user', buildCreateBookingDto(), createRequest());
+    await expect(
+      service.create('client-user', buildCreateBookingDto(), createRequest()),
+    ).rejects.toBeInstanceOf(BusinessRuleError);
+  });
+
+  it('resets the weekly tally when crossing Sunday to Monday', async () => {
+    const { service, prismaMock } = createServiceWithMocks();
+    const bookingCount = prismaMock.booking.count as jest.Mock;
+    bookingCount.mockResolvedValue(0);
+
+    const sundayDto = buildCreateBookingDto();
+    sundayDto.scheduledDate = '2025-08-03'; // Sunday
+    const mondayDto = buildCreateBookingDto();
+    mondayDto.scheduledDate = '2025-08-04'; // Monday
+
+    await service.create('client-user', sundayDto, createRequest());
+    await service.create('client-user', mondayDto, createRequest());
+
+    const [firstCall, secondCall] = bookingCount.mock.calls;
+    const firstStart = firstCall[0].where.scheduledStart.gte;
+    const secondStart = secondCall[0].where.scheduledStart.gte;
+    expect(firstStart.getUTCDay()).toBe(1);
+    expect(secondStart.getUTCDay()).toBe(1);
+    expect(
+      (secondStart.getTime() - firstStart.getTime()) /
+        (24 * 60 * 60 * 1000),
+    ).toBe(7);
+  });
+
+  it('only counts confirmed, started and finished statuses', async () => {
+    const { service, prismaMock } = createServiceWithMocks();
+    const bookingCount = prismaMock.booking.count as jest.Mock;
+    bookingCount.mockResolvedValue(0);
+
+    await service.create('client-user', buildCreateBookingDto(), createRequest());
+
+    const statuses = bookingCount.mock.calls[0][0].where.status.in;
+    expect(statuses).toEqual([
+      BookingStatus.CONFIRMED,
+      BookingStatus.STARTED,
+      BookingStatus.FINISHED,
+    ]);
+  });
+
+  it('blocks confirming a third booking in the same week', async () => {
+    const {
+      service,
+      prismaMock,
+      providersServiceMock,
+    } = createServiceWithMocks();
+    const booking = {
+      id: 'booking-id',
+      clientId: 'client-id',
+      providerId: 'provider-id',
+      scheduledDate: new Date('2025-08-03'),
+      scheduledTime: '10:00',
+      status: BookingStatus.PENDING,
+      client: { userId: 'client-user' },
+      provider: { id: 'provider-id', userId: 'provider-user' },
+    } as unknown as BookingWithDetailsRelations;
+
+    (prismaMock.booking.findUnique as jest.Mock).mockResolvedValueOnce(booking);
+    (prismaMock.booking.count as jest.Mock).mockResolvedValue(2);
+    providersServiceMock.findByUserId = jest.fn().mockResolvedValue({
+      id: 'provider-id',
+    });
+
+    const request = {
+      user: { role: UserRole.PROVIDER, userId: 'provider-user' },
+      locale: 'pt-BR',
+    } as Request;
+
+    await expect(
+      service.updateStatus('booking-id', BookingStatus.CONFIRMED, UserRole.PROVIDER, request),
+    ).rejects.toBeInstanceOf(BusinessRuleError);
   });
 });
 
