@@ -12,6 +12,7 @@ import { AuthService } from './auth.service';
 import { RegisterClientDto } from './dto/register-client.dto';
 import { RegisterProviderDto } from './dto/register-provider.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordConfirmDto } from './dto/reset-password-confirm.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -155,6 +156,31 @@ export class AuthController {
     return {
       message:
         'Se um usuário com este email existir, um link de redefinição de senha será enviado.',
+    };
+  }
+
+  @Post('password/reset/confirm')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60 } })
+  @ApiOperation({ summary: 'Confirmação de redefinição de senha' })
+  @ApiResponse({
+    status: 200,
+    description: 'Senha redefinida com sucesso.',
+    type: MessageResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Token inválido ou expirado.' })
+  async confirmPasswordReset(
+    @Body() resetPasswordDto: ResetPasswordConfirmDto,
+  ): Promise<MessageResponseDto> {
+    this.logger.log(
+      `[AuthController] confirmPasswordReset request for token=masked`,
+    );
+    await this.authService.confirmPasswordReset(
+      resetPasswordDto.token,
+      resetPasswordDto.newPassword,
+    );
+    return {
+      message: 'Senha redefinida com sucesso.',
     };
   }
 }
