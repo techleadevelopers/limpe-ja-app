@@ -4,7 +4,6 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ProviderDisplayInfo } from '../types/backend/providers';
-import { PricingType } from '../types/backend/services';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -72,28 +71,8 @@ const CategoryProviderCard: React.FC<CategoryProviderCardProps> = ({ item, onPre
             return 'Consultar';
         }
 
-        let priceValue;
-        let priceUnit = '';
-
-        const rawPrice = primaryService.price;
-        const price = (typeof rawPrice === 'number') ? rawPrice : (rawPrice as any)?.toNumber?.() ?? 0;
-
-        switch (primaryService.pricingType) {
-            case PricingType.HOURLY:
-                priceValue = price;
-                priceUnit = '/h';
-                break;
-            case PricingType.BY_SIZE:
-                priceValue = primaryService.pricePerSquareMeter;
-                priceUnit = '/m²';
-                break;
-            case PricingType.FIXED_PRICE:
-            case PricingType.CUSTOM_QUOTE:
-            default:
-                priceValue = price;
-                priceUnit = '';
-                break;
-        }
+        const priceValue = primaryService.pricePerHour ?? 0;
+        const priceUnit = '/h';
 
         return priceValue !== undefined && priceValue !== null && priceValue > 0
             ? `R$ ${priceValue.toFixed(2).replace('.', ',')}${priceUnit}`
