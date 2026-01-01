@@ -1450,7 +1450,7 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     padding: Spacing.md,
-    paddingTop: 0,
+    paddingTop:  0,
     paddingBottom: Spacing.xl,
   },
   qaPanelButton: {
