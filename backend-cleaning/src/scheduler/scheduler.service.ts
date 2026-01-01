@@ -283,7 +283,16 @@ export class SchedulerService implements OnModuleInit {
         where: { status: NotificationScheduleStatus.PENDING },
         orderBy: { runAt: 'asc' },
       });
-      pending.forEach((record) => this.scheduleTimer(record));
+      for (const record of pending) {
+        const runAt = this.toDateOrNull(record.runAt);
+        if (!runAt) {
+          this.logger.debug(
+            `[SchedulerService] Schedule ${record.id} sem runAt válido; ignorando reidratação.`,
+          );
+          continue;
+        }
+        this.scheduleTimer({ ...record, runAt } as NotificationSchedule);
+      }
     } catch (error) {
       this.logger.error(
         `[SchedulerService] Falha ao reidratar schedules pendentes: ${error}`,
@@ -411,5 +420,13 @@ export class SchedulerService implements OnModuleInit {
       );
       return key;
     }
+  }
+
+  private toDateOrNull(value: unknown): Date | null {
+    if (!value) {
+      return null;
+    }
+    const date = value instanceof Date ? value : new Date(value as string);
+    return Number.isFinite(date.getTime()) ? date : null;
   }
 }
