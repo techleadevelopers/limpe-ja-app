@@ -262,6 +262,8 @@
       "be_the_first_review": "Seja o primeiro a deixar uma!",
       "add_review": "Adicionar Avaliação",
       "price_not_available": "Preço não disponível",
+      "price_review": "Preço em revisão",
+      "minimum_hours": "Mínimo 4h",
       "reviews_count": "({{count}} avaliações)",
       "provider_name_title": "Nome do Provedor",
       "location_label": "Localização",
