@@ -34,7 +34,6 @@ import {
   InsurancePlanId,
 } from '../../../types/backend/bookings';
 import { ProviderAvailability, ProviderDisplayInfo, ProviderServiceOffering } from '../../../types/backend/providers';
-import { PricingType } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
 import { VerificationStatus } from '../../../types/backend/auth';
 import { formatBRL } from '../../../utils/formatters';
@@ -66,6 +65,9 @@ const toMinutes = (time: string) => {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
 };
+
+const isHourlyService = (service?: ProviderServiceOffering | null | undefined) =>
+  Boolean(service && service.pricePerHour > 0 && !service.needsReview);
 
 const SafetyReminderBanner = () => (
   <View style={styles.safetyBannerContainer}>
@@ -175,13 +177,9 @@ const BookingSummaryPreview = ({
   const serviceDetailsText = useMemo(() => {
     if (!selectedProviderService) return t('common.na', { defaultValue: 'N/A' });
 
-    if (selectedProviderService.pricingType === PricingType.HOURLY && durationInMinutes) {
-      const hours = durationInMinutes / 60;
+    if (isHourlyService(selectedProviderService) && durationInMinutes) {
+      const hours = (durationInMinutes ?? 0) / 60;
       return `${t('schedule_service.summary_hours', { defaultValue: 'Horas' })}: ${hours}h`;
-    }
-
-    if (selectedProviderService.pricingType === PricingType.BY_SIZE && squareMeters) {
-      return `${squareMeters} m²`;
     }
 
     return t('common.na', { defaultValue: 'N/A' });
@@ -438,8 +436,7 @@ const BookingSummaryPreview = ({
           </Text>
         </View>
 
-        {(selectedProviderService.pricingType === PricingType.HOURLY ||
-          selectedProviderService.pricingType === PricingType.BY_SIZE) && (
+        {isHourlyService(selectedProviderService) && (
           <View style={styles.summaryItem}>
             <Animated.View style={animatedIconStyle}>
               <Ionicons name="timer-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
@@ -563,7 +560,7 @@ export default function ScheduleServiceScreen() {
   const [minHourlyMinutes, setMinHourlyMinutes] = useState(DEFAULT_MIN_HOURLY_MINUTES);
 
   useEffect(() => {
-    if (!selectedProviderService || selectedProviderService.pricingType !== PricingType.HOURLY) return;
+    if (!selectedProviderService || !isHourlyService(selectedProviderService)) return;
 
     if (!selectedSlots || selectedSlots.length === 0) {
       setSelectedTime(null);
@@ -607,6 +604,10 @@ export default function ScheduleServiceScreen() {
   const shineAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.3)).current;
 
   const [displaySlotsInfo, setDisplaySlotsInfo] = useState<{ time: string; isAvailable: boolean }[]>([]);
+
+  const providerNeedsApproval =
+    provider?.verificationStatus !== undefined &&
+    provider.verificationStatus !== VerificationStatus.APPROVED;
 
   const slotStepMinutes = useMemo(() => {
     const times = displaySlotsInfo
@@ -658,7 +659,7 @@ export default function ScheduleServiceScreen() {
   const isMounted = useRef(true);
 
   const effectiveDurationInMinutes = useMemo(() => {
-    if (selectedProviderService?.pricingType === PricingType.HOURLY) {
+    if (isHourlyService(selectedProviderService)) {
       const billableHours =
         selectedSlots.length > 0
           ? Math.max(selectedSlots.length, minHourlySlots)
@@ -668,7 +669,7 @@ export default function ScheduleServiceScreen() {
     }
 
     return durationInMinutes;
-  }, [selectedProviderService?.pricingType, selectedSlots.length, durationInMinutes]);
+  }, [selectedProviderService, selectedSlots.length, durationInMinutes, minHourlySlots]);
 
   const scheduledDateKey = useMemo(
     () => selectedDate?.toISOString().split('T')[0] ?? null,
@@ -688,8 +689,19 @@ export default function ScheduleServiceScreen() {
     insurancePlanId,
   });
 
+  const resolvedServicePrice = useMemo(() => {
+    if (selectedProviderService?.pricePerHour != null && selectedProviderService.pricePerHour > 0) {
+      return selectedProviderService.pricePerHour;
+    }
+    if (paramServicePrice) {
+      const parsed = Number(paramServicePrice);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+    }
+    return undefined;
+  }, [selectedProviderService?.pricePerHour, paramServicePrice]);
+
   const fallbackFinalPrice =
-    resolvedServicePrice ?? (selectedProviderService?.price ?? 0);
+    resolvedServicePrice ?? (selectedProviderService?.pricePerHour ?? 0);
   const displaySubtotal = quote?.subtotal ?? fallbackFinalPrice;
   const displayDiscount = quote?.discountAmount ?? 0;
   const insuranceFeeCents = quote?.insuranceFeeCents ?? 0;
@@ -718,35 +730,24 @@ export default function ScheduleServiceScreen() {
   });
 
   const totalHours = useMemo(() => {
-    if (selectedProviderService?.pricingType !== PricingType.HOURLY) return null;
+    if (!isHourlyService(selectedProviderService)) return null;
 
     const selectedHours = selectedSlots.length;
     if (selectedHours <= 0) return null;
 
     return Math.max(selectedHours, minHourlySlots);
-  }, [selectedProviderService?.pricingType, selectedSlots.length]);
+  }, [selectedProviderService, selectedSlots.length, minHourlySlots]);
 
   const hourlyBasePrice = useMemo(() => {
-    return selectedProviderService?.price ?? (paramServicePrice ? Number(paramServicePrice) : 0);
-  }, [selectedProviderService?.price, paramServicePrice]);
-
-  const resolvedServicePrice = useMemo(() => {
-    if (selectedProviderService?.price != null && selectedProviderService?.price > 0) {
-      return selectedProviderService.price;
-    }
-    if (paramServicePrice) {
-      const parsed = Number(paramServicePrice);
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-    }
-    return undefined;
-  }, [selectedProviderService?.price, paramServicePrice]);
+    return selectedProviderService?.pricePerHour ?? (paramServicePrice ? Number(paramServicePrice) : 0);
+  }, [selectedProviderService?.pricePerHour, paramServicePrice]);
 
   const hourlyTotalPrice = useMemo(() => {
-    if (selectedProviderService?.pricingType === PricingType.HOURLY && totalHours && totalHours > 0) {
+    if (isHourlyService(selectedProviderService) && totalHours && totalHours > 0) {
       return hourlyBasePrice * totalHours;
     }
     return null;
-  }, [selectedProviderService?.pricingType, hourlyBasePrice, totalHours]);
+  }, [selectedProviderService, hourlyBasePrice, totalHours]);
 
   const priceChangeAnim = useRef(new Animated.Value(0)).current;
   const lastFinalPriceRef = useRef<number>(finalCalculatedPrice);
@@ -782,19 +783,15 @@ export default function ScheduleServiceScreen() {
   const timeSelectionSummaryLabel = useMemo(() => {
     if (!selectedProviderService) return null;
 
-    if (selectedProviderService.pricingType === PricingType.HOURLY && selectedSlots.length > 0) {
+    if (isHourlyService(selectedProviderService) && selectedSlots.length > 0) {
       const hours = selectedSlots.length;
       const hoursLabel = hours === 1 ? 'hora selecionada' : 'horas selecionadas';
       const price = finalCalculatedPrice > 0 ? finalCalculatedPrice : hourlyTotalPrice ?? finalCalculatedPrice;
       return `${hours} ${hoursLabel} · Total estimado: ${formatBRL(price)}`;
     }
 
-    if (selectedProviderService.pricingType === PricingType.BY_SIZE && squareMeters && finalCalculatedPrice > 0) {
-      return `${squareMeters} m² · Total estimado: ${formatBRL(finalCalculatedPrice)}`;
-    }
-
     return null;
-  }, [selectedProviderService, selectedSlots.length, squareMeters, finalCalculatedPrice, hourlyTotalPrice]);
+  }, [selectedProviderService, selectedSlots.length, finalCalculatedPrice, hourlyTotalPrice]);
 
   const prefetchAvailability = useCallback(async (provId: string | undefined, baseDate: Date) => {
     if (!provId) return;
@@ -959,7 +956,7 @@ export default function ScheduleServiceScreen() {
   }, [fadeAnim, slideUpAnim, scaleAnim, pulseAnim, rotateAnim, backgroundFloatAnim, headerGlowAnim, calendarBreatheAnim]);
 
   useEffect(() => {
-    if (currentStep !== 2 || selectedProviderService?.pricingType !== PricingType.HOURLY || selectedSlots.length === 0) {
+    if (currentStep !== 2 || !isHourlyService(selectedProviderService) || selectedSlots.length === 0) {
       slotBadgePulse.stopAnimation();
       return;
     }
@@ -985,7 +982,7 @@ export default function ScheduleServiceScreen() {
 
     loop.start();
     return () => loop.stop();
-  }, [currentStep, selectedProviderService?.pricingType, selectedSlots.length, slotBadgePulse]);
+  }, [currentStep, selectedProviderService, selectedSlots.length, slotBadgePulse]);
 
   useEffect(() => {
     if (selectedSlots.length === 0) {
@@ -1179,7 +1176,7 @@ export default function ScheduleServiceScreen() {
         return result.sort((a, b) => toMinutes(a) - toMinutes(b));
       };
 
-      if (selectedProviderService?.pricingType === PricingType.HOURLY) {
+      if (isHourlyService(selectedProviderService)) {
         setSelectedSlots(() => {
           const next = expandToMinSlots(time);
 
@@ -1324,7 +1321,7 @@ export default function ScheduleServiceScreen() {
     }
 
     if (
-      selectedProviderService?.pricingType === PricingType.HOURLY &&
+      isHourlyService(selectedProviderService) &&
       (effectiveDurationInMinutes === null || effectiveDurationInMinutes === undefined || effectiveDurationInMinutes <= 0)
     ) {
       NotificationUIService.showError(
@@ -1334,27 +1331,13 @@ export default function ScheduleServiceScreen() {
       return;
     }
 
-    if (
-      selectedProviderService?.pricingType === PricingType.BY_SIZE &&
-      (squareMeters === null || squareMeters === undefined || squareMeters <= 0)
-    ) {
-      NotificationUIService.showError(
-        t('schedule_service.booking_error_duration_size', { field: t('common.area', { defaultValue: 'área' }) }),
-        t('schedule_service.booking_error_title', { defaultValue: 'Erro no Agendamento' }),
-      );
-      return;
-    }
-
     let requestedDurationMinutes = 0;
-    let requestedSquareMeters = 0;
 
     if (isMounted.current) setIsBooking(true);
 
     try {
-      if (selectedProviderService.pricingType === PricingType.HOURLY) {
-        requestedDurationMinutes = effectiveDurationInMinutes!;
-      } else if (selectedProviderService.pricingType === PricingType.BY_SIZE) {
-        requestedSquareMeters = squareMeters!;
+      if (isHourlyService(selectedProviderService)) {
+        requestedDurationMinutes = effectiveDurationInMinutes ?? 0;
       }
 
       const safeSelectedDate = selectedDate ?? new Date();
@@ -1371,8 +1354,7 @@ export default function ScheduleServiceScreen() {
           latitude: address.latitude ?? 0,
           longitude: address.longitude ?? 0,
         },
-        ...(selectedProviderService.pricingType === PricingType.HOURLY && { requestedDurationMinutes }),
-        ...(selectedProviderService.pricingType === PricingType.BY_SIZE && { requestedSquareMeters }),
+        requestedDurationMinutes,
         couponCode: quote?.couponApplied ? couponCode : undefined,
         quoteId: quote?.quoteId,
         quoteHash: quote?.quoteHash,
@@ -1481,17 +1463,17 @@ export default function ScheduleServiceScreen() {
           (ps) => ps.id === paramServiceId && ps.service && ps.service.id && ps.service.name,
         );
 
-        if (foundService && foundService.pricingType !== PricingType.HOURLY) {
+        if (foundService && !isHourlyService(foundService)) {
           const targetServiceId = foundService.service?.id;
 
           const hourlyAlternative =
             fetchedProvider.providerServices?.find(
               (ps) =>
-                ps.pricingType === PricingType.HOURLY &&
+                isHourlyService(ps) &&
                 ps.service &&
                 targetServiceId &&
                 ps.service.id === targetServiceId,
-            ) || fetchedProvider.providerServices?.find((ps) => ps.pricingType === PricingType.HOURLY);
+            ) || fetchedProvider.providerServices?.find((ps) => isHourlyService(ps));
 
           if (hourlyAlternative) foundService = hourlyAlternative;
         }
@@ -1510,15 +1492,11 @@ export default function ScheduleServiceScreen() {
 
         if (isMounted.current) setSelectedProviderService(foundService);
 
-        if (foundService.pricingType === PricingType.HOURLY) {
-          const defaultDuration =
-            typeof foundService.durationMinutes === 'number' && foundService.durationMinutes > 0
-              ? foundService.durationMinutes
-              : 120;
-          if (isMounted.current) setDurationInMinutes(defaultDuration);
-        } else if (foundService.pricingType === PricingType.BY_SIZE) {
-          if (isMounted.current) setSquareMeters(50);
-        }
+        const defaultDuration =
+          typeof foundService.durationMinutes === 'number' && foundService.durationMinutes > 0
+            ? foundService.durationMinutes
+            : 120;
+        if (isMounted.current) setDurationInMinutes(defaultDuration);
 
         const userAddress = typedUser?.clientDetails?.address || typedUser?.providerDetails?.address;
 
@@ -1840,8 +1818,7 @@ export default function ScheduleServiceScreen() {
 
   const isNextButtonDisabled = useMemo(() => {
     if (currentStep === 1) {
-      const needMinSlots =
-        selectedProviderService?.pricingType === PricingType.HOURLY && selectedSlots.length < minHourlySlots;
+      const needMinSlots = isHourlyService(selectedProviderService) && selectedSlots.length < minHourlySlots;
 
       return (
         selectedSlots.length === 0 ||
@@ -1854,11 +1831,7 @@ export default function ScheduleServiceScreen() {
       );
     }
     return false;
-  }, [currentStep, selectedSlots, address, selectedProviderService?.pricingType]);
-
-  const providerNeedsApproval =
-    provider?.verificationStatus !== undefined &&
-    provider.verificationStatus !== VerificationStatus.APPROVED;
+  }, [currentStep, selectedSlots, address, selectedProviderService, minHourlySlots]);
 
   const isConfirmButtonDisabled = useMemo(() => {
     if (!selectedProviderService) return true;
@@ -1872,23 +1845,25 @@ export default function ScheduleServiceScreen() {
       !address.state ||
       isBooking;
 
-    if (selectedProviderService.pricingType === PricingType.HOURLY) {
-      return baseDisabled || selectedSlots.length < minHourlySlots || !durationInMinutes || durationInMinutes <= 0;
+    if (!isHourlyService(selectedProviderService)) {
+      return baseDisabled || providerNeedsApproval;
     }
 
-    if (selectedProviderService.pricingType === PricingType.BY_SIZE) {
-      return baseDisabled || !squareMeters || squareMeters <= 0;
-    }
-
-    return baseDisabled || providerNeedsApproval;
-  }, [selectedSlots, address, selectedProviderService, durationInMinutes, squareMeters, isBooking, providerNeedsApproval]);
+    return (
+      baseDisabled ||
+      selectedSlots.length < minHourlySlots ||
+      !durationInMinutes ||
+      durationInMinutes <= 0 ||
+      providerNeedsApproval
+    );
+  }, [selectedSlots, address, selectedProviderService, durationInMinutes, isBooking, providerNeedsApproval, minHourlySlots]);
 
   const selectedHoursLabel = useMemo(() => {
-    if (selectedProviderService?.pricingType === PricingType.HOURLY && totalHours && totalHours > 0) {
+    if (isHourlyService(selectedProviderService) && totalHours && totalHours > 0) {
       return `${totalHours} ${totalHours === 1 ? 'hora' : 'horas'}`;
     }
     return null;
-  }, [selectedProviderService?.pricingType, totalHours]);
+  }, [selectedProviderService, totalHours]);
 
   const selectedSlotRange = useMemo(() => {
     if (!selectedTime) {
@@ -1907,14 +1882,14 @@ export default function ScheduleServiceScreen() {
       label: `${formatHourLabel(startMinutes)} – ${formatHourLabel(endMinutes)}`,
       hours: Math.max(minHourlyMinutes / 60, 1),
     };
-  }, [selectedTime, selectedProviderService?.pricingType]);
+  }, [selectedTime, minHourlyMinutes]);
 
   const hourlyBlockHours = useMemo<number>(() => {
-    if (selectedProviderService?.pricingType !== PricingType.HOURLY || selectedSlots.length === 0) {
+    if (!isHourlyService(selectedProviderService) || selectedSlots.length === 0) {
       return 0;
     }
     return Math.max(selectedSlots.length, minHourlySlots);
-  }, [selectedProviderService?.pricingType, selectedSlots.length]);
+  }, [selectedProviderService, selectedSlots.length, minHourlySlots]);
 
   const hourlyBlockPrice = useMemo(() => {
     if (hourlyBlockHours <= 0) return null;
@@ -1934,7 +1909,7 @@ export default function ScheduleServiceScreen() {
   );
 
   const confirmButtonText = useMemo(() => {
-    const isHourly = selectedProviderService?.pricingType === PricingType.HOURLY;
+    const isHourly = isHourlyService(selectedProviderService);
 
     if (isHourly && hourlyBlockHours && hourlyBlockPrice !== null) {
       const displayPrice =
@@ -1950,10 +1925,10 @@ export default function ScheduleServiceScreen() {
     }
 
     return t('schedule_service.select_date_time_address', { defaultValue: 'Selecione Data, Hora e Endereco' });
-  }, [selectedProviderService?.pricingType, finalCalculatedPrice, hourlyBlockHours, hourlyBlockPrice, t]);
+  }, [selectedProviderService, finalCalculatedPrice, hourlyBlockHours, hourlyBlockPrice, t]);
 
   const slotBadgeVisible =
-    currentStep === 1 && selectedProviderService?.pricingType === PricingType.HOURLY && selectedSlots.length > 0;
+    currentStep === 1 && isHourlyService(selectedProviderService) && selectedSlots.length > 0;
 
   const slotBadgeLabel = `${selectedSlots.length}h`;
 
@@ -2159,10 +2134,10 @@ export default function ScheduleServiceScreen() {
             >
               <Text style={styles.nextStepButtonText}>
                 {(() => {
-                  const isHourly = selectedProviderService?.pricingType === PricingType.HOURLY;
+                  const isHourly = isHourlyService(selectedProviderService);
                   const effectiveHours = isHourly ? hourlyBlockHours : 0;
                   const basePrice =
-                    selectedProviderService?.price ??
+                    selectedProviderService?.pricePerHour ??
                     (paramServicePrice ? Number(paramServicePrice) : 0);
 
                   const priceForDisplay =
