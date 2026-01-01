@@ -1,29 +1,21 @@
 // LimpeJaApp/src/types/backend/provider-service.ts
 
-import { Service, PricingType } from './services'; // Import PricingType and Service
+import { Service } from './services';
 
 /**
- * @interface ProviderServiceDetails
- * Representa os detalhes de um serviço específico oferecido por um provedor.
- * Esta é a versão detalhada para uso em resultados de busca ou exibição.
+ * Representa os detalhes de um serviÍo oferecido por um provedor.
+ * Agora o contrato centraliza o preço por hora e marca quando o registro precisa de revisão manual.
  */
 export interface ProviderServiceDetails {
   id: string;
   providerId: string;
   serviceId: string;
-  price: number; // CORREÇÃO: Decimal no Prisma é number aqui
+  price?: number;
+  pricePerHour: number;
   durationMinutes?: number | null;
   description?: string | null;
-  pricingType: PricingType;
-  pricePerSquareMeter?: number | null; // CORREÇÃO: Decimal no Prisma é number aqui
-  pricePerRoom?: number | null; // CORREÇÃO: Decimal no Prisma é number aqui
-  service: Service; // Details about the service category
+  needsReview: boolean;
+  service: Service;
 }
 
-/**
- * @interface ProviderServiceOffering
- * Representa um serviço específico oferecido por um provedor, incluindo detalhes do tipo de serviço.
- * Mantido para compatibilidade, mas ProviderServiceDetails é mais completo.
- * Pode ser um alias para ProviderServiceDetails se forem idênticos.
- */
 export type ProviderServiceOffering = ProviderServiceDetails;
