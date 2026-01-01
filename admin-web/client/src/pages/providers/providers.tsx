@@ -114,13 +114,20 @@ export default function Providers() {
     return filteredProviders.slice(start, start + pageSize);
   }, [filteredProviders, currentPage]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+  const showingStart = paginatedProviders.length ? (currentPage - 1) * pageSize + 1 : 0;
+  const showingEnd = paginatedProviders.length ? showingStart + paginatedProviders.length - 1 : 0;
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter]);
+
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+  };
 
   const handleProviderClick = (provider: Provider) => {
     setSelectedProvider(provider);
@@ -225,9 +232,9 @@ export default function Providers() {
             <div className="text-center py-12 text-red-600">
               <p>Erro ao carregar provedores: {error?.message}</p>
             </div>
-          ) : paginatedProviders.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedProviders.map((provider: Provider, index: number) => (
+            ) : paginatedProviders.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedProviders.map((provider: Provider, index: number) => (
                 <motion.div
                   key={provider.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -306,14 +313,40 @@ export default function Providers() {
                   </Card>
                 </motion.div>
               ))}
-            </div>
+              </div>
           ) : (
             <div className="text-center py-12">
-              <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum provedor encontrado</h3>
-              <p className="text-gray-500">
-                {searchTerm ? `Nenhum provedor corresponde a "${searchTerm}"` : "Nenhum provedor registrado ainda."}
+            <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum provedor encontrado</h3>
+            <p className="text-gray-500">
+              {searchTerm ? `Nenhum provedor corresponde a "${searchTerm}"` : "Nenhum provedor registrado ainda."}
+            </p>
+          </div>
+        )}
+
+          {!isLoading && filteredProviders.length > 0 && totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between text-gray-600">
+              <p className="text-sm">
+                Mostrando {showingStart}–{showingEnd} de {filteredProviders.length} provedores
               </p>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  className="rounded-full px-4 py-2 text-sm"
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  className="rounded-full px-4 py-2 text-sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  Próximo
+                </Button>
+              </div>
             </div>
           )}
 
