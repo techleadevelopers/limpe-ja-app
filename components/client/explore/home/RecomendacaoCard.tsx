@@ -44,6 +44,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   const router = useRouter();
   const { t } = useTranslation();
   const androidShrinkStyle = Platform.OS === 'android' ? { transform: [{ scale: ANDROID_SHRINK_SCALE }] } : undefined;
+  const shouldShowReflection = Platform.OS !== 'android';
 
   if (!item || !item.id || !item.fullName) {
     return null;
@@ -296,24 +297,11 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     : require('../../../../assets/images/default-avatar.png');
 
   // --- Lógica para determinar o serviço principal a ser exibido como "A partir de" ---
-  let mainServiceForDisplay: ProviderServiceOffering | undefined = undefined;
-  let lowestFixedPrice: number | null = null;
-
-  if (item.providerServices && item.providerServices.length > 0) {
-    item.providerServices.forEach(service => {
-      if (service.pricingType === PricingType.FIXED_PRICE) {
-        const currentPrice = getNumericPriceValue(service);
-        if (currentPrice > 0 && (lowestFixedPrice === null || currentPrice < lowestFixedPrice)) {
-          lowestFixedPrice = currentPrice;
-          mainServiceForDisplay = service;
-        }
-      }
-    });
-
-    if (!mainServiceForDisplay) {
-      mainServiceForDisplay = item.providerServices[0];
-    }
-  }
+  const availableServices = (item.providerServices || []).filter(
+    service => !service.needsReview && getNumericPriceValue(service) > 0
+  );
+  let mainServiceForDisplay: ProviderServiceOffering | undefined =
+    availableServices[0] || item.providerServices?.[0];
 
   // Formata a string do preço principal a ser exibida usando o helper
   const mainDisplayedPrice = mainServiceForDisplay
@@ -323,29 +311,19 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   // Obtém o valor numérico do preço principal para comparações futuras
   const numericMainPrice = mainServiceForDisplay ? getNumericPriceValue(mainServiceForDisplay) : null;
 
-  // --- Calcula menor preço por hora entre todos os serviços ---
-  let minHourlyPrice: number | null = null;
-  if (item.providerServices && item.providerServices.length > 0) {
-    item.providerServices.forEach(service => {
-      if (service.pricingType === PricingType.HOURLY) {
-        const hourlyPrice = getNumericPriceValue(service);
-        if (hourlyPrice > 0) {
-          if (minHourlyPrice === null || hourlyPrice < minHourlyPrice) {
-            minHourlyPrice = hourlyPrice;
-          }
-        }
-      }
-    });
-  }
+  const minHourlyPrice = availableServices.reduce<number | null>((prev, service) => {
+    const hourlyPrice = getNumericPriceValue(service);
+    if (hourlyPrice <= 0) return prev;
+    if (prev === null || hourlyPrice < prev) {
+      return hourlyPrice;
+    }
+    return prev;
+  }, null);
 
-  const mainPriceIsExplicitlyHourly = mainServiceForDisplay?.pricingType === PricingType.HOURLY;
+  const shouldShowMinHourlyPrice =
+    minHourlyPrice !== null && numericMainPrice !== null && minHourlyPrice < numericMainPrice;
 
-  const shouldShowMinHourlyPrice = typeof minHourlyPrice === 'number' && minHourlyPrice > 0 && (
-    !mainPriceIsExplicitlyHourly ||
-    (mainPriceIsExplicitlyHourly && numericMainPrice !== null && minHourlyPrice < numericMainPrice)
-  );
-
-  // Ref para armazenar o número aleatório de avaliações, estável por prestador
+// Ref para armazenar o número aleatório de avaliações, estável por prestador
   const stableRandomReviewCountRef = useRef<number | null>(null);
 
   // --- INÍCIO DA MODIFICAÇÃO PARA O NÚMERO DE AVALIAÇÕES ---
@@ -715,13 +693,15 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                 <Text style={styles.priceLabel} allowFontScaling={false}>{t('pricing.from', { defaultValue: '(Preço por hora)' })}</Text>
                 <View style={styles.priceBadge} onLayout={(e) => setPriceBadgeWidth(e.nativeEvent.layout.width)}>
                   {/* Reflexo animado sutil sobre o preço */}
-                  <AnimatedPriceReflection
-                    pointerEvents="none"
-                    colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[styles.priceReflectionStripe, priceReflectionStyle]}
-                  />
+                  {shouldShowReflection && (
+                    <AnimatedPriceReflection
+                      pointerEvents="none"
+                      colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.priceReflectionStripe, priceReflectionStyle]}
+                    />
+                  )}
                   {(() => {
                     const priceText =
                       typeof mainDisplayedPrice === 'string'
@@ -1201,7 +1181,7 @@ right: Platform.OS === 'android' ? 5 : 0,
   priceReflectionStripe: {
     position: 'absolute',
     top: 0,
-    bottom: 0,
+    bottom: Platform.OS === 'android' ? 110 : 0,
     left: -220, // começa fora à esquerda para o sweep
     width: 40,
     borderRadius: 8,
