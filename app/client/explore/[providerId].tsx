@@ -30,7 +30,6 @@ import SideIcon from '../../../components/client/explore/provider/SideIcon';
 import { VerificationStatus } from '../../../types/backend/auth';
 import { ProviderServiceOffering } from '../../../types/backend/provider-service';
 import { Offer, ProviderDisplayInfo, ProviderReview } from '../../../types/backend/providers';
-import { PricingType } from '../../../types/backend/services';
 
 import { AppColors } from '../../../constants/appStyles';
 import { Icons3D } from '../../../constants/icons3d';
@@ -41,6 +40,15 @@ import { styles } from '../../../styles/providerStyles';
 import { formatDistance } from '../../../utils/formatters';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const MINIMUM_HOURLY_MINUTES = 240;
+const MINIMUM_BILLABLE_HOURS = 4;
+
+const formatBRL = (value: number) => `R$ ${value.toFixed(2).replace('.', ',')}`;
+const computeBillableHours = (durationMinutes?: number) =>
+  Math.max(
+    MINIMUM_BILLABLE_HOURS,
+    Math.ceil((durationMinutes ?? MINIMUM_HOURLY_MINUTES) / 60),
+  );
 
 // Type local para PromiseRejectedResult (evita erros TS sem import global)
 type PromiseRejectedResult = {
@@ -658,50 +666,22 @@ if (isAuthenticated && user?.id) {
     }).start();
   };
 
-  const formatPriceDisplay = (service: ProviderServiceOffering) => {
-    let priceValue;
-    let priceUnit = '';
+  const isServiceAvailable = (service?: ProviderServiceOffering) =>
+    Boolean(service && service.pricePerHour > 0 && !service.needsReview);
 
-    const rawPrice = service.price;
-    const price = (typeof rawPrice === 'number')
-      ? rawPrice
-      : (rawPrice as any)?.toNumber?.() ?? 0;
-
-      switch (service.pricingType) {
-        case PricingType.HOURLY:
-          priceValue = price;
-          // Exibir explicitamente "/h" ao lado do preço para serviços por hora
-          priceUnit = '/h';
-          break;
-      case PricingType.BY_SIZE:
-        const sqmPrice = service.pricePerSquareMeter ?? 0;
-        priceValue = (typeof sqmPrice === 'number')
-          ? sqmPrice
-          : (sqmPrice as any)?.toNumber?.() ?? 0;
-        priceUnit = t('common.per_sqm_short');
-        break;
-      case PricingType.FIXED_PRICE:
-      case PricingType.CUSTOM_QUOTE:
-      default:
-        priceValue = price;
-        priceUnit = '';
-        break;
+  const formatPriceDisplay = (service?: ProviderServiceOffering) => {
+    if (!service) {
+      return t('provider_details.price_not_available', { defaultValue: 'Preço não disponível' });
     }
-
-      if (typeof priceValue !== 'number' || !Number.isFinite(priceValue) || priceValue <= 0) {
-        return t('provider_details.price_not_available');
-      }
-
-      const base = `R$ ${priceValue.toFixed(2).replace('.', ',')}`;
-
-      // Garantir que serviços por hora exibam sempre "/h" ao lado do preço,
-      // mesmo que por algum motivo o i18n não esteja sendo aplicado.
-      if (service.pricingType === PricingType.HOURLY) {
-        return `${base}/h`;
-      }
-
-      return `${base}${priceUnit}`;
-    };
+    if (service.needsReview) {
+      return t('provider_details.price_review', { defaultValue: 'Preço em revisão' });
+    }
+    const hourly = service.pricePerHour ?? 0;
+    if (hourly <= 0) {
+      return t('provider_details.price_not_available', { defaultValue: 'Preço não disponível' });
+    }
+    return `${formatBRL(hourly)}/h`;
+  };
 
   const handleViewAllReviews = () => {
     if (provider) {
@@ -791,19 +771,14 @@ if (isAuthenticated && user?.id) {
     );
   }
 
-  const firstProviderService =
-    provider.providerServices && provider.providerServices.length > 0
-      ? (
-          provider.providerServices.find(ps => ps.pricingType === PricingType.HOURLY)
-          ?? provider.providerServices[0]
-        )
-      : undefined;
-
-  const firstServicePrice = firstProviderService
-    ? formatPriceDisplay(firstProviderService).replace('/h', '').trim()
-    : t('provider_details.price_not_available');
-
-  const firstProviderServiceOfferingId = firstProviderService ? firstProviderService.id : undefined;
+  const bookableService = provider.providerServices?.find(isServiceAvailable);
+  const primaryService = bookableService ?? provider.providerServices?.[0];
+  const isPrimaryServiceValid = isServiceAvailable(primaryService);
+  const firstProviderServiceOfferingId = bookableService?.id;
+  const estimatedTotalPrice =
+    isPrimaryServiceValid && primaryService?.durationMinutes
+      ? formatBRL((primaryService.pricePerHour ?? 0) * computeBillableHours(primaryService.durationMinutes))
+      : null;
 
   return (
     <View style={styles.screenContainer}>
@@ -834,7 +809,7 @@ if (isAuthenticated && user?.id) {
           style={{
             flex: 1,
             textAlign: 'center',
-            fontSize: Platform.OS === 'ios' ? 17 : 16,
+            fontSize: Platform.OS === 'ios' ? 17 : 17,
             left: 4,
             top: Platform.OS === 'ios' ? 0 : 4,
             fontFamily: 'Montserrat-Regular',
@@ -978,6 +953,26 @@ if (isAuthenticated && user?.id) {
             })()}
 
             <View style={styles.priceBackgroundWrapper}>
+              <View style={styles.priceWrapper}>
+                <Text style={styles.priceValue}>{formatPriceDisplay(primaryService)}</Text>
+                {isPrimaryServiceValid ? (
+                  <>
+                    <Text style={styles.priceSubLabel}>{t('provider_details.minimum_hours', { defaultValue: 'Mínimo 4h' })}</Text>
+                    {estimatedTotalPrice && (
+                      <Text style={styles.priceUnit}>
+                        {`Total: ${estimatedTotalPrice} (4h mín.)`}
+                      </Text>
+                    )}
+                  </>
+                ) : (
+                  <Text style={styles.priceSubLabel}>
+                    {primaryService?.needsReview
+                      ? t('provider_details.price_review', { defaultValue: 'Preço em revisão' })
+                      : t('provider_details.price_not_available', { defaultValue: 'Preço não disponível' })}
+                  </Text>
+                )}
+              </View>
+              <Image source={Icons3D.facial} style={styles.priceFacialIconFloating} />
               <Animated.View
                 style={[
                   styles.infoChipsContainer,
@@ -997,22 +992,16 @@ if (isAuthenticated && user?.id) {
                 {provider.yearsOfExperience !== undefined && provider.yearsOfExperience !== null && (
                   <InfoChip
                     iconName="hourglass-outline"
+                    iconSize={16}
                     text={t('provider_details.years_experience', {
                       count: provider.yearsOfExperience,
                     })}
                   />
                 )}
                 {provider.verificationStatus === VerificationStatus.APPROVED && (
-                  <InfoChip iconName="shield-checkmark-outline" text={t('provider_details.verified')} />
+                  <InfoChip iconName="shield-checkmark-outline" iconSize={16} text={t('provider_details.verified')} />
                 )}
               </Animated.View>
-              <View style={styles.priceWrapper}>
-                <Text style={styles.priceValue}>{firstServicePrice}</Text>
-                <Text style={styles.priceSubLabel}>(Preço por Hora)</Text>
-              </View>
-              {firstProviderService?.pricingType === PricingType.HOURLY && (
-                <Text style={styles.priceUnit}>(Preço por hora)</Text>
-              )}
             </View>
           </View>
 
@@ -1202,18 +1191,44 @@ if (isAuthenticated && user?.id) {
           </View>
         </Animated.View>
       </ScrollView>
-      <BookServiceButton
-        providerId={provider.id}
-        serviceId={firstProviderServiceOfferingId}
-        router={guardedRouter}
-        bookNowButtonAnim={bookNowButtonAnim}
-        servicePrice={firstProviderService?.price}
-        sticky
-        safeBottomInset={Platform.OS === 'ios' ? insets.bottom : 35}
-        isAuthenticated={isAuthenticated}
-        requireAuthOrRedirect={requireAuthOrRedirect}
-        verificationStatus={provider.verificationStatus}
-      />
+      {bookableService ? (
+        <BookServiceButton
+          providerId={provider.id}
+          serviceId={bookableService.id}
+          router={guardedRouter}
+          bookNowButtonAnim={bookNowButtonAnim}
+          servicePrice={bookableService.pricePerHour}
+          sticky
+          safeBottomInset={Platform.OS === 'ios' ? insets.bottom : 35}
+          isAuthenticated={isAuthenticated}
+          requireAuthOrRedirect={requireAuthOrRedirect}
+          verificationStatus={provider.verificationStatus}
+        />
+      ) : (
+        <View style={localStyles.unavailableNotice}>
+          <Text style={localStyles.unavailableNoticeText}>
+            {primaryService?.needsReview
+              ? t('provider_details.price_review', { defaultValue: 'Preço em revisão' })
+              : t('provider_details.price_not_available', { defaultValue: 'Preço não disponível' })}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
+
+const localStyles = StyleSheet.create({
+  unavailableNotice: {
+    marginHorizontal: 24,
+    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: AppColors.border,
+    alignItems: 'center',
+  },
+  unavailableNoticeText: {
+    color: AppColors.danger,
+    fontWeight: '600',
+  },
+});
