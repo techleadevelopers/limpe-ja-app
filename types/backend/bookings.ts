@@ -74,7 +74,6 @@ export interface CreateBookingDto {
 }
 
 
-}
 
 /**
  * @interface BookingDetails
