@@ -1,193 +1,149 @@
-import React, { useRef, useState } from 'react';
-import {
-  Animated,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  ViewToken,
-} from 'react-native';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import type { ImageSourcePropType } from 'react-native';
 
-interface ServiceDetailsDto {
-  id: string;
-  name: string;
-  icon?: any;
-}
-
-interface CategoryCardProps {
-  item: ServiceDetailsDto;
-}
-
-type QuickAccessItem = {
-  id: string;
-  label: string;
-  icon: any;
-};
-
-const QUICK_ACCESS: QuickAccessItem[] = [
-  { id: 'obras', label: 'Obras', icon: require('../../../../assets/images/icons/obra.png') },
-  { id: 'casa', label: 'Casa', icon: require('../../../../assets/images/icons/residencial.png') },
-  { id: 'empresa', label: 'Empresa', icon: require('../../../../assets/images/icons/comercial.png') },
-  { id: 'vidros', label: 'Vidros', icon: require('../../../../assets/images/icons/vidro.png') },
-  { id: 'escritorio', label: 'Escritorio', icon: require('../../../../assets/images/icons/escritorio.png') },
-  { id: 'estofados', label: 'Estofados', icon: require('../../../../assets/images/icons/estofados.png') },
+const QUICK_ACTIONS: QuickAction[] = [
+  { id: 'coupons', title: 'Cupons', icon: require('../../../../assets/images/3d/ticket.png'), route: '/client/coupons' },
+  { id: 'missions', title: 'Missões', icon: require('../../../../assets/images/3d/missions8.png'), route: '/client/missions' },
+  { id: 'champions2', title: 'Ranking', icon: require('../../../../assets/images/3d/champp.png'), route: '/client/explore/ranking' },
+  { id: 'cashback', title: 'Cashback', icon: require('../../../../assets/images/3d/cashback3.png'), route: '/client/wallet/cashback' },
+  { id: 'referral', title: 'Indicações', icon: require('../../../../assets/images/3d/gift2.png'), route: '/client/referrals' },
+  { id: 'metrics', title: 'Métricas', icon: require('../../../../assets/images/3d/metrics.png'), route: '/client/metrics' },
+  { id: 'support', title: 'Suporte', icon: require('../../../../assets/images/3d/support4.png'), route: '/common/support' },
 ];
 
-const ITEM_WIDTH = 90;
-const CategoryCard2: React.FC<CategoryCardProps> = ({ item }) => {
-  if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') return null;
+interface QuickAction {
+  id: string;
+  title: string;
+  icon: ImageSourcePropType;
+  route: string;
+}
 
-  const flatRef = useRef<FlatList>(null);
-  const middleIndex = 1; // garante "Casa" no centro
-  const [activeIndex, setActiveIndex] = useState(middleIndex);
-
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems?.length > 0 && typeof viewableItems[0].index === 'number') {
-        setActiveIndex(viewableItems[0].index);
-      }
-    }
-  ).current;
-
-  const scrollLeft = () => {
-    if (activeIndex > 0) {
-      flatRef.current?.scrollToIndex({ index: activeIndex - 1, animated: true });
-    }
-  };
-
-  const scrollRight = () => {
-    if (activeIndex < QUICK_ACCESS.length - 1) {
-      flatRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
-    }
-  };
-
+const CategoryCard2: React.FC = () => {
   return (
-    <View style={styles.howItWorksTutorialContainer}>
-      <Text style={styles.howItWorksTitle} allowFontScaling={false}>
-        Categorias
-      </Text>
-
-      <View style={styles.carouselWrapper}>
-        <FlatList
-          ref={flatRef}
-          data={QUICK_ACCESS}
-          keyExtractor={(it) => it.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          snapToAlignment="center"
-          snapToInterval={ITEM_WIDTH}
-          decelerationRate="fast"
-          initialScrollIndex={middleIndex}
-          getItemLayout={(_, index) => ({
-            length: ITEM_WIDTH,
-            offset: ITEM_WIDTH * index,
-            index,
-          })}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={{ itemVisiblePercentThreshold: 55 }}
-          contentContainerStyle={styles.listWrapper}
-          renderItem={({ item: it, index }) => {
-            const isActive = index === activeIndex;
-            const iconSize = isActive ? 44 : 36;
-
-            return (
-              <Animated.View
-                style={[
-                  styles.howItWorksStep,
-                  {
-                    transform: [{ scale: isActive ? 1 : 0.9 }],
-                    opacity: isActive ? 1 : 0.55,
-                  },
-                ]}
-              >
-                <Image source={it.icon} style={[styles.howItWorksIcon, { width: iconSize, height: iconSize }]} />
-                <Text
-                  style={[
-                    styles.howItWorksStepLabel,
-                    isActive && styles.howItWorksStepLabelActive,
-                  ]}
-                  allowFontScaling={false}
-                >
-                  {it.label}
-                </Text>
-              </Animated.View>
-            );
-          }}
-        />
-      </View>
+    <View style={styles.listWrapper}>
+      {QUICK_ACTIONS.map((item) => (
+        <ActionCard key={item.id} item={item} />
+      ))}
     </View>
   );
 };
 
+const ActionCard: React.FC<{ item: QuickAction }> = ({ item }) => {
+  const router = useRouter();
+  const pressAnim = useRef(new Animated.Value(1)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [floatAnim]);
+
+  const handlePress = () => {
+    Animated.spring(pressAnim, { toValue: 0.97, useNativeDriver: true, friction: 6 }).start(() => {
+      Animated.spring(pressAnim, { toValue: 1, useNativeDriver: true, friction: 6 }).start();
+    });
+    router.push(item.route as any);
+  };
+
+  return (
+    <Animated.View style={[styles.cardContainerWrapper, { transform: [{ scale: pressAnim }] }]}>
+      <TouchableOpacity
+        onPress={handlePress}
+        style={styles.touchableSurface}
+        activeOpacity={0.9}
+      >
+        <BlurView intensity={Platform.OS === 'ios' ? 30 : 60} tint="light" style={StyleSheet.absoluteFillObject} />
+        <LinearGradient
+          colors={['#F1F2F2', '#F4F6F9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <LinearGradient colors={['rgba(146,210,241,0.45)', 'rgba(175,183,244,0.12)']} style={styles.contentOverlay}>
+          <Animated.Image
+            source={item.icon}
+            style={[
+              styles.iconImage,
+              {
+                transform: [
+                  { translateY: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) },
+                ],
+              },
+            ]}
+          />
+        </LinearGradient>
+      </TouchableOpacity>
+      <Text style={styles.categoriaTexto} numberOfLines={1}>
+        {item.title}
+      </Text>
+    </Animated.View>
+  );
+};
+
 const styles = StyleSheet.create({
-  howItWorksTutorialContainer: {
-    marginHorizontal: 11,
-    marginBottom: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 29,
-    borderRadius: 18,
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    ,
-  },
-  howItWorksTitle: {
-    fontSize: 16,
-    fontFamily: 'Montserrat-Regular',
-    fontWeight: '700',
-    color: AppColors.textTitle,
-    marginBottom: 14,
-    textAlign: 'center',
-  },
-  carouselWrapper: {
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
   listWrapper: {
-    paddingHorizontal: 6,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    gap: 10,
+    marginTop: 12,
+    paddingHorizontal: 10,
   },
- howItWorksStep: {
-    width: ITEM_WIDTH,
+  cardContainerWrapper: {
+    width: Platform.OS === 'android' ? 58 : 64,
+    height: Platform.OS === 'android' ? 110 : 120,
+    marginBottom: Platform.OS === 'android' ? -6 : -14,
     alignItems: 'center',
-    paddingVertical: 4,
-    right: -18,
     justifyContent: 'center',
   },
-  howItWorksIcon: {
-    marginBottom: 3,
+  touchableSurface: {
+    width: Platform.OS === 'android' ? 58 : 64,
+    height: Platform.OS === 'android' ? 58 : 64,
+    borderRadius: 45,
+    borderWidth: 0.3,
+    borderColor: '#bfd0f3',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contentOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  iconImage: {
+    width: 32,
+    height: 32,
     resizeMode: 'contain',
   },
-  howItWorksStepLabel: {
-    fontSize: 12,
-    color: AppColors.textBody,
-  },
-  howItWorksStepLabelActive: {
-    fontWeight: '700',
-    color: AppColors.textTitle,
-  },
-  arrow: {
-    position: 'absolute',
-    top: '22%',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(64,149,255,0.10)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  arrowLeft: {
-  },
-  arrowRight: {
-  },
-  arrowText: {
-    color: '#378AFF',
-    fontSize: 14,
-    fontWeight: '900',
+  categoriaTexto: {
+    fontSize: 11,
+    color: '#7890a5',
+    fontWeight: Platform.OS === 'android' ? '500' : '400',
+    textAlign: 'center',
+    marginTop: 6,
   },
 });
 
