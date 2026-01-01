@@ -104,6 +104,7 @@ const Spacing = {
   md: 18,
   lg: 24,
 };
+const px = (value: number) => Platform.OS === 'android' ? Math.max(value - 2, 0) : value;
 const easeOut = Easing.out(Easing.ease);
 
 // Locale PT-BR (Calendário)
@@ -811,13 +812,13 @@ export default function ManageAvailabilityScreen() {
     return generateTimeSlots(8, 18, 60);
   }, []);
 
-  const handleApplyPreset = useCallback((dayOfWeek: number, preset: PresetKey) => {
+  const handleApplyPreset = useCallback((dayOfWeek: number, preset: PresetKey, announcement?: string) => {
     setWeeklyAvailability(prev => prev.map(d => {
       if (d.dayOfWeek !== dayOfWeek) return d;
       const newSlots = applyPresetSlots(preset);
       return { ...d, isEnabled: true, selectedSlots: newSlots };
     }));
-    AccessibilityInfo.announceForAccessibility?.('Preset aplicado');
+    AccessibilityInfo.announceForAccessibility?.(announcement ?? 'Preset aplicado');
   }, [applyPresetSlots]);
 
   const handleResetDayToOriginal = useCallback((dayOfWeek: number) => {
@@ -1188,6 +1189,75 @@ export default function ManageAvailabilityScreen() {
     return dates;
   }, [specificDateOverrides, selectedDateForOverride]);
 
+  const todayDow = new Date().getDay();
+  const tomorrowDow = (todayDow + 1) % 7;
+  const quickTileActions = useMemo(() => [
+    {
+      id: 'today-morning',
+      title: 'Hoje — Manhã',
+      subtitle: '08-12',
+      onPress: () => {
+        if (Platform.OS === 'ios') Haptics.selectionAsync();
+        handleApplyPreset(todayDow, 'morning', 'Disponibilidade salva para hoje 08-12');
+      },
+      accessibilityLabel: 'Aplicar manhã para hoje',
+    },
+    {
+      id: 'today-afternoon',
+      title: 'Hoje — Tarde',
+      subtitle: '13-17',
+      onPress: () => {
+        if (Platform.OS === 'ios') Haptics.selectionAsync();
+        handleApplyPreset(todayDow, 'afternoon', 'Disponibilidade salva para hoje 13-17');
+      },
+      accessibilityLabel: 'Aplicar tarde para hoje',
+    },
+    {
+      id: 'today-evening',
+      title: 'Hoje — Noite',
+      subtitle: '18-21',
+      onPress: () => {
+        if (Platform.OS === 'ios') Haptics.selectionAsync();
+        handleApplyPreset(todayDow, 'evening', 'Disponibilidade salva para hoje 18-21');
+      },
+      accessibilityLabel: 'Aplicar noite para hoje',
+    },
+    {
+      id: 'tomorrow',
+      title: 'Agendar amanhã',
+      subtitle: 'Manhã 08-12',
+      onPress: () => {
+        if (Platform.OS === 'ios') Haptics.selectionAsync();
+        handleApplyPreset(tomorrowDow, 'morning', 'Disponibilidade salva para amanhã 08-12');
+      },
+      accessibilityLabel: 'Agendar amanhã pela manhã',
+    },
+    {
+      id: 'day-off',
+      title: 'Folga hoje',
+      subtitle: 'Dia bloqueado',
+      onPress: () => {
+        handleClearSlots(todayDow);
+        handleToggleDay(todayDow, false);
+        AccessibilityInfo.announceForAccessibility?.('Folga registrada para hoje');
+        if (Platform.OS === 'ios') Haptics.selectionAsync();
+      },
+      accessibilityLabel: 'Marcar folga para hoje',
+    },
+    {
+      id: 'repeat-week',
+      title: 'Copiar semana padrão',
+      subtitle: 'Reaplicar blocos',
+      onPress: () => {
+        openCopyModal(todayDow);
+        setCopyTargets([1, 2, 3, 4, 5]);
+        AccessibilityInfo.announceForAccessibility?.('Semana padrão pronta para copiar');
+        if (Platform.OS === 'ios') Haptics.selectionAsync();
+      },
+      accessibilityLabel: 'Copiar disponibilidade para a semana inteira',
+    },
+  ], [handleApplyPreset, handleClearSlots, handleToggleDay, openCopyModal, todayDow, tomorrowDow, setCopyTargets]);
+
   // Apply preset actions when navigated with preset query param
 const didRunPresetRef = useRef(false);
 useEffect(() => {
@@ -1258,66 +1328,26 @@ useEffect(() => {
 
         {activeTab === 'weekly' && (
           <>
-            {false && <View style={styles.quickTilesRow}>
-              <TouchableOpacity 
-                style={styles.quickTile} 
-                onPress={() => {
-                  const today = new Date().getDay();
-                  handleApplyPreset(today, 'morning');
-                  if (Platform.OS === 'ios') Haptics.selectionAsync();
-                  AccessibilityInfo.announceForAccessibility('Disponibilidade salva para hoje 08-12');
-                }}
-              >
-                <Text style={styles.quickActionText}>Disponível hoje 08-12</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.quickTile} 
-                onPress={() => {
-                  const d = new Date(); 
-                  const tomorrow = (d.getDay() + 1) % 7;
-                  handleApplyPreset(tomorrow, 'afternoon');
-                  if (Platform.OS === 'ios') Haptics.selectionAsync();
-                  AccessibilityInfo.announceForAccessibility('Disponibilidade salva para amanhAL 13-17');
-                }}
-              >
-                <Text style={styles.quickActionText}>Disponível amanhã 13-17</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.quickTile} 
-                onPress={() => {
-                  const t = new Date().getDay();
-                  handleClearSlots(t); 
-                  handleToggleDay(t, false);
-                  if (Platform.OS === 'ios') Haptics.selectionAsync();
-                  AccessibilityInfo.announceForAccessibility('Dia bloqueado');
-                }}
-              >
-                <Text style={styles.quickActionText}>Bloquear hoje (folga)</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.quickTile} 
-                onPress={() => {
-                  const base = new Date().getDay(); 
-                  openCopyModal(base); 
-                  setCopyTargets([1, 2, 3, 4, 5]);
-                  if (Platform.OS === 'ios') Haptics.selectionAsync();
-                  AccessibilityInfo.announceForAccessibility('Repetir esta semana');
-                }}
-              >
-                <Text style={styles.quickActionText}>Repetir esta semana</Text>
-              </TouchableOpacity>
-            </View>}
-            {false && (<TouchableOpacity 
-              style={styles.primaryCTAButton} 
-              onPress={() => openSmartStep('weekly')} 
-              accessibilityRole="button" 
-              accessibilityLabel="Assistente de Horários"
-            >
-              <Ionicons name="flash-outline" size={18} color="#fff" style={{ marginRight: 8 }} accessibilityHidden={true} />
-              <Text style={styles.primaryCTAButtonText}>Assistente de Horários</Text>
-            </TouchableOpacity>)}
+            <View style={styles.quickTilesRow}>
+              {quickTileActions.map((action) => (
+                <TouchableOpacity
+                  key={action.id}
+                  onPress={action.onPress}
+                  style={styles.quickTile}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel={action.accessibilityLabel ?? action.title}
+                >
+                  <Text style={styles.quickTileText}>{action.title}</Text>
+                  {action.subtitle && <Text style={styles.quickTileSub}>{action.subtitle}</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
             <Text style={styles.sectionTitleImproved}>Disponibilidade Semanal</Text>
-            <InfoCard text="Defina seus horários da semana. Vocês pode usar horários prontos e copiar para os outros dias." />
+            <Text style={styles.sectionHint}>
+              Toque em um período para abrir sua agenda. Para horários diferentes, toque em Mais horários.
+            </Text>
+            <InfoCard text="Defina seus horÇ­rios da semana. VocÇ¦s pode usar horÇ­rios prontos e copiar para os outros dias." />
             {([...weeklyAvailability]
               .sort((a, b) => ((a.dayOfWeek - new Date().getDay() + 7) % 7) - ((b.dayOfWeek - new Date().getDay() + 7) % 7)))
               .map(day => (
@@ -1339,7 +1369,6 @@ useEffect(() => {
             ))}
           </>
         )}
-
         {activeTab === 'overrides' && (
           <>
             <Text style={styles.sectionTitleImproved}>Calendário</Text>
@@ -1778,9 +1807,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
     color: Colors.primaryDark,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.sm + 5,
+    marginTop: px(Spacing.md),
+    marginBottom: px(Spacing.sm + 5),
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
+  },
+  sectionHint: {
+    fontSize: 13,
+    textAlign: 'center',
+    color: Colors.textMuted,
+    marginBottom: px(Spacing.sm),
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   primaryCTAButton: {
     backgroundColor: Colors.primary,
@@ -1889,16 +1925,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginHorizontal: 20,
-    marginTop: 8,
+    marginHorizontal: px(20),
+    marginTop: px(8),
   },
   quickTile: {
     width: '48%',
     backgroundColor: Colors.surface,
     borderRadius: Radii.md,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    marginBottom: 10,
+    paddingVertical: px(14),
+    paddingHorizontal: px(12),
+    marginBottom: px(10),
     borderWidth: 0.5,
     borderColor: Colors.border,
     alignItems: 'flex-start',
