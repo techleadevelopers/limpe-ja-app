@@ -271,10 +271,11 @@ newProviderNoReviewsSubtitle: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 0,
-    marginTop: 0,
+    marginTop: 6,
+    top: 15,
     paddingHorizontal: 0,
     alignItems: 'center',
-    flex: 1,
+    flex: 0,
     marginRight: 12,
   },
   infoChip: {
@@ -289,7 +290,7 @@ newProviderNoReviewsSubtitle: {
   priceDropContainer: {
   position: 'absolute',
   right: 20,
-  top: 110, // Ajustado para flutuar na lateral superior da imagem (altura header ~60 + offset 50 para topo da foto)
+  top: 120, // Ajustado para flutuar na lateral superior da imagem (altura header ~60 + offset 50 para topo da foto)
   zIndex: 10,
   alignItems: 'center',
   justifyContent: 'center',
@@ -341,7 +342,7 @@ priceDropText: {
     
   },
   sectionTitle: {
-      fontSize: 20,
+      fontSize: Platform.OS === 'android' ? 18 : 20,
       left: 4,
       paddingHorizontal: 6,
       fontWeight: '700',
@@ -351,7 +352,7 @@ priceDropText: {
      marginTop: Platform.OS === 'android' ? 24 : 25,
   },
   descriptionText: {
-    fontSize: Platform.OS === 'android' ? 14 : 15,
+    fontSize: Platform.OS === 'android' ? 13 : 15,
     lineHeight: Platform.OS === 'android' ? 17 : 18,
     color: AppColors.textAuxiliary, // Usando AppColors
     textAlign: 'left',
@@ -369,12 +370,12 @@ priceDropText: {
     paddingVertical: 4,
   },
   descriptionToggleText: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 11 :12,
     fontWeight: '600',
     color: AppColors.primaryInteractive,
   },
   noReviewsText: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 13 : 14,
     color: AppColors.mediumGray, // Usando AppColors
     fontStyle: 'italic',
     textAlign: 'center',
@@ -615,15 +616,16 @@ priceDropText: {
     marginBottom: 6,
     left: 10,
     bottom: 10,
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    position: 'relative',
   },
 
   priceWrapper: {
     marginTop: Platform.OS === 'android' ? 6 : 18,
-    marginBottom: Platform.OS === 'android' ? -35 : -30,
-    alignItems: 'flex-end',
+    marginBottom: 0,
+    alignItems: 'flex-start',
   },
 
   priceValue: {
@@ -631,10 +633,18 @@ priceDropText: {
     fontWeight: '800',
     color: AppColors.primaryInteractive,
   },
+  priceFacialIconFloating: {
+    position: 'absolute',
+    top: Platform.OS === 'android' ? 0 : 0,
+    right: Platform.OS === 'android' ? 32 : 24,
+    width: 76,
+    height: 76,
+    resizeMode: 'contain',
+  },
 
   priceSubLabel: {
     marginTop: 2,
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 13 : 14,
     left: 5,
     fontWeight: '300',
     color: AppColors.textAuxiliary,
@@ -844,8 +854,8 @@ priceBackground: {
    
   },
     likeIcon: {
-    width: 45,
-    height: 45,
+    width: 42,
+    height: 42,
     borderRadius: 22.5,
     fontWeight: '700',
     color: AppColors.textBody, // Usando AppColors
