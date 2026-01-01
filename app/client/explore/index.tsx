@@ -51,12 +51,14 @@ import {
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { Offer } from '../../../types/backend/offers';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
-import { PricingType, Service } from '../../../types/backend/services';
+import { Service } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
 
 import { AppColors, AppShadows } from '../../../constants/appStyles';
 import { CLIENT_ROUTES } from '../../../constants/routes';
 import { alertUserError } from '../../_shared/errors/uiFeedback';
+import { filterByRadiusOrCity, normalizeLocationText } from './utils/locationFilter';
+import type { CityStateHint } from './utils/locationFilter';
 
 // Importar o formatAddress e getNumericPriceValue
 import { formatAddress } from '../../../utils/formatters';
@@ -86,6 +88,7 @@ import { useTutorial } from '../../../hooks/useTutorial';
 // Importar os novos componentes Nudge
 import IncentiveNudge from '../../../components/nudges/IncentiveNudge';
 import SecurityNudge from '../../../components/nudges/SecurityNudge';
+import { platform } from 'node:os';
 
 // Fallback local: garante render do RecomendacaoCard mesmo se a API falhar
 const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
@@ -102,14 +105,6 @@ const FALLBACK_CATEGORIES: Service[] = [
   { id: 'office-clean', name: 'Escritório', icon: 'escritorio.png' } as Service,
 ];
 const QA_PANEL_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_ENABLE_QA_PANEL === 'true';
-type CityStateHint = {
-  city?: string;
-  state?: string;
-  latitude?: number;
-  longitude?: number;
-};
-
-const normalizeLocationText = (v?: string | null) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
 const toNum = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const computeDistanceMeters = (
   baseLat?: number | null,
@@ -150,32 +145,6 @@ const extractLocationHint = (profile?: UserProfile | null): CityStateHint => {
     latitude,
     longitude,
   };
-};
-
-const filterByRadiusOrCity = (
-  items: ProviderDisplayInfo[],
-  radiusMeters: number,
-  hint: CityStateHint
-): ProviderDisplayInfo[] => {
-  if (!Array.isArray(items)) return [];
-  const hasCityState = !!(hint.city && hint.state);
-  return items.filter((item) => {
-    if (!item) return false;
-    const dist = Number(item.distance);
-    if (Number.isFinite(dist) && radiusMeters > 0) {
-      return dist <= radiusMeters;
-    }
-    if (hasCityState) {
-      const providerCity = normalizeLocationText(item.address?.city);
-      const providerState = normalizeLocationText(item.address?.state);
-      if (providerCity && providerState) {
-        return providerCity === hint.city && providerState === hint.state;
-      }
-      // Se o provider nÇõo trouxe cidade/UF, nÇõo bloqueie a exibiÇõÇœo.
-      return true;
-    }
-    return true;
-  });
 };
 
 const sortByDistanceStable = (items: ProviderDisplayInfo[]): ProviderDisplayInfo[] => {
@@ -276,8 +245,6 @@ export default function ExploreClientScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Novo estado para o raio de busca
   const [searchRadiusKm] = useState<number>(50); // Padrão 50 km (como no código original)
-  // Novo estado para o filtro de preço
-  const [priceFilter] = useState<PricingType | null>(null);
   const locationHint = useMemo(() => extractLocationHint(userProfile), [userProfile]);
   const locationHintRef = useRef<CityStateHint>(locationHint);
   const userCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
@@ -893,20 +860,14 @@ export default function ExploreClientScreen() {
   const safeServiceCategories = serviceCategories.filter((c) => c && c.name);
   const categoriesToRender = safeServiceCategories.length > 0 ? safeServiceCategories : FALLBACK_CATEGORIES;
 
-  // Filtrar nearbyProviders com base no priceFilter
+  // Filtrar nearbyProviders com base em serviços disponíveis
   const radiusMeters = searchRadiusKm * 1000;
   const filteredNearbyProviders = Array.isArray(nearbyProviders)
     ? nearbyProviders.filter((item) => {
       if (!item || !item.fullName) return false;
-      if (!priceFilter) return true; // Sem filtro de preco, mostra todos
-
-      // Verifica se o provedor tem algum servico que corresponda ao tipo de preco
       return item.providerServices?.some((service) => {
-        if (service.pricingType === priceFilter) {
-          const price = getNumericPriceValue(service);
-          return price > 0; // Apenas servicos com preco valido
-        }
-        return false;
+        const price = getNumericPriceValue(service);
+        return price > 0;
       });
     })
     : [];
@@ -1110,38 +1071,6 @@ export default function ExploreClientScreen() {
                   userAddress={addressToDisplay}
                   isVisitor={!isAuthenticated}
                 />
-                {Platform.OS === 'android' && isAuthenticated && (
-                  <Animated.View
-                    style={[
-                      styles.carouselContainer,
-                      {
-                        opacity: bannerAnim,
-                        transform: [
-                          {
-                            translateY: bannerAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [-12, 0],
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  >
-                    <FlatList<BannerDataItem>
-                      ref={flatListRef}
-                      data={bannerData}
-                      renderItem={renderBannerItem}
-                      keyExtractor={(item) => item.id}
-                      horizontal
-                      pagingEnabled
-                      showsHorizontalScrollIndicator={false}
-                      snapToInterval={screenWidth}
-                      decelerationRate="fast"
-                      contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }}
-                      nestedScrollEnabled={true}
-                    />
-                  </Animated.View>
-                )}
               </View>
               {/*QA_PANEL_ENABLED && (
                 <TouchableOpacity
@@ -1273,12 +1202,11 @@ export default function ExploreClientScreen() {
                 {isAuthenticated && Platform.OS === 'android' && renderCategoriesSection()}
 
                 {/* Carrossel de Banners ÚNICO */}
-                {(Platform.OS !== 'android' || !isAuthenticated) && (
-                  <Animated.View
-                    style={[
-                      styles.carouselContainer,
-                      {
-                        opacity: bannerAnim,
+                <Animated.View
+                  style={[
+                    styles.carouselContainer,
+                    {
+                      opacity: bannerAnim,
                       transform: [
                         {
                           translateY:
@@ -1292,10 +1220,10 @@ export default function ExploreClientScreen() {
                       ],
                     },
                   ]}>
-                    <FlatList<BannerDataItem>
-                      ref={flatListRef}
-                      data={bannerData}
-                      renderItem={renderBannerItem}
+                  <FlatList<BannerDataItem>
+                    ref={flatListRef}
+                    data={bannerData}
+                    renderItem={renderBannerItem}
                     keyExtractor={(item) => item.id}
                     horizontal
                     pagingEnabled
@@ -1304,15 +1232,14 @@ export default function ExploreClientScreen() {
                     decelerationRate="fast"
                     contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }}
                     nestedScrollEnabled={true} // Melhora scroll aninhado no Android
-                    />
-                  </Animated.View>
-                )}
+                  />
+                </Animated.View>
 
                 {/* REMOVER OS DOIS BLOCOS DE ACESSO RÁPIDO DO FINAL DO contentWrapper */}
                 {/* Os blocos de "Acesso rápido" para visitante e logado foram movidos para a lógica condicional acima e removidos daqui. */}
 
                 {/* Spacer para scroll extra (compensa absolutos) */}
-                <View style={{ height: 20 }} />
+                <View style={{ height: 10 }} />
               </View>
             </>
           )}
@@ -1660,8 +1587,9 @@ const styles = StyleSheet.create({
     right: 200,
   },
   carouselContainer: {
-    marginTop: 10,
+    marginTop: -10,
     marginBottom: 35,
+    bottom: Platform.OS === 'android' ? 12 : 0,
     alignItems: 'center',
   },
   navBarContainer: {
@@ -1823,15 +1751,6 @@ const styles = StyleSheet.create({
   radiusTextActive: {
     color: '#FFFFFF',
     fontWeight: 'bold',
-  },
-  priceFilterContainer: {
-    paddingHorizontal: 10,
-    marginBottom: 15,
-    marginTop: 10,
-  },
-  priceFilterOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
   },
   howItWorksTutorialContainer: {
     marginHorizontal: 11,
