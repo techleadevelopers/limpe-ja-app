@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     fontWeight: 'normal',
   },
   providerNameText: {
-    fontSize: Platform.OS === 'android' ? 18 : 20,
+    fontSize: Platform.OS === 'android' ? 15 : 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
