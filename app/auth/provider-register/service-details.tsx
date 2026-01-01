@@ -34,6 +34,7 @@ import {
     updateMyProviderProfile,
     updateProviderServiceOffering,
 } from '../../../services/providerService';
+import { CreateProviderServiceData, UpdateProviderServiceData } from '../../../types/backend/providers';
 import verificationService from '../../../services/verificationService';
 import { VerificationStatus } from '../../../types/backend/auth';
 import { showUserError } from '../../_shared/errors/userError';
@@ -49,15 +50,6 @@ const SERVICE_OPTIONS = [
 ];
 
 
-enum PricingType {
-  FIXED_PRICE = 'FIXED_PRICE',
-  HOURLY = 'HOURLY',
-  BY_SIZE = 'BY_SIZE',
-  CUSTOM_QUOTE = 'CUSTOM_QUOTE',
-}
-
-type PriceUnit = 'hora' | 'quarto' | 'metragem' | null;
-
 interface ServiceDetailsFormData {
   profilePhoto: string | null;
   description: string;
@@ -66,7 +58,6 @@ interface ServiceDetailsFormData {
   pixKey: string;
   specialties: string[];
   serviceAreas: string[];
-  priceUnit: PriceUnit;
 }
 
 export default function ServiceDetailsScreen() {
@@ -81,7 +72,6 @@ export default function ServiceDetailsScreen() {
     pixKey: '',
     specialties: [],
     serviceAreas: [],
-    priceUnit: null,
   });
 
   const [serviceIdMap, setServiceIdMap] = useState<Record<string, string>>({});
@@ -116,7 +106,6 @@ export default function ServiceDetailsScreen() {
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [yearsOfExperienceError, setYearsOfExperienceError] = useState<string | null>(null);
   const [specialtiesError, setSpecialtiesError] = useState<string | null>(null);
-  const [priceUnitError, setPriceUnitError] = useState<string | null>(null);
   const [basePriceError, setBasePriceError] = useState<string | null>(null);
   const [pixKeyError, setPixKeyError] = useState<string | null>(null);
   const [serviceAreasError, setServiceAreasError] = useState<string | null>(null);
@@ -275,7 +264,6 @@ export default function ServiceDetailsScreen() {
             pixKey: loadedData.pixKey || '',
             specialties: loadedData.specialties || [],
             serviceAreas: loadedData.serviceAreas || [],
-            priceUnit: loadedData.priceUnit || null,
           });
           setCurrentServiceSubStep(loadedData.currentServiceSubStep || 1);
           setGeneralError("Dados carregados automaticamente. Continue preenchendo seus detalhes de serviço.");
@@ -351,20 +339,15 @@ export default function ServiceDetailsScreen() {
 
   const validateSubStep3 = useCallback(() => {
     let isValid = true;
-    setPriceUnitError(null);
     setBasePriceError(null);
 
-    if (!formData.priceUnit) {
-      setPriceUnitError('Por favor, selecione um tipo de precificação.');
-      isValid = false;
-    }
     const price = parseFloat(formData.basePrice.replace(',', '.'));
     if (!formData.basePrice.trim() || isNaN(price) || price <= 0) {
-      setBasePriceError('O preço base é obrigatório e deve ser um número maior que zero.');
+      setBasePriceError('O preço por hora é obrigatório e deve ser um número maior que zero.');
       isValid = false;
     }
     return isValid;
-  }, [formData.priceUnit, formData.basePrice]);
+  }, [formData.basePrice]);
 
   const validateSubStep4 = useCallback(() => {
     let isValid = true;
@@ -413,35 +396,34 @@ export default function ServiceDetailsScreen() {
     } else if (currentServiceSubStep === 5) {
       handleFinalSubmission();
     }
-    };
+  };
 
- const handleBackSubStep = () => {
+  const handleBackSubStep = () => {
     setGeneralError(null);
     // Clear specific errors when going back
     setProfilePhotoError(null);
     setDescriptionError(null);
     setYearsOfExperienceError(null);
     setSpecialtiesError(null);
-    setPriceUnitError(null);
     setBasePriceError(null);
     setPixKeyError(null);
     setServiceAreasError(null);
 
     if (currentServiceSubStep > 1) {
-        setCurrentServiceSubStep(currentServiceSubStep - 1);
+      setCurrentServiceSubStep(currentServiceSubStep - 1);
     } else {
-        if (router.canGoBack()) {
-            router.back();
-        } else {
-            router.replace(AUTH_ROUTES.PROVIDER_REGISTER);
-        }
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace(AUTH_ROUTES.PROVIDER_REGISTER);
+      }
     }
-};
+  };
 
   const handleFinalSubmission = async () => {
     if (!user || !user.token || !user.providerDetails?.id) {
-        Alert.alert('Erro de autenticação', 'Usuário não logado ou detalhes do provedor ausentes. Por favor, faça login novamente.');
-        return;
+      Alert.alert('Erro de autenticação', 'Usuário não logado ou detalhes do provedor ausentes. Por favor, faça login novamente.');
+      return;
     }
 
     if (!validateSubStep1() || !validateSubStep2() || !validateSubStep3() || !validateSubStep4()) {
@@ -460,19 +442,20 @@ export default function ServiceDetailsScreen() {
       const providerId = user.providerDetails.id;
       let avatarUrl: string | null | undefined = user.providerDetails.avatarUrl;
 
-  // 1. Upload da foto, se for uma URI local
-if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
-  try {
-    const uploadResponse = await verificationService.uploadAvatar(formData.profilePhoto);
-    if (uploadResponse && uploadResponse.url) {
-      avatarUrl = uploadResponse.url;
-    } else {
-      throw new Error('O serviço de upload de avatar não retornou uma URL válida.');
-    }
-  } catch (uploadError: any) {
-    throw new Error("Não foi possível fazer o upload da foto de perfil.");
-  }
-}
+      // 1. Upload da foto, se for uma URI local
+      if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
+        try {
+          const uploadResponse = await verificationService.uploadAvatar(formData.profilePhoto);
+          if (uploadResponse && uploadResponse.url) {
+            avatarUrl = uploadResponse.url;
+          } else {
+            throw new Error('O serviço de upload de avatar não retornou uma URL válida.');
+          }
+        } catch (uploadError: any) {
+          throw new Error("Não foi possível fazer o upload da foto de perfil.");
+        }
+      }
+
       // 2. Atualização do Perfil (TEMP: anexa as áreas no bio)
       const areasLine =
         formData.serviceAreas && formData.serviceAreas.length
@@ -486,7 +469,7 @@ if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
         pixKey: formData.pixKey,
         // Não enviar serviceAreas enquanto o backend não suportar
       };
-      
+
       await updateMyProviderProfile(profileUpdateData);
 
       // 3. Atualização/Criação de Serviços
@@ -501,50 +484,33 @@ if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
           continue;
         }
 
-        let durationMinutes = 60;
-        if (formData.priceUnit === 'hora') {
-          durationMinutes = MIN_HOURLY_DURATION;
-        }
-        let serviceData: any = {
-          serviceId: serviceId,
-          description: formData.description,
+        const basePriceValue = parseFloat(formData.basePrice.replace(',', '.'));
+        const durationMinutes = MIN_HOURLY_DURATION;
+
+        const createData: CreateProviderServiceData = {
+          serviceId,
+          description: formData.description.trim(),
           durationMinutes,
+          pricePerHour: basePriceValue,
         };
 
-        const basePriceValue = parseFloat(formData.basePrice.replace(',', '.'));
-        
-        if (formData.priceUnit === 'hora') {
-          serviceData.pricingType = PricingType.HOURLY;
-          serviceData.price = basePriceValue;
-          serviceData.pricePerRoom = null;
-          serviceData.pricePerSquareMeter = null;
-        } else if (formData.priceUnit === 'quarto') {
-          serviceData.pricingType = PricingType.BY_SIZE;
-          serviceData.pricePerRoom = basePriceValue;
-          serviceData.pricePerSquareMeter = null;
-          serviceData.price = 0;
-        } else if (formData.priceUnit === 'metragem') {
-          serviceData.pricingType = PricingType.BY_SIZE;
-          serviceData.pricePerSquareMeter = basePriceValue;
-          serviceData.pricePerRoom = null;
-          serviceData.price = 0;
-        } else {
-            continue;
-        }
-        
+        const updateData: UpdateProviderServiceData = {
+          description: formData.description.trim(),
+          durationMinutes,
+          pricePerHour: basePriceValue,
+        };
+
         const existingService = existingProviderServices.find((s: any) => s.serviceId === serviceId);
 
         if (existingService) {
-          const updatedServiceData = { ...serviceData };
-          delete updatedServiceData.serviceId;
-          await updateProviderServiceOffering(providerId, existingService.id, updatedServiceData);
+          await updateProviderServiceOffering(providerId, existingService.id, updateData);
         } else {
-          await addProviderServiceOffering(providerId, serviceData);
+          await addProviderServiceOffering(providerId, createData);
         }
       }
 
       // 4. Avançar status de verificação
-      await verificationService.advanceVerificationStatus(); 
+      await verificationService.advanceVerificationStatus();
 
       // 5. Persistir raio e disponibilidades (não bloqueante)
       try {
@@ -580,10 +546,9 @@ if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
       // 6. Finalização e Navegação (Requisito 3: Sem Alert de sucesso)
       setIsRegistrationInProgress(false);
       await AsyncStorage.removeItem('serviceDetailsFormData');
-      
+
       // Navegação direta, sem alert
       router.push(AUTH_ROUTES.PROVIDER_VERIFY_ACCOUNT);
-
     } catch (error: any) {
       if (__DEV__) {
         console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message);
@@ -629,23 +594,11 @@ if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
     </View>
   );
 
-  const getPriceInputPlaceholder = (unit: PriceUnit) => {
-    switch (unit) {
-      case 'hora':
-        return 'Ex: 50,00 (por hora)';
-      case 'quarto':
-        return 'Ex: 150,00 (por quarto)';
-      case 'metragem':
-        return 'Ex: 5,00 (por m²)';
-      default:
-        return 'Preço base';
-    }
-  };
   const getSubStepTitle = () => {
   switch (currentServiceSubStep) {
     case 1: return '';
     case 2: return '2. Experiência e Especialidades';
-    case 3: return '3. Preço e Unidade';
+    case 3: return '3. Preço por hora';
     case 4: return '4. Chave PIX e Áreas de Atendimento';
     default: return '';
   }
@@ -655,7 +608,7 @@ const getMicrocopyText = () => {
   switch (currentServiceSubStep) {
     case 1: return 'Sua foto e uma breve descrição ajudam os clientes a te conhecerem.';
     case 2: return 'Conte-nos sobre sua experiência e os serviços que você oferece.';
-    case 3: return 'Defina como você precifica seus serviços.';
+    case 3: return 'Defina o preço por hora (mínimo de 4h).';
     case 4: return 'Para receber pagamentos e informar suas áreas de atuação.';
     default: return '';
   }
@@ -810,46 +763,16 @@ const getMicrocopyText = () => {
               </View>
             )}
 
-            {/* Sub-step 3: Price + Unit */}
+            {/* Sub-step 3: Hourly Price */}
             {currentServiceSubStep === 3 && (
               <View style={styles.formContainer}>
-                <View style={styles.priceTypeContainer}>
-                  <Text style={styles.sectionTitle}>
-                    <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Tipo de Precificação
-                  </Text>
-                  <View style={styles.priceTypeGrid}>
-                    {[
-                      { id: 'hora', label: 'Por Hora' },
-                      { id: 'quarto', label: 'Fixo' },
-                      { id: 'metragem', label: 'Por m²' }
-                    ].map((priceOption) => (
-                      <TouchableOpacity
-                        key={priceOption.id}
-                        style={[
-                          styles.priceTypeCard,
-                          formData.priceUnit === priceOption.id && styles.priceTypeCardSelected
-                        ]}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          setFormData(prev => ({ ...prev, priceUnit: priceOption.id as PriceUnit }));
-                          setPriceUnitError(null);
-                        }}
-                      >
-                        <Text style={[
-                          styles.priceTypeLabel,
-                          formData.priceUnit === priceOption.id && styles.priceTypeLabelSelected
-                        ]}>
-                          {priceOption.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  {priceUnitError && <Text style={styles.inlineErrorMessage}>{priceUnitError}</Text>}
-                </View>
-
+                <Text style={styles.sectionTitle}>
+                  <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Preço por hora
+                </Text>
+                <Text style={styles.priceHintText}>Mínimo de 4 horas (240 min). A cobrança segue o modelo horário.</Text>
                 {renderInputSection(
-                  `Preço Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do Serviço'})`,
-                  getPriceInputPlaceholder(formData.priceUnit),
+                  'Preço por hora',
+                  'Ex: 50,00',
                   formData.basePrice,
                   (text) => { setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.,]/g, '') })); setBasePriceError(null); },
                   'numeric',
@@ -859,40 +782,6 @@ const getMicrocopyText = () => {
                   basePriceError,
                   validateSubStep3
                 )}
-                {/* Cobertura (km) e Disponibilidades abaixo do preço */}
-                {false && (<>
-                <Text style={styles.sectionTitle}>Cobertura (km)</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-                  <TouchableOpacity onPress={onMinusKm} activeOpacity={0.9} style={[btn.backGlassInner, { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]}>
-                    <Text style={{ color: '#1F2A37', fontSize: 18, fontWeight: '800' }}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={{ marginHorizontal: 12, fontSize: 16, fontWeight: '800', color: '#2C3E50' }}>{radiusKm} km</Text>
-                  <TouchableOpacity onPress={onPlusKm} activeOpacity={0.9} style={[btn.backGlassInner, { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]}>
-                    <Text style={{ color: '#1F2A37', fontSize: 18, fontWeight: '800' }}>+</Text>
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.sectionTitle}>Disponibilidades (próximos dias)</Text>
-                {upcoming.map(d => {
-                  const key = d.toISOString().slice(0, 10);
-                  const s = selectedDays[key] ?? { morning: false, afternoon: false };
-                  const dayLabel = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d.getDay()];
-                  const dd = String(d.getDate()).padStart(2, '0');
-                  const mm = String(d.getMonth() + 1).padStart(2, '0');
-                  return (
-                    <View key={key} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E0E0E0' }}>
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#3F4A5A' }}>{`${dayLabel} ${dd}/${mm}`}</Text>
-                      <View style={{ flexDirection: 'row' }}>
-                        <TouchableOpacity onPress={() => toggleDay(key, 'morning')} activeOpacity={0.9} style={[styles.priceTypeCard, s.morning && styles.priceTypeCardSelected, { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, marginRight: 6 }]}>
-                          <Text style={[styles.priceTypeLabel, s.morning && styles.priceTypeLabelSelected]}>08–12</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => toggleDay(key, 'afternoon')} activeOpacity={0.9} style={[styles.priceTypeCard, s.afternoon && styles.priceTypeCardSelected, { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 }]}>
-                          <Text style={[styles.priceTypeLabel, s.afternoon && styles.priceTypeLabelSelected]}>14–18</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })}
-                </>)}
               </View>
             )}
 
@@ -1169,6 +1058,11 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     alignSelf: 'flex-start',
     width: '100%',
+  },
+  priceHintText: {
+    fontSize: 12,
+    color: '#6C757D',
+    marginBottom: 12,
   },
   imageUploadButton: {
     width: 140,
