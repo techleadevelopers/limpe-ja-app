@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   Easing,
   Platform,
   RefreshControl,
+  ScrollView,
   StyleProp,
   StyleSheet,
   Text,
@@ -37,6 +39,9 @@ import {
   markNotificationAsRead,
 } from '../../../services/notificationService';
 import { getProviderAvatar } from '../../../services/providerService';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const NAVBAR_OFFSET = SCREEN_HEIGHT * 0;
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { alertUserError } from '../../_shared/errors/uiFeedback';
 
@@ -47,11 +52,11 @@ import { fix } from '../../../utils/platformFix';
 
 // Local light theme tokens for this screen only (UI refactor only)
 const UI = {
-  bg: '#f2f2f2',
+  bg: '#f1f2f1',
   card: '#FFFFFF',
   textPrimary: '#1A1A1A',
   textSecondary: '#6B7280',
-  divider: '#E5E7EB',
+  divider: '#f1f2f1',
   accent: '#2563EB',
   success: '#16A34A',
   danger: '#EF4444',
@@ -59,7 +64,6 @@ const UI = {
 } as const;
 
 // Tipos e helpers
-const { highlightNew } = useLocalSearchParams<{ highlightNew?: string }>();
 type FilterType = 'requests' | 'upcoming' | 'completed' | 'cancelled';
 
 const isAxiosError = (error: unknown): error is AxiosError => axios.isAxiosError(error);
@@ -324,7 +328,7 @@ export default function MyBookingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterType>((highlightNew ? 'requests' : 'upcoming') as FilterType);
-  const [headerTitle, setHeaderTitle] = useState('Meus Agendamentos');
+  const [headerTitle, setHeaderTitle] = useState('Meus agendamentos');
   const [paymentNotification, setPaymentNotification] = useState<AppNotification | null>(null);
   const insets = useSafeAreaInsets();
   const { isSmallPhone, isLargePhone } = useDevice();
@@ -382,7 +386,7 @@ export default function MyBookingsScreen() {
         if (!user?.id) {
           console.warn('[MyBookingsScreen] Usuário ausente; abortando fetch.');
           setIsLoading(false);
-          setHeaderTitle('Meus Agendamentos');
+          setHeaderTitle('Meus agendamentos');
           setIsRefreshing(false);
           return;
         }
@@ -444,7 +448,7 @@ export default function MyBookingsScreen() {
           }
 
           setBookings(filteredAndSortedBookings);
-          setHeaderTitle('Meus Agendamentos');
+          setHeaderTitle('Meus agendamentos');
           if (refreshing) Alert.alert('Sucesso', 'Agendamentos atualizados!');
         } catch (err: unknown) {
           console.error('Erro ao buscar agendamentos:', err);
@@ -669,44 +673,50 @@ export default function MyBookingsScreen() {
           },
         ]}
       >
-        {filters.map((filterItem, index) => (
-          <Animated.View
-            key={filterItem.value}
-            style={{ transform: [{ scale: filterButtonAnims[index] }] }}
-          >
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                rFilterBtn,
-                activeFilter === filterItem.value && [
-                  styles.filterButtonActive,
-                  { backgroundColor: (theme as any).primary, borderColor: (theme as any).primary },
-                ],
-              ]}
-              onPress={() => handleFilterChange(filterItem.value)}
-              onPressIn={() => onPressInFilterButton(index)}
-              onPressOut={onPressOutFilterButton}
-              accessibilityRole="button"
-              accessibilityLabel={`Filtrar por ${filterItem.label}`}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScrollRow}
+        >
+          {filters.map((filterItem, index) => (
+            <Animated.View
+              key={filterItem.value}
+              style={{ transform: [{ scale: filterButtonAnims[index] }] }}
             >
-              <Ionicons
-                name={filterItem.icon}
-                size={13}
-                color={activeFilter === filterItem.value ? '#FFFFFF' : AppColors.textBody}
-                style={styles.filterIcon}
-              />
-              <Text
+              <TouchableOpacity
                 style={[
-                  styles.filterButtonText,
-                  activeFilter === filterItem.value && styles.filterButtonTextActive,
+                  styles.filterButton,
+                  rFilterBtn,
+                  activeFilter === filterItem.value && [
+                    styles.filterButtonActive,
+                    { backgroundColor: (theme as any).primary, borderColor: (theme as any).primary },
+                  ],
                 ]}
-                numberOfLines={1}
+                onPress={() => handleFilterChange(filterItem.value)}
+                onPressIn={() => onPressInFilterButton(index)}
+                onPressOut={onPressOutFilterButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Filtrar por ${filterItem.label}`}
               >
-                {filterItem.label}
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ))}
+                <Ionicons
+                  name={filterItem.icon}
+                  size={13}
+                  color={activeFilter === filterItem.value ? '#FFFFFF' : AppColors.textBody}
+                  style={styles.filterIcon}
+                />
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    activeFilter === filterItem.value && styles.filterButtonTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {filterItem.label}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          ))}
+        </ScrollView>
       </View>
 
       {paymentNotification && paymentMeta?.bookingId && (
@@ -758,7 +768,7 @@ export default function MyBookingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: UI.bg },
+  container: { flex: 1, backgroundColor: '#F1F2F2' },
   // Header temático (vidro leve + bordas arredondadas) alinhado ao ScheduleHeader
   thematicHeader: {
   marginHorizontal: 12,
@@ -771,7 +781,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
-      android: { elevation: 0.5 },
+      android: { elevation: 0 },
     }),
   },
   headerRow: {
@@ -780,26 +790,29 @@ const styles = StyleSheet.create({
   justifyContent: 'space-between',
   paddingHorizontal: 10,
   paddingVertical: 10,
-  ...(Platform.OS === 'android' ? { marginTop: -20 } : { marginTop: 28 }),
+  ...(Platform.OS === 'android' ? { marginTop: -10 } : { marginTop: 28 }),
 },
-  headerIconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700', color: UI.textPrimary, left: 4, },
+  headerIconBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'android'
+      ? { top: SCREEN_HEIGHT * 0.01 }
+      : undefined),
+  },
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700', color: UI.textPrimary, left: 4,
+    top: Platform.OS === 'android' ? 6 : 0,
+   },
   navbarContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
-    borderTopLeftRadius: 26,
-borderTopRightRadius: 26,
-overflow: 'hidden',
-backgroundColor: 'transparent',
     right: 0,
-    height: 94,
-    zIndex: 1000,
-    elevation: Platform.OS === 'android' ? 1.5 : 2,
-    ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.18, shadowRadius: 12 },
-      android: { elevation: 0.5 },
-    }),
+    marginBottom: 0,
+    zIndex: 200,
+ 
+
   },
   filterHeaderRow: {
     flexDirection: 'row',
@@ -814,36 +827,41 @@ backgroundColor: 'transparent',
     borderBottomWidth: 1,
   },
   filterHelp: { padding: 6 },
-  filterHeaderTitle: { fontSize: fix.font(18), fontWeight: '700', color: AppColors.textBody, fontFamily: 'Montserrat-SemiBold' },
+  filterHeaderTitle: { fontSize: Platform.OS === 'android' ? 17 : fix.font(18), fontWeight: '700', color: AppColors.textBody, fontFamily: 'Montserrat-SemiBold' },
   filterHeaderSub: { fontSize: 15, color: AppColors.textAuxiliary, marginTop: 2, marginBottom: 10, fontFamily: 'Montserrat-Regular' },
 
   filterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Platform.OS === 'android' ? 12 : 10,
+    paddingVertical: Platform.OS === 'android' ? 9 : 10,
     bottom: 10,
     paddingHorizontal: 5,
-    backgroundColor: AppColors.white,
+    backgroundColor: '#f1f2f1',
     borderTopWidth: TOP_HAIRLINE,
     borderTopColor: '#EEF3FA',
     borderBottomWidth: BOTTOM_HAIRLINE,
     borderBottomColor: '#E9F0FA',
     marginBottom: 2,
   },
+  filterScrollRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
   filterButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Platform.OS === 'android' ? 12 : 10,
-    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'android' ? 9 : 10,
+    paddingHorizontal:  Platform.OS === 'android' ? 9 : 12,
     borderRadius: 28,
     marginHorizontal: 8,
     minHeight: 42,
     marginBottom: 10,
     marginTop: 10,
     backgroundColor: AppColors.backgroundNeutral,
-    borderWidth: 1,
+    borderWidth: Platform.OS === 'android' ? 0 : 1,
     borderColor: AppColors.borderNeutral,
   },
   filterButtonActive: {
@@ -851,11 +869,11 @@ backgroundColor: 'transparent',
     borderColor: AppColors.primaryInteractive,
     ...Platform.select({
       ios: { shadowColor: AppColors.primaryInteractive + '22', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8 },
-      android: { elevation: 0.5 },
+      android: { elevation: 0 },
     }),
   },
-  filterIcon: { marginRight: 8, transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
-  filterButtonText: { fontSize: 13, fontWeight: '600', color: AppColors.textBody, fontFamily: 'Montserrat-Regular' },
+  filterIcon: { marginRight: Platform.OS === 'android' ? 5 : 8, transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
+  filterButtonText: { fontSize:  Platform.OS === 'android' ? 11 : 13, fontWeight: '600', color: AppColors.textBody, fontFamily: 'Montserrat-Regular' },
   filterButtonTextActive: { color: AppColors.white, fontWeight: '700', fontFamily: 'Montserrat-SemiBold' },
   paymentBanner: {
     marginHorizontal: 16,
@@ -951,12 +969,19 @@ backgroundColor: 'transparent',
   loadingText: { fontSize: 15, color: AppColors.textAuxiliary, fontFamily: 'Montserrat-Regular', marginTop: 12 },
 
   emptyText: { fontSize: fix.font(20), fontWeight: '700', color: AppColors.textBody, textAlign: 'center', marginBottom: 10, fontFamily: 'Montserrat-SemiBold' },
-  emptySubText: { fontSize: 15, color: AppColors.textAuxiliary, textAlign: 'center', marginBottom: 24, fontFamily: 'Montserrat-Regular', lineHeight: 20 },
+  emptySubText: {
+    fontSize: Platform.OS === 'android' ? 13 : 15,
+    color: AppColors.textAuxiliary,
+    textAlign: 'center',
+    marginBottom: 24,
+    fontFamily: 'Montserrat-Regular',
+    lineHeight: Platform.OS === 'android' ? 18 : 20,
+  },
 
-  emptyStateButton: { backgroundColor: AppColors.primaryInteractive, paddingVertical: Platform.OS === 'android' ? 16 : 14, paddingHorizontal: 26, borderRadius: 28, flexDirection: 'row', alignItems: 'center', marginTop: 8,  },
-  emptyStateButtonText: { color: AppColors.white, fontSize: 15, fontWeight: '600', marginLeft: 10, fontFamily: 'Montserrat-Regular' },
+  emptyStateButton: { backgroundColor: AppColors.primaryInteractive, paddingVertical: Platform.OS === 'android' ? 12 : 14, paddingHorizontal: 26, borderRadius: 28, flexDirection: 'row', alignItems: 'center', marginTop: 8,  },
+  emptyStateButtonText: { color: AppColors.white, fontSize: Platform.OS === 'android' ? 12 : 15, fontWeight: '600', marginLeft: 10, fontFamily: 'Montserrat-Regular' },
 
-  exploreButton: { backgroundColor: '#5196d3ff', paddingVertical: Platform.OS === 'android' ? 16 : 14, paddingHorizontal: 34, borderRadius: 30, marginTop: 10,  },
-  exploreButtonText: { color: AppColors.white, fontSize: 16, fontWeight: '700', fontFamily: 'Montserrat-SemiBold' },
+  exploreButton: { backgroundColor: '#5196d3ff', paddingVertical: Platform.OS === 'android' ? 13 : 14, paddingHorizontal: 34, borderRadius: 30, marginTop: 10,  },
+  exploreButtonText: { color: AppColors.white, fontSize: Platform.OS === 'android' ? 13 : 16, fontWeight: '700', fontFamily: 'Montserrat-SemiBold' },
   iconAdjust: { transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
 });
