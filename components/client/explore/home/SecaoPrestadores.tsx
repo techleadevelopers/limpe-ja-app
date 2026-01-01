@@ -113,7 +113,7 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
 const styles = StyleSheet.create({
   container: {
     marginTop: -2,
-    marginBottom: 12,
+    marginBottom: Platform.OS === 'android' ? 4 :  12,
     paddingHorizontal: 3,
     backgroundColor: 'transparent',
   },
