@@ -57,7 +57,7 @@
     "index.ts",
     "index.tsx",
     "global.d.ts"
-, "styles/providerStyles.ts", "data/mockData.ts", "utils/platformFix.ts", "utils/paymentIntentHooks.ts"  ],
+, "styles/providerStyles.ts", "data/mockData.ts", "utils/platformFix.ts", "utils/paymentIntentHooks.ts", "__tests__/notificationsPipeline.test.tsx", "__tests__/booking/schedule-service.insurance.test.tsx", "__tests__/booking/BookingSuccessScreen.test.tsx", "__tests__/booking/BookingDetailsScreen.test.tsx", "__tests__/safety/incident-report.test.tsx", "__tests__/auth/reset-password.confirm.test.tsx", "__tests__/auth/forgot-password.flow.test.tsx"  ],
   "exclude": [
     "node_modules",
     "**/node_modules",
