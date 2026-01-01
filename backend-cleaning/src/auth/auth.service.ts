@@ -585,6 +585,22 @@ export class AuthService {
       { userId: user.id },
       { expiresIn: '1h' },
     );
+    const tokenExpirationMs = 60 * 60 * 1000;
+    const expiresAt = new Date(Date.now() + tokenExpirationMs);
+    const tokenHash = await bcrypt.hash(resetToken, 10);
+
+    await this.prisma.passwordResetToken.deleteMany({
+      where: { userId: user.id },
+    });
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+        usedAt: null,
+      },
+    });
+
     const appBaseUrl =
       this.configService.get<string>('appBaseUrl') ||
       this.configService.get<string>('APP_BASE_URL');
@@ -633,6 +649,58 @@ export class AuthService {
         `[TELEMETRY] forgot_password_email_failed: { email: ${email}, error: ${emailError.message} }`,
       );
     }
+  }
+
+  async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+    let payload: { userId?: string };
+
+    try {
+      payload = this.jwtService.verify<{ userId: string }>(token);
+    } catch (error: any) {
+      this.logger.warn(
+        `[AuthService] Falha ao validar token de redefinição: ${error?.message}`,
+      );
+      throw new BadRequestException('Token inválido ou expirado.');
+    }
+
+    const userId = payload?.userId;
+    if (!userId) {
+      throw new BadRequestException('Token inválido ou expirado.');
+    }
+
+    const tokenRecord = await this.prisma.passwordResetToken.findFirst({
+      where: {
+        userId,
+        usedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      orderBy: {
+        createdAt: Prisma.SortOrder.desc,
+      },
+    });
+
+    if (!tokenRecord) {
+      throw new BadRequestException('Token inválido ou expirado.');
+    }
+
+    const isTokenValid = await bcrypt.compare(token, tokenRecord.tokenHash);
+    if (!isTokenValid) {
+      throw new BadRequestException('Token inválido ou expirado.');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: hashedPassword },
+    });
+
+    await this.prisma.passwordResetToken.update({
+      where: { id: tokenRecord.id },
+      data: { usedAt: new Date() },
+    });
   }
 
   /**
