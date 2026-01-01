@@ -139,20 +139,39 @@ class AuthService {
                 throw new Error('Erro no servidor. Tente novamente em alguns minutos.');
             }
             throw new Error(error.response?.data?.message || 'Erro ao registrar prestador');
-        }
     }
+  }
 
-    async sendPasswordReset(email: string): Promise<MessageResponseDto> {
-        try {
-            if (__DEV__) console.log(`[AuthService Frontend] Solicitando redefinição de senha para: ${email}`);
-            const response = await api.post<MessageResponseDto>('/auth/forgot-password', { email });
-            if (__DEV__) console.log(`[AuthService Frontend] Redefinição de senha solicitada com sucesso para: ${email}`);
-            return response.data;
-        } catch (error: any) {
-            console.error(`[AuthService Frontend] Erro ao solicitar redefinição de senha para ${email}:`, error.response?.data || error.message);
-            throw new Error(error.response?.data?.message || 'Erro ao enviar link de redefinição de senha.');
-        }
+  async sendPasswordReset(email: string): Promise<MessageResponseDto> {
+    try {
+      if (__DEV__) console.log(`[AuthService Frontend] Solicitando redefinição de senha para: ${email}`);
+      const response = await api.post<MessageResponseDto>('/auth/forgot-password', { email });
+      if (__DEV__) console.log(`[AuthService Frontend] Redefinição de senha solicitada com sucesso para: ${email}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`[AuthService Frontend] Erro ao solicitar redefinição de senha para ${email}:`, error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || 'Erro ao enviar link de redefinição de senha.');
     }
+  }
+
+  async confirmPasswordReset(token: string, newPassword: string): Promise<MessageResponseDto> {
+    try {
+      if (__DEV__) {
+        console.log('[AuthService Frontend] Confirmando redefinição de senha com token:', token);
+      }
+      const response = await api.post<MessageResponseDto>('/auth/password/reset/confirm', {
+        token,
+        newPassword,
+      });
+      if (__DEV__) {
+        console.log('[AuthService Frontend] Redefinição de senha confirmada com sucesso.');
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('[AuthService Frontend] Erro ao confirmar redefinição de senha:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || 'Erro ao confirmar redefinição de senha.');
+    }
+  }
 
     async loadAuthData(): Promise<{ token: string | null; role: UserRole | null; id: string | null; user: UserProfile | null }> {
         try {
