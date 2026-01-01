@@ -250,14 +250,16 @@ export default function ProviderProfileScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ProfileHero
-        name={userName}
-        // Corrigido: Profissional de Limpeza (não havia erro, mas manteve-se)
-        subtitle="Profissional de Limpeza"
-        avatarUrl={userAvatarUrl}
-        onBack={() => router.back()}
-        onSubtitlePress={() => router.push(PROVIDER_ROUTES.PROFILE as any)}
-      />
+      <View style={Platform.OS === 'android' ? styles.profileHeroAndroid : undefined}>
+        <ProfileHero
+          name={userName}
+          // Corrigido: Profissional de Limpeza (não havia erro, mas manteve-se)
+          subtitle="Profissional de Limpeza"
+          avatarUrl={userAvatarUrl}
+          onBack={() => router.back()}
+          onSubtitlePress={() => router.push(PROVIDER_ROUTES.PROFILE as any)}
+        />
+      </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContentContainer}>
         <PaymentCard onPress={() => router.push('/provider/profile/bank-details' as any)} />
@@ -338,6 +340,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f7f7f7' },
   scrollView: { flex: 1 },
   scrollViewContentContainer: { paddingBottom: 40, paddingHorizontal: 12 },
+  profileHeroAndroid: {
+    transform: [{ scale: 0.95 }],
+  },
 
   centeredMessageContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   simpleButton: { marginTop: 20, backgroundColor: '#007AFF', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
