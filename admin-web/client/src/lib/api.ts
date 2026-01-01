@@ -306,6 +306,7 @@ const mapUserProfileToClient = (user: any): Client => {
         name: client?.fullName ?? user?.fullName ?? user?.email ?? "",
         email: user?.email ?? "",
         role: user?.role,
+        avatarUrl: client?.avatarUrl ?? user?.avatarUrl ?? null,
         phone: client?.phone ?? user?.phone ?? null,
         cpf: client?.cpf ?? null,
         dateOfBirth: client?.dateOfBirth ?? null,
@@ -317,7 +318,9 @@ const mapUserProfileToClient = (user: any): Client => {
         memberSince: user?.createdAt ?? "",
         status: user?.status ?? "active",
         lastActivity: user?.updatedAt ?? user?.createdAt ?? "",
+        lastLogin: user?.lastLogin ?? user?.updatedAt ?? user?.createdAt ?? "",
         loyaltyTier: user?.loyalty?.tier ?? "bronze",
+        verificationStatus: user?.verificationStatus ?? client?.verificationStatus ?? null,
         createdAt: user?.createdAt ?? "",
         updatedAt: user?.updatedAt ?? "",
     };
