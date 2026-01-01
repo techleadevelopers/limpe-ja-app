@@ -499,7 +499,7 @@ export default function WithdrawScreen() {
         >
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Solicitar Saque</Text>
+        <Text style={styles.headerTitle}>Financeiro</Text>
         <View style={styles.headerActionIconPlaceholder} /> {/* Placeholder para balanceamento */}
       </Animated.View>
 
@@ -591,7 +591,7 @@ export default function WithdrawScreen() {
               { type: PixKeyType.CNPJ, icon: 'briefcase-outline' as React.ComponentProps<typeof Ionicons>['name'], subtitle: '14 dígitos', hint: 'apenas números' },
               { type: PixKeyType.EMAIL, icon: 'mail-outline' as React.ComponentProps<typeof Ionicons>['name'], subtitle: 'exemplo@domínio', hint: 'formato de e-mail' },
               { type: PixKeyType.PHONE, icon: 'call-outline' as React.ComponentProps<typeof Ionicons>['name'], subtitle: '+55 11 99999-9999', hint: 'formato de telefone' },
-              { type: PixKeyType.RANDOM, icon: 'key-outline' as React.ComponentProps<typeof Ionicons>['name'], subtitle: 'chave UUID', hint: 'chave aleatória' },
+             
             ] as { type: PixKeyType; icon: React.ComponentProps<typeof Ionicons>['name']; subtitle: string; hint: string }[]).map(({ type, icon, subtitle, hint }) => (
               <TouchableOpacity
                 key={type}
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: Colors.surface, // Branco clean
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Platform.OS === 'android' ? 20 : Spacing.md,
     paddingVertical: Spacing.lg,
     borderBottomLeftRadius: Radii.xl,
     borderBottomRightRadius: Radii.xl,
@@ -760,14 +760,17 @@ const styles = StyleSheet.create({
   },
   headerBackButton: {
     padding: Spacing.sm,
+    top: Platform.OS === 'android' ? 23 : 0,
   },
   headerTitle: {
     fontSize: 18, // Tamanho premium legível
-    fontWeight: '700', // Bold para ênfase
+    fontFamily:Platform.OS === 'android' ? 'Montserrat-Regular' : 'Montserrat-Regular',
+    fontWeight: Platform.OS === 'android' ? '700' : '700', // Bold para ênfase
     color: Colors.text, // Cinza escuro premium
+    top: Platform.OS === 'android' ? 23 : 0,
     flex: 1,
     textAlign: 'center',
-    letterSpacing: 0.8, // Espaçamento refinado para conforto
+    letterSpacing: Platform.OS === 'android' ? 0 :  0.8, // Espaçamento refinado para conforto
     marginHorizontal: Spacing.sm,
   },
   headerActionIconPlaceholder: {
@@ -819,6 +822,7 @@ const styles = StyleSheet.create({
   },
   heroEyebrow: {
     fontSize: 14,
+     fontFamily:Platform.OS === 'android' ? 'Montserrat-Regular' : 'Montserrat-Regular',
     fontWeight: '700',
     color: Colors.primary,
     letterSpacing: 0.4,
@@ -840,13 +844,13 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   heroTitle: {
-    fontSize: 38,
+    fontSize: Platform.OS === 'android' ? 28:34,
     fontWeight: '800',
     color: Colors.text,
     marginBottom: Spacing.xs,
   },
   heroSubtitle: {
-    fontSize: 16,
+    fontSize:  Platform.OS === 'android' ? 14 : 14,
     color: Colors.textMuted,
     marginBottom: Spacing.md,
   },
@@ -869,17 +873,17 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     color: Colors.text,
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 10 : 12,
   },
   // Estilos para Card de Saldo (Estado Financeiro)
   balanceValue: {
-    fontSize: 36,
+    fontSize: Platform.OS === 'android' ? 36 : 36,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: Spacing.xs,
   },
   balanceSubtitle: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ?  13 : 16,
     color: Colors.textMuted,
     textAlign: 'center',
     marginBottom: Spacing.md,
@@ -901,11 +905,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   amountInput: {
-    fontSize: 36,
+    fontSize: Platform.OS === 'android' ? 29 : 32,
     fontWeight: 'bold',
     color: Colors.text,
     textAlign: 'center',
-    paddingVertical: Spacing.sm,
+    paddingVertical: Platform.OS === 'android' ? 1 : Spacing.sm,
     marginBottom: Spacing.xs,
     borderBottomWidth: 2,
     borderBottomColor: Colors.border,
@@ -1045,7 +1049,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   pixKeyInput: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 14 : 16,
     color: Colors.text,
     padding: Spacing.lg,
     backgroundColor: Colors.fieldBg,
@@ -1088,7 +1092,7 @@ const styles = StyleSheet.create({
   actionButtonPrimary: {
     backgroundColor: Colors.primary,
     borderRadius: Radii.pill,
-    paddingVertical: Spacing.lg,
+    paddingVertical: Platform.OS === 'android' ? 10 : Spacing.lg,
     alignItems: 'center',
     ...Platform.select({
       ios: {
@@ -1101,6 +1105,7 @@ const styles = StyleSheet.create({
         elevation: 0,
       },
     }),
+    transform: Platform.OS === 'android' ? [{ scale: 0.98 }] : undefined,
   },
   actionButtonDisabled: {
     backgroundColor: Colors.primaryDark,
