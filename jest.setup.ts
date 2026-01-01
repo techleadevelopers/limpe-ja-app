@@ -1,6 +1,13 @@
 import React from 'react';
 import path from 'node:path';
 import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/async-storage-mock';
+if (typeof global.clearImmediate === 'undefined') {
+  (global as any).clearImmediate = (handle: number) => clearTimeout(handle);
+}
+if (typeof global.setImmediate === 'undefined') {
+  (global as any).setImmediate = (fn: (...args: any[]) => void, ...args: any[]) =>
+    setTimeout(fn, 0, ...args);
+}
 jest.mock('@sentry/react-native', () => ({
   init: jest.fn(),
   captureException: jest.fn(),
@@ -45,10 +52,27 @@ jest.mock('expo-linear-gradient', () => ({
   LinearGradient: ({ children }: { children?: React.ReactNode }) => children ?? null,
 }));
 
-jest.mock('react-native-reanimated', () => ({
-  __esModule: true,
-  default: {},
-}));
+jest.mock('react-native-reanimated', () => {
+  const ImageMock = () => null;
+  const stub = {
+    __esModule: true,
+    default: {
+      Image: ImageMock,
+    },
+    Image: ImageMock,
+    interpolate: () => 0,
+    Extrapolate: { CLAMP: 'clamp' },
+    Easing: {
+      inOut: (fn: any) => fn,
+      ease: (value: any) => value,
+    },
+    useSharedValue: (value: number = 0) => ({ value }),
+    useAnimatedStyle: () => () => ({}),
+    withRepeat: (animation: any) => animation,
+    withTiming: (value: any) => () => ({}),
+  };
+  return stub;
+});
 
 jest.mock('expo-device', () => ({
   Platform: {
@@ -227,6 +251,7 @@ jest.mock('react-native-chart-kit', () => ({
 jest.mock('expo-haptics', () => ({
   notificationAsync: jest.fn().mockResolvedValue(undefined),
   impactAsync: jest.fn().mockResolvedValue(undefined),
+  selectionAsync: jest.fn().mockResolvedValue(undefined),
   NotificationFeedbackType: {
     Success: 'success',
   },
