@@ -1,92 +1,35 @@
-import {
-  ProviderService as PrismaProviderService,
-  Prisma,
-  PricingType,
-} from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class ProviderServiceEntity implements PrismaProviderService {
-  @ApiProperty({
-    description: 'ID do serviço oferecido',
-    example: 'uuid-do-servico-oferecido',
-  })
+export class ProviderServiceEntity {
+  @ApiProperty({ description: 'ID do servico oferecido', example: 'uuid-do-servico' })
   id: string;
 
-  @ApiProperty({
-    description: 'ID do provedor que oferece o serviço',
-    example: 'uuid-do-provedor',
-  })
+  @ApiProperty({ description: 'ID do provedor que oferece o servico', example: 'uuid-provedor' })
   providerId: string;
 
-  @ApiProperty({
-    description: 'ID do tipo de serviço (e.g., Limpeza Padrão)',
-    example: 'uuid-do-tipo-servico',
-  })
+  @ApiProperty({ description: 'ID do tipo de servico', example: 'uuid-tipo-servico' })
   serviceId: string;
 
-  @ApiPropertyOptional({
-    description: 'Preço do serviço (se pricingType for FIXED_PRICE)',
-    example: 150.0,
-  })
-  price: Prisma.Decimal | null; // CORRIGIDO: Agora é opcional
+  @ApiProperty({ description: 'Preco por hora', example: 45.0 })
+  pricePerHour: Prisma.Decimal;
 
-  @ApiPropertyOptional({
-    description: 'Preço por hora (se pricingType for HOURLY)',
-    example: 45.0,
-  })
-  pricePerHour: Prisma.Decimal | null; // ADICIONADO: Campo que estava faltando
+  @ApiPropertyOptional({ description: 'Duracao estimada em minutos', example: 180 })
+  durationMinutes: number | null;
 
-  @ApiPropertyOptional({
-    description: 'Duração estimada do serviço em minutos',
-    example: 120,
-  })
-  durationMinutes: number | null; // CORRIGIDO: Agora é opcional
-
-  @ApiPropertyOptional({
-    description: 'Descrição adicional do serviço oferecido',
-    example: 'Limpeza completa para apartamentos de até 80m².',
-  })
+  @ApiPropertyOptional({ description: 'Descricao adicional do servico', example: 'Limpeza completa para ate 80m2' })
   description: string | null;
 
-  @ApiProperty({
-    description: 'Data de criação do serviço oferecido',
-    example: '2023-01-01T10:00:00.000Z',
-  })
+  @ApiProperty({ description: 'Indica se o servico precisa de revisao manual' })
+  needsReview: boolean;
+
+  @ApiProperty({ description: 'Data de criacao', example: '2023-01-01T10:00:00.000Z' })
   createdAt: Date;
 
-  @ApiProperty({
-    description: 'Data da última atualização do serviço oferecido',
-    example: '2023-01-01T10:00:00.000Z',
-  })
+  @ApiProperty({ description: 'Data de atualizacao', example: '2023-01-01T10:00:00.000Z' })
   updatedAt: Date;
 
-  @ApiProperty({
-    description: 'Tipo de precificação do serviço',
-    enum: PricingType,
-    example: PricingType.FIXED_PRICE,
-  })
-  pricingType: PricingType;
-
-  @ApiPropertyOptional({
-    description: 'Preço por metro quadrado (se pricingType for BY_SIZE)',
-    example: 10.5,
-  })
-  pricePerSquareMeter: Prisma.Decimal | null;
-
-  @ApiPropertyOptional({
-    description: 'Preço por cômodo (se pricingType for BY_SIZE)',
-    example: 50.0,
-  })
-  pricePerRoom: Prisma.Decimal | null;
-
-  // Propriedades adicionais do modelo Prisma, se houver (ex: bookings, subscriptions)
-  // Para a entidade, geralmente mapeamos apenas os campos diretos.
-  // Se necessário, adicione aqui as relações, mas para fins de DTO/entidade simples,
-  // os campos primitivos e enums são o foco.
-  // bookings: any[]; // Exemplo, se você precisar mapear relações aqui
-  // subscriptions: any[]; // Exemplo
-
-  constructor(partial: Partial<PrismaProviderService>) {
+  constructor(partial: Partial<ProviderServiceEntity>) {
     Object.assign(this, partial);
   }
 }
