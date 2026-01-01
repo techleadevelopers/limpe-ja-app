@@ -334,6 +334,16 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
   const isReducedMotionEnabled = useReducedMotion(); // Usar o hook de movimento reduzido
 
   const headerAnim = useRef(new Animated.Value(0)).current;
+  const headerTransform = useMemo(() => {
+    const translateY = headerAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [-20, 0],
+    });
+    return [
+      { translateY },
+      { scale: Platform.OS === 'android' ? 0.92 : 1 },
+    ];
+  }, [headerAnim]);
   const calendarAnim = useRef(new Animated.Value(0)).current;
   const calendarTransform = useMemo(() => {
     const translateY = calendarAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
@@ -342,7 +352,7 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
       | { scale: number }
     > = [{ translateY }];
     if (Platform.OS === 'android') {
-      transforms.push({ scale: 0.98 });
+      transforms.push({ scale: 0.92 });
     }
     return transforms;
   }, [calendarAnim]);
@@ -505,20 +515,19 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
       <Animated.View
         style={[
           styles.customHeader,
-          { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }
+          { opacity: headerAnim, transform: headerTransform, width: '100%' }
         ]}
       >
-        <Text style={styles.headerTitle}>Minha Agenda</Text>
         <TouchableOpacity
-          onPress={() => router.push(PROVIDER_ROUTES.MANAGE_AVAILABILITY as any)}
-          style={styles.headerActionIcon}
+          style={styles.backButton}
+          onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Gerenciar disponibilidade"
-          accessibilityHint="Navegar para tela de gerenciamento de horários"
+          accessibilityLabel="Voltar"
+          accessibilityHint="Retorna para a tela anterior"
         >
-          <Ionicons name="options-outline" size={22} color="#FFFFFF" accessibilityHidden={true} />
-          <Text style={styles.headerActionText}>Disponibilidade</Text>
+          <Ionicons name="arrow-back" size={22} color={Colors.text} />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Minha Agenda</Text>
       </Animated.View>
 
  
@@ -837,10 +846,11 @@ const styles = StyleSheet.create({
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    backgroundColor: '#ffffffff',
+    width: '100%',
     top: Platform.OS === 'ios' ? -16 : 0,
-    paddingHorizontal: 18,
+    paddingHorizontal: 0,
     paddingVertical: Platform.OS === 'ios' ? 59 : 28,
     paddingTop: Platform.OS === 'ios' ? 29 : 24,
     ...Platform.select({
@@ -859,39 +869,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#FFFFFF',
-    flex: 1,
-    textAlign: 'left',
-    marginLeft: 22,
-    top: Platform.OS === 'ios' ? 38 : 16,
+    color: Colors.text,
+    top: Platform.OS === 'ios' ? 32 : 18,
+    textAlign: 'center',
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
 
-  headerActionIcon: {
-    flexDirection: 'row',
-    top: Platform.OS === 'ios' ? 38 : 16,
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  backButton: {
+    position: 'absolute',
+    left: 18,
+    top: Platform.OS === 'ios' ? 32 : 32,
+    padding: 8,
     borderRadius: Radii.pill,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: { elevation: 0 },
-    }),
-  },
-
-  headerActionText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-    marginLeft: 8,
-    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
+    backgroundColor: 'rgba(255,255,255,0.8)',
   },
 
   // ===== Calendar =====
@@ -920,16 +910,17 @@ const styles = StyleSheet.create({
   // ===== Agenda Header (texto "Agenda para...") =====
   agendaListHeader: {
     paddingHorizontal: 18,
-    paddingTop: 18,
+    paddingTop: 4,
     paddingBottom: Platform.OS === 'android' ? 12: 12,
     backgroundColor: Colors.bgSoft,
   },
 
   agendaListTitle: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'ios' ? 16 :16,
     fontWeight: '800',
     color: '#1C3A5F',
     textTransform: 'capitalize',
+    paddingHorizontal: Platform.OS === 'ios' ? 16 :16,
     letterSpacing: 0.2,
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
@@ -937,16 +928,39 @@ const styles = StyleSheet.create({
   // ===== List =====
   listStyle: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 24 : 0,
+    width: '100%',
   },
 
   listContentContainer: {
     paddingHorizontal: 18,
-    paddingBottom: Platform.OS === 'android' ? 100 : 44,
-    paddingTop: Platform.OS === 'android' ? 10 : 6,
+    paddingBottom: Platform.OS === 'android' ? 110 : 130,
+    paddingTop: Platform.OS === 'android' ? 18 : 16,
   },
 
   listSeparator: { height: 0 },
+
+  agendaListBody: {
+    flex: 1,
+    marginHorizontal: 18,
+    marginTop: 12,
+    marginBottom: Platform.OS === 'android' ? 90 : 130,
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.md,
+    borderWidth: 0.5,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+    paddingTop: 4,
+    paddingBottom: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.shadow,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 14,
+      },
+      android: { elevation: 0 },
+    }),
+  },
 
   // ===== Premium Appointment Card (NOVO) =====
   appointmentCardWrapper: {
