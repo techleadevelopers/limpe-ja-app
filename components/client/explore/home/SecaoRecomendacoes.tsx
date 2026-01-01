@@ -142,7 +142,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: Platform.OS === 'android' ? -35 : -29,
+    marginTop: Platform.OS === 'android' ? -5 : -9,
     marginBottom: -10,
     paddingHorizontal: 6,
     backgroundColor: 'transparent',
