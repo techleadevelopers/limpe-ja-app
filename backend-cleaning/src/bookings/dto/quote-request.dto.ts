@@ -99,24 +99,6 @@ export class BookingQuoteRequestDto {
   @Min(0)
   durationMinutes?: number;
 
-  @ApiPropertyOptional({
-    description: 'Área solicitada em metros quadrados (para serviços BY_SIZE)',
-    example: 70,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  squareMeters?: number;
-
-  @ApiPropertyOptional({
-    description: 'Quantidade de cômodos solicitados (para serviços BY_SIZE)',
-    example: 3,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  roomCount?: number;
-
   @ApiPropertyOptional({ description: 'Código de cupom', example: 'LIMPEJA10' })
   @IsOptional()
   @IsString()
