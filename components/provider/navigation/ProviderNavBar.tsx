@@ -26,7 +26,7 @@ const ProviderNavBar: React.FC = () => {
     { name: 'Início', icon: 'home', route: '/provider' },
     { name: 'Agenda', icon: 'calendar', route: '/provider/profile' },
     { name: 'Cupons', icon: 'pricetag', route: '/provider/promotions' },
-    { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/provider/support' },
+    { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/provider/messages' },
     { name: 'Perfil', icon: 'person', route: '/provider/profile' },
   ];
 
@@ -34,8 +34,8 @@ const ProviderNavBar: React.FC = () => {
   const rippleAnims = useRef(navItems.map(() => new Animated.Value(0))).current;
   const [navBarWidth, setNavBarWidth] = useState(0);
 
-  const CURRENT_COLOR = theme.primary || '#6198cebd';
-  const INACTIVE_COLOR = '#8A8A8E';
+  const CURRENT_COLOR = theme.primary || '#357abebd';
+  const INACTIVE_COLOR = '#707078ff';
 
   const onLayout = (event: LayoutChangeEvent) =>
     setNavBarWidth(event.nativeEvent.layout.width);
@@ -154,7 +154,7 @@ const ProviderNavBar: React.FC = () => {
                 name={
                   (isSelected ? item.icon : `${item.icon}-outline`) as any
                 }
-                size={24}
+                size={21}
                 color={isSelected ? CURRENT_COLOR : INACTIVE_COLOR}
                 style={{
                   marginBottom: 3,
@@ -190,10 +190,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    height: 87,
-    top: Platform.OS === 'android' ? 5 : 0,
-    borderTopLeftRadius: 38,
-    borderTopRightRadius: 38,
+    height: 82,
+    gap: -8,
+    top: Platform.OS === 'android' ? 12 : 12,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
     overflow: 'hidden',
 
   },
@@ -202,14 +203,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
-    gap: Platform.OS === 'android' ? -5 : 0,
-    paddingHorizontal: 10,
+    gap: Platform.OS === 'android' ? -5 : -8,
+    paddingHorizontal: 15,
     marginBottom: 5,
+    bottom: Platform.OS === 'android' ? 6 : 8,
     position: 'relative',
   },
   navText: {
     fontSize: 10,
     letterSpacing: 0.1,
+    marginTop: 1.3,
   },
   activePill: {
     position: 'absolute',
