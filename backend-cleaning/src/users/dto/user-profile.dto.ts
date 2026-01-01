@@ -255,7 +255,8 @@ export class UserProfileDto {
 
           durationMinutes: ps.durationMinutes ?? null,
           description: ps.description ?? null,
-          pricingType: ps.pricingType,
+          pricingType: ps.pricingType ?? PricingType.HOURLY,
+          needsReview: ps.needsReview ?? false,
 
           service,
         };
