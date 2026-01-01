@@ -78,6 +78,7 @@ function FloatingActiveServicePill({
 }): React.ReactElement | null {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { statusMap } = useBookingStatusMeta();
   const [booking, setBooking] = React.useState<BookingDetails | null>(null);
   const [timeLabel, setTimeLabel] = React.useState<string>('');
   const [hidden, setHidden] = React.useState<boolean>(false);
