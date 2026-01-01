@@ -1,6 +1,6 @@
 // LimpeJaApp/src/types/backend/providers.ts
 
-import { Service, PricingType } from './services';
+import { Service } from './services';
 import { BookingAddress, BookingDetails } from './bookings'; // Adicionar BookingDetails
 import { VerificationStatus, UserRole } from './auth'; // CORREÇÃO: Importar UserRole
 import { UserProfile } from './users'; // CORREÇÃO: Importar UserProfile para usar user.isVerified
@@ -188,12 +188,9 @@ export interface Offer {
  */
 export interface CreateProviderServiceData {
   serviceId: string;
-  price: number;
+  pricePerHour: number;
   durationMinutes?: number;
   description?: string;
-  pricingType: PricingType;
-  pricePerSquareMeter?: number;
-  pricePerRoom?: number;
 }
 
 /**
@@ -202,12 +199,9 @@ export interface CreateProviderServiceData {
  * Corresponde ao PATCH /providers/:providerId/services/:id
  */
 export interface UpdateProviderServiceData {
-  price?: number;
+  pricePerHour?: number;
   durationMinutes?: number;
   description?: string;
-  pricingType?: PricingType;
-  pricePerSquareMeter?: number;
-  pricePerRoom?: number;
 }
 
 /**
