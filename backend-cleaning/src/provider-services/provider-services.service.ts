@@ -26,80 +26,59 @@ export class ProviderServicesService {
   ): Promise<ProviderService> {
     const {
       serviceId,
-      price,
+      pricePerHour,
       durationMinutes,
       description,
       pricingType,
-      pricePerSquareMeter,
-      pricePerRoom,
-      pricePerHour,
-    } = createProviderServiceDto; // ADICIONADO pricePerHour aqui
+    } = createProviderServiceDto;
 
-    const normalizedDuration =
-      pricingType === 'HOURLY'
-        ? Math.max(durationMinutes ?? MIN_HOURLY_MINUTES, MIN_HOURLY_MINUTES)
-        : (durationMinutes ?? null);
+    if (pricingType && pricingType !== 'HOURLY') {
+      throw new BadRequestException('Somente HOURLY e permitido.');
+    }
 
-    // Verificar se o provedor existe
     const providerExists = await this.providersService.findOne(providerId);
     if (!providerExists) {
       throw new NotFoundException(
-        `Provedor com ID "${providerId}" não encontrado.`,
+        `Provedor com ID "${providerId}" nao encontrado.`,
       );
     }
 
-    // Verificar se o tipo de serviço existe
     const serviceTypeExists = await this.servicesService.findOne(serviceId);
     if (!serviceTypeExists) {
       throw new NotFoundException(
-        `Tipo de serviço com ID "${serviceId}" não encontrado.`,
+        `Tipo de servico com ID "${serviceId}" nao encontrado.`,
       );
     }
 
-    // Verificar se o provedor já oferece este serviço com este tipo de precificação
     const existingProviderService =
       await this.prisma.providerService.findUnique({
         where: {
-          // CORRIGIDO: Usar o campo de unicidade composto
-          providerId_serviceId_pricingType: {
+        providerId_serviceId: {
             providerId,
             serviceId,
-            pricingType, // ADICIONADO: Incluir pricingType na verificação de unicidade
           },
         },
       });
 
     if (existingProviderService) {
       throw new ConflictException(
-        `O provedor com ID "${providerId}" já oferece o tipo de serviço com ID "${serviceId}" e tipo de precificação "${pricingType}".`,
+        `O provedor com ID "${providerId}" ja oferece o tipo de servico com ID "${serviceId}".`,
       );
     }
+
+    const normalizedDuration = Math.max(
+      durationMinutes ?? MIN_HOURLY_MINUTES,
+      MIN_HOURLY_MINUTES,
+    );
 
     return this.prisma.providerService.create({
       data: {
         providerId,
         serviceId,
-        // CORREÇÃO: Converter price para Prisma.Decimal e permitir null
-        price:
-          price !== undefined && price !== null
-            ? new Prisma.Decimal(price)
-            : null,
-        durationMinutes: normalizedDuration, // Normaliza HOURLY para pelo menos 240 min
-        pricingType,
-        // CORREÇÃO: Converter pricePerHour para Prisma.Decimal e permitir null
-        pricePerHour:
-          pricePerHour !== undefined && pricePerHour !== null
-            ? new Prisma.Decimal(pricePerHour)
-            : null,
-        pricePerSquareMeter:
-          pricePerSquareMeter !== undefined && pricePerSquareMeter !== null
-            ? new Prisma.Decimal(pricePerSquareMeter)
-            : null,
-        pricePerRoom:
-          pricePerRoom !== undefined && pricePerRoom !== null
-            ? new Prisma.Decimal(pricePerRoom)
-            : null,
+        pricePerHour: new Prisma.Decimal(pricePerHour),
+        durationMinutes: normalizedDuration,
         description,
+        needsReview: false,
       },
     });
   }
@@ -110,7 +89,7 @@ export class ProviderServicesService {
     });
     if (!providerExists) {
       throw new NotFoundException(
-        `Provedor com ID "${providerId}" não encontrado.`,
+        `Provedor com ID "${providerId}" nao encontrado.`,
       );
     }
     return this.prisma.providerService.findMany({
@@ -138,98 +117,39 @@ export class ProviderServicesService {
       const existingService = await this.findOne(id, providerId);
       if (!existingService) {
         throw new NotFoundException(
-          `Serviço oferecido com ID "${id}" não encontrado para o provedor "${providerId}".`,
+          `Servico oferecido com ID "${id}" nao encontrado para o provedor "${providerId}".`,
         );
       }
 
       const updateData: Prisma.ProviderServiceUpdateInput = {};
-      const { pricingType } = updateProviderServiceDto;
+      const { pricePerHour, durationMinutes, description } =
+        updateProviderServiceDto;
 
-      const price = updateProviderServiceDto.price;
-      const pricePerHour = updateProviderServiceDto.pricePerHour;
-      const pricePerSquareMeter = updateProviderServiceDto.pricePerSquareMeter;
-      const pricePerRoom = updateProviderServiceDto.pricePerRoom;
-      const durationMinutes = updateProviderServiceDto.durationMinutes;
-
-      if (price !== undefined) {
-        updateData.price = price !== null ? new Prisma.Decimal(price) : null;
+      if (
+        pricePerHour === undefined &&
+        durationMinutes === undefined &&
+        description === undefined
+      ) {
+        throw new BadRequestException('Nenhum campo valido fornecido.');
       }
+
       if (pricePerHour !== undefined) {
-        updateData.pricePerHour =
-          pricePerHour !== null ? new Prisma.Decimal(pricePerHour) : null;
+        if (pricePerHour <= 0) {
+          throw new BadRequestException('pricePerHour deve ser maior que zero.');
+        }
+        updateData.pricePerHour = new Prisma.Decimal(pricePerHour);
+        updateData.needsReview = false;
       }
-      if (pricePerSquareMeter !== undefined) {
-        updateData.pricePerSquareMeter =
-          pricePerSquareMeter !== null
-            ? new Prisma.Decimal(pricePerSquareMeter)
-            : null;
-      }
-      if (pricePerRoom !== undefined) {
-        updateData.pricePerRoom =
-          pricePerRoom !== null ? new Prisma.Decimal(pricePerRoom) : null;
-      }
+
       if (durationMinutes !== undefined) {
-        updateData.durationMinutes =
-          durationMinutes !== null ? durationMinutes : null;
+        updateData.durationMinutes = Math.max(
+          durationMinutes ?? MIN_HOURLY_MINUTES,
+          MIN_HOURLY_MINUTES,
+        );
       }
 
-      const effectivePricing = pricingType ?? existingService.pricingType;
-      const ensurePositive = (value?: unknown) => {
-        if (value === null || value === undefined) return null;
-        const num = typeof value === 'number' ? value : Number(value);
-        if (!Number.isFinite(num) || num <= 0) return NaN;
-        return num;
-      };
-
-      switch (effectivePricing) {
-        case 'HOURLY': {
-          const dur = ensurePositive(
-            durationMinutes ?? existingService.durationMinutes,
-          );
-          const pph = ensurePositive(
-            pricePerHour ?? existingService.pricePerHour,
-          );
-          if (!dur || !pph) {
-            throw new BadRequestException(
-              'Para HOURLY, defina pricePerHour>0 e durationMinutes>0.',
-            );
-          }
-          const normalizedDur = Math.max(dur, MIN_HOURLY_MINUTES);
-          updateData.durationMinutes = normalizedDur;
-          updateData.pricePerHour = new Prisma.Decimal(pph);
-          updateData.price = null;
-          updateData.pricePerSquareMeter = null;
-          updateData.pricePerRoom = null;
-          break;
-        }
-        case 'BY_SIZE': {
-          const psm = ensurePositive(
-            pricePerSquareMeter ?? existingService.pricePerSquareMeter,
-          );
-          const pr = ensurePositive(
-            pricePerRoom ?? existingService.pricePerRoom,
-          );
-          if (!psm && !pr) {
-            throw new BadRequestException(
-              'Para BY_SIZE, defina pricePerSquareMeter>0 ou pricePerRoom>0.',
-            );
-          }
-          updateData.price = null;
-          updateData.pricePerHour = null;
-          break;
-        }
-        case 'FIXED_PRICE':
-        default: {
-          const p = ensurePositive(price ?? existingService.price);
-          if (!p) {
-            throw new BadRequestException('Para FIXED_PRICE, defina price>0.');
-          }
-          updateData.price = new Prisma.Decimal(p);
-          updateData.pricePerHour = null;
-          updateData.pricePerSquareMeter = null;
-          updateData.pricePerRoom = null;
-          break;
-        }
+      if (description !== undefined) {
+        updateData.description = description;
       }
 
       return await this.prisma.providerService.update({
@@ -242,7 +162,7 @@ export class ProviderServicesService {
         error.code === 'P2025'
       ) {
         throw new NotFoundException(
-          `Serviço oferecido com ID "${id}" não encontrado.`,
+          `Servico oferecido com ID "${id}" nao encontrado.`,
         );
       }
       throw error;
@@ -254,7 +174,7 @@ export class ProviderServicesService {
       const existingService = await this.findOne(id, providerId);
       if (!existingService) {
         throw new NotFoundException(
-          `Serviço oferecido com ID "${id}" não encontrado para o provedor "${providerId}".`,
+          `Servico oferecido com ID "${id}" nao encontrado para o provedor "${providerId}".`,
         );
       }
       await this.prisma.providerService.deleteMany({
@@ -266,7 +186,7 @@ export class ProviderServicesService {
         error.code === 'P2025'
       ) {
         throw new NotFoundException(
-          `Serviço oferecido com ID "${id}" não encontrado.`,
+          `Servico oferecido com ID "${id}" nao encontrado.`,
         );
       }
       throw error;
