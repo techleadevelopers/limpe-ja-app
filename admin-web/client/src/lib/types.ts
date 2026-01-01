@@ -189,6 +189,7 @@ export type Client = {
     userId: string;
     name: string;
     email: string;
+    avatarUrl?: string | null;
     role?: 'ADMIN' | 'CLIENT' | 'PROVIDER';
     phone?: string | null;
     cpf?: string | null;
@@ -201,7 +202,9 @@ export type Client = {
     memberSince: string;
     status: 'active' | 'inactive' | 'blocked';
     lastActivity: string;
+    lastLogin?: string | null;
     loyaltyTier: 'bronze' | 'silver' | 'gold' | 'platinum';
+    verificationStatus?: string | null;
     createdAt: string;
     updatedAt: string;
 };
