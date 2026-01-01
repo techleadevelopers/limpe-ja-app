@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   // hero
   hero: { paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 16, paddingHorizontal: 14 },
   heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroBackBtn: { padding: 6 },
+  heroBackBtn: { padding: 6, top: Platform.OS === 'android' ? 6 : 0, },
   heroLogo: { width: 40, height: 16, resizeMode: 'contain', marginLeft: 8 },
   heroProfileRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center' },
   heroAvatarWrap: { width: 42, height: 42, borderRadius: 21, overflow: 'hidden', backgroundColor: '#F0F2F5', marginRight: 10 },
