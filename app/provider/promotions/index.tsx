@@ -1,8 +1,9 @@
 ﻿import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { Stack, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Alert,
   Modal,
@@ -66,7 +67,9 @@ const PromotionsScreen = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [isVerificationPending, setIsVerificationPending] = useState(false);
+  const [highlightUpdate, setHighlightUpdate] = useState(false);
   const router = useRouter();
+  const lastActivePromotionRef = useRef<string | null>(null);
 
 const resolveErrorMessage = useCallback(
   (error: unknown, action: 'list' | 'create' | 'toggle') => {
@@ -155,6 +158,23 @@ const resolveErrorMessage = useCallback(
     () => sortedPromotions.find((promotion) => promotion.isActive && !isPromotionExpired(promotion)),
     [sortedPromotions],
   );
+
+  useEffect(() => {
+    if (activePromotion?.id && lastActivePromotionRef.current !== activePromotion.id) {
+      lastActivePromotionRef.current = activePromotion.id;
+      setHighlightUpdate(true);
+      AccessibilityInfo.announceForAccessibility('Novas promoções ativas disponíveis');
+      const timer = setTimeout(() => setHighlightUpdate(false), 2200);
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+
+    if (!activePromotion) {
+      lastActivePromotionRef.current = null;
+      setHighlightUpdate(false);
+    }
+  }, [activePromotion]);
 
   const validUntilDate = useMemo(() => getDateAfterDays(selectedDuration), [selectedDuration]);
 
@@ -339,8 +359,19 @@ const resolveErrorMessage = useCallback(
           <View style={styles.section}>
             <View style={styles.activeSection}>
               {activePromotion ? (
-                <View style={styles.activeCard}>
-                  <Text style={styles.activeDiscount}>-{activePromotion.percentOff}%</Text>
+                <View style={[styles.activeCard, highlightUpdate && styles.activeCardHighlight]}>
+              <Text
+                style={[
+                  styles.activePromotionLabel,
+                  highlightUpdate && styles.activePromotionLabelHighlight,
+                ]}
+              >
+                Promoções ativas
+              </Text>
+              {highlightUpdate && (
+                <Text style={styles.activePromotionLabelUpdate}>Atualizado agora</Text>
+              )}
+                <Text style={styles.activeDiscount}>-{activePromotion.percentOff}%</Text>
                   <Text style={styles.activeValid}>
                     Válida até {formatFullDate(activePromotion.validUntil)}
                   </Text>
@@ -593,6 +624,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 12,
     elevation: 0,
+  },
+  activeCardHighlight: {
+    borderColor: Colors.light.primary,
+    shadowColor: Colors.light.primary,
+    shadowOpacity: 0.12,
+  },
+  activePromotionLabel: {
+    fontSize: 12,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: '#556',
+    marginBottom: 4,
+  },
+  activePromotionLabelHighlight: {
+    color: Colors.light.primary,
+  },
+  activePromotionLabelUpdate: {
+    fontSize: 12,
+    color: Colors.light.primary,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   activeDiscount: {
     fontSize: 40,
