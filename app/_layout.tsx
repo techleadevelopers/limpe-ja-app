@@ -34,6 +34,7 @@ import NotificationUIService from '../services/notificationUIService';
 import { UserRole, VerificationStatus } from '../types/backend/auth';
 import { useNotificationsSocket } from '../hooks/useNotificationsSocket';
 import { BookingDetails, BookingStatus } from '../types/backend/bookings';
+import { initializeObservability } from '../services/observability';
 // Optional local notifications setup (Android channel) â€“ safe, no-op on iOS if unavailable
 let setupNotificationsOnce: (() => Promise<void>) | null = (async () => {
   try {
@@ -251,14 +252,7 @@ function FloatingActiveServicePill({
 
 // ✓ SOLUÇÃO GLOBAL: Ignora só o warning específico do LogBox (dev mode apenas; não afeta produção ou outros erros)
 LogBox.ignoreLogs(['Text strings must be rendered within a <Text>']);
-
-Sentry.init({
-    dsn: 'https://947962edb662e5ff655cbcd778ee13b6@o4509792415252480.ingest.us.sentry.io/4509792431898624',
-    sendDefaultPii: true,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1,
-    integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
-});
+initializeObservability();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -275,8 +269,9 @@ function RootLayoutContent() {
     const pathname = usePathname();
     const { t } = useTranslation();
 
-    // ativa o socket de notificações quando token está disponível
-    useNotificationsSocket(token);
+    // ativa o socket de notificações somente quando o app estiver pronto e o token disponível,
+    // evitando chamadas de overlay enquanto o layout inicial ainda está escondido.
+    useNotificationsSocket(appReady ? token : null);
     // one-time local notifications channel (Android). Harmless on iOS.
     useEffect(() => { if (setupNotificationsOnce) { setupNotificationsOnce(); } }, []);
     // Deep-link handler for notification taps (local or push)
