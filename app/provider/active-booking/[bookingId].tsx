@@ -345,14 +345,15 @@ export default function ActiveBookingDetails() {
         title: 'Atendimento',
         headerLeft: () => (
           <TouchableOpacity
+            testID="activeBookingBackButton"
             onPress={() => {
               if (Platform.OS === 'ios') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }
               router.back();
             }}
-            style={{ 
-              marginLeft: 10, 
+            style={{
+              marginLeft: 10,
               padding: 8, 
               borderRadius: 8, 
               backgroundColor: 'rgba(255, 255, 255, 0.8)' 
@@ -376,13 +377,13 @@ export default function ActiveBookingDetails() {
         {isInProgress && (
           <View style={[styles.banner, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }] }>
             <Ionicons name="time-outline" size={16} color={PRIMARY} />
-            <Text style={[styles.bannerText, { color: TEXT }]}>Servico em andamento</Text>
+            <Text style={[styles.bannerText, { color: TEXT }]} testID="jobStatusText">Servico em andamento</Text>
           </View>
         )}
         {isCompleted && (
           <View style={[styles.banner, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}>
             <Ionicons name="checkmark-circle-outline" size={16} color={SUCCESS} />
-            <Text style={[styles.bannerText, { color: TEXT }]}>Concluido</Text>
+            <Text style={[styles.bannerText, { color: TEXT }]} testID="jobStatusText">Concluido</Text>
           </View>
         )}
 
@@ -394,6 +395,7 @@ export default function ActiveBookingDetails() {
                 onPress={handleStart}
                 disabled={startDisabled}
                 accessibilityLabel="Iniciar Servico"
+                testID="startJobButton"
               >
                 <Ionicons name="play-circle-outline" size={18} color={startDisabled ? MUTED : PRIMARY} />
                 <Text style={[styles.btnTextPrimary, { color: startDisabled ? MUTED : PRIMARY }]}>Iniciar</Text>
@@ -404,6 +406,7 @@ export default function ActiveBookingDetails() {
                 onPress={handleComplete}
                 disabled={completeDisabled}
                 accessibilityLabel="Concluir Servico"
+                testID="completeJobButton"
               >
                 {submitting === 'COMPLETE' ? (
                   <ActivityIndicator color={WHITE} size="small" />
