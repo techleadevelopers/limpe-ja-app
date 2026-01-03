@@ -87,6 +87,10 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
       backendApiUrl:
         process.env.EXPO_PUBLIC_API_BASE_URL ??
         'https://limpeja-backend-production-edfa.up.railway.app',
+      logRocketAppId:
+        process.env.EXPO_PUBLIC_LOGROCKET_APP_ID ??
+        process.env.LOGROCKET_APP_ID ??
+        '',
       environment: process.env.NODE_ENV || 'production',
       router: {},
       eas: {
