@@ -24,7 +24,7 @@ const ProviderNavBar: React.FC = () => {
   // 🔁 ÚNICA diferença real: rotas do provider
   const navItems = [
     { name: 'Início', icon: 'home', route: '/provider' },
-    { name: 'Agenda', icon: 'calendar', route: '/provider/profile' },
+    { name: 'Agenda', icon: 'calendar', route: '/provider/schedule' },
     { name: 'Cupons', icon: 'pricetag', route: '/provider/promotions' },
     { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/provider/messages' },
     { name: 'Perfil', icon: 'person', route: '/provider/profile' },
