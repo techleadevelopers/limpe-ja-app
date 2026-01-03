@@ -9,6 +9,7 @@ import {
   Alert,
   Animated,
   Easing,
+  GestureResponderEvent,
   Image,
   Platform,
   RefreshControl,
@@ -24,6 +25,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { subscribeToProviderNotifications } from '../../services/notificationBus';
 import NotificationUIService from '../../services/notificationUIService'; // Added
 import { toastUserError } from '../_shared/errors/uiFeedback';
+import  ProviderNavBar  from '../../components/provider/navigation/ProviderNavBar';
 // Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/dashboardService';
@@ -143,7 +145,7 @@ const DashboardHeader: React.FC<{
       Platform.OS === 'android' && { paddingTop: androidPaddingTopValue },
     ]}>
       <View style={headerStyles.greetingContainer}>
-        <Text style={headerStyles.greetingText}>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
+        <Text style={headerStyles.greetingText} testID= providerDashboardTitle>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
         <Text style={headerStyles.currentDateText}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
       </View>
       <TouchableOpacity
@@ -174,9 +176,10 @@ const headerStyles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.lg,
+    paddingVertical: Platform.OS === 'android' ? 8 : Spacing.lg,
     backgroundColor: WHITE,
     borderBottomLeftRadius: Radii.xl,
+    bottom: Platform.OS === 'android' ? 15 : 0,
     borderBottomRightRadius: Radii.xl,
     ...Platform.select({
       ios: {
@@ -187,18 +190,19 @@ const headerStyles = StyleSheet.create({
       },
       android: { elevation: 0 },
     }),
-    marginBottom: Spacing.lg,
+    marginBottom: Platform.OS === 'android' ? 10 : Spacing.lg,
   },
   greetingContainer: {
     flex: 1,
   },
   greetingText: {
-    fontSize: 18.8,
+    fontSize: Platform.OS === 'android' ? 17 : 18.8,
     fontWeight: 'bold',
+    top: Platform.OS === 'android' ? 5 : 0,
     color: TEXT_DARK,
   },
   providerNameText: {
-    color: ICON_PRIMARY,
+    color: TEXT_DARK,
   },
   currentDateText: {
     fontSize: 14,
@@ -726,7 +730,8 @@ const RequestItem: React.FC<{
           onPressOut={detailsTouchAnimation.onPressOut}
           accessibilityRole="button"
           accessibilityLabel={`Ver detalhes do serviço ${item.serviceName}`}
-          accessibilityHint="Abre a tela com todas as informações do agendamento."
+        accessibilityHint="Abre a tela com todas as informações do agendamento."
+        testID={`pendingRequest-${item.id}`}
         >
           <Animated.View style={[styles.secondaryActionContent, { transform: [{ scale: detailsTouchAnimation.scaleAnim }] }]}>
             <Ionicons name="eye-outline" size={18} color={ICON_PRIMARY} accessibilityHidden={true} />
@@ -841,6 +846,7 @@ const ConfirmedServiceItem: React.FC<{
         accessibilityRole="button"
         accessibilityLabel={`Ver detalhes do serviço ${item.serviceName} com ${item.clientFullName}`}
         accessibilityHint="Toque para ver detalhes do serviço confirmado."
+        testID={`upcomingService-${item.id}`}
       >
         <Animated.View style={[styles.serviceItemContent, { transform: [{ scale: touchAnimation.scaleAnim }] }]}>
           <View style={styles.serviceItemIconWrapper}>
@@ -915,7 +921,9 @@ export default function ProviderDashboardScreen() {
     }
   }, []);
   const fetchData = useCallback(async () => {
-    console.log("[DashboardScreen] fetchData: Iniciando busca de dados.");
+      if (__DEV__) {
+        console.log("[DashboardScreen] fetchData: Iniciando busca de dados.");
+      }
     if (isMounted.current) {
       setIsLoading(true);
       setError(null);
@@ -929,13 +937,17 @@ export default function ProviderDashboardScreen() {
       }
       return;
     }
-    console.log(`[DashboardScreen] fetchData: Buscando dashboard para userId: ${user.id}`);
+    if (__DEV__) {
+      console.log(`[DashboardScreen] fetchData: Buscando dashboard para userId: ${user.id}`);
+    }
     try {
       // CORRIGIDO: Chamar a função correta do serviço de dashboard
       const dashboard = await getMyProviderDashboard();
       if (!isMounted.current) return; // Verificar se o componente ainda está montado
-      console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard);
-      console.log("[DashboardScreen] REVIEWS NA DASHBOARD (AGORA COM 'reviews'):", dashboard.reviews);
+      if (__DEV__) {
+        console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard);
+        console.log("[DashboardScreen] REVIEWS NA DASHBOARD (AGORA COM 'reviews'):", dashboard.reviews);
+      }
       setDashboardData(dashboard);
       // Buscar listas reais como no provider/index.tsx
       const pendingBookings = await getBookingsForUser(BookingStatus.PENDING);
@@ -966,12 +978,16 @@ export default function ProviderDashboardScreen() {
         setIsLoading(false);
         setIsRefreshing(false);
       }
-      console.log("[DashboardScreen] fetchData: Finalizado. isLoading:", false, "isRefreshing:", false);
+      if (__DEV__) {
+        console.log("[DashboardScreen] fetchData: Finalizado. isLoading:", false, "isRefreshing:", false);
+      }
     }
   }, [user, financialSummaryAnim, quickActionsAnim, newRequestsAnim, upcomingServicesAnim, reviewsSectionAnim, logoutButtonAnim, isReducedMotionEnabled]);
   useEffect(() => {
     isMounted.current = true; // Componente montado
-    console.log("[DashboardScreen] useEffect: authLoading:", authLoading, "user.id:", user?.id);
+    if (__DEV__) {
+      console.log("[DashboardScreen] useEffect: authLoading:", authLoading, "user.id:", user?.id);
+    }
     if (!authLoading && user?.id) {
       fetchData();
     } else if (!authLoading && !user?.id) {
@@ -1031,17 +1047,23 @@ export default function ProviderDashboardScreen() {
     || user?.fullName
     || undefined; // Removidas as dependências individuais das Animated.Value, pois a animação composta é controlada por staggerAnimationRef
   const onRefresh = useCallback(() => {
-    console.log("[DashboardScreen] onRefresh: Iniciando refresh.");
+    if (__DEV__) {
+      console.log("[DashboardScreen] onRefresh: Iniciando refresh.");
+    }
     if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsRefreshing(true);
     fetchData();
   }, [fetchData, isReducedMotionEnabled]);
   const handleViewAllServicesPress = () => {
-    console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviços.");
+    if (__DEV__) {
+      console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviços.");
+    }
     router.push(PROVIDER_ROUTES.SERVICES_LIST as any);
   };
   const handleViewAllMessagesPress = () => {
-    console.log("[DashboardScreen] handleViewAllMessagesPress: Navegando para a lista de mensagens.");
+    if (__DEV__) {
+      console.log("[DashboardScreen] handleViewAllMessagesPress: Navegando para a lista de mensagens.");
+    }
     router.push(PROVIDER_ROUTES.MESSAGES_LIST as any);
   };
   // Handlers de navegação para Ações Rápidas novas
@@ -1059,12 +1081,22 @@ export default function ProviderDashboardScreen() {
   const goEarnings = () => router.push(PROVIDER_ROUTES.EARNINGS as any);
   const goWithdraw = () => router.push(PROVIDER_ROUTES.WITHDRAW as any); // CORREÇÃO: Usar a constante da rota
   const handleAcceptRequest = async (bookingId: string) => {
-    console.log(`[DashboardScreen] handleAcceptRequest: Tentando aceitar agendamento ${bookingId}.`);
+    if (__DEV__) {
+      console.log(`[DashboardScreen] handleAcceptRequest: Tentando aceitar agendamento ${bookingId}.`);
+    }
     Alert.alert(
       'Aceitar Solicitação',
       `Tem certeza que deseja aceitar o agendamento ${bookingId}?`,
       [
-        { text: 'Cancelar', style: 'cancel', onPress: () => console.log('[DashboardScreen] Aceitar cancelado.') },
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+          onPress: () => {
+            if (__DEV__) {
+              console.log('[DashboardScreen] Aceitar cancelado.');
+            }
+          },
+        },
         {
           text: 'Aceitar',
           onPress: async () => {
@@ -1075,7 +1107,9 @@ export default function ProviderDashboardScreen() {
               await updateBookingStatus(bookingId, { status: BookingStatus.CONFIRMED });
               if (isMounted.current) {
                 NotificationUIService.showSuccess('Agendamento aceito com sucesso!', 'Sucesso');
-                console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
+                if (__DEV__) {
+                  console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
+                }
                 fetchData();
               }
               } catch (error: any) {
@@ -1094,12 +1128,22 @@ export default function ProviderDashboardScreen() {
     );
   };
   const handleRejectRequest = async (bookingId: string) => {
-    console.log(`[DashboardScreen] handleRejectRequest: Tentando rejeitar agendamento ${bookingId}.`);
+    if (__DEV__) {
+      console.log(`[DashboardScreen] handleRejectRequest: Tentando rejeitar agendamento ${bookingId}.`);
+    }
     Alert.alert(
       'Rejeitar Solicitação',
       `Tem certeza que deseja rejeitar o agendamento ${bookingId}?`,
       [
-        { text: 'Cancelar', style: 'cancel', onPress: () => console.log('[DashboardScreen] Rejeitar cancelado.') },
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+          onPress: () => {
+            if (__DEV__) {
+              console.log('[DashboardScreen] Rejeitar cancelado.');
+            }
+          },
+        },
         {
           text: 'Rejeitar',
           onPress: async () => {
@@ -1110,7 +1154,9 @@ export default function ProviderDashboardScreen() {
               await updateBookingStatus(bookingId, { status: BookingStatus.REJECTED });
               if (isMounted.current) {
                 NotificationUIService.showSuccess('Agendamento rejeitado com sucesso!', 'Sucesso');
-                console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
+                if (__DEV__) {
+                  console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
+                }
                 fetchData();
               }
               } catch (error: any) {
@@ -1129,15 +1175,21 @@ export default function ProviderDashboardScreen() {
     );
   };
   const handleChatWithClient = (clientId: string, clientName: string) => {
-    console.log(`[DashboardScreen] handleChatWithClient: Iniciando chat com cliente ${clientName} (${clientId}).`);
+    if (__DEV__) {
+      console.log(`[DashboardScreen] handleChatWithClient: Iniciando chat com cliente ${clientName} (${clientId}).`);
+    }
     router.push({ pathname: '/provider/messages/[chatId]', params: { chatId: clientId, recipientName: clientName } } as any);
   };
   const handleLogout = async () => {
-    console.log("[Dashboard] Botão de Logout clicado: Iniciando logout direto.");
+    if (__DEV__) {
+      console.log("[Dashboard] Botão de Logout clicado: Iniciando logout direto.");
+    }
     if (!isReducedMotionEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); // CORREÇÃO: Usar notificationAsync e NotificationFeedbackType.Warning
     try {
       await logout();
-      console.log("[Dashboard] logout() concluído. O _layout.tsx deve redirecionar.");
+      if (__DEV__) {
+        console.log("[Dashboard] logout() concluído. O _layout.tsx deve redirecionar.");
+      }
       AccessibilityInfo.announceForAccessibility('Logout realizado com sucesso. Redirecionando para tela inicial.');
     } catch (error) {
       console.error("[Dashboard] Erro ao fazer logout:", error);
@@ -1389,6 +1441,8 @@ export default function ProviderDashboardScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+      <ProviderNavBar />
+      
       <ProviderNudgeContainer /> {/* Added ProviderNudgeContainer */}
     </View>
   );
@@ -1450,7 +1504,7 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     padding: Spacing.md,
-    paddingTop:  0,
+    paddingTop: 0,
     paddingBottom: Spacing.xl,
   },
   qaPanelButton: {
@@ -1927,7 +1981,11 @@ const EditHoursSection: React.FC<{
             <Text style={quickActionStyles.quickChipSubtitle}>Manhã, tarde ou dia todo</Text>
           </View>
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); router.push('/provider/schedule/manage-availability?preset=today-morning' as any); }}
+            onPress={(event: GestureResponderEvent) => {
+              event.stopPropagation();
+              Haptics.selectionAsync();
+              router.push('/provider/schedule/manage-availability?preset=today-morning' as any);
+            }}
             style={quickActionStyles.plusButton}
             accessibilityRole="button"
             accessibilityLabel="Adicionar"
@@ -1948,7 +2006,11 @@ const EditHoursSection: React.FC<{
             <Text style={quickActionStyles.quickChipSubtitle}>Escolha seus horários</Text>
           </View>
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); router.push('/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any); }}
+            onPress={(event: GestureResponderEvent) => {
+              event.stopPropagation();
+              Haptics.selectionAsync();
+              router.push('/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any);
+            }}
             style={quickActionStyles.plusButton}
             accessibilityRole="button"
             accessibilityLabel="Adicionar"
@@ -1969,7 +2031,11 @@ const EditHoursSection: React.FC<{
             <Text style={quickActionStyles.quickChipSubtitle}>Tire um dia de descanso</Text>
           </View>
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); router.push('/provider/schedule/manage-availability?preset=block-today' as any); }}
+            onPress={(event: GestureResponderEvent) => {
+              event.stopPropagation();
+              Haptics.selectionAsync();
+              router.push('/provider/schedule/manage-availability?preset=block-today' as any);
+            }}
             style={quickActionStyles.plusButton}
             accessibilityRole="button"
             accessibilityLabel="Adicionar"
@@ -1990,7 +2056,11 @@ const EditHoursSection: React.FC<{
             <Text style={quickActionStyles.quickChipSubtitle}>Replique os horários da última semana</Text>
           </View>
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); router.push('/provider/schedule/manage-availability?preset=repeat-week' as any); }}
+            onPress={(event: GestureResponderEvent) => {
+              event.stopPropagation();
+              Haptics.selectionAsync();
+              router.push('/provider/schedule/manage-availability?preset=repeat-week' as any);
+            }}
             style={quickActionStyles.plusButton}
             accessibilityRole="button"
             accessibilityLabel="Adicionar"
