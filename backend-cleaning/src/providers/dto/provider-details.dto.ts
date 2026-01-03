@@ -167,14 +167,14 @@ export class ProviderDetailsDto {
   reviewCount: number;
 
   @ApiProperty({
-    description: 'Data de criaA§ALo do cadastro',
+    description: 'Data de criação do cadastro',
     example: '2025-01-01T12:00:00.000Z',
   })
   @IsString()
   createdAt: string;
 
   @ApiProperty({
-    description: 'Data da Aoltima atualizaA§ALo',
+    description: 'Data da Aoltima atualização',
     example: '2025-01-02T12:00:00.000Z',
   })
   @IsString()
