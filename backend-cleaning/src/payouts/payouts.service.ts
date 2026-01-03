@@ -512,7 +512,7 @@ export class PayoutsService {
         await this.queues.addNotificationJob('send-notification', {
           userId,
           type: 'WITHDRAWAL_REQUESTED',
-          message: `SolicitaÃ§Ã£o de saque criada (R$ ${payout.amount.toFixed(2)}).`,
+          message: `Solicitação de saque criada (R$ ${payout.amount.toFixed(2)}).`,
           targetUrl: '/app/(provider)/earnings',
         });
       } catch {}
