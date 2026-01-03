@@ -536,6 +536,7 @@ export default function ClientRegisterScreen() {
         return valid;
     }, [phone, cpf]);
 
+    const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
     const checkStep3Validity = useCallback(() => { // Step 3: DateOfBirth + Password
         let valid = true;
         if (!dateOfBirth.trim()) valid = false;
@@ -557,7 +558,7 @@ export default function ClientRegisterScreen() {
                 }
             }
         }
-        if (!password.trim() || password.length < 6) valid = false;
+        if (!password.trim() || !PASSWORD_COMPLEXITY_REGEX.test(password)) valid = false;
         return valid;
     }, [dateOfBirth, password]);
 
@@ -760,13 +761,14 @@ export default function ClientRegisterScreen() {
             devLog("[ClientRegister] handleNext: Avançando para o Step 3 (Data + Senha).");
         } else if (currentStep === 3) { // Step 3: DateOfBirth + Password
             const isValid = checkStep3Validity();
-            if (!isValid) {
-                handleDateOfBirthBlur();
-                handlePasswordBlur();
-                setGeneralError('Por favor, preencha data de nascimento e senha corretamente.');
-                devWarn("[ClientRegister] handleNext: Falha ao avançar: Step 3 inválido.");
-                return;
-            }
+        if (!isValid) {
+            handleDateOfBirthBlur();
+            handlePasswordBlur();
+            setPasswordError('A senha deve ter ao menos 8 caracteres, incluindo maiúsculas, minúsculas, números e símbolos.');
+            setGeneralError('Digite uma data válida e uma senha que atenda aos requisitos de segurança.');
+            devWarn("[ClientRegister] handleNext: Falha ao avançar: Step 3 inválido.");
+            return;
+        }
             setCurrentStep(4); // Step 4: Referral
             devLog("[ClientRegister] handleNext: Avançando para o Step 4 (Código de Indicação).");
         } else if (currentStep === 4) { // Step 4: Referral Code (opcional)
@@ -1278,6 +1280,7 @@ export default function ClientRegisterScreen() {
                                         <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
                                     </TouchableOpacity>
                                 </View>
+                                <Text style={styles.passwordHint}>Inclua maiúscula, minúscula, número e símbolo.</Text>
                                 <AnimatedErrorMessage message={passwordError} isVisible={!!passwordError} centered={false} containerStyle={styles.inlineErrorLift} />
 
                                 <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
@@ -1677,6 +1680,13 @@ const styles = StyleSheet.create({
     },
     inlineErrorLift: {
         transform: [{ translateY: -7 }], // Aproxima o erro 15% da altura do input (45px)
+    },
+    passwordHint: {
+        fontSize: 12,
+        color: '#6C757D',
+        alignSelf: 'flex-start',
+        marginBottom: 8,
+        marginTop: -6,
     },
     eyeIconTouchable: {
         paddingHorizontal: 8,
