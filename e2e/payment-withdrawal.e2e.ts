@@ -3,7 +3,7 @@
 // Importações necessárias para Detox.
 // 'device', 'element', 'by', 'expect' são as únicas importações necessárias aqui.
 // 'installWorker' e 'cleanup' são gerenciadas pelo runner do Jest/Detox.
-import { device, element, by, expect } from 'detox';
+import { device, element, by, expect, waitFor } from 'detox';
 
 // Importa 'fetch' para simular as chamadas de webhook.
 // Certifique-se de ter 'node-fetch' instalado: npm install --save-dev node-fetch @types/node-fetch
@@ -167,5 +167,29 @@ describe('Fluxo Completo de Pagamento e Saque', () => {
     // Adapte o valor esperado se o saque não for total ou se houver taxas.
     await expect(element(by.id('availableBalanceText'))).toHaveText('R$ 0,00');
     console.log('Final balance verified as R$ 0,00.');
+  });
+
+  it('abre agenda de provedor e executa pull-to-refresh', async () => {
+    await element(by.text('Agenda')).tap();
+    await expect(element(by.id('providerScheduleScreen'))).toBeVisible();
+    await element(by.id('providerScheduleList')).swipe('down', 'fast', 0.5);
+    await expect(element(by.id('manageAvailabilityButton'))).toBeVisible();
+  });
+
+  it('permite iniciar e encerrar um atendimento', async () => {
+    await element(by.id('emailInput')).typeText('provedor@teste.com');
+    await element(by.id('passwordInput')).typeText('12345678');
+    await element(by.id('loginButton')).tap();
+    await waitFor(element(by.id('providerDashboardTitle'))).toBeVisible().withTimeout(15000);
+
+    await waitFor(element(by.id('upcomingService-BKG-LIVE-1'))).toBeVisible().withTimeout(15000);
+    await element(by.id('upcomingService-BKG-LIVE-1')).tap();
+
+    await waitFor(element(by.id('startJobButton'))).toBeVisible().withTimeout(10000);
+    await element(by.id('startJobButton')).tap();
+    await waitFor(element(by.id('jobStatusText'))).toHaveText('Servico em andamento').withTimeout(15000);
+
+    await element(by.id('completeJobButton')).tap();
+    await waitFor(element(by.id('jobStatusText'))).toHaveText('Concluido').withTimeout(15000);
   });
 });
