@@ -1,0 +1,36 @@
+name: Detox iOS
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  detox-ios:
+    name: Detox iOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate native projects
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install --repo-update
+
+      - name: Build iOS Detox app
+        run: npm run detox:build:ios
+
+      - name: Run Detox iOS tests
+        run: npm run detox:test:ios
