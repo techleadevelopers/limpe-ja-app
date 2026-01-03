@@ -33,14 +33,14 @@ import { CreateProviderServiceData, UpdateProviderServiceData } from '../../../t
 import { Service } from '../../../types/backend/services';
 import { alertUserError } from '../../_shared/errors/uiFeedback';
 
-// ===== CatÃ¡logo fallback (garante opÃ§Ãµes como Residencial/Comercial se backend ainda nÃ£o responder) =====
+// ===== CatÃ¡logo fallback (garante opções como Residencial/Comercial se backend ainda não responder) =====
 const FALLBACK_SERVICES: Service[] = [
   { id: '3f17467b-e198-4072-87f0-0213d2d08997', name: 'Residencial', description: 'Limpeza de residÃªncias', price: null },
   { id: '78cc63ad-a18d-4ba0-b0b8-28624412caf3', name: 'Comercial', description: 'Limpeza comercial', price: null },
   { id: '0a8ea519-63e4-4efb-a03a-628dbbc9f052', name: 'PÃ³s-Obra', description: 'Limpeza pÃ³s-obra', price: null },
   { id: '2559b9e2-0526-4304-9d04-89606b424074', name: 'EscritÃ³rio', description: 'Limpeza de escritÃ³rios', price: null },
   { id: 'c8c6bfee-598f-4de0-a383-0f6101699b15', name: 'Vidros', description: 'Limpeza de vidros', price: null },
-  { id: '3abda78a-264f-4745-9094-83cad16e65f3', name: 'Estofados', description: 'HigienizaÃ§Ã£o de estofados', price: null },
+  { id: '3abda78a-264f-4745-9094-83cad16e65f3', name: 'Estofados', description: 'Higienização de estofados', price: null },
 ];
 
 // ===== Design Tokens (Premium UI - Alinhado para iOS Clean) =====
@@ -80,8 +80,8 @@ const MIN_DURATION_MINUTES = 240;
 const easeOut = Easing.out(Easing.ease);
 
 /**
- * Helper para aplicar toFixed() de forma segura, evitando erros em valores nÃ£o numÃ©ricos.
- * Retorna uma string formatada ou uma string vazia/padrÃ£o se o valor nÃ£o for um nÃºmero vÃ¡lido.
+ * Helper para aplicar toFixed() de forma segura, evitando erros em valores não numéricos.
+ * Retorna uma string formatada ou uma string vazia/padrão se o valor não for um número válido.
  */
 function safeToFixed(value: any, digits: number = 2, defaultValue: string = ''): string {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -123,7 +123,7 @@ function parseDurationToMinutes(input: string | undefined) {
   return anyNum ? parseInt(anyNum[0], 10) : undefined;
 }
 
-// Hook para verificar se o movimento reduzido estÃ¡ ativado
+// Hook para verificar se o movimento reduzido está ativado
 function useReducedMotion() {
   const [isReducedMotionEnabled, setIsReducedMotionEnabled] = useState(false);
 
@@ -134,7 +134,7 @@ function useReducedMotion() {
         const enabled = await AccessibilityInfo.isReduceMotionEnabled();
         if (mounted) setIsReducedMotionEnabled(enabled);
       } catch (e) {
-        // nÃ£o crÃ­tico
+        // não crítico
       }
     };
 
@@ -209,8 +209,8 @@ const AnimatedServiceItem: React.FC<{
 
   const confirmDelete = () => {
     Alert.alert(
-      'Excluir ServiÃ§o',
-      `Tem certeza que deseja excluir "${item.name}"? Esta aÃ§Ã£o nÃ£o pode ser desfeita.`,
+      'Excluir Serviço',
+      `Tem certeza que deseja excluir "${item.name}"? Esta ação não pode ser desfeita.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Excluir', style: 'destructive', onPress: () => onDelete(item.id) },
@@ -229,7 +229,8 @@ const AnimatedServiceItem: React.FC<{
     const formatted = safeToFixed(service.pricePerHour, 2);
     return formatted ? `R$ ${formatted.replace('.', ',')}/h` : 'Preço indisponível';
   };
-const durationLabel = item.durationMinutes ? `${item.durationMinutes} min` : 'Duração mínima 4h';
+
+  const durationLabel = item.durationMinutes ? `${item.durationMinutes} min` : 'Duração mínima 4h';
 
   return (
     <Animated.View
@@ -237,7 +238,7 @@ const durationLabel = item.durationMinutes ? `${item.durationMinutes} min` : 'Du
         styles.serviceItemWrapper,
         { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] },
       ]}
-      accessibilityLabel={`ServiÃ§o ${item.name}. DescriÃ§Ã£o: ${item.description}. PreÃ§o: ${formatPriceDisplay(item)}. Toque para editar ou excluir.`}
+      accessibilityLabel={`Serviço ${item.name}. Descrição: ${item.description}. Preço: ${formatPriceDisplay(item)}. Toque para editar ou excluir.`}
     >
       <TouchableOpacity
         onPressIn={onPressInItem}
@@ -300,7 +301,7 @@ export default function EditProviderServicesScreen() {
   const [isReloadingCatalog, setIsReloadingCatalog] = useState(false);
   const [isUsingFallbackCatalog, setIsUsingFallbackCatalog] = useState(false);
 
-  // â Sheet premium de seleÃ§Ã£o do tipo
+  // ✅ Sheet premium de seleção do tipo
   const [typeSheetOpen, setTypeSheetOpen] = useState(false);
   const [typeQuery, setTypeQuery] = useState('');
 
@@ -316,7 +317,6 @@ export default function EditProviderServicesScreen() {
 
   const [formError, setFormError] = useState<string | null>(null);
 
-  
   // Animations (refinadas para iOS premium)
   const headerAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
@@ -326,13 +326,13 @@ export default function EditProviderServicesScreen() {
 
   const isReducedMotionEnabled = useReducedMotion();
 
-  // â Selected service (para o campo compacto)
+  // ✅ Selected service (para o campo compacto)
   const selectedService = useMemo(
     () => availableBaseServices.find(s => s.id === selectedBaseServiceId),
     [availableBaseServices, selectedBaseServiceId]
   );
 
-  // â Filtered services (busca no sheet)
+  // ✅ Filtered services (busca no sheet)
   const filteredServices = useMemo(() => {
     const q = typeQuery.trim().toLowerCase();
     if (!q) return availableBaseServices;
@@ -341,13 +341,14 @@ export default function EditProviderServicesScreen() {
       (s.description || '').toLowerCase().includes(q)
     );
   }, [availableBaseServices, typeQuery]);
+
   useEffect(() => {
     const animationDuration = isReducedMotionEnabled ? 0 : 600;
     Animated.timing(headerAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }).start();
 
     const fetchAllData = async () => {
       if (!user?.providerDetails?.id) {
-        Alert.alert('Erro', 'ID do provedor nÃ£o encontrado. FaÃ§a login novamente.');
+        Alert.alert('Erro', 'ID do provedor não encontrado. Faça login novamente.');
         setIsLoading(false);
         Animated.timing(feedbackAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }).start();
         return;
@@ -375,7 +376,7 @@ export default function EditProviderServicesScreen() {
         }
       } catch (error: any) {
         console.error('[EditProviderServicesScreen] Erro ao carregar dados:', error);
-        alertUserError(error, 'Erro ao carregar serviÃ§os');
+        alertUserError(error, 'Erro ao carregar serviços');
       } finally {
         setIsLoading(false);
         const staggerDelay = isReducedMotionEnabled ? 0 : 160;
@@ -392,7 +393,7 @@ export default function EditProviderServicesScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isReducedMotionEnabled]);
 
-  // Fallback automÃ¡tico: se o catÃ¡logo vier vazio e nÃ£o estiver carregando
+  // Fallback automático: se o catálogo vier vazio e não estiver carregando
   useEffect(() => {
     if (!isLoading && availableBaseServices.length === 0) {
       setAvailableBaseServices(FALLBACK_SERVICES);
@@ -412,7 +413,7 @@ export default function EditProviderServicesScreen() {
         setSelectedBaseServiceId(fetchedBaseServices[0].id);
       }
     } catch (error: any) {
-      alertUserError(error, 'Erro ao recarregar o catÃ¡logo de serviÃ§os');
+      alertUserError(error, 'Erro ao recarregar o catálogo de serviços');
     } finally {
       setIsReloadingCatalog(false);
     }
@@ -420,7 +421,7 @@ export default function EditProviderServicesScreen() {
 
   // ===== Handlers =====
   const handleSaveServices = useCallback(() => {
-    showOverlay({ title: 'ServiÃ§os salvos com sucesso', variant: 'success' });
+    showOverlay({ title: 'Serviços salvos com sucesso', variant: 'success' });
     if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }, []);
 
@@ -560,25 +561,25 @@ export default function EditProviderServicesScreen() {
   const deleteService = useCallback(
     async (serviceId: string) => {
       if (!user?.providerDetails?.id) {
-        Alert.alert('Erro', 'ID do provedor nÃ£o encontrado. FaÃ§a login novamente.');
+        Alert.alert('Erro', 'ID do provedor não encontrado. Faça login novamente.');
         return;
       }
       setIsLoading(true);
       try {
         await deleteProviderServiceOffering(user.providerDetails.id, serviceId);
         setServices(prev => prev.filter(s => s.id !== serviceId));
-        Alert.alert('Sucesso', 'O serviÃ§o foi removido da sua lista.');
+        Alert.alert('Sucesso', 'O serviço foi removido da sua lista.');
         resetForm();
       } catch (error: any) {
-        console.error('[EditProviderServicesScreen] Erro ao deletar serviÃ§o:', error);
+        console.error('[EditProviderServicesScreen] Erro ao deletar serviço:', error);
         const rawMessage = String(error?.message || '').toLowerCase();
         const isForeignKeyError =
           rawMessage.includes('foreign') ||
           rawMessage.includes('constraint') ||
           rawMessage.includes('booking');
         const friendlyMessage = isForeignKeyError
-          ? 'Este serviÃ§o estÃ¡ vinculado a agendamentos. Cancele ou conclua esses agendamentos antes de remover.'
-          : 'NÃ£o foi possÃ­vel deletar o serviÃ§o. Tente novamente ou fale com o suporte.';
+          ? 'Este serviço está vinculado a agendamentos. Cancele ou conclua esses agendamentos antes de remover.'
+          : 'Não foi possível deletar o serviço. Tente novamente ou fale com o suporte.';
         Alert.alert('Erro ao excluir', friendlyMessage);
       } finally {
         setIsLoading(false);
@@ -598,13 +599,13 @@ export default function EditProviderServicesScreen() {
             { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] as any },
           ]}
         >
-          <Text style={styles.headerTitle}>Editar ServiÃ§os</Text>
+          <Text style={styles.headerTitle}>Editar Serviços</Text>
           <View style={styles.headerActionIconPlaceholder} />
         </Animated.View>
 
         <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-          <ActivityIndicator size="large" color={Colors.primary} accessibilityLabel="Carregando seus serviÃ§os" />
-          <Text style={styles.loadingText}>Carregando seus serviÃ§os...</Text>
+          <ActivityIndicator size="large" color={Colors.primary} accessibilityLabel="Carregando seus serviços" />
+          <Text style={styles.loadingText}>Carregando seus serviços...</Text>
         </Animated.View>
       </View>
     );
@@ -628,7 +629,7 @@ export default function EditProviderServicesScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityRole="button" accessibilityLabel="Voltar para a tela anterior">
           <Ionicons name="arrow-back" size={24} color="#2F3A4A" accessibilityHidden={true} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Editar ServiÃ§os</Text>
+        <Text style={styles.headerTitle}>Editar Serviços</Text>
         <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
 
@@ -639,15 +640,15 @@ export default function EditProviderServicesScreen() {
             { opacity: formAnim, transform: [{ translateY: formAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] as any },
           ]}
         >
-          <Text style={styles.formTitle}>{isEditing ? 'Editar ServiÃ§o Existente' : 'Adicionar Novo ServiÃ§o'}</Text>
+          <Text style={styles.formTitle}>{isEditing ? 'Editar Serviço Existente' : 'Adicionar Novo Serviço'}</Text>
 
           <View style={styles.inputLabelRow}>
-            <Text style={styles.inputLabel}>Tipo de ServiÃ§o</Text>
+            <Text style={styles.inputLabel}>Tipo de Serviço</Text>
             <TouchableOpacity
               onPress={reloadServiceCatalog}
               disabled={isReloadingCatalog}
               accessibilityRole="button"
-              accessibilityLabel="Recarregar catÃ¡logo de serviÃ§os"
+              accessibilityLabel="Recarregar catálogo de serviços"
               style={styles.refreshButton}
             >
               {isReloadingCatalog ? (
@@ -659,10 +660,10 @@ export default function EditProviderServicesScreen() {
           </View>
 
           {isUsingFallbackCatalog && (
-            <Text style={styles.inputHint}>Usando catÃ¡logo padrÃ£o enquanto carregamos o catÃ¡logo real.</Text>
+            <Text style={styles.inputHint}>Usando catálogo padrão enquanto carregamos o catálogo real.</Text>
           )}
 
-          {/* â Campo compacto + Bottom Sheet (substitui os chips) */}
+          {/* ✅ Campo compacto + Bottom Sheet (substitui os chips) */}
           <TouchableOpacity
             style={[styles.selectField, isEditing && { opacity: 0.5 }]}
             disabled={!!isEditing || availableBaseServices.length === 0}
@@ -672,7 +673,7 @@ export default function EditProviderServicesScreen() {
               if (Platform.OS === 'ios') Haptics.selectionAsync();
             }}
             accessibilityRole="button"
-            accessibilityLabel="Selecionar tipo de serviÃ§o"
+            accessibilityLabel="Selecionar tipo de serviço"
           >
             <Text style={styles.selectFieldText}>
               {selectedService?.name || (availableBaseServices.length === 0 ? 'Carregando...' : 'Selecione...')}
@@ -680,31 +681,31 @@ export default function EditProviderServicesScreen() {
             <Text style={styles.selectFieldAction}>{isEditing ? 'Bloqueado' : 'Alterar'}</Text>
           </TouchableOpacity>
 
-          {/* SugestÃµes compactas (texto Ãºnico) */}
+          {/* Sugestões compactas (texto único) */}
           {!isEditing && availableBaseServices.length > 0 && (
-            <Text style={styles.suggestionsText}>SugestÃµes: {SERVICE_NAME_SUGGESTIONS.join(', ')}</Text>
+            <Text style={styles.suggestionsText}>Sugestões: {SERVICE_NAME_SUGGESTIONS.join(', ')}</Text>
           )}
 
           {isEditing && (
-            <Text style={styles.inputHint}>VocÃª nÃ£o pode alterar o tipo de serviÃ§o de um serviÃ§o existente.</Text>
+            <Text style={styles.inputHint}>Você não pode alterar o tipo de serviço de um serviço existente.</Text>
           )}
 
           {availableBaseServices.length === 0 && !isLoading && (
             <Text style={styles.formErrorText} accessibilityLiveRegion="polite">
-              Nenhum tipo de serviÃ§o base disponÃ­vel. Verifique a conexÃ£o ou o backend.
+              Nenhum tipo de serviço base disponível. Verifique a conexão ou o backend.
             </Text>
           )}
 
-          <Text style={styles.inputLabel}>DescriÃ§Ã£o Detalhada</Text>
+          <Text style={styles.inputLabel}>Descrição Detalhada</Text>
           <TextInput
             style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
-            placeholder="Ex: Inclui aspiraÃ§Ã£o, lavagem de banheiros, limpeza de cozinha..."
+            placeholder="Ex: Inclui aspiração, lavagem de banheiros, limpeza de cozinha..."
             placeholderTextColor={Colors.textMuted}
             value={serviceDesc}
             onChangeText={setServiceDesc}
             multiline
-            accessibilityLabel="DescriÃ§Ã£o do serviÃ§o"
-            accessibilityHint="Descreva o que seu serviÃ§o inclui para o cliente."
+            accessibilityLabel="Descrição do serviço"
+            accessibilityHint="Descreva o que seu serviço inclui para o cliente."
           />
 
           <Text style={styles.inputLabel}>Valor por hora</Text>
@@ -733,13 +734,13 @@ export default function EditProviderServicesScreen() {
 
           {!!formError && <Text style={styles.formErrorText} accessibilityLiveRegion="polite">{formError}</Text>}
 
-          <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleAddOrUpdateService} accessibilityRole="button" accessibilityLabel={isEditing ? 'Atualizar ServiÃ§o' : 'Adicionar Novo ServiÃ§o'}>
-            <Text style={styles.actionButtonPrimaryText}>{isEditing ? 'Atualizar ServiÃ§o' : 'Adicionar Novo ServiÃ§o'}</Text>
+          <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleAddOrUpdateService} accessibilityRole="button" accessibilityLabel={isEditing ? 'Atualizar Serviço' : 'Adicionar Novo Serviço'}>
+            <Text style={styles.actionButtonPrimaryText}>{isEditing ? 'Atualizar Serviço' : 'Adicionar Novo Serviço'}</Text>
           </TouchableOpacity>
 
           {isEditing && (
-            <TouchableOpacity style={styles.actionButtonSecondary} onPress={resetForm} accessibilityRole="button" accessibilityLabel="Cancelar EdiÃ§Ã£o e Limpar FormulÃ¡rio">
-              <Text style={styles.actionButtonSecondaryText}>Cancelar EdiÃ§Ã£o</Text>
+            <TouchableOpacity style={styles.actionButtonSecondary} onPress={resetForm} accessibilityRole="button" accessibilityLabel="Cancelar Edição e Limpar Formulário">
+              <Text style={styles.actionButtonSecondaryText}>Cancelar Edição</Text>
             </TouchableOpacity>
           )}
         </Animated.View>
@@ -750,25 +751,25 @@ export default function EditProviderServicesScreen() {
             { opacity: listHeaderAnim, transform: [{ translateY: listHeaderAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] as any },
           ]}
         >
-          ServiÃ§os Cadastrados
+          Serviços Cadastrados
         </Animated.Text>
 
         {services.length === 0 ? (
           <Animated.View style={[styles.emptyListContainer, { opacity: feedbackAnim }]}>
             <Ionicons name="pricetags-outline" size={64} color="#CED4DA" accessibilityHidden={true} />
-            <Text style={styles.emptyListText}>VocÃª ainda nÃ£o adicionou serviÃ§os.</Text>
-            <Text style={styles.emptyListSubText}>Use o formulÃ¡rio acima para comeÃ§ar -- Ã© rapidinho.</Text>
+            <Text style={styles.emptyListText}>Você ainda não adicionou serviços.</Text>
+            <Text style={styles.emptyListSubText}>Use o formulário acima para começar -- é rapidinho.</Text>
             <TouchableOpacity
               style={[styles.actionButtonPrimary, { marginTop: Spacing.md }]}
               onPress={() => setTypeSheetOpen(true)}
               accessibilityRole="button"
-              accessibilityLabel="Adicionar meu primeiro serviÃ§o"
+              accessibilityLabel="Adicionar meu primeiro serviço"
             >
-              <Text style={styles.actionButtonPrimaryText}>Adicionar meu primeiro serviÃ§o</Text>
+              <Text style={styles.actionButtonPrimaryText}>Adicionar meu primeiro serviço</Text>
             </TouchableOpacity>
           </Animated.View>
         ) : (
-          <View style={styles.flatListContent} accessibilityLabel="Lista de serviÃ§os que vocÃª oferece">
+          <View style={styles.flatListContent} accessibilityLabel="Lista de serviços que você oferece">
             {services.map((item, index) => (
               <View key={item.id}>
                 <AnimatedServiceItem item={item} onEdit={startEdit} onDelete={deleteService} delay={index * 60 + 140} isReducedMotionEnabled={isReducedMotionEnabled} />
@@ -784,13 +785,13 @@ export default function EditProviderServicesScreen() {
             { opacity: saveButtonAnim, transform: [{ translateY: saveButtonAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] as any },
           ]}
         >
-          <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleSaveServices} accessibilityRole="button" accessibilityLabel="Salvar Todas as AlteraÃ§Ãµes">
-            <Text style={styles.actionButtonPrimaryText}>Salvar Todas as AlteraÃ§Ãµes</Text>
+          <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleSaveServices} accessibilityRole="button" accessibilityLabel="Salvar Todas as Alterações">
+            <Text style={styles.actionButtonPrimaryText}>Salvar Todas as Alterações</Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
 
-      {/* â Bottom Sheet: Tipo de ServiÃ§o */}
+      {/* ✅ Bottom Sheet: Tipo de Serviço */}
       {typeSheetOpen && (
         <View style={styles.modalOverlay}>
           <TouchableOpacity
@@ -798,12 +799,12 @@ export default function EditProviderServicesScreen() {
             activeOpacity={1}
             onPress={() => setTypeSheetOpen(false)}
             accessibilityRole="button"
-            accessibilityLabel="Fechar seleÃ§Ã£o de tipo"
+            accessibilityLabel="Fechar seleção de tipo"
           />
           <View style={styles.sheetCard}>
             <View style={styles.sheetHeader}>
               <View>
-                <Text style={styles.sheetTitle}>Escolha o tipo de serviÃ§o</Text>
+                <Text style={styles.sheetTitle}>Escolha o tipo de serviço</Text>
                 <Text style={styles.sheetSub}>Toque para selecionar</Text>
               </View>
               <TouchableOpacity onPress={() => setTypeSheetOpen(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
@@ -880,6 +881,7 @@ export default function EditProviderServicesScreen() {
     </KeyboardAvoidingView>
   );
 }
+
 
 // ===== Styles =====
 const styles = StyleSheet.create({
