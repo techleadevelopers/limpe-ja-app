@@ -9,6 +9,7 @@ import {
   Alert,
   Animated,
   Easing,
+  GestureResponderEvent,
   Image,
   Platform,
   RefreshControl,
@@ -918,7 +919,9 @@ export default function ProviderDashboardScreen() {
     }
   }, []);
   const fetchData = useCallback(async () => {
-    console.log("[DashboardScreen] fetchData: Iniciando busca de dados.");
+      if (__DEV__) {
+        console.log("[DashboardScreen] fetchData: Iniciando busca de dados.");
+      }
     if (isMounted.current) {
       setIsLoading(true);
       setError(null);
@@ -932,13 +935,17 @@ export default function ProviderDashboardScreen() {
       }
       return;
     }
-    console.log(`[DashboardScreen] fetchData: Buscando dashboard para userId: ${user.id}`);
+    if (__DEV__) {
+      console.log(`[DashboardScreen] fetchData: Buscando dashboard para userId: ${user.id}`);
+    }
     try {
       // CORRIGIDO: Chamar a função correta do serviço de dashboard
       const dashboard = await getMyProviderDashboard();
       if (!isMounted.current) return; // Verificar se o componente ainda está montado
-      console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard);
-      console.log("[DashboardScreen] REVIEWS NA DASHBOARD (AGORA COM 'reviews'):", dashboard.reviews);
+      if (__DEV__) {
+        console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard);
+        console.log("[DashboardScreen] REVIEWS NA DASHBOARD (AGORA COM 'reviews'):", dashboard.reviews);
+      }
       setDashboardData(dashboard);
       // Buscar listas reais como no provider/index.tsx
       const pendingBookings = await getBookingsForUser(BookingStatus.PENDING);
@@ -969,12 +976,16 @@ export default function ProviderDashboardScreen() {
         setIsLoading(false);
         setIsRefreshing(false);
       }
-      console.log("[DashboardScreen] fetchData: Finalizado. isLoading:", false, "isRefreshing:", false);
+      if (__DEV__) {
+        console.log("[DashboardScreen] fetchData: Finalizado. isLoading:", false, "isRefreshing:", false);
+      }
     }
   }, [user, financialSummaryAnim, quickActionsAnim, newRequestsAnim, upcomingServicesAnim, reviewsSectionAnim, logoutButtonAnim, isReducedMotionEnabled]);
   useEffect(() => {
     isMounted.current = true; // Componente montado
-    console.log("[DashboardScreen] useEffect: authLoading:", authLoading, "user.id:", user?.id);
+    if (__DEV__) {
+      console.log("[DashboardScreen] useEffect: authLoading:", authLoading, "user.id:", user?.id);
+    }
     if (!authLoading && user?.id) {
       fetchData();
     } else if (!authLoading && !user?.id) {
@@ -1034,17 +1045,23 @@ export default function ProviderDashboardScreen() {
     || user?.fullName
     || undefined; // Removidas as dependências individuais das Animated.Value, pois a animação composta é controlada por staggerAnimationRef
   const onRefresh = useCallback(() => {
-    console.log("[DashboardScreen] onRefresh: Iniciando refresh.");
+    if (__DEV__) {
+      console.log("[DashboardScreen] onRefresh: Iniciando refresh.");
+    }
     if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsRefreshing(true);
     fetchData();
   }, [fetchData, isReducedMotionEnabled]);
   const handleViewAllServicesPress = () => {
-    console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviços.");
+    if (__DEV__) {
+      console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviços.");
+    }
     router.push(PROVIDER_ROUTES.SERVICES_LIST as any);
   };
   const handleViewAllMessagesPress = () => {
-    console.log("[DashboardScreen] handleViewAllMessagesPress: Navegando para a lista de mensagens.");
+    if (__DEV__) {
+      console.log("[DashboardScreen] handleViewAllMessagesPress: Navegando para a lista de mensagens.");
+    }
     router.push(PROVIDER_ROUTES.MESSAGES_LIST as any);
   };
   // Handlers de navegação para Ações Rápidas novas
@@ -1062,12 +1079,22 @@ export default function ProviderDashboardScreen() {
   const goEarnings = () => router.push(PROVIDER_ROUTES.EARNINGS as any);
   const goWithdraw = () => router.push(PROVIDER_ROUTES.WITHDRAW as any); // CORREÇÃO: Usar a constante da rota
   const handleAcceptRequest = async (bookingId: string) => {
-    console.log(`[DashboardScreen] handleAcceptRequest: Tentando aceitar agendamento ${bookingId}.`);
+    if (__DEV__) {
+      console.log(`[DashboardScreen] handleAcceptRequest: Tentando aceitar agendamento ${bookingId}.`);
+    }
     Alert.alert(
       'Aceitar Solicitação',
       `Tem certeza que deseja aceitar o agendamento ${bookingId}?`,
       [
-        { text: 'Cancelar', style: 'cancel', onPress: () => console.log('[DashboardScreen] Aceitar cancelado.') },
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+          onPress: () => {
+            if (__DEV__) {
+              console.log('[DashboardScreen] Aceitar cancelado.');
+            }
+          },
+        },
         {
           text: 'Aceitar',
           onPress: async () => {
@@ -1078,7 +1105,9 @@ export default function ProviderDashboardScreen() {
               await updateBookingStatus(bookingId, { status: BookingStatus.CONFIRMED });
               if (isMounted.current) {
                 NotificationUIService.showSuccess('Agendamento aceito com sucesso!', 'Sucesso');
-                console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
+                if (__DEV__) {
+                  console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
+                }
                 fetchData();
               }
               } catch (error: any) {
@@ -1097,12 +1126,22 @@ export default function ProviderDashboardScreen() {
     );
   };
   const handleRejectRequest = async (bookingId: string) => {
-    console.log(`[DashboardScreen] handleRejectRequest: Tentando rejeitar agendamento ${bookingId}.`);
+    if (__DEV__) {
+      console.log(`[DashboardScreen] handleRejectRequest: Tentando rejeitar agendamento ${bookingId}.`);
+    }
     Alert.alert(
       'Rejeitar Solicitação',
       `Tem certeza que deseja rejeitar o agendamento ${bookingId}?`,
       [
-        { text: 'Cancelar', style: 'cancel', onPress: () => console.log('[DashboardScreen] Rejeitar cancelado.') },
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+          onPress: () => {
+            if (__DEV__) {
+              console.log('[DashboardScreen] Rejeitar cancelado.');
+            }
+          },
+        },
         {
           text: 'Rejeitar',
           onPress: async () => {
@@ -1113,7 +1152,9 @@ export default function ProviderDashboardScreen() {
               await updateBookingStatus(bookingId, { status: BookingStatus.REJECTED });
               if (isMounted.current) {
                 NotificationUIService.showSuccess('Agendamento rejeitado com sucesso!', 'Sucesso');
-                console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
+                if (__DEV__) {
+                  console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
+                }
                 fetchData();
               }
               } catch (error: any) {
@@ -1132,15 +1173,21 @@ export default function ProviderDashboardScreen() {
     );
   };
   const handleChatWithClient = (clientId: string, clientName: string) => {
-    console.log(`[DashboardScreen] handleChatWithClient: Iniciando chat com cliente ${clientName} (${clientId}).`);
+    if (__DEV__) {
+      console.log(`[DashboardScreen] handleChatWithClient: Iniciando chat com cliente ${clientName} (${clientId}).`);
+    }
     router.push({ pathname: '/provider/messages/[chatId]', params: { chatId: clientId, recipientName: clientName } } as any);
   };
   const handleLogout = async () => {
-    console.log("[Dashboard] Botão de Logout clicado: Iniciando logout direto.");
+    if (__DEV__) {
+      console.log("[Dashboard] Botão de Logout clicado: Iniciando logout direto.");
+    }
     if (!isReducedMotionEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); // CORREÇÃO: Usar notificationAsync e NotificationFeedbackType.Warning
     try {
       await logout();
-      console.log("[Dashboard] logout() concluído. O _layout.tsx deve redirecionar.");
+      if (__DEV__) {
+        console.log("[Dashboard] logout() concluído. O _layout.tsx deve redirecionar.");
+      }
       AccessibilityInfo.announceForAccessibility('Logout realizado com sucesso. Redirecionando para tela inicial.');
     } catch (error) {
       console.error("[Dashboard] Erro ao fazer logout:", error);
@@ -1932,7 +1979,11 @@ const EditHoursSection: React.FC<{
             <Text style={quickActionStyles.quickChipSubtitle}>Manhã, tarde ou dia todo</Text>
           </View>
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); router.push('/provider/schedule/manage-availability?preset=today-morning' as any); }}
+            onPress={(event: GestureResponderEvent) => {
+              event.stopPropagation();
+              Haptics.selectionAsync();
+              router.push('/provider/schedule/manage-availability?preset=today-morning' as any);
+            }}
             style={quickActionStyles.plusButton}
             accessibilityRole="button"
             accessibilityLabel="Adicionar"
@@ -1953,7 +2004,11 @@ const EditHoursSection: React.FC<{
             <Text style={quickActionStyles.quickChipSubtitle}>Escolha seus horários</Text>
           </View>
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); router.push('/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any); }}
+            onPress={(event: GestureResponderEvent) => {
+              event.stopPropagation();
+              Haptics.selectionAsync();
+              router.push('/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any);
+            }}
             style={quickActionStyles.plusButton}
             accessibilityRole="button"
             accessibilityLabel="Adicionar"
@@ -1974,7 +2029,11 @@ const EditHoursSection: React.FC<{
             <Text style={quickActionStyles.quickChipSubtitle}>Tire um dia de descanso</Text>
           </View>
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); router.push('/provider/schedule/manage-availability?preset=block-today' as any); }}
+            onPress={(event: GestureResponderEvent) => {
+              event.stopPropagation();
+              Haptics.selectionAsync();
+              router.push('/provider/schedule/manage-availability?preset=block-today' as any);
+            }}
             style={quickActionStyles.plusButton}
             accessibilityRole="button"
             accessibilityLabel="Adicionar"
@@ -1995,7 +2054,11 @@ const EditHoursSection: React.FC<{
             <Text style={quickActionStyles.quickChipSubtitle}>Replique os horários da última semana</Text>
           </View>
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); router.push('/provider/schedule/manage-availability?preset=repeat-week' as any); }}
+            onPress={(event: GestureResponderEvent) => {
+              event.stopPropagation();
+              Haptics.selectionAsync();
+              router.push('/provider/schedule/manage-availability?preset=repeat-week' as any);
+            }}
             style={quickActionStyles.plusButton}
             accessibilityRole="button"
             accessibilityLabel="Adicionar"
