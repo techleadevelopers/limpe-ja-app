@@ -5,7 +5,7 @@ module.exports = {
 
   // *** ALTERAÇÃO CRÍTICA AQUI ***
   // Use o ambiente de teste customizado do Detox
-  testEnvironment: '<rootDir>/e2e/environment.js', // Você precisará criar este arquivo
+  testEnvironment: '<rootDir>/environment.js',
 
   // Define o timeout para os testes. Detox recomenda um valor alto.
   // Movemos o timeout de jest.setup.js para cá.
@@ -21,7 +21,7 @@ module.exports = {
   testRunner: 'jest-circus/runner',
 
   // Inclui apenas arquivos .e2e.ts na pasta e2e
-  testMatch: ['<rootDir>/e2e/**/*.e2e.ts'], // Ajustado para ser mais explícito com rootDir
+  testMatch: ['<rootDir>/**/*.e2e.ts'], // Ajustado para buscar dentro da pasta de testes
 
   // Transforma arquivos TS/TSX com ts-jest
   transform: {
