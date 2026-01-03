@@ -3,7 +3,14 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics'; // Adicionado para iOS premium feedback
 import { Stack, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
     AccessibilityInfo,
     ActivityIndicator,
@@ -20,8 +27,11 @@ import {
 } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import ProviderNavBar from '../../../components/provider/navigation/ProviderNavBar';
+import { ResilientErrorBoundary } from '../../../components/common/ResilientErrorBoundary';
 import { PROVIDER_ROUTES } from '../../../constants/routes';
+import { useProviderSchedule } from '../../../hooks/useProviderSchedule';
 import { showOverlay } from '../../../hooks/useOverlayMessage';
+import { ProviderAppointment } from '../../../services/providerScheduleService';
 import { formatDate } from '../../../utils/helpers';
 
 // ====== Design tokens (mesmos da UI padronizada - Premium iOS) ======
@@ -135,35 +145,6 @@ const calendarTheme: Partial<Theme> = {
       paddingBottom: 8,
     },
   },
-};
-
-// ====== Tipos e dados simulados ======
-interface ProviderAppointment {
-  id: string;
-  clientName: string;
-  clientAvatarUrl?: string;
-  serviceType: string;
-  bookingId?: string;
-  startTime: string;
-  serviceId?: string;
-  endTime?: string;
-  date: string;
-  status: 'Confirmado' | 'PendenteCliente' | 'ARealizar' | 'Concluído' | 'Cancelado';
-  addressSummary?: string;
-}
-
-const ALL_PROVIDER_APPOINTMENTS: ProviderAppointment[] = [
-  { id: 'servA1', clientName: 'Fernanda Lima', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/1.jpg', serviceType: 'Limpeza Padrão', startTime: '09:00', endTime: '12:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'Confirmado', addressSummary: 'Rua das Flores, 100' },
-  { id: 'servA2', clientName: 'Ricardo Alves', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/2.jpg', serviceType: 'Limpeza Pesada', startTime: '14:00', endTime: '18:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'Confirmado', addressSummary: 'Av. Brasil, 500' },
-  { id: 'servA3', clientName: 'Juliana Moreira', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/3.jpg', serviceType: 'Limpeza de Manutenção', startTime: '10:00', endTime: '13:00', date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], status: 'ARealizar', addressSummary: 'Travessa da Paz, 45' },
-  { id: 'servA4', clientName: 'Marcos Andrade', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/4.jpg', serviceType: 'Limpeza de Vidros', startTime: '08:00', endTime: '10:00', date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0], status: 'Concluído', addressSummary: 'Rua do Sol, 20' },
-  { id: 'servA5', clientName: 'Ana Paula', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/5.jpg', serviceType: 'Limpeza Pós-Obra', startTime: '09:00', endTime: '17:00', date: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], status: 'PendenteCliente', addressSummary: 'Praça da Liberdade, 10' },
-  { id: 'servA6', clientName: 'Pedro Costa', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/6.jpg', serviceType: 'Limpeza Comercial', startTime: '13:00', endTime: '17:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'ARealizar', addressSummary: 'Av. Central, 800' },
-];
-
-const fetchProviderAppointments = async (_month?: string, _year?: string): Promise<ProviderAppointment[]> => {
-  await new Promise(resolve => setTimeout(resolve, 800));
-  return ALL_PROVIDER_APPOINTMENTS;
 };
 
 // Hook para verificar se o movimento reduzido está ativado
@@ -322,14 +303,33 @@ const AnimatedAppointmentItem: React.FC<{
 };
 
 // ====== Screen ======
-export default function MyScheduleScreen() {
+type ScheduleState = ReturnType<typeof useProviderSchedule>;
+
+const ScheduleSuspenseFallback = () => (
+  <View style={styles.suspenseFallback}>
+    <ActivityIndicator size="large" color={Colors.primary} accessibilityLabel="Carregando sua agenda" />
+    <Text style={styles.loadingText}>Carregando sua agenda...</Text>
+  </View>
+);
+
+function ScheduleView({ scheduleState }: { scheduleState: ScheduleState }) {
   const router = useRouter();
-const tomorrow = new Date();
-tomorrow.setDate(tomorrow.getDate() + 1);
-const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T')[0]);
-  const [allAppointments, setAllAppointments] = useState<ProviderAppointment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T')[0]);
+  const {
+    appointments,
+    loading,
+    refreshing,
+    error,
+    refresh,
+    retry,
+  } = scheduleState;
+  const [appointmentSnapshot, setAppointmentSnapshot] = useState<ProviderAppointment[]>(appointments);
+
+  useEffect(() => {
+    setAppointmentSnapshot(appointments);
+  }, [appointments]);
 
   const isReducedMotionEnabled = useReducedMotion(); // Usar o hook de movimento reduzido
 
@@ -374,33 +374,10 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
   const [rrVisible, setRrVisible] = useState(false);
   const [rrItem, setRrItem] = useState<ProviderAppointment | null>(null);
 
-  const loadAppointments = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await fetchProviderAppointments();
-      setAllAppointments(data);
-
-      const animationDuration = isReducedMotionEnabled ? 0 : 160; // Suave iOS
-      const staggerDelay = isReducedMotionEnabled ? 0 : 60; // Sequência mais natural (60ms)
-
-      Animated.stagger(staggerDelay, [
-        Animated.timing(calendarAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
-        Animated.timing(agendaHeaderAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
-        Animated.timing(feedbackAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
-      ]).start();
-    } catch (err) {
-      console.error('[MyScheduleScreen] Erro ao buscar agendamentos:', err);
-      showOverlay({ title: 'Erro', subtitle: 'Não foi possível carregar os dados da agenda.', variant: 'error' });
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [isReducedMotionEnabled, calendarAnim, agendaHeaderAnim, feedbackAnim]);
 
   useEffect(() => {
     const animationDuration = isReducedMotionEnabled ? 0 : 600; // Confortável iOS
     Animated.timing(headerAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }).start();
-    loadAppointments();
     // Exibir guia na primeira visita
     (async () => {
       try {
@@ -412,25 +389,55 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
         }
       } catch {}
     })();
-  }, [headerAnim, isReducedMotionEnabled, loadAppointments]);
+  }, [headerAnim, isReducedMotionEnabled]);
+
+  useEffect(() => {
+    if (error) {
+      showOverlay({
+        title: 'Erro',
+        subtitle: 'Não foi possível carregar os dados da agenda.',
+        variant: 'error',
+      });
+    }
+  }, [error]);
+
+  const entryAnimationPlayed = useRef(false);
+  const triggerEntryAnimations = useCallback(() => {
+    const animationDuration = isReducedMotionEnabled ? 0 : 160; // Suave iOS
+    const staggerDelay = isReducedMotionEnabled ? 0 : 60; // Sequência mais natural
+
+    Animated.stagger(staggerDelay, [
+      Animated.timing(calendarAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
+      Animated.timing(agendaHeaderAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
+      Animated.timing(feedbackAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
+    ]).start();
+  }, [agendaHeaderAnim, calendarAnim, feedbackAnim, isReducedMotionEnabled]);
+
+  useEffect(() => {
+    if (!loading && !entryAnimationPlayed.current) {
+      entryAnimationPlayed.current = true;
+      triggerEntryAnimations();
+    }
+  }, [loading, triggerEntryAnimations]);
 
   const onRefresh = () => {
-    setIsRefreshing(true);
-    loadAppointments();
+    if (!refreshing) {
+      refresh();
+    }
   };
 
   const appointmentsForSelectedDate = useMemo(() => {
-    return allAppointments
+    return appointmentSnapshot
       .filter(app => app.date === selectedDate)
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [allAppointments, selectedDate]);
+  }, [appointmentSnapshot, selectedDate]);
 
   const markedDates = useMemo(() => {
     const marks: Record<string, any> = {};
-    allAppointments.forEach(app => {
-      const hasConfirmed = allAppointments.some(a => a.date === app.date && a.status === 'Confirmado');
-      const hasPending = allAppointments.some(a => a.date === app.date && a.status === 'PendenteCliente');
-      const hasUpcoming = allAppointments.some(a => a.date === app.date && a.status === 'ARealizar');
+    appointmentSnapshot.forEach(app => {
+      const hasConfirmed = appointmentSnapshot.some(a => a.date === app.date && a.status === 'Confirmado');
+      const hasPending = appointmentSnapshot.some(a => a.date === app.date && a.status === 'PendenteCliente');
+      const hasUpcoming = appointmentSnapshot.some(a => a.date === app.date && a.status === 'ARealizar');
 
       let dotColor = Colors.primary;
       if (hasPending) dotColor = '#FF6F00';
@@ -441,7 +448,7 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
 
     const currentMark = marks[selectedDate] || {};
     marks[selectedDate] = {
-      ...currentMark, // Spread correto para fusão
+      ...currentMark,
       selected: true,
       selectedColor: Colors.primary,
       selectedTextColor: '#FFFFFF',
@@ -449,7 +456,7 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
       dotColor: currentMark.dotColor || Colors.primary,
     };
     return marks;
-  }, [allAppointments, selectedDate]);
+  }, [appointmentSnapshot, selectedDate]);
 
   const onDayPress = (day: DateData) => {
     const todayStr = new Date().toISOString().split('T')[0];
@@ -460,7 +467,7 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
     }
     setSelectedDate(day.dateString);
     // Aprimorar a acessibilidade para leitores de tela
-    const appointmentsCount = allAppointments.filter(app => app.date === day.dateString).length;
+    const appointmentsCount = appointmentSnapshot.filter(app => app.date === day.dateString).length;
     let announcement = `Data selecionada ${formatDate(day.dateString, { weekday: 'long', day: 'numeric', month: 'long' })}`;
     if (appointmentsCount > 0) {
       announcement += `. ${appointmentsCount} agendamento${appointmentsCount > 1 ? 's' : ''} para este dia.`;
@@ -509,7 +516,7 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="providerScheduleScreen">
       <Stack.Screen options={{ headerShown: false }} />
 
       <Animated.View
@@ -547,7 +554,9 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
           minDate={new Date().toISOString().split('T')[0]}
           onMonthChange={(month) => {
             // manter log; futura integração para fetch por mês
-            console.log('[MyScheduleScreen] Mês alterado para:', month.month, month.year);
+            if (__DEV__) {
+              console.log('[MyScheduleScreen] Mês alterado para:', month.month, month.year);
+            }
             AccessibilityInfo.announceForAccessibility(`Mês alterado para ${LocaleConfig.locales['pt-br'].monthNames[month.month - 1]} de ${month.year}`);
           }}
           firstDay={1}
@@ -558,6 +567,23 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
           accessibilityHint="Selecione uma data para ver agendamentos"
         />
       </Animated.View>
+
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText} numberOfLines={2}>
+            {error}
+          </Text>
+          <TouchableOpacity
+            style={styles.errorBannerAction}
+            onPress={retry}
+            accessibilityRole="button"
+            accessibilityLabel="Tentar novamente"
+            testID="scheduleRetryButton"
+          >
+            <Text style={styles.errorBannerActionText}>Tentar novamente</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Animated.View
         style={[
@@ -570,13 +596,14 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
         </Text>
       </Animated.View>
 
-      {isLoading && allAppointments.length === 0 ? (
+      {loading && appointmentSnapshot.length === 0 ? (
         <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
           <ActivityIndicator size="large" color={Colors.primary} accessibilityLabel="Carregando sua agenda" />
           <Text style={styles.loadingText}>Carregando sua agenda...</Text>
         </Animated.View>
       ) : appointmentsForSelectedDate.length > 0 ? (
         <FlatList
+          testID="providerScheduleList"
           data={appointmentsForSelectedDate}
           renderItem={({ item, index }) => (
             <AnimatedAppointmentItem item={item} onPress={handleAppointmentPress} delay={index * 60} isReducedMotionEnabled={isReducedMotionEnabled} /> // Delay suave (60ms)
@@ -586,7 +613,7 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
           contentContainerStyle={styles.listContentContainer}
           ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
           refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary} colors={[Colors.primary]} accessibilityLabel="Atualizar lista de agendamentos" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} colors={[Colors.primary]} accessibilityLabel="Atualizar lista de agendamentos" />
           }
           accessibilityLabel="Lista de agendamentos para o dia selecionado"
         />
@@ -598,11 +625,16 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
             Aproveite para gerenciar sua disponibilidade ou confira outros dias!
           </Text>
           <TouchableOpacity
-            style={styles.manageAvailabilityButton}
+            style={[
+              styles.manageAvailabilityButton,
+              loading && styles.manageAvailabilityButtonDisabled,
+            ]}
             onPress={() => router.push(PROVIDER_ROUTES.MANAGE_AVAILABILITY as any)}
             accessibilityRole="button"
             accessibilityLabel="Ir para Gerenciar Disponibilidade"
             accessibilityHint="Navegar para tela de gerenciamento de horários disponíveis"
+            disabled={loading}
+            testID="manageAvailabilityButton"
           >
             <Text style={styles.manageAvailabilityButtonText}>Gerenciar Disponibilidade</Text>
             <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={{ marginLeft: 10 }} accessibilityHidden={true} />
@@ -694,7 +726,7 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalConfirm]}
                 onPress={() => {
-                  setAllAppointments(prev => prev.map(a => a.id===rrItem.id ? { ...a, status: 'Confirmado' } : a));
+                  setAppointmentSnapshot(prev => prev.map(a => a.id===rrItem.id ? { ...a, status: 'Confirmado' } : a));
                   setRrVisible(false);
                   showOverlay({ title: 'Pedido aceito', variant: 'success' });
                   if (Platform.OS==='ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -717,7 +749,7 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalCancel]}
                 onPress={() => {
-                  setAllAppointments(prev => prev.map(a => a.id===rrItem.id ? { ...a, status: 'Cancelado' } : a));
+                  setAppointmentSnapshot(prev => prev.map(a => a.id===rrItem.id ? { ...a, status: 'Cancelado' } : a));
                   setRrVisible(false);
                   showOverlay({ title: 'Pedido recusado', variant: 'warning' });
                 }}
@@ -836,6 +868,17 @@ const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T
 }
 
 // ====== Styles (Premium iOS Clean e Confortável) ======
+export default function MyScheduleScreen() {
+  const scheduleState = useProviderSchedule();
+  return (
+    <ResilientErrorBoundary onRetry={scheduleState.retry}>
+      <Suspense fallback={<ScheduleSuspenseFallback />}>
+        <ScheduleView scheduleState={scheduleState} />
+      </Suspense>
+    </ResilientErrorBoundary>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -882,6 +925,36 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: Radii.pill,
     backgroundColor: 'rgba(255,255,255,0.8)',
+  },
+
+  errorBanner: {
+    marginHorizontal: 18,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    backgroundColor: '#FEF3F2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  errorBannerText: {
+    flex: 1,
+    color: Colors.danger,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  errorBannerAction: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: Radii.pill,
+    backgroundColor: Colors.primary,
+  },
+  errorBannerActionText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
   },
 
   // ===== Calendar =====
@@ -984,9 +1057,10 @@ const styles = StyleSheet.create({
   appointmentCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    gap: 16,
+    minHeight: 120,
   },
 
   // Avatar
@@ -1046,20 +1120,23 @@ const styles = StyleSheet.create({
 
   // Meta lines
   metaRow: {
-    marginTop: 10,
-    gap: 6,
+    marginTop: 12,
+    flexWrap: 'wrap',
+    gap: 10,
   },
 
   metaLine: {
     flexDirection: 'row',
     alignItems: 'center',
     minWidth: 0,
+    maxWidth: '100%',
   },
 
   metaText: {
     flex: 1,
     minWidth: 0,
     fontSize: 13.5,
+    lineHeight: 18,
     color: Colors.textMuted,
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
@@ -1086,6 +1163,15 @@ const styles = StyleSheet.create({
 
   // ===== Center feedback =====
   centeredFeedback: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    marginTop: 24,
+    marginBottom: 24,
+  },
+
+  suspenseFallback: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1138,6 +1224,10 @@ const styles = StyleSheet.create({
       },
       android: { elevation: 0 },
     }),
+  },
+
+  manageAvailabilityButtonDisabled: {
+    opacity: 0.65,
   },
 
   manageAvailabilityButtonText: {
