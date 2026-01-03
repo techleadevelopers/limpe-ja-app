@@ -4,7 +4,7 @@ import { PrismaClient, UserRole, Prisma, VerificationStatus, BookingStatus, Tran
 import * as bcrypt from 'bcrypt';
 import { assertTestDatabaseUrl } from '../../scripts/assert-test-env';
 
-const testDatabaseUrl = process.env.DATABASE_URL_TEST;
+const testDatabaseUrl = process.env.DATABASE_URL;
 assertTestDatabaseUrl(testDatabaseUrl);
 const prisma = new PrismaClient({
   datasources: {
