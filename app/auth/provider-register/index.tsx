@@ -887,404 +887,464 @@ export default function RegisterProviderScreen() {
     return formattedCpf;
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoidingContainer}
+ return (
+  <SafeAreaView style={styles.safeArea}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.keyboardAvoidingContainer}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor={styles.scrollView.backgroundColor} />
+
+      <LinearGradient
+        colors={["#F0F4F8", "#E2E8F0", "#F7FAFC"]}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContentContainer}
+        keyboardShouldPersistTaps="handled"
       >
-        <StatusBar barStyle="dark-content" backgroundColor={styles.scrollView.backgroundColor} />
-
-        <LinearGradient
-          colors={['#F0F4F8', '#E2E8F0', '#F7FAFC']}
-          style={StyleSheet.absoluteFillObject}
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            headerTitle: "",
+            headerLeft: () =>
+              currentStep > 1 ? (
+                <TouchableOpacity onPress={handleBack} style={styles.backButtonHeader}>
+                  <Ionicons name="arrow-back-outline" size={24} color="#00BCD4" />
+                  <Text style={styles.backButtonHeaderText}>{getBackButtonText()}</Text>
+                </TouchableOpacity>
+              ) : null,
+            headerTransparent: true,
+          }}
         />
+        <Animated.View
+          style={[
+            styles.contentWrapper,
+            { opacity: mainElementsOpacity, transform: [{ translateY: mainElementsTranslateY }] },
+          ]}
+        >
+          <View style={styles.logoContainer}>
+            <AnimatedReanimated.Image
+              source={LOGO_IMAGE}
+              style={[styles.logo, animatedLogoStyle]} // Aplica ambos os estilos
+              resizeMode="contain"
+            />
+          </View>
 
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled" >
-          <Stack.Screen
-            options={{
-              headerShown: true,
-              headerTitle: '',
-              headerLeft: () => (
-                currentStep > 1 ? (
-                  <TouchableOpacity onPress={handleBack} style={styles.backButtonHeader}>
-                    <Ionicons name="arrow-back-outline" size={24} color="#00BCD4" />
-                    <Text style={styles.backButtonHeaderText}>{getBackButtonText()}</Text>
-                  </TouchableOpacity>
-                ) : null
-              ),
-              headerTransparent: true,
-            }}
-          />
-          <Animated.View style={[styles.contentWrapper, { opacity: mainElementsOpacity, transform: [{ translateY: mainElementsTranslateY }] }]}>
-            <View style={styles.logoContainer}>
-              <AnimatedReanimated.Image
-                source={LOGO_IMAGE}
-                style={[styles.logo, animatedLogoStyle]} // Aplica ambos os estilos
-                resizeMode="contain"
-              />
+          <Text style={styles.welcomeSubtitle}>{getWelcomeSubtitle()}</Text>
+          <Text style={styles.stepIndicatorText}>{stepText}</Text>
+          <Text style={styles.microcopyText}>{microcopy}</Text>
+
+          {/* Step 1: Name + Email */}
+          {currentStep === 1 && (
+            <View style={styles.stepContent}>
+              <View style={[styles.inputWrapper, usernameError ? styles.inputWrapperError : {}]}>
+                <View style={styles.iconCircle}>
+                  <Ionicons name="person-outline" size={23} color="#00BCD4" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nome completo"
+                  placeholderTextColor="#A0AEC0"
+                  value={username}
+                  onChangeText={(text) => {
+                    setUsername(text);
+                    setUsernameError(null);
+                  }}
+                  onBlur={handleUsernameBlur}
+                  autoCapitalize="words"
+                  textContentType="name"
+                  autoComplete="name"
+                />
+              </View>
+              <AnimatedErrorMessage message={usernameError} isVisible={!!usernameError} centered={false} />
+
+              <View style={[styles.inputWrapper, emailError ? styles.inputWrapperError : {}]}>
+                <View style={styles.iconCircle}>
+                  <Ionicons name="mail-outline" size={23} color="#00BCD4" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="E-mail"
+                  placeholderTextColor="#A0AEC0"
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    setEmailError(null);
+                  }}
+                  onBlur={handleEmailBlur}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  textContentType="emailAddress"
+                  autoComplete="email"
+                />
+              </View>
+              <AnimatedErrorMessage message={emailError} isVisible={!!emailError} centered={false} />
+
+              <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
+
+              {/* Navigation Buttons for Step 1: Back + Next (agora com botão de voltar integrado) */}
+              <View style={styles.navigationButtons}>
+                <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
+                  <Ionicons name="arrow-back-outline" size={18} color="#00BCD4" />
+                  <Text style={styles.navButtonTextBack}>Voltar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.navButton,
+                    styles.finalButton,
+                    (isLoading || !isNextButtonEnabledStep1) && styles.buttonDisabled,
+                  ]}
+                  onPress={handleNext}
+                  disabled={isLoading || !isNextButtonEnabledStep1}
+                >
+                  <Text style={styles.navButtonTextNext}>Avançar</Text>
+                  <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
             </View>
+          )}
 
-            <Text style={styles.welcomeSubtitle}>
-              {getWelcomeSubtitle()}
-            </Text>
-            <Text style={styles.stepIndicatorText}>{stepText}</Text>
-            <Text style={styles.microcopyText}>{microcopy}</Text>
-
-            {/* Step 1: Name + Email */}
-            {currentStep === 1 && (
-              <View style={styles.stepContent}>
-                <View style={[styles.inputWrapper, usernameError ? styles.inputWrapperError : {}]}>
-                  <View style={styles.iconCircle}>
-                    <Ionicons name="person-outline" size={23} color="#00BCD4" />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Nome Completo"
-                    placeholderTextColor="#A0AEC0"
-                    value={username}
-                    onChangeText={(text) => { setUsername(text); setUsernameError(null); }}
-                    onBlur={handleUsernameBlur}
-                    autoCapitalize="words"
-                    textContentType="name"
-                    autoComplete="name"
-                  />
+          {/* Step 2: Phone + CPF */}
+          {currentStep === 2 && (
+            <View style={styles.stepContent}>
+              <View style={[styles.inputWrapper, phoneError ? styles.inputWrapperError : {}]}>
+                <View style={styles.iconCircle}>
+                  <Ionicons name="call-outline" size={23} color="#00BCD4" />
                 </View>
-                <AnimatedErrorMessage message={usernameError} isVisible={!!usernameError} centered={false} />
-
-                <View style={[styles.inputWrapper, emailError ? styles.inputWrapperError : {}]}>
-                  <View style={styles.iconCircle}>
-                    <Ionicons name="mail-outline" size={23} color="#00BCD4" />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    placeholderTextColor="#A0AEC0"
-                    value={email}
-                    onChangeText={(text) => { setEmail(text); setEmailError(null); }}
-                    onBlur={handleEmailBlur}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    textContentType="emailAddress"
-                    autoComplete="email"
-                  />
-                </View>
-                <AnimatedErrorMessage message={emailError} isVisible={!!emailError} centered={false} />
-
-                <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
-
-                {/* Navigation Buttons for Step 1: Back + Next (agora com botĂŁo de voltar integrado) */}
-                <View style={styles.navigationButtons}>
-                  <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
-                    <Ionicons name="arrow-back-outline" size={18} color="#00BCD4" />
-                    <Text style={styles.navButtonTextBack}>Voltar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.navButton, styles.finalButton, (isLoading || !isNextButtonEnabledStep1) && styles.buttonDisabled]}
-                    onPress={handleNext}
-                    disabled={isLoading || !isNextButtonEnabledStep1}
-                  >
-                    <Text style={styles.navButtonTextNext}>Avançar</Text>
-                    <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
-                  </TouchableOpacity>
-                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Telefone (DDD + número)"
+                  placeholderTextColor="#A0AEC0"
+                  value={phone}
+                  onChangeText={(text) => {
+                    setPhone(formatPhoneNumber(text));
+                    setPhoneError(null);
+                  }}
+                  onBlur={handlePhoneBlur}
+                  keyboardType="phone-pad"
+                  maxLength={15}
+                />
               </View>
-            )}
+              <AnimatedErrorMessage message={phoneError} isVisible={!!phoneError} centered={false} />
 
-            {/* Step 2: Phone + CPF */}
-            {currentStep === 2 && (
-              <View style={styles.stepContent}>
-                <View style={[styles.inputWrapper, phoneError ? styles.inputWrapperError : {}]}>
-                  <View style={styles.iconCircle}>
-                    <Ionicons name="call-outline" size={23} color="#00BCD4" />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Telefone (DDD + Número)"
-                    placeholderTextColor="#A0AEC0"
-                    value={phone}
-                    onChangeText={(text) => { setPhone(formatPhoneNumber(text)); setPhoneError(null); }}
-                    onBlur={handlePhoneBlur}
-                    keyboardType="phone-pad"
-                    maxLength={15}
-                  />
+              <View style={[styles.inputWrapper, cpfError ? styles.inputWrapperError : {}]}>
+                <View style={styles.iconCircle}>
+                  <Ionicons name="card-outline" size={23} color="#00BCD4" />
                 </View>
-                <AnimatedErrorMessage message={phoneError} isVisible={!!phoneError} centered={false} />
-
-                <View style={[styles.inputWrapper, cpfError ? styles.inputWrapperError : {}]}>
-                  <View style={styles.iconCircle}>
-                    <Ionicons name="card-outline" size={23} color="#00BCD4" />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="CPF (apenas números)"
-                    placeholderTextColor="#A0AEC0"
-                    value={cpf}
-                    onChangeText={(text) => { setCpf(formatCpf(text)); setCpfError(null); }}
-                    onBlur={handleCpfBlur}
-                    keyboardType="numeric"
-                    maxLength={14}
-                  />
-                </View>
-                <AnimatedErrorMessage message={cpfError} isVisible={!!cpfError} centered={false} />
-
-                <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
-
-                {/* Navigation Buttons for Step 2: Back + Next */}
-                <View style={styles.navigationButtons}>
-                  <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
-                    <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
-                    <Text style={styles.navButtonTextBack}>Voltar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.navButton, styles.finalButton, (isLoading || !isNextButtonEnabledStep2) && styles.buttonDisabled]}
-                    onPress={handleNext}
-                    disabled={isLoading || !isNextButtonEnabledStep2}
-                  >
-                    <Text style={styles.navButtonTextNext}>Avançar</Text>
-                    <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
-                  </TouchableOpacity>
-                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="CPF (apenas números)"
+                  placeholderTextColor="#A0AEC0"
+                  value={cpf}
+                  onChangeText={(text) => {
+                    setCpf(formatCpf(text));
+                    setCpfError(null);
+                  }}
+                  onBlur={handleCpfBlur}
+                  keyboardType="numeric"
+                  maxLength={14}
+                />
               </View>
-            )}
+              <AnimatedErrorMessage message={cpfError} isVisible={!!cpfError} centered={false} />
 
-            {/* Step 3: DateOfBirth + Password */}
-            {currentStep === 3 && (
-              <View style={styles.stepContent}>
-                <View style={[styles.inputWrapper, dateOfBirthError ? styles.inputWrapperError : {}]}>
-                  <View style={styles.iconCircle}>
-                    <Ionicons name="calendar-outline" size={23} color="#00BCD4" />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Data de Nascimento (DD/MM/AAAA)"
-                    placeholderTextColor="#A0AEC0"
-                    value={dateOfBirth}
-                    onChangeText={(text) => { setDateOfBirth(formatDateForDisplay(text)); setDateOfBirthError(null); }}
-                    onBlur={handleDateOfBirthBlur}
-                    keyboardType="numeric"
-                    maxLength={10}
-                  />
-                </View>
-                <AnimatedErrorMessage message={dateOfBirthError} isVisible={!!dateOfBirthError} centered={false} />
+              <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
-                <View style={[styles.inputWrapper, passwordError ? styles.inputWrapperError : {}]}>
-                  <View style={styles.iconCircle}>
-                    <Ionicons name="lock-closed-outline" size={23} color="#00BCD4" />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Senha (mínimo 6 caracteres)"
-                    placeholderTextColor="#A0AEC0"
-                    value={password}
-                    onChangeText={(text) => { setPassword(text); setPasswordError(null); }}
-                    onBlur={handlePasswordBlur}
-                    secureTextEntry={!showPassword}
-                    textContentType="password"
-                  />
-                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIconTouchable}>
-                    <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
-                  </TouchableOpacity>
-                </View>
-                {/* Erro inline da senha fica EXATAMENTE abaixo do input */}
-                <AnimatedErrorMessage message={passwordError} isVisible={!!passwordError} centered={false} />
-
-                <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
-
-                {/* Navigation Buttons for Step 3: Back + Next */}
-                <View style={styles.navigationButtons}>
-                  <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
-                    <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
-                    <Text style={styles.navButtonTextBack}>Voltar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.navButton, styles.finalButton, (isLoading || !isNextButtonEnabledStep3) && styles.buttonDisabled]}
-                    onPress={handleNext}
-                    disabled={isLoading || !isNextButtonEnabledStep3}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                      <>
-                        <Text style={styles.navButtonTextNext}>Avançar</Text>
-                        <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
+              {/* Navigation Buttons for Step 2: Back + Next */}
+              <View style={styles.navigationButtons}>
+                <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
+                  <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                  <Text style={styles.navButtonTextBack}>Voltar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.navButton,
+                    styles.finalButton,
+                    (isLoading || !isNextButtonEnabledStep2) && styles.buttonDisabled,
+                  ]}
+                  onPress={handleNext}
+                  disabled={isLoading || !isNextButtonEnabledStep2}
+                >
+                  <Text style={styles.navButtonTextNext}>Avançar</Text>
+                  <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
+          )}
 
-            {/* Step 4: EndereĂ§o (Sub-steps) */}
-            {currentStep === 4 && (
-              <View style={styles.stepContent}>
-                {/* Sub-step 1: CEP */}
-                {subStepAddress === 1 && (
-                  <View style={styles.subStepContainer}>
-                    <View style={[styles.inputWrapper, cepInputError ? styles.inputWrapperError : {}]}>
-                      <View style={styles.iconCircle}>
-                        <Ionicons name="map-outline" size={23} color="#00BCD4" />
-                      </View>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="CEP (apenas números)"
-                        placeholderTextColor="#A0AEC0"
-                        value={cep}
-                        onChangeText={(text) => {
-                          setCep(text.replace(/\D/g, ''));
-                          setCepInputError(null);
-                          setAddressError(null);
-                          // Removido o fetch manual aqui; agora Ă© gerenciado pelo useEffect
-                          if (text.replace(/\D/g, '').length < 8) {
-                            setStreet('');
-                            setNeighborhood('');
-                            setCity('');
-                            setState('');
-                          }
-                        }}
-                        // Removido onBlur para depender da automaĂ§ĂŁo via useEffect
-                        keyboardType="numeric"
-                        maxLength={8}
-                      />
-                      {cepLoading && <ActivityIndicator size="small" color="#00BCD4" style={{ marginLeft: 10 }} />}
-                    </View>
-                    <AnimatedErrorMessage message={cepInputError} isVisible={!!cepInputError} centered={false} />
-                    <AnimatedErrorMessage message={addressError} isVisible={!!addressError} centered={true} />
-                    <View style={styles.navigationButtons}>
-                      <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
-                        <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
-                        <Text style={styles.navButtonTextBack}>Voltar</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.navButton, styles.finalButton, (isLoading || !isNextButtonEnabledAddressSubStep1) && styles.buttonDisabled]}
-                        onPress={handleNext}
-                        disabled={isLoading || !isNextButtonEnabledAddressSubStep1}
-                      >
-                        <Text style={styles.navButtonTextNext}>Próximo</Text>
-                        <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
-
-                {/* Sub-step 2: Detalhes do EndereĂ§o */}
-                {subStepAddress === 2 && (
-                  <View style={styles.subStepContainer}>
-                    <View style={[styles.inputWrapper, streetError ? styles.inputWrapperError : {}]}>
-                      <View style={styles.iconCircle}>
-                        <Ionicons name="navigate-outline" size={23} color="#00BCD4" />
-                      </View>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Rua"
-                        placeholderTextColor="#A0AEC0"
-                        value={street}
-                        onChangeText={(text) => { setStreet(text); setStreetError(null); }}
-                        onBlur={handleStreetBlur}
-                        autoCapitalize="words"
-                        editable={!cepLoading}
-                      />
-                    </View>
-                    <AnimatedErrorMessage message={streetError} isVisible={!!streetError} centered={false} />
-
-                    <View style={[styles.inputWrapper, numberError ? styles.inputWrapperError : {}]}>
-                      <View style={styles.iconCircle}>
-                        <Ionicons name="home-outline" size={23} color="#00BCD4" />
-                      </View>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Número"
-                        placeholderTextColor="#A0AEC0"
-                        value={number}
-                        onChangeText={(text) => { setNumber(text); setNumberError(null); }}
-                        onBlur={handleNumberBlur}
-                        keyboardType="numeric"
-                      />
-                    </View>
-                    <AnimatedErrorMessage message={numberError} isVisible={!!numberError} centered={false} />
-
-                    <View style={[styles.inputWrapper, neighborhoodError ? styles.inputWrapperError : {}]}>
-                      <View style={styles.iconCircle}>
-                        <Ionicons name="business-outline" size={23} color="#00BCD4" />
-                      </View>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Bairro"
-                        placeholderTextColor="#A0AEC0"
-                        value={neighborhood}
-                        onChangeText={(text) => { setNeighborhood(text); setNeighborhoodError(null); }}
-                        onBlur={handleNeighborhoodBlur}
-                        autoCapitalize="words"
-                        editable={!cepLoading}
-                      />
-                    </View>
-                    <AnimatedErrorMessage message={neighborhoodError} isVisible={!!neighborhoodError} centered={false} />
-
-                    <View style={[styles.inputWrapper, cityError ? styles.inputWrapperError : {}]}>
-                      <View style={styles.iconCircle}>
-                        <Ionicons name="location-outline" size={23} color="#00BCD4" />
-                      </View>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Cidade"
-                        placeholderTextColor="#A0AEC0"
-                        value={city}
-                        onChangeText={(text) => { setCity(text); setCityError(null); }}
-                        onBlur={handleCityBlur}
-                        autoCapitalize="words"
-                        editable={!cepLoading}
-                      />
-                    </View>
-                    <AnimatedErrorMessage message={cityError} isVisible={!!cityError} centered={false} />
-
-                    <View style={[styles.inputWrapper, stateError ? styles.inputWrapperError : {}]}>
-                      <View style={styles.iconCircle}>
-                        <Ionicons name="location-outline" size={23} color="#00BCD4" />
-                      </View>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Estado (UF)"
-                        placeholderTextColor="#A0AEC0"
-                        value={state}
-                        onChangeText={(text) => { setState(text); setStateError(null); }}
-                        onBlur={handleStateBlur}
-                        autoCapitalize="characters"
-                        maxLength={2}
-                        editable={!cepLoading}
-                      />
-                    </View>
-                    <AnimatedErrorMessage message={stateError} isVisible={!!stateError} centered={false} />
-
-                    <AnimatedErrorMessage message={addressError} isVisible={!!addressError} centered={true} />
-                    <View style={styles.navigationButtons}>
-                      <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
-                        <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
-                        <Text style={styles.navButtonTextBack}>Voltar</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.navButton, styles.finalButton, (isLoading || !isNextButtonEnabledAddressSubStep2) && styles.buttonDisabled]}
-                        onPress={handleNext}
-                        disabled={isLoading || !isNextButtonEnabledAddressSubStep2}
-                      >
-                        {isLoading ? (
-                          <ActivityIndicator color="#FFFFFF" />
-                        ) : (
-                          <>
-                            <Text style={styles.navButtonTextNext}>Finalizar</Text>
-                            <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
-                          </>
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
+          {/* Step 3: DateOfBirth + Password */}
+          {currentStep === 3 && (
+            <View style={styles.stepContent}>
+              <View style={[styles.inputWrapper, dateOfBirthError ? styles.inputWrapperError : {}]}>
+                <View style={styles.iconCircle}>
+                  <Ionicons name="calendar-outline" size={23} color="#00BCD4" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Data de nascimento (DD/MM/AAAA)"
+                  placeholderTextColor="#A0AEC0"
+                  value={dateOfBirth}
+                  onChangeText={(text) => {
+                    setDateOfBirth(formatDateForDisplay(text));
+                    setDateOfBirthError(null);
+                  }}
+                  onBlur={handleDateOfBirthBlur}
+                  keyboardType="numeric"
+                  maxLength={10}
+                />
               </View>
-            )}
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
+              <AnimatedErrorMessage message={dateOfBirthError} isVisible={!!dateOfBirthError} centered={false} />
+
+              <View style={[styles.inputWrapper, passwordError ? styles.inputWrapperError : {}]}>
+                <View style={styles.iconCircle}>
+                  <Ionicons name="lock-closed-outline" size={23} color="#00BCD4" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Senha (mínimo de 6 caracteres)"
+                  placeholderTextColor="#A0AEC0"
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    setPasswordError(null);
+                  }}
+                  onBlur={handlePasswordBlur}
+                  secureTextEntry={!showPassword}
+                  textContentType="password"
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIconTouchable}>
+                  <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
+                </TouchableOpacity>
+              </View>
+              {/* Erro inline da senha fica EXATAMENTE abaixo do input */}
+              <AnimatedErrorMessage message={passwordError} isVisible={!!passwordError} centered={false} />
+
+              <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
+
+              {/* Navigation Buttons for Step 3: Back + Next */}
+              <View style={styles.navigationButtons}>
+                <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
+                  <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                  <Text style={styles.navButtonTextBack}>Voltar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.navButton,
+                    styles.finalButton,
+                    (isLoading || !isNextButtonEnabledStep3) && styles.buttonDisabled,
+                  ]}
+                  onPress={handleNext}
+                  disabled={isLoading || !isNextButtonEnabledStep3}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.navButtonTextNext}>Avançar</Text>
+                      <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Step 4: Endereço (Sub-steps) */}
+          {currentStep === 4 && (
+            <View style={styles.stepContent}>
+              {/* Sub-step 1: CEP */}
+              {subStepAddress === 1 && (
+                <View style={styles.subStepContainer}>
+                  <View style={[styles.inputWrapper, cepInputError ? styles.inputWrapperError : {}]}>
+                    <View style={styles.iconCircle}>
+                      <Ionicons name="map-outline" size={23} color="#00BCD4" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="CEP (apenas números)"
+                      placeholderTextColor="#A0AEC0"
+                      value={cep}
+                      onChangeText={(text) => {
+                        setCep(text.replace(/\D/g, ""));
+                        setCepInputError(null);
+                        setAddressError(null);
+                        // Removido o fetch manual aqui; agora é gerenciado pelo useEffect
+                        if (text.replace(/\D/g, "").length < 8) {
+                          setStreet("");
+                          setNeighborhood("");
+                          setCity("");
+                          setState("");
+                        }
+                      }}
+                      // Removido onBlur para depender da automação via useEffect
+                      keyboardType="numeric"
+                      maxLength={8}
+                    />
+                    {cepLoading && <ActivityIndicator size="small" color="#00BCD4" style={{ marginLeft: 10 }} />}
+                  </View>
+                  <AnimatedErrorMessage message={cepInputError} isVisible={!!cepInputError} centered={false} />
+                  <AnimatedErrorMessage message={addressError} isVisible={!!addressError} centered={true} />
+                  <View style={styles.navigationButtons}>
+                    <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
+                      <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                      <Text style={styles.navButtonTextBack}>Voltar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.navButton,
+                        styles.finalButton,
+                        (isLoading || !isNextButtonEnabledAddressSubStep1) && styles.buttonDisabled,
+                      ]}
+                      onPress={handleNext}
+                      disabled={isLoading || !isNextButtonEnabledAddressSubStep1}
+                    >
+                      <Text style={styles.navButtonTextNext}>Próximo</Text>
+                      <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {/* Sub-step 2: Detalhes do Endereço */}
+              {subStepAddress === 2 && (
+                <View style={styles.subStepContainer}>
+                  <View style={[styles.inputWrapper, streetError ? styles.inputWrapperError : {}]}>
+                    <View style={styles.iconCircle}>
+                      <Ionicons name="navigate-outline" size={23} color="#00BCD4" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Rua"
+                      placeholderTextColor="#A0AEC0"
+                      value={street}
+                      onChangeText={(text) => {
+                        setStreet(text);
+                        setStreetError(null);
+                      }}
+                      onBlur={handleStreetBlur}
+                      autoCapitalize="words"
+                      editable={!cepLoading}
+                    />
+                  </View>
+                  <AnimatedErrorMessage message={streetError} isVisible={!!streetError} centered={false} />
+
+                  <View style={[styles.inputWrapper, numberError ? styles.inputWrapperError : {}]}>
+                    <View style={styles.iconCircle}>
+                      <Ionicons name="home-outline" size={23} color="#00BCD4" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Número"
+                      placeholderTextColor="#A0AEC0"
+                      value={number}
+                      onChangeText={(text) => {
+                        setNumber(text);
+                        setNumberError(null);
+                      }}
+                      onBlur={handleNumberBlur}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <AnimatedErrorMessage message={numberError} isVisible={!!numberError} centered={false} />
+
+                  <View style={[styles.inputWrapper, neighborhoodError ? styles.inputWrapperError : {}]}>
+                    <View style={styles.iconCircle}>
+                      <Ionicons name="business-outline" size={23} color="#00BCD4" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Bairro"
+                      placeholderTextColor="#A0AEC0"
+                      value={neighborhood}
+                      onChangeText={(text) => {
+                        setNeighborhood(text);
+                        setNeighborhoodError(null);
+                      }}
+                      onBlur={handleNeighborhoodBlur}
+                      autoCapitalize="words"
+                      editable={!cepLoading}
+                    />
+                  </View>
+                  <AnimatedErrorMessage message={neighborhoodError} isVisible={!!neighborhoodError} centered={false} />
+
+                  <View style={[styles.inputWrapper, cityError ? styles.inputWrapperError : {}]}>
+                    <View style={styles.iconCircle}>
+                      <Ionicons name="location-outline" size={23} color="#00BCD4" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Cidade"
+                      placeholderTextColor="#A0AEC0"
+                      value={city}
+                      onChangeText={(text) => {
+                        setCity(text);
+                        setCityError(null);
+                      }}
+                      onBlur={handleCityBlur}
+                      autoCapitalize="words"
+                      editable={!cepLoading}
+                    />
+                  </View>
+                  <AnimatedErrorMessage message={cityError} isVisible={!!cityError} centered={false} />
+
+                  <View style={[styles.inputWrapper, stateError ? styles.inputWrapperError : {}]}>
+                    <View style={styles.iconCircle}>
+                      <Ionicons name="location-outline" size={23} color="#00BCD4" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Estado (UF)"
+                      placeholderTextColor="#A0AEC0"
+                      value={state}
+                      onChangeText={(text) => {
+                        setState(text);
+                        setStateError(null);
+                      }}
+                      onBlur={handleStateBlur}
+                      autoCapitalize="characters"
+                      maxLength={2}
+                      editable={!cepLoading}
+                    />
+                  </View>
+                  <AnimatedErrorMessage message={stateError} isVisible={!!stateError} centered={false} />
+
+                  <AnimatedErrorMessage message={addressError} isVisible={!!addressError} centered={true} />
+                  <View style={styles.navigationButtons}>
+                    <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
+                      <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                      <Text style={styles.navButtonTextBack}>Voltar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.navButton,
+                        styles.finalButton,
+                        (isLoading || !isNextButtonEnabledAddressSubStep2) && styles.buttonDisabled,
+                      ]}
+                      onPress={handleNext}
+                      disabled={isLoading || !isNextButtonEnabledAddressSubStep2}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                      ) : (
+                        <>
+                          <Text style={styles.navButtonTextNext}>Finalizar</Text>
+                          <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+        </Animated.View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  </SafeAreaView>
+);
+
 }
 
 const styles = StyleSheet.create({
