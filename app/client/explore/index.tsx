@@ -241,7 +241,7 @@ export default function ExploreClientScreen() {
   const [recommendations, setRecommendations] = useState<ProviderDisplayInfo[]>([]);
   const [nearbyProviders, setNearbyProviders] = useState<ProviderDisplayInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Novo estado para o raio de busca
   const [searchRadiusKm] = useState<number>(50); // Padrão 50 km (como no código original)
@@ -452,6 +452,10 @@ export default function ExploreClientScreen() {
       locationFetchStarted.current = false;
     }
   }, [searchRadiusKm]);
+  const triggerLocationRefresh = useCallback(() => {
+    locationFetchDone.current = false;
+    loadLocationAndNearby();
+  }, [loadLocationAndNearby]);
 
 
 
@@ -689,11 +693,11 @@ export default function ExploreClientScreen() {
   useEffect(() => {
     isMounted.current = true; // Componente montado
     fetchData();
-    loadLocationAndNearby();
+    triggerLocationRefresh();
     return () => {
       isMounted.current = false; // Componente desmontado
     };
-  }, [fetchData, loadLocationAndNearby]);
+  }, [fetchData, triggerLocationRefresh]);
   // Refetch quando raio foi salvo no painel do provedor
   useFocusEffect(
     React.useCallback(() => {
@@ -704,12 +708,12 @@ export default function ExploreClientScreen() {
           if (!cancelled && flag === '1') {
             await AsyncStorage.removeItem('@settings:radius:changed');
             fetchData();
-            loadLocationAndNearby();
-          }
-        } catch { }
-      })();
-      return () => { cancelled = true; };
-    }, [fetchData, loadLocationAndNearby])
+              triggerLocationRefresh();
+            }
+          } catch { }
+        })();
+        return () => { cancelled = true; };
+    }, [fetchData, triggerLocationRefresh])
   );
 
   const handleOpenPendingReview = useCallback(() => {
@@ -954,8 +958,8 @@ export default function ExploreClientScreen() {
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     fetchData();
-    loadLocationAndNearby();
-  }, [fetchData, loadLocationAndNearby]);
+    triggerLocationRefresh();
+  }, [fetchData, triggerLocationRefresh]);
 
   const handleUseWelcomeCoupon = useCallback(
     async (code: string) => {
@@ -1094,8 +1098,8 @@ export default function ExploreClientScreen() {
                   style={[
                     styles.howItWorksTutorialContainer,
                     Platform.OS === 'android' && !isAuthenticated && {
-                      marginTop: 10,
-                      marginBottom: 20,
+                      marginTop: -15,
+                      marginBottom: -2,
                       transform: [{ scale: 0.92 }, { translateX: 16 }],
                       
                     },
@@ -1131,6 +1135,26 @@ export default function ExploreClientScreen() {
 
               {/* ContentWrapper ÚNICO - TODO o conteúdo aqui */}
               <View style={styles.contentWrapper}>
+                {error && (
+                  <View style={styles.errorBanner}>
+                    <Text style={styles.errorBannerTitle} allowFontScaling={false}>
+                      {t('common.error', { defaultValue: 'Erro' })}
+                    </Text>
+                    <Text style={styles.errorBannerText} allowFontScaling={false}>
+                      {error}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.errorBannerCTA}
+                      onPress={onRefresh}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('common.retry', { defaultValue: 'Tentar novamente' })}
+                    >
+                      <Text style={styles.errorBannerCTAText} allowFontScaling={false}>
+                        {t('common.retry', { defaultValue: 'Tentar novamente' })}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
                 {/* Recomendações ÚNICAS */}
                 <Animated.View
                   style={{
@@ -1206,6 +1230,7 @@ export default function ExploreClientScreen() {
                   style={[
                     styles.carouselContainer,
                     {
+                      marginTop: isAuthenticated ? 0 : 28,
                       opacity: bannerAnim,
                       transform: [
                         {
@@ -1751,6 +1776,37 @@ const styles = StyleSheet.create({
   radiusTextActive: {
     color: '#FFFFFF',
     fontWeight: 'bold',
+  },
+  errorBanner: {
+    backgroundColor: '#FFE6E6',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFB0A0',
+  },
+  errorBannerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#B22222',
+  },
+  errorBannerText: {
+    marginTop: 6,
+    fontSize: 13,
+    color: AppColors.textBody,
+  },
+  errorBannerCTA: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: AppColors.primaryInteractive,
+  },
+  errorBannerCTAText: {
+    color: AppColors.white,
+    fontWeight: '700',
+    fontSize: 13,
   },
   howItWorksTutorialContainer: {
     marginHorizontal: 11,
