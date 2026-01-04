@@ -32,7 +32,7 @@ Top risks:
   10. Disponibilizar metricas sem login ou com credencial de servico para facilitar monitoramento (`backend-cleaning/src/metrics/metrics.controller.ts:8`).
 
 ## 1) Arquitetura atual (mapa)
-- Frontend: o Expo Router mapeia `app/client`, `app/provider` e `app/auth`; os conjuntos `CLIENT_ROUTES`, `PROVIDER_ROUTES` e `AUTH_ROUTES` ficam em `app/routes.ts:13`, `app/routes.ts:27` e `app/routes.ts:55`, e `_layout.tsx` agrupa `AuthProvider`, `AppProvider`, `ProviderRegistrationProvider`, `AppQueryClientProvider` e checa `getBookingsForUser` para renderizar o floating pill de um atendimento ativo (`app/_layout.tsx:1`, `app/_layout.tsx:34`, `app/_layout.tsx:86`).
+- Frontend: o Expo Router mapeia `app/client`, `app/provider` e `app/auth`; os conjuntos `CLIENT_ROUTES`, `PROVIDER_ROUTES` e `AUTH_ROUTES` ficam em `app/_shared/routes.ts:13`, `app/_shared/routes.ts:27` e `app/_shared/routes.ts:55`, e `_layout.tsx` agrupa `AuthProvider`, `AppProvider`, `ProviderRegistrationProvider`, `AppQueryClientProvider` e checa `getBookingsForUser` para renderizar o floating pill de um atendimento ativo (`app/_layout.tsx:1`, `app/_layout.tsx:34`, `app/_layout.tsx:86`).
 - Backend: `AppModule` injeta Auth, Bookings, Payments, Providers, Availability, Queues, Metrics, Health, Sentry e Throttler (`backend-cleaning/src/app.module.ts:1`), e `main.ts` inicializa Prometheus, OpenTelemetry, Sentry, CORS, pipes globais e middleware raw-body antes de subir o aplicativo (`backend-cleaning/src/main.ts:1`).
 - Banco/Cache/Filas: o Postgres e acessado via `PrismaService` (`backend-cleaning/src/prisma/prisma.service.ts:1`), O `CacheModule` usa KeyvRedis (`backend-cleaning/src/cache/cache.module.ts:1`) com logs de hits/misses em `CacheService` (`backend-cleaning/src/cache/cache.service.ts:1`) e o `QueuesModule` (`backend-cleaning/src/app.module.ts:49`) alimenta jobs de notificacao usados por servicos como `PaymentsService` (`backend-cleaning/src/payments/payments.service.ts:360`).
 - Integracoes externas: `PaymentsService` conversa com PagSeguro (`backend-cleaning/src/payments/payments.service.ts:60`), o guard `PspWebhookGuard` valida assinatura/timestamp/replay (`backend-cleaning/src/payouts/guards/psp-webhook.guard.ts:1`), Firebase Admin e inicializado automaticamente (`backend-cleaning/src/main.ts:80`) e o `HttpMetricsMiddleware` coleta latencia/status (`backend-cleaning/src/common/middleware/http-metrics.middleware.ts:1`).
@@ -85,7 +85,7 @@ Top risks:
 ## 3) Frontend (Expo)
 
 ### 3.1 Rotas (Expo Router)
--  As rotas UTILITARIAS estao em `app/routes.ts:13`, `app/routes.ts:27` e `app/routes.ts:55`, e `_layout.tsx` monta provedores de contexto e o floating pill que consome `getBookingsForUser` (`app/_layout.tsx:1`, `app/_layout.tsx:34`, `app/_layout.tsx:86`).
+-  As rotas UTILITARIAS estao em `app/_shared/routes.ts:13`, `app/_shared/routes.ts:27` e `app/_shared/routes.ts:55`, e `_layout.tsx` monta provedores de contexto e o floating pill que consome `getBookingsForUser` (`app/_layout.tsx:1`, `app/_layout.tsx:34`, `app/_layout.tsx:86`).
 -  `frontend_routes.json` esta disponivel mas nao e consumido automaticamente, entao ha duplicacao de strings nas telas.
 -  Nao ha validacao tipada para garantir que o `CLIENT_ROUTES.PROVIDER_DETAILS` seja sempre atualizado junto ao nome da rota.
 -  `_layout.tsx` injeta widgets como `NotificationUIService` e responde ao estado de um booking ativo, podendo falhar ao buscar bookings (`app/_layout.tsx:34`, `:86`).
@@ -183,7 +183,7 @@ Top risks:
 - `Get-ChildItem app`
 - `Get-ChildItem app/client/explore`
 - `Get-ChildItem app/client/bookings`
-- `Get-Content app/routes.ts`
+- `Get-Content app/_shared/routes.ts`
 - `Get-Content -LiteralPath app/client/explore/[providerId].tsx | Select-Object -First 200`
 - `Select-String -LiteralPath "app/client/explore/[providerId].tsx" -Pattern "BookServiceButton" -Context 5`
 - `Get-ChildItem services`
