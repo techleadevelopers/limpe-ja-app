@@ -2070,7 +2070,7 @@ export default function ScheduleServiceScreen() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedDate, provider?.id, selectedProviderService, prefetchAvailability, t, fadeAnim, scaleAnim]);
+  }, [selectedDate, provider?.id, selectedProviderService, t, fadeAnim, scaleAnim]);
 
   const isNextButtonDisabled = useMemo(() => {
     if (!isPricingConfigReady) return true;
