@@ -50,7 +50,12 @@ try {
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-const shouldRetry = (error: AxiosError) => !error.response || error.response.status >= 500;
+const shouldRetry = (error: AxiosError) => {
+  if (error.response?.status === 429) {
+    return false;
+  }
+  return !error.response || error.response.status >= 500;
+};
 const IDEMP_PATHS = [
   '/bookings',
   '/missions/track',
