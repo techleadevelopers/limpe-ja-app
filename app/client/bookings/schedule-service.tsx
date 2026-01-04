@@ -2063,7 +2063,8 @@ export default function ScheduleServiceScreen() {
       if (inflightAvailabilityKeyRef.current === fetchKey) {
         inflightAvailabilityKeyRef.current = null;
       }
-    };
+    }
+  };
 
     fetchAndProcessSlotsForDate();
 
