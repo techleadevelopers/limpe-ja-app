@@ -247,7 +247,7 @@ export class UserProfileDto {
           serviceId: ps.serviceId,
 
           price: toNumber(ps.price),
-          pricePerHour: ps.pricePerHour,
+          pricePerHour: toNumber(ps.pricePerHour),
           pricePerSquareMeter: toNumberOrNull(ps.pricePerSquareMeter),
           pricePerRoom: toNumberOrNull(ps.pricePerRoom),
           createdAt: toISOStringSafe(ps.createdAt),
