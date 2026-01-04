@@ -19,23 +19,23 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { alertUserError, setSafeError } from '../../../_shared/errors/uiFeedback';
 import { cancelBooking, getBookingDetails } from '../../../services/bookingService';
 import { getProviderDetails } from '../../../services/providerService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
-import { alertUserError, setSafeError } from '../../_shared/errors/uiFeedback';
 
 import { useDevice } from '@/utils/responsive';
 import { AppColors } from '../../../constants/appStyles';
 import { fix } from '../../../utils/platformFix';
 
-import ProviderServicesInline from '../../../components/booking/ProviderServicesInline';
 import InsuranceSummary from '../../../components/booking/InsuranceSummary';
+import ProviderServicesInline from '../../../components/booking/ProviderServicesInline';
 import TutorialOverlay from '../../../components/ui/TutorialOverlay';
+import { useBookingStatusMeta } from '../../../hooks/useBookingStatusMeta';
 import { useProviderServices } from '../../../hooks/useProviderServices';
 import { useTutorial } from '../../../hooks/useTutorial';
-import { useBookingStatusMeta } from '../../../hooks/useBookingStatusMeta';
 
 // =============================================================================
 // Helpers de status / cores
@@ -378,9 +378,8 @@ function ReviewSheet({
                 }
                 onClose();
                 router.push({
-                  pathname: '/common/feedback/[targetId]',
+                  pathname: `/common/feedback/${booking.id}`,
                   params: {
-                    targetId: booking.id,
                     type: 'service',
                     serviceName: sanitizeText(booking.serviceName),
                     providerName: sanitizeText(booking.providerFullName),
@@ -531,9 +530,8 @@ export default function BookingDetailsScreen() {
   const handleReview = () => {
     if (!booking) return;
     router.push({
-      pathname: '/common/feedback/[targetId]',
+      pathname: `/common/feedback/${booking.id}`,
       params: {
-        targetId: booking.id,
         type: 'service',
         serviceName: sanitizeText(booking.serviceName),
         providerName: sanitizeText(booking.providerFullName),
@@ -544,10 +542,7 @@ export default function BookingDetailsScreen() {
 
   const handleViewProfile = () => {
     if (!booking) return;
-    router.push({
-      pathname: '/client/explore/[providerId]',
-      params: { providerId: booking.providerId },
-    } as any);
+    router.push(`/client/explore/${booking.providerId}`);
   };
 
   const handleCopyAddress = () => {
