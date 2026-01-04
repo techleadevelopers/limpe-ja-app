@@ -15,6 +15,8 @@ import {
   DisputeStatus,
   Prisma,
   UserRole,
+  PolicyEnforcement,
+  PolicySource,
   SupportTicketCategory,
   SupportTicketStatus,
   LedgerEntryType,
@@ -24,6 +26,7 @@ import { UpdateDisputeDto } from './dto/update-dispute.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BookingsService } from '../bookings/bookings.service';
 import * as Sentry from '@sentry/node'; // NEW: Import Sentry (conceptual, requires setup)
+import { ContactLeakPolicyService } from '../common/services/contact-leak-policy.service';
 
 @Injectable()
 export class DisputeService {
@@ -42,6 +45,7 @@ export class DisputeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly contactLeakPolicyService: ContactLeakPolicyService,
     @Inject(forwardRef(() => BookingsService))
     private readonly bookingsService: BookingsService,
   ) {}
@@ -269,8 +273,29 @@ export class DisputeService {
     });
     if (!dispute) {
       throw new NotFoundException(
-        `Disputa com ID "${disputeId}" não encontrada.`,
+      `Disputa com ID "${disputeId}" não encontrada.`,
       );
+    }
+
+    const policyResult = await this.contactLeakPolicyService.evaluatePolicy({
+      userId: senderUserId,
+      content,
+      disputeId,
+      bookingId: dispute.bookingId,
+      source: PolicySource.DISPUTE,
+    });
+
+    if (policyResult?.enforcement === PolicyEnforcement.BLOCKED) {
+      this.logger.warn(
+        `[DisputeService] addMessageToDispute: Bloqueio por política para disputeId=${disputeId}, sender=${senderUserId}`,
+      );
+      throw new ForbiddenException(
+        'Sua mensagem foi bloqueada pela política de contato.',
+      );
+    }
+
+    if (policyResult?.enforcement === PolicyEnforcement.SANITIZED) {
+      content = '***';
     }
 
     try {
