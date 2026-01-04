@@ -1,19 +1,19 @@
 // src/components/TextInputWithIcon.tsx
-import React, { useState, useRef } from 'react'; // Importe useState e useRef
+import React, { useRef, useState } from 'react'; // Importe useState e useRef
 import {
-  View,
-  TextInput,
-  StyleSheet,
-  ViewStyle,
-  TextInputProps,
-  Platform, // Importe Platform aqui
-  Animated, // Importe Animated
-  TouchableOpacity, // Importe TouchableOpacity para o botão de limpar
+    Animated,
+    Platform,
+    StyleSheet,
+    TextInput,
+    TextInputProps, // Importe Animated
+    TouchableOpacity,
+    View,
+    ViewStyle,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { inputBase, shadow, textBase } from '../../_shared/ui/parity';
 import { colors } from './theme/colors';
 import { typography } from './theme/typography';
-import { inputBase, shadow, textBase } from '../../app/_shared/ui/parity';
 
 interface TextInputWithIconProps extends TextInputProps {
   iconName?: string;
