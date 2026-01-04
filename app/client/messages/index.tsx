@@ -197,9 +197,8 @@ export default function ConversationsListScreen() {
 
   const handleConversationPress = (item: ConversationItem) => {
     router.push({
-      pathname: '/client/messages/[chatId]',
+      pathname: `/client/messages/${item.id}`,
       params: {
-        chatId: item.id,
         recipientName: item.otherUserName,
         recipientId: item.otherUserId,
         recipientAvatarUrl: item.otherUserAvatarUrl,
