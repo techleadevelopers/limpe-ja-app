@@ -1,5 +1,5 @@
 // app/services/providerService.ts
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { api } from './api';
 
 // Importa o serviço de reviews do frontend
@@ -35,6 +35,56 @@ import { ReviewEntity } from '../types/backend/reviews'; // Certifique-se de que
 import { VerificationStatus, UserRole } from '../types/backend/auth';
 
 const FALLBACK_TIMESTAMP = '2025-01-01T00:00:00.000Z';
+const PROVIDER_BLOCK_DURATION_MS = 20_000;
+const providerBlockCooldownMap = new Map<string, number>();
+
+const createProviderBlockedResponse = (providerId: string, remainingMs: number): AxiosResponse => {
+  const config: AxiosRequestConfig = {
+    url: `/providers/${providerId}`,
+    method: 'get',
+  };
+  return {
+    data: {
+      message:
+        remainingMs > 0
+          ? `Limite de requisições atingido. Tente novamente em ${Math.ceil(remainingMs / 1000)}s.`
+          : 'Limite de requisições atingido.',
+    },
+    status: 429,
+    statusText: 'Too Many Requests',
+    headers: {},
+    config,
+    request: {},
+  };
+};
+
+const getProviderBlockRemaining = (providerId: string): number => {
+  const blockedUntil = providerBlockCooldownMap.get(providerId);
+  if (!blockedUntil) return 0;
+  const remaining = blockedUntil - Date.now();
+  if (remaining <= 0) {
+    providerBlockCooldownMap.delete(providerId);
+    return 0;
+  }
+  return remaining;
+};
+
+const ensureProviderNotBlocked = (providerId: string) => {
+  const remaining = getProviderBlockRemaining(providerId);
+  if (remaining > 0) {
+    throw new AxiosError(
+      `Provider ${providerId} is temporarily blocked.`,
+      'ERR_PROVIDER_BLOCKED',
+      { url: `/providers/${providerId}`, method: 'get' },
+      undefined,
+      createProviderBlockedResponse(providerId, remaining),
+    );
+  }
+};
+
+const blockProvider = (providerId: string, durationMs: number = PROVIDER_BLOCK_DURATION_MS) => {
+  providerBlockCooldownMap.set(providerId, Date.now() + durationMs);
+};
 
 const FALLBACK_RECOMMENDED_PROVIDERS: ProviderDisplayInfo[] = [
   {
@@ -197,6 +247,7 @@ const FALLBACK_RECOMMENDED_PROVIDERS: ProviderDisplayInfo[] = [
  * @returns Uma Promise que resolve para o objeto ProviderDisplayInfo.
  */
 export async function getProviderDetails(providerId: string): Promise<ProviderDisplayInfo> {
+  ensureProviderNotBlocked(providerId);
   try {
     // Busca os detalhes principais do provedor
     const providerResponse: AxiosResponse<ProviderDisplayInfo> = await api.get(`/providers/${providerId}`);
@@ -220,6 +271,9 @@ export async function getProviderDetails(providerId: string): Promise<ProviderDi
 
     return providerDetails;
   } catch (error: any) {
+    if (axios.isAxiosError(error) && error.response?.status === 429) {
+      blockProvider(providerId);
+    }
     console.error(`Erro ao buscar detalhes do provedor ${providerId}:`, error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
       throw new Error(error.response.data.message || `Erro ao buscar detalhes do provedor ${providerId}.`);
@@ -681,11 +735,15 @@ export async function searchProviders(query: ProviderSearchQuery): Promise<Provi
  * @returns Uma Promise que resolve para o objeto ProviderMetrics.
  */
 export async function getProviderMetrics(providerId: string): Promise<ProviderMetrics> {
+  ensureProviderNotBlocked(providerId);
   try {
     // Exemplo de endpoint: /providers/:providerId/metrics
     const response: AxiosResponse<ProviderMetrics> = await api.get(`/providers/${providerId}/metrics`);
     return response.data;
   } catch (error: any) {
+    if (axios.isAxiosError(error) && error.response?.status === 429) {
+      blockProvider(providerId);
+    }
     console.error(`Erro ao buscar métricas do provedor ${providerId}:`, error.response?.data || error.message);
     // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
     // O erro deve ser propagado para que a UI possa lidar com ele.
