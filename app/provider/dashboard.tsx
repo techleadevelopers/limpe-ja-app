@@ -4,28 +4,28 @@ import * as Haptics from 'expo-haptics'; // CORREÇÃO: Import separado e corret
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Easing,
-  GestureResponderEvent,
-  Image,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    AccessibilityInfo,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Easing,
+    GestureResponderEvent,
+    Image,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { PROVIDER_ROUTES } from '../../constants/routes'; // Importar PROVIDER_ROUTES
 import { useAuth } from '../../hooks/useAuth';
 // Import NotificationUIService
+import { toastUserError } from '../../_shared/errors/uiFeedback';
+import ProviderNavBar from '../../components/provider/navigation/ProviderNavBar';
 import { subscribeToProviderNotifications } from '../../services/notificationBus';
 import NotificationUIService from '../../services/notificationUIService'; // Added
-import { toastUserError } from '../_shared/errors/uiFeedback';
-import  ProviderNavBar  from '../../components/provider/navigation/ProviderNavBar';
 // Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/dashboardService';
@@ -145,7 +145,9 @@ const DashboardHeader: React.FC<{
       Platform.OS === 'android' && { paddingTop: androidPaddingTopValue },
     ]}>
       <View style={headerStyles.greetingContainer}>
-        <Text style={headerStyles.greetingText} testID= providerDashboardTitle>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
+        <Text style={headerStyles.greetingText} testID="providerDashboardTitle">
+          Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!
+        </Text>
         <Text style={headerStyles.currentDateText}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
       </View>
       <TouchableOpacity
@@ -1178,7 +1180,7 @@ export default function ProviderDashboardScreen() {
     if (__DEV__) {
       console.log(`[DashboardScreen] handleChatWithClient: Iniciando chat com cliente ${clientName} (${clientId}).`);
     }
-    router.push({ pathname: '/provider/messages/[chatId]', params: { chatId: clientId, recipientName: clientName } } as any);
+    router.push({ pathname: `/provider/messages/${clientId}`, params: { recipientName: clientName } } as any);
   };
   const handleLogout = async () => {
     if (__DEV__) {
