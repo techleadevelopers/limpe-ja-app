@@ -39,6 +39,7 @@ import { BookingAndPixResponseDto } from './dto/booking-and-pix-response.dto';
 import { PaymentsService } from '../payments/payments.service';
 import { BookingDetailsDto } from './dto/booking-details.dto';
 import { ReportDisputeDto } from './dto/report-dispute.dto';
+import { BookingLocationInput } from './dto/booking-location.dto';
 import { QueuesService } from '../queues/queues.service';
 import { PricingService } from '../pricing/pricing.service';
 import { CouponsService } from '../coupons/coupons.service';
@@ -174,6 +175,7 @@ interface BookingProofPayload {
   videoUrl?: string | null;
   hashes?: Record<string, unknown> | null;
   timestamps?: Record<string, unknown> | null;
+  location?: BookingLocationInput;
 }
 
 @Injectable()
@@ -491,6 +493,49 @@ export class BookingsService {
     return proof;
   }
 
+  private requiresProofGps(booking: BookingWithDetailsRelations): boolean {
+    const insurance = booking.bookingInsurance;
+    if (!insurance) {
+      return false;
+    }
+    return (
+      insurance.proofRequired ||
+      insurance.planId === InsurancePlanId.PREMIUM
+    );
+  }
+
+  private buildGpsFields(
+    location: BookingLocationInput | undefined,
+    prefix: 'arrived' | 'started' | 'completed',
+  ): Prisma.BookingUpdateInput {
+    if (!location) {
+      return {};
+    }
+    const payload: Record<string, number | null> = {
+      [`${prefix}Lat`]: location.lat,
+      [`${prefix}Lng`]: location.lng,
+      [`${prefix}AccuracyM`]: location.accuracyM ?? null,
+    };
+    return payload as Prisma.BookingUpdateInput;
+  }
+
+  private logGpsEvent(
+    bookingId: string,
+    providerId: string,
+    event: string,
+    location?: BookingLocationInput,
+  ) {
+    this.logger.log(
+      `[BookingsService] GPS event ${event}: ${JSON.stringify({
+        bookingId,
+        providerId,
+        gpsCaptured: Boolean(location),
+        lat: location?.lat ?? null,
+        lng: location?.lng ?? null,
+      })}`,
+    );
+  }
+
   async submitProof(
     bookingId: string,
     providerUserId: string,
@@ -538,8 +583,20 @@ export class BookingsService {
           timestamps: payload.timestamps
             ? (payload.timestamps as Prisma.InputJsonValue)
             : null,
+          latitude: payload.location?.lat ?? null,
+          longitude: payload.location?.lng ?? null,
+          accuracyMeters: payload.location?.accuracyM ?? null,
+          capturedAt: payload.location?.capturedAt
+            ? new Date(payload.location.capturedAt)
+            : null,
         },
       });
+      this.logGpsEvent(
+        booking.id,
+        booking.providerId,
+        `submit-proof-${type}`,
+        payload.location,
+      );
       return proof;
     } catch (error: any) {
       if (
@@ -2585,6 +2642,7 @@ export class BookingsService {
   async arriveAtLocation(
     bookingId: string,
     actorUserId: string,
+    location?: BookingLocationInput,
   ): Promise<BookingWithDetailsRelations> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -2600,22 +2658,28 @@ export class BookingsService {
     }
 
     const now = new Date();
+    const gpsData = this.buildGpsFields(location, 'arrived');
     // bloco de arriveAtLocation
     const updated = await this.changeBookingStatus(bookingId, BookingStatus.ARRIVED, {
       booking,
-      data: { arrivedAt: now },
+      data: { arrivedAt: now, ...gpsData },
       include: DEFAULT_BOOKING_DETAILS_INCLUDE,
     });
 
     // side-effects: notifications
     await this.notifyClientStatusUpdate(updated, BookingStatus.ARRIVED);
+    this.logGpsEvent(booking.id, booking.providerId, 'arriveAtLocation', location);
     this.logger.log(
       `[BookingsService] arriveAtLocation: Booking ${bookingId} CHEGOU.`,
     );
     return updated;
   }
 
-  async startService(bookingId: string, providerUserId: string) {
+  async startService(
+    bookingId: string,
+    providerUserId: string,
+    location?: BookingLocationInput,
+  ) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       include: DEFAULT_BOOKING_DETAILS_INCLUDE,
