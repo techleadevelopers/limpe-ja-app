@@ -445,6 +445,72 @@ describe('BookingsService quote & mismatch detection', () => {
       service.create('client-user', dto, createRequest()),
     ).rejects.toBeInstanceOf(ConflictException);
   });
+
+  it('rejects booking creation when quote has expired', async () => {
+    const { service } = createServiceWithMocks();
+    const dto = buildCreateBookingDto();
+    dto.quoteExpiresAt = new Date(Date.now() - 60_000).toISOString();
+
+    await expect(
+      service.create('client-user', dto, createRequest()),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('QUOTE_EXPIRED'),
+    });
+  });
+
+  it('stores quote responses in redis cache per request key', async () => {
+    const { service, cacheService } = createServiceWithMocks();
+    const quoteRequest: BookingQuoteRequestDto = {
+      providerId: 'provider-id',
+      providerServiceId: 'provider-service-id',
+      scheduledDate: '2025-12-31',
+      scheduledTime: '10:00',
+      address: {
+        latitude: -23.55,
+        longitude: -46.63,
+        city: 'SAO PAULO',
+        state: 'SP',
+        cep: '01001000',
+      },
+    };
+
+    cacheService.get.mockResolvedValue(undefined);
+    const firstResponse = await service.quotePrice('client-user', quoteRequest, createRequest());
+    expect(cacheService.set).toHaveBeenCalledWith(
+      expect.stringMatching(/^quote:[0-9a-f]{64}$/),
+      firstResponse,
+      60,
+    );
+    expect(calculateServiceTotalPriceMock).toHaveBeenCalledTimes(1);
+
+    cacheService.get.mockResolvedValueOnce(firstResponse);
+    const cachedResponse = await service.quotePrice('client-user', quoteRequest, createRequest());
+    expect(cachedResponse).toBe(firstResponse);
+    expect(calculateServiceTotalPriceMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns the same quoteHash for identical request payloads', async () => {
+    const { service, cacheService } = createServiceWithMocks();
+    const quoteRequest: BookingQuoteRequestDto = {
+      providerId: 'provider-id',
+      providerServiceId: 'provider-service-id',
+      scheduledDate: '2025-12-31',
+      scheduledTime: '10:00',
+      address: {
+        latitude: -23.55,
+        longitude: -46.63,
+        city: 'SAO PAULO',
+        state: 'SP',
+        cep: '01001000',
+      },
+    };
+
+    cacheService.get.mockResolvedValue(undefined);
+    const firstResponse = await service.quotePrice('client-user', quoteRequest, createRequest());
+    cacheService.get.mockResolvedValue(undefined);
+    const secondResponse = await service.quotePrice('client-user', quoteRequest, createRequest());
+    expect(secondResponse.quoteHash).toBe(firstResponse.quoteHash);
+  });
 });
 
 describe('BookingsService (insurance persistence)', () => {
