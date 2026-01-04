@@ -38,6 +38,7 @@ import { checkActiveChatBooking } from '../../../services/bookingService';
 import { getProviderDetails, getProviderOffers } from '../../../services/providerService';
 import { styles } from '../../../styles/providerStyles';
 import { formatDistance } from '../../../utils/formatters';
+import { getNumericPriceValue } from '../../../utils/service-helpers';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const MINIMUM_HOURLY_MINUTES = 240;
@@ -630,9 +631,8 @@ if (isAuthenticated && user?.id) {
     }
     if (provider && user && activeBookingId) {
       router.push({
-        pathname: '/client/messages/[chatId]',
+        pathname: `/client/messages/${activeBookingId}`,
         params: {
-          chatId: activeBookingId,
           recipientName: provider.fullName,
           recipientId: provider.id,
           recipientAvatarUrl: provider.avatarUrl,
@@ -667,16 +667,13 @@ if (isAuthenticated && user?.id) {
   };
 
   const isServiceAvailable = (service?: ProviderServiceOffering) =>
-    Boolean(service && service.pricePerHour > 0 && !service.needsReview);
+    Boolean(service && getNumericPriceValue(service) > 0 && !service.needsReview);
 
   const formatPriceDisplay = (service?: ProviderServiceOffering) => {
     if (!service) {
       return t('provider_details.price_not_available', { defaultValue: 'Preço não disponível' });
     }
-    if (service.needsReview) {
-      return t('provider_details.price_review', { defaultValue: 'Preço em revisão' });
-    }
-    const hourly = service.pricePerHour ?? 0;
+    const hourly = getNumericPriceValue(service);
     if (hourly <= 0) {
       return t('provider_details.price_not_available', { defaultValue: 'Preço não disponível' });
     }
@@ -686,8 +683,8 @@ if (isAuthenticated && user?.id) {
   const handleViewAllReviews = () => {
     if (provider) {
       router.push({
-        pathname: '/common/feedback/[targetId]',
-        params: { targetId: provider.id, targetType: 'provider' },
+        pathname: `/common/feedback/${provider.id}`,
+        params: { targetType: 'provider' },
       });
     }
   };
@@ -698,6 +695,18 @@ if (isAuthenticated && user?.id) {
     }
     return null;
   }, [provider?.distance]);
+
+  useEffect(() => {
+    if (provider?.providerServices) {
+      console.log('[ProviderDetails] price payload', provider.providerServices.map((svc) => ({
+        id: svc.id,
+        pricePerHour: svc.pricePerHour,
+        needsReview: svc.needsReview,
+        pricingType: svc.pricingType,
+        price: svc.price,
+      })));
+    }
+  }, [provider?.providerServices]);
 
   if (isLoading) {
     return (
