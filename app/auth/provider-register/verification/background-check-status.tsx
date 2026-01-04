@@ -3,8 +3,8 @@ import { Ionicons } from '@expo/vector-icons'; //
 import * as Haptics from 'expo-haptics'; //
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'; // // Added Platform
+import { showUserError } from '../../../../_shared/errors/userError';
 import verificationService from '../../../../services/verificationService'; //
-import { showUserError } from '../../../_shared/errors/userError';
 
 // Paleta de cores (repetida para clareza, em um projeto real viria de Colors.ts)
 const Colors = {
