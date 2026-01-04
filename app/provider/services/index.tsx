@@ -15,13 +15,13 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { toastUserError } from '../../../_shared/errors/uiFeedback';
 import ServiceItemSkeleton from '../../../components/ServiceItemSkeleton';
 import ToastMessage from '../../../components/ui/ToastMessage';
 import Colors from '../../../constants/Colors';
 import { PROVIDER_ROUTES } from '../../../constants/routes';
 import NotificationUIService from '../../../services/notificationUIService';
 import { formatDate } from '../../../utils/helpers';
-import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 // --- Importações de SERVIÇOS e TIPAGENS REAIS do BACKEND ---
 import { getBookingsForUser, updateBookingStatus } from '../../../services/bookingService';
