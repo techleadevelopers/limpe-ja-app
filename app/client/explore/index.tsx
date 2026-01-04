@@ -1,23 +1,23 @@
 import { Stack, useRouter } from 'expo-router';
 import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Dimensions,
-  Easing,
-  FlatList,
-  Image,
-  InteractionManager,
-  Platform,
-  RefreshControl,
-  Share,
-  StyleProp,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  ViewStyle,
+    AccessibilityInfo,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Dimensions,
+    Easing,
+    FlatList,
+    Image,
+    InteractionManager,
+    Platform,
+    RefreshControl,
+    Share,
+    StyleProp,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    ViewStyle,
 } from 'react-native';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -32,20 +32,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icons3D } from '../../../constants/icons3d';
 import { getCurrentPosition } from '../../../services/locationService';
 
+import { useAndroidDialog } from '../../../hooks/useAndroidDialog';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOverlayMessage } from '../../../hooks/useOverlayMessage';
 import { getBookingsForUser } from '../../../services/bookingService';
-import { useAndroidDialog } from '../../../hooks/useAndroidDialog';
 import {
-  getOffers,
-  getServiceCategories,
-  getUserProfile,
-  searchProvidersWithLocation,
+    getOffers,
+    getServiceCategories,
+    getUserProfile,
+    searchProvidersWithLocation,
 } from '../../../services/clientService';
 import { canReviewBooking } from '../../../services/reviewService';
 
 import {
-  getRecommendedProviders,
+    getRecommendedProviders,
 } from '../../../services/providerService';
 
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
@@ -54,11 +54,11 @@ import { ProviderDisplayInfo } from '../../../types/backend/providers';
 import { Service } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
 
-import { AppColors, AppShadows } from '../../../constants/appStyles';
+import { alertUserError } from '../../../_shared/errors/uiFeedback';
+import { AppColors } from '../../../constants/appStyles';
 import { CLIENT_ROUTES } from '../../../constants/routes';
-import { alertUserError } from '../../_shared/errors/uiFeedback';
-import { filterByRadiusOrCity, normalizeLocationText } from './utils/locationFilter';
-import type { CityStateHint } from './utils/locationFilter';
+import type { CityStateHint } from '../../../utils/locationFilter';
+import { filterByRadiusOrCity, normalizeLocationText } from '../../../utils/locationFilter';
 
 // Importar o formatAddress e getNumericPriceValue
 import { formatAddress } from '../../../utils/formatters';
@@ -74,7 +74,6 @@ import NavBar from '../../../components/client/explore/home/NavBar';
 import NewHeader from '../../../components/client/explore/home/NewHeader';
 import PrestadorCard from '../../../components/client/explore/home/PrestadorCard';
 import RecomendacaoCard from '../../../components/client/explore/home/RecomendacaoCard';
-import SecaoContainer from '../../../components/client/explore/home/SecaoContainer';
 import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrestadores';
 import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRecomendacoes';
 import BottomSlideInCard from '../../../components/common/BottomSlideInCard';
@@ -88,7 +87,6 @@ import { useTutorial } from '../../../hooks/useTutorial';
 // Importar os novos componentes Nudge
 import IncentiveNudge from '../../../components/nudges/IncentiveNudge';
 import SecurityNudge from '../../../components/nudges/SecurityNudge';
-import { platform } from 'node:os';
 
 // Fallback local: garante render do RecomendacaoCard mesmo se a API falhar
 const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
@@ -719,9 +717,8 @@ export default function ExploreClientScreen() {
   const handleOpenPendingReview = useCallback(() => {
     if (!pendingReview) return;
     router.push({
-      pathname: '/common/feedback/[targetId]',
+      pathname: `/common/feedback/${pendingReview.bookingId}`,
       params: {
-        targetId: pendingReview.bookingId,
         providerId: pendingReview.providerId,
         providerName: pendingReview.providerName,
         providerAvatar: pendingReview.providerAvatar || undefined,
