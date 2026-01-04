@@ -12,6 +12,8 @@ efreshSession esteja definido e o backend ofereça apenas login/register/forgot 
   - QR PIX exibe apenas toast genérico quando createPixCharge falha, mesmo que o backend responda 503 ao detectar PSP não configurado (services/paymentService.ts:9-58; app/client/bookings/success.tsx:192-420; backend-cleaning/src/payments/payments.service.ts:1016-1033).
   - Observabilidade captura X-Client-Request-Id e Sentry mas o UI ainda não mostra request/booking ids, o que enquadra menos tolerância em Ads (services/api.ts:34-210; app/_layout.tsx:232-238).
 
+- Chat error handling now reuses `getUserMessage` from `_shared/errors/uiFeedback`, so `app/client/messages/[chatId].tsx` shares the normalized text when fetching or sending messages and no longer hits TS2304 (lines 27, 122, 216).
+
 ### Top 10 riscos
 1. Minutos mínimos de hora são hardcoded na UI e invalidam validação do backend se MIN_HOURLY_MINUTES mudar (app/client/bookings/schedule-service.tsx:54-1850; app/provider/schedule/manage-availability.tsx:180-640; services/configService.ts:1-33; backend-cleaning/src/pricing/pricing.controller.ts:45-67). Impacto alto, prob. alta. Mitigação: carregar /config/pricing no bootstrap e eliminar as constantes.
 2. O CTA de booking continua ativo para erificationStatus !== APPROVED, mas BookingsService.create devolve Forbidden, gerando 403 não tratados (app/client/explore/[providerId].tsx:1005-1034; components/client/explore/provider/OverviewContent.tsx:1-60; backend-cleaning/src/bookings/bookings.service.ts:450-482). Impacto alto, prob. média. Mitigação: bloquear UI e mostrar banner explicando aprovação.
