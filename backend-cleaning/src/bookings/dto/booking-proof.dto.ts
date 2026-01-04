@@ -6,8 +6,16 @@ import {
   IsOptional,
   IsEnum,
   IsObject,
+  IsNumber,
+  IsISO8601,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { BookingProofType, Prisma } from '@prisma/client';
+import {
+  BookingLocationDto,
+  BookingLocationInput,
+} from './booking-location.dto';
 
 const toRecord = (
   value?: Prisma.JsonValue | null,
@@ -52,6 +60,15 @@ export class SubmitBookingProofDto {
   @IsOptional()
   @IsObject()
   timestamps?: Record<string, unknown>;
+
+  @ApiPropertyOptional({
+    description: 'Localização onde as fotos foram tiradas',
+    type: BookingLocationDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => BookingLocationDto)
+  location?: BookingLocationInput;
 }
 
 export class BookingProofResponseDto {
@@ -94,6 +111,38 @@ export class BookingProofResponseDto {
   @IsObject()
   timestamps?: Record<string, unknown> | null;
 
+  @ApiPropertyOptional({
+    description: 'Latitude associada ao comprovante',
+    example: -23.55052,
+  })
+  @IsOptional()
+  @IsNumber()
+  latitude?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Longitude associada ao comprovante',
+    example: -46.633308,
+  })
+  @IsOptional()
+  @IsNumber()
+  longitude?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Precisão do GPS em metros',
+    example: 12.5,
+  })
+  @IsOptional()
+  @IsNumber()
+  accuracyMeters?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Timestamp da captura da localização (ISO 8601)',
+    example: '2025-01-01T09:00:00.000Z',
+  })
+  @IsOptional()
+  @IsISO8601()
+  capturedAt?: string | null;
+
   @ApiProperty({ description: 'ID do usuário que enviou o comprovante', example: 'user-1' })
   @IsString()
   userId: string;
@@ -111,6 +160,10 @@ export class BookingProofResponseDto {
     timestamps?: Prisma.JsonValue | null;
     userId: string;
     createdAt: Date | string;
+    latitude?: number | null;
+    longitude?: number | null;
+    accuracyMeters?: number | null;
+    capturedAt?: Date | string | null;
   }) {
     this.id = data.id;
     this.type = data.type;
@@ -125,5 +178,18 @@ export class BookingProofResponseDto {
       data.createdAt instanceof Date
         ? data.createdAt.toISOString()
         : data.createdAt;
+    this.latitude =
+      typeof data.latitude === 'number' ? data.latitude : data.latitude ?? null;
+    this.longitude =
+      typeof data.longitude === 'number' ? data.longitude : data.longitude ?? null;
+    this.accuracyMeters =
+      typeof data.accuracyMeters === 'number'
+        ? data.accuracyMeters
+        : data.accuracyMeters ?? null;
+    this.capturedAt = data.capturedAt
+      ? data.capturedAt instanceof Date
+        ? data.capturedAt.toISOString()
+        : data.capturedAt
+      : null;
   }
 }
