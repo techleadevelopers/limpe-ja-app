@@ -2697,6 +2697,15 @@ export class BookingsService {
     if (booking.paymentIntent?.status !== 'PAID')
       throw new BadRequestException('Pagamento não confirmado.');
 
+    const locationRequired = this.requiresProofGps(booking);
+    if (locationRequired && !location) {
+      throw new BadRequestException({
+        code: 'PROOF_GPS_REQUIRED',
+        message:
+          'GPS obrigatório para iniciar serviços com seguro premium ou requisito de prova.',
+      });
+    }
+
     await this.schedulerService.notifyJobStarted({
       bookingId,
       clientUserId: booking.client?.userId ?? '',
@@ -2717,11 +2726,13 @@ export class BookingsService {
       throw new BadRequestException('Fora da janela de início (±15min).');
     }
 
+    const gpsData = this.buildGpsFields(location, 'started');
     const updated = await this.changeBookingStatus(bookingId, BookingStatus.STARTED, {
       booking,
       data: {
         startedAt: now,
         startedByUser: { connect: { id: providerUserId } },
+        ...gpsData,
       },
       include: DEFAULT_BOOKING_DETAILS_INCLUDE,
     });
@@ -2747,10 +2758,15 @@ export class BookingsService {
         idempotencyKey: `notif:service_started:client:${updated.id}`,
       });
     }
+    this.logGpsEvent(booking.id, booking.providerId, 'startService', location);
     return updated;
   }
 
-  async completeService(bookingId: string, providerUserId: string) {
+  async completeService(
+    bookingId: string,
+    providerUserId: string,
+    location?: BookingLocationInput,
+  ) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       include: DEFAULT_BOOKING_DETAILS_INCLUDE,
@@ -2775,15 +2791,26 @@ export class BookingsService {
     if (booking.paymentIntent?.status !== 'PAID')
       throw new BadRequestException('Pagamento não confirmado.');
 
+    const locationRequired = this.requiresProofGps(booking);
+    if (locationRequired && !location) {
+      throw new BadRequestException({
+        code: 'PROOF_GPS_REQUIRED',
+        message:
+          'GPS obrigatório para concluir serviços com seguro premium ou requisito de prova.',
+      });
+    }
+
     const expectedEnd = this.getExpectedEnd(booking);
     if (new Date() < expectedEnd)
       throw new BadRequestException('Ainda não atingiu o horário final.');
 
+    const gpsData = this.buildGpsFields(location, 'completed');
     const updated = await this.changeBookingStatus(bookingId, BookingStatus.FINISHED, {
       booking,
       data: {
         completedAt: new Date(),
         completedByUser: { connect: { id: providerUserId } },
+        ...gpsData,
       },
       include: DEFAULT_BOOKING_DETAILS_INCLUDE,
     });
@@ -2825,6 +2852,7 @@ export class BookingsService {
       );
     }
 
+    this.logGpsEvent(booking.id, booking.providerId, 'completeService', location);
     return updated;
   }
 
