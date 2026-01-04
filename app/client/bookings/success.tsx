@@ -1,36 +1,36 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ScrollView, Animated, Platform, Text } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 
-import { useAuth } from '../../../hooks/useAuth';
-import SuccessHeader from '../../../components/client/booking/success/SuccessHeader';
 import BookingSummaryCard from '../../../components/client/booking/success/BookingSummaryCard';
-import MainActionButtons from '../../../components/client/booking/success/MainActionButtons';
 import ImmediateActionButtons from '../../../components/client/booking/success/ImmediateActionButtons';
-import SecurityInfoSection from '../../../components/client/booking/success/SecurityInfoSection';
 import LoyaltyTeaserSection from '../../../components/client/booking/success/LoyaltyTeaserSection';
-import { ReturnCouponCard } from '../../../components/client/booking/success/ReturnCouponCard';
-import SuccessLoadingError from '../../../components/client/booking/success/SuccessLoadingError';
+import MainActionButtons from '../../../components/client/booking/success/MainActionButtons';
 import PaymentConfirmationCard from '../../../components/client/booking/success/PaymentConfirmationCard';
+import { ReturnCouponCard } from '../../../components/client/booking/success/ReturnCouponCard';
+import SecurityInfoSection from '../../../components/client/booking/success/SecurityInfoSection';
+import SuccessHeader from '../../../components/client/booking/success/SuccessHeader';
+import SuccessLoadingError from '../../../components/client/booking/success/SuccessLoadingError';
+import { useAuth } from '../../../hooks/useAuth';
 
-import { fetchPaymentIntent, createPixCharge } from '../../../services/paymentService';
 import { getBookingDetails } from '../../../services/bookingService';
-import { getProviderDetails } from '../../../services/providerService';
-import { getMyLoyaltyBalance, LoyaltyBalance } from '../../../services/loyaltyService';
 import { getOffers } from '../../../services/clientService';
+import { getMyLoyaltyBalance, LoyaltyBalance } from '../../../services/loyaltyService';
 import NotificationUIService from '../../../services/notificationUIService';
+import { createPixCharge, fetchPaymentIntent } from '../../../services/paymentService';
+import { getProviderDetails } from '../../../services/providerService';
 
-import { formatAddressLine1, formatAddressLine2 } from '../../../utils/address';
 import { AppColors } from '../../../constants/appStyles';
+import { formatAddressLine1, formatAddressLine2 } from '../../../utils/address';
 
-import { PaymentIntent, PaymentIntentStatus, PixChargeResponseDto } from '../../../types/backend/payments';
+import { textFix } from '../../../_shared/ui/parity';
 import { BookingDetails } from '../../../types/backend/bookings';
-import { ProviderDisplayInfo } from '../../../types/backend/providers';
 import { Offer } from '../../../types/backend/offers';
-import { textFix } from '../../_shared/ui/parity';
+import { PaymentIntent, PaymentIntentStatus, PixChargeResponseDto } from '../../../types/backend/payments';
+import { ProviderDisplayInfo } from '../../../types/backend/providers';
 
 type SuccessRouteParams = {
   bookingId?: string | string[];
@@ -373,9 +373,8 @@ export default function BookingSuccessScreen() {
       return;
     }
     router.push({
-      pathname: '/client/messages/[chatId]',
+      pathname: `/client/messages/${booking.providerId}`,
       params: {
-        chatId: booking.providerId,
         recipientName: provider?.fullName || booking.providerFullName || 'Prestador',
       },
     } as any);
