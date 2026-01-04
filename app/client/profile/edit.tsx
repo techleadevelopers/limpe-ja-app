@@ -4,23 +4,23 @@ import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Easing,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleProp,
-  StyleSheet,
-  Text,
-  TextInput,
-  TextStyle,
-  TouchableOpacity,
-  useColorScheme,
-  View,
-  ViewStyle,
+    ActivityIndicator,
+    Animated,
+    Easing,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleProp,
+    StyleSheet,
+    Text,
+    TextInput,
+    TextStyle,
+    TouchableOpacity,
+    useColorScheme,
+    View,
+    ViewStyle,
 } from 'react-native';
 import { useAuth } from '../../../hooks/useAuth'; // Ajuste o path se necessário
 
@@ -34,11 +34,11 @@ import { formatPhoneNumber, isValidPhoneNumber } from '../../../utils/helpers';
 
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { toastUserError } from '../../../_shared/errors/uiFeedback';
 import { EmptyState } from '../../../components/EmptyState';
 import { Sheet } from '../../../components/Sheet';
 import Toast from '../../../components/Toast';
 import Colors from '../../../constants/Colors';
-import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 /* Animated error message (kept) */
 const AnimatedErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
