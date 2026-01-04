@@ -5,8 +5,8 @@ import NotificationUIService from '../services/notificationUIService';
 import { AppColors, AppDurations } from '../constants/appStyles';
 
 interface UseCouponValidationOptions {
-  couponCode: string;
-  onApplyCoupon?: () => Promise<void>;
+  couponValue: string;
+  onApplyCoupon?: (value: string) => Promise<void>;
 }
 
 interface UseCouponValidationResult {
@@ -21,7 +21,7 @@ interface UseCouponValidationResult {
 export const useCouponValidation = (
   options: UseCouponValidationOptions,
 ): UseCouponValidationResult => {
-  const { couponCode, onApplyCoupon } = options;
+  const { couponValue, onApplyCoupon } = options;
   const { t } = useTranslation();
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const couponInputAnim = useRef(new Animated.Value(0)).current;
@@ -50,7 +50,7 @@ export const useCouponValidation = (
   }, [couponFeedbackAnim]);
 
   const handleApplyCoupon = useCallback(async () => {
-    if (!couponCode) {
+    if (!couponValue) {
       NotificationUIService.showInfo(
         t('offers.invalid_coupon'),
         t('common.error'),
@@ -72,7 +72,7 @@ export const useCouponValidation = (
     couponFeedbackAnim.setValue(0);
 
     try {
-      await onApplyCoupon();
+    await onApplyCoupon(couponValue.trim());
       setCouponFeedbackColor(AppColors.successStandard);
       setCouponFeedbackIcon('checkmark-circle');
       NotificationUIService.showSuccess(
@@ -92,7 +92,7 @@ export const useCouponValidation = (
       setIsApplyingCoupon(false);
       animateFeedback();
     }
-  }, [couponCode, onApplyCoupon, t, couponFeedbackAnim, animateFeedback]);
+  }, [couponValue, onApplyCoupon, t, couponFeedbackAnim, animateFeedback]);
 
   return {
     isApplyingCoupon,
