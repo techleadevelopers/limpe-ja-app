@@ -218,12 +218,12 @@ const ReviewsScreen: React.FC = () => {
 
   const handleOpenBooking = (bookingId?: string) => {
     if (!bookingId) return;
-    router.push({ pathname: '/provider/active-booking/[bookingId]', params: { bookingId } } as any);
+    router.push(`/provider/active-booking/${bookingId}`);
   };
 
   const handleMessage = (clientId?: string, clientName?: string) => {
     if (!clientId) return;
-    router.push({ pathname: '/provider/messages/[chatId]', params: { chatId: clientId, recipientName: clientName || 'Cliente' } } as any);
+    router.push({ pathname: `/provider/messages/${clientId}`, params: { recipientName: clientName || 'Cliente' } } as any);
   };
 
   return (
