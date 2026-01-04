@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useRef } from 'react';
-import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { formatDate } from '../../../utils/helpers'; // Certifique-se de que o caminho está correto
 import { useRouter } from 'expo-router'; // Importa o useRouter
+import React, { useRef } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { shadow, textFix } from '../../../_shared/ui/parity';
 import { PROVIDER_ROUTES } from '../../../constants/routes'; // Importa PROVIDER_ROUTES
-import { shadow, textFix } from '../../../app/_shared/ui/parity';
+import { formatDate } from '../../../utils/helpers'; // Certifique-se de que o caminho está correto
 
 // Importa a tipagem do Dashboard para o resumo
 import { EarningsResponseDto, ProviderDashboard } from '../../../types/backend/providers';
