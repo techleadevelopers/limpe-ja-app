@@ -38,6 +38,14 @@ export class ProviderServiceOfferingDto {
   price: number;
 
   @ApiPropertyOptional({
+    description: 'Preço por hora declarado pelo provedor',
+    example: 120.0,
+  })
+  @IsOptional()
+  @IsNumber()
+  pricePerHour?: number;
+
+  @ApiPropertyOptional({
     description: 'Duração do serviço em minutos',
     example: 120,
   })
@@ -86,6 +94,10 @@ export class ProviderServiceOfferingDto {
         : source.price;
     this.durationMinutes = source.durationMinutes;
     this.description = source.description;
+    this.pricePerHour =
+      source.pricePerHour instanceof Prisma.Decimal
+        ? source.pricePerHour.toNumber()
+        : source.pricePerHour;
 
     // Garante que service existe antes de tentar instanciar.
     // Se ServiceDetailsDto pode aceitar null (se service for opcional),
