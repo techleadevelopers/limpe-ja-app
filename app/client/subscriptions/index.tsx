@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { toastUserError } from '../../../_shared/errors/uiFeedback';
 import { getSubscriptionsForUser } from '../../../services/subscriptionService';
 import { Subscription } from '../../../types/backend/subscriptions';
-import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 export default function SubscriptionsListScreen() {
   const { data: subscriptions, isLoading, error } = useQuery({
