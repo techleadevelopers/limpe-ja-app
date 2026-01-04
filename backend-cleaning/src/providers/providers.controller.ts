@@ -658,5 +658,3 @@ export class ProvidersController {
     );
   }
 }
-
-export { ProvidersController };
