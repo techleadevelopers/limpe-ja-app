@@ -38,7 +38,7 @@ import {
 import verificationService from '../../../services/verificationService';
 import { VerificationStatus } from '../../../types/backend/auth';
 import { CreateProviderServiceData, UpdateProviderServiceData } from '../../../types/backend/providers';
-import { AUTH_ROUTES } from '../../routes';
+import { AUTH_ROUTES } from '../../_shared/routes';
 
 const MIN_HOURLY_DURATION = 240;
 
