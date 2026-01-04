@@ -71,6 +71,7 @@ export interface CreateBookingDto {
   insurancePlanId?: InsurancePlanId;
   quoteId?: string;
   quoteHash?: string;
+  quoteExpiresAt?: string;
 }
 
 
