@@ -129,13 +129,14 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const amp = (hash % 3) + 1; // 1..3
     const initialRotate = `${side * (5 * amp)}deg`;
     const enteringKF = new ReKeyframe({
-        0: { opacity: 0.0001, transform: [{ scale: 0.85 }, { rotate: initialRotate }, { translateY: 14 }] },
-        100: { opacity: 1, transform: [{ scale: 1 }, { rotate: '0deg' }, { translateY: 0 }] },
+        0: { opacity: 0.0001 },
+        100: { opacity: 1 },
     }).duration(520);
 
     return (
-        <AnimatedReanimated.View entering={enteringKF} style={rootShrinkStyle}>
-        <Animated.View style={[styles.animatedCardContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
+        <AnimatedReanimated.View entering={enteringKF} style={styles.layoutWrapper}>
+            {/* Layout wrapper keeps entering separate from the transform animations. */}
+            <Animated.View style={[styles.animatedCardContainer, rootShrinkStyle, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
             <TouchableOpacity
                 style={styles.cardContainer}
                 onPress={() => {
@@ -190,12 +191,15 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                 </LinearGradient>
 
             </TouchableOpacity>
-        </Animated.View>
+            </Animated.View>
         </AnimatedReanimated.View>
     );
 };
 
 const styles = StyleSheet.create({
+    layoutWrapper: {
+        overflow: 'visible',
+    },
     animatedCardContainer: {
         marginRight: Platform.OS === 'android' ? 19 : 13,
         left: Platform.OS === 'android' ? -6 : -15,
