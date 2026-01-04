@@ -93,6 +93,42 @@ export default function TimeSlotsSection({
     });
   }, [date, i18n?.language]);
 
+  const selectedSlotsSet = React.useMemo(
+    () => new Set(selectedSlots ?? []),
+    [selectedSlots],
+  );
+
+  const handleSlotPress = React.useCallback(
+    (time: string, alreadySelected: boolean) => {
+      if (alreadySelected) {
+        return;
+      }
+      onTimeSelect(time);
+    },
+    [onTimeSelect],
+  );
+
+  const renderSlotItem = React.useCallback(
+    ({ item }: { item: SlotItem }) => {
+      const isInMultiSelection = selectedSlotsSet.size > 0 && selectedSlotsSet.has(item.time);
+      const isSlotSelected = isInMultiSelection || selectedTime === item.time;
+
+      return (
+        <TimeSlotButton
+          time={item.time}
+          isSelected={isSlotSelected}
+          onPress={() => handleSlotPress(item.time, isSlotSelected)}
+          isAvailable={item.isAvailable}
+          itemWidth={itemWidth}
+          isRecommended={item.isRecommended && dense}
+          dense={dense}
+          noHorizontalMargin={!dense}
+        />
+      );
+    },
+    [selectedSlotsSet, selectedTime, handleSlotPress, dense, itemWidth],
+  );
+
   const sections = React.useMemo(() => {
     const filtered = showUnavailable ? displaySlotsInfo : displaySlotsInfo.filter(s => s.isAvailable);
     const sorted = [...filtered].sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
@@ -159,26 +195,7 @@ export default function TimeSlotsSection({
                 data={section.data}
                 keyExtractor={(item: SlotItem) => item.time}
                 numColumns={numColumns}
-                renderItem={({ item }: { item: SlotItem }) => {
-                  const isInMultiSelection =
-                    selectedSlots && selectedSlots.length > 0
-                      ? selectedSlots.includes(item.time)
-                      : false;
-                  const isSlotSelected = isInMultiSelection || selectedTime === item.time;
-
-                  return (
-                    <TimeSlotButton
-                      time={item.time}
-                      isSelected={isSlotSelected}
-                      onPress={onTimeSelect}
-                      isAvailable={item.isAvailable}
-                      itemWidth={itemWidth}
-                      isRecommended={item.isRecommended && dense}
-                      dense={dense}
-                      noHorizontalMargin={!dense}
-                    />
-                  );
-                }}
+                renderItem={renderSlotItem}
                 getItemLayout={(data, index) => ({
                   length: dense ? 40 : 44,
                   offset: (dense ? 40 : 44) * index,
