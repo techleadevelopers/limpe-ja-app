@@ -3,12 +3,12 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { showUserError } from '../../../../_shared/errors/userError';
 import AnimatedErrorMessage from '../../../../components/schedule/manager/AnimatedErrorMessage';
 import colors from '../../../../constants/Colors';
 import { SIZES } from '../../../../constants/theme';
 import verificationService from '../../../../services/verificationService';
 import { DocumentPhotoType } from '../../../../types/backend/verification';
-import { showUserError } from '../../../_shared/errors/userError';
 
 const PARTE_FRENTE_IMAGE = require('../../../../assets/images/partefrente.png');
 const PARTE_TRAS_IMAGE = require('../../../../assets/images/partetras.png');
