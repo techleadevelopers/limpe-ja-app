@@ -19,6 +19,7 @@ import { BookingsModule } from './bookings/bookings.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { ChatModule } from './chat/chat.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ComplianceModule } from './compliance/compliance.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { OffersModule } from './offers/offers.module';
 import { PaymentsModule } from './payments/payments.module';
@@ -48,6 +49,7 @@ import { ConnectModule } from './connect/connect.module';
 
 // ConfigModule customizado
 import { ConfigModule as CustomConfigModule } from './config/config.module';
+import { CommonModule } from './common/common.module';
 
 // Sentry
 import { SentryModule } from '@sentry/nestjs/setup';
@@ -105,9 +107,11 @@ import { APP_GUARD } from '@nestjs/core';
     }),
 
     SentryModule.forRoot(),
+    CommonModule,
 
     PrismaModule,
     AuthModule,
+    ComplianceModule,
     UsersModule,
     forwardRef(() => ProvidersModule),
     ProviderPromotionsModule,
