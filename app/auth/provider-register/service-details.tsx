@@ -11,10 +11,10 @@ import {
     Animated,
     Easing,
     Image,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
-    Platform,
     TextInput,
     TouchableOpacity,
     View,
@@ -25,6 +25,7 @@ import { bulkSetAvailability, saveProviderSettings, TimeRange } from '../../../s
 // IMPORTAÇÃO DO COMPONENTE PREMIUM SERVICE CHIP (Assumindo o caminho fornecido)
 import { PremiumServiceChip } from '../../../components/auth/PremiumServiceChip';
 
+import { showUserError } from '../../../_shared/errors/userError';
 import ServiceDetailsStep5Premium from '../../../components/auth/ServiceDetailsStep5Premium';
 import { useAuth } from '../../../hooks/useAuth';
 import {
@@ -34,10 +35,9 @@ import {
     updateMyProviderProfile,
     updateProviderServiceOffering,
 } from '../../../services/providerService';
-import { CreateProviderServiceData, UpdateProviderServiceData } from '../../../types/backend/providers';
 import verificationService from '../../../services/verificationService';
 import { VerificationStatus } from '../../../types/backend/auth';
-import { showUserError } from '../../_shared/errors/userError';
+import { CreateProviderServiceData, UpdateProviderServiceData } from '../../../types/backend/providers';
 import { AUTH_ROUTES } from '../../routes';
 
 const MIN_HOURLY_DURATION = 240;
