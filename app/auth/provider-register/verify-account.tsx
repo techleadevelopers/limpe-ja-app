@@ -1,8 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     Animated,
     Image,
     KeyboardAvoidingView,
@@ -10,18 +9,19 @@ import {
     ScrollView,
     StatusBar,
     StyleSheet,
-    View,
     Text,
     TouchableOpacity // Adicionado para o botão de tentar novamente
+    ,
+    View
 } from 'react-native';
-import DocumentUploadScreen from './verification/document-upload';
+import { showUserError } from '../../../_shared/errors/userError';
 import ToastMessage from '../../../components/ui/ToastMessage';
 import { useAuth } from '../../../hooks/useAuth';
 import verificationService from '../../../services/verificationService';
-import { showUserError } from '../../_shared/errors/userError';
+import { VerificationStatus } from '../../../types/backend/auth';
 import { DocumentPhotoType } from '../../../types/backend/verification';
-import { VerificationStatus, UserRole } from '../../../types/backend/auth';
 import { PROVIDER_ROUTES } from '../../routes';
+import DocumentUploadScreen from './verification/document-upload';
 
 const LOGO_IMAGE = require('../../../assets/images/logo.png');
 const HEADER_ICON_IMAGE = require('../../../assets/images/facer.png');
