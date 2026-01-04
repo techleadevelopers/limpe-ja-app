@@ -11,6 +11,7 @@ import {
   IsInt,
   IsArray,
   IsObject,
+  IsISO8601,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
@@ -42,6 +43,13 @@ const toRecord = (
     return value as Record<string, unknown>;
   }
   return null;
+};
+
+const toNumberValue = (value?: Decimal | number | null): number | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  return isDecimal(value) ? value.toNumber() : value;
 };
 
 class BookingInsuranceSnapshotDto {
@@ -148,6 +156,38 @@ class BookingProofSnapshotDto {
   @IsObject()
   timestamps?: Record<string, unknown> | null;
 
+  @ApiPropertyOptional({
+    description: 'Latitude associada ao comprovante',
+    example: -23.55052,
+  })
+  @IsOptional()
+  @IsNumber()
+  latitude?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Longitude associada ao comprovante',
+    example: -46.633308,
+  })
+  @IsOptional()
+  @IsNumber()
+  longitude?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Precisão do GPS em metros',
+    example: 12.5,
+  })
+  @IsOptional()
+  @IsNumber()
+  accuracyMeters?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Timestamp ISO 8601 da captura',
+    example: '2025-01-01T09:00:00.000Z',
+  })
+  @IsOptional()
+  @IsISO8601()
+  capturedAt?: string | null;
+
   @ApiProperty({ description: 'ID do usuário que enviou', example: 'user-123' })
   @IsString()
   userId: string;
@@ -165,6 +205,10 @@ class BookingProofSnapshotDto {
     timestamps?: Prisma.JsonValue | null;
     userId: string;
     createdAt: Date | string;
+    latitude?: number | null;
+    longitude?: number | null;
+    accuracyMeters?: number | null;
+    capturedAt?: Date | string | null;
   }) {
     this.id = data.id;
     this.type = data.type;
@@ -175,6 +219,19 @@ class BookingProofSnapshotDto {
     this.userId = data.userId;
     this.createdAt =
       data.createdAt instanceof Date ? data.createdAt.toISOString() : data.createdAt;
+    this.latitude =
+      typeof data.latitude === 'number' ? data.latitude : data.latitude ?? null;
+    this.longitude =
+      typeof data.longitude === 'number' ? data.longitude : data.longitude ?? null;
+    this.accuracyMeters =
+      typeof data.accuracyMeters === 'number'
+        ? data.accuracyMeters
+        : data.accuracyMeters ?? null;
+    this.capturedAt = data.capturedAt
+      ? data.capturedAt instanceof Date
+        ? data.capturedAt.toISOString()
+        : data.capturedAt
+      : null;
   }
 }
 
@@ -458,6 +515,38 @@ export class BookingDetailsDto {
   durationMinutes?: number | null;
 
   @ApiPropertyOptional({
+    description: 'Horário em que o prestador registrou a chegada',
+    example: '2025-07-01T08:55:00.000Z',
+  })
+  @IsOptional()
+  @IsString()
+  arrivedAt?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Latitude do momento de chegada',
+    example: -23.55052,
+  })
+  @IsOptional()
+  @IsNumber()
+  arrivedLat?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Longitude do momento de chegada',
+    example: -46.633308,
+  })
+  @IsOptional()
+  @IsNumber()
+  arrivedLng?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Precisão do GPS de chegada em metros',
+    example: 14,
+  })
+  @IsOptional()
+  @IsNumber()
+  arrivedAccuracyM?: number | null;
+
+  @ApiPropertyOptional({
     description: 'Horário real de início (se iniciado)',
     example: '2025-07-01T09:05:00.000Z',
   })
@@ -466,12 +555,60 @@ export class BookingDetailsDto {
   startedAt?: string | null;
 
   @ApiPropertyOptional({
+    description: 'Latitude do momento de início',
+    example: -23.55052,
+  })
+  @IsOptional()
+  @IsNumber()
+  startedLat?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Longitude do momento de início',
+    example: -46.633308,
+  })
+  @IsOptional()
+  @IsNumber()
+  startedLng?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Precisão do GPS de início em metros',
+    example: 12.5,
+  })
+  @IsOptional()
+  @IsNumber()
+  startedAccuracyM?: number | null;
+
+  @ApiPropertyOptional({
     description: 'Horário real de conclusão (se finalizado)',
     example: '2025-07-01T13:05:00.000Z',
   })
   @IsOptional()
   @IsString()
   completedAt?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Latitude do momento de conclusão',
+    example: -23.55052,
+  })
+  @IsOptional()
+  @IsNumber()
+  completedLat?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Longitude do momento de conclusão',
+    example: -46.633308,
+  })
+  @IsOptional()
+  @IsNumber()
+  completedLng?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Precisão do GPS de conclusão em metros',
+    example: 8,
+  })
+  @IsOptional()
+  @IsNumber()
+  completedAccuracyM?: number | null;
 
   @ApiPropertyOptional({
     description: 'Horário estimado de término (calculado)',
@@ -506,8 +643,18 @@ export class BookingDetailsDto {
     scheduledTime: string;
     scheduledStart?: Date | string | null;
     durationMinutes?: number | null;
+    arrivedAt?: Date | string | null;
+    arrivedLat?: Decimal | number | null;
+    arrivedLng?: Decimal | number | null;
+    arrivedAccuracyM?: Decimal | number | null;
     startedAt?: Date | string | null;
+    startedLat?: Decimal | number | null;
+    startedLng?: Decimal | number | null;
+    startedAccuracyM?: Decimal | number | null;
     completedAt?: Date | string | null;
+    completedLat?: Decimal | number | null;
+    completedLng?: Decimal | number | null;
+    completedAccuracyM?: Decimal | number | null;
     status: BookingStatus;
     totalPrice: Decimal | number;
     notes?: string | null;
@@ -611,16 +758,30 @@ export class BookingDetailsDto {
       : null;
     this.durationMinutes =
       data.durationMinutes !== undefined ? data.durationMinutes : null;
+    this.arrivedAt = data.arrivedAt
+      ? data.arrivedAt instanceof Date
+        ? data.arrivedAt.toISOString()
+        : data.arrivedAt
+      : null;
+    this.arrivedLat = toNumberValue(data.arrivedLat);
+    this.arrivedLng = toNumberValue(data.arrivedLng);
+    this.arrivedAccuracyM = toNumberValue(data.arrivedAccuracyM);
     this.startedAt = data.startedAt
       ? data.startedAt instanceof Date
         ? data.startedAt.toISOString()
         : data.startedAt
       : null;
+    this.startedLat = toNumberValue(data.startedLat);
+    this.startedLng = toNumberValue(data.startedLng);
+    this.startedAccuracyM = toNumberValue(data.startedAccuracyM);
     this.completedAt = data.completedAt
       ? data.completedAt instanceof Date
         ? data.completedAt.toISOString()
         : data.completedAt
       : null;
+    this.completedLat = toNumberValue(data.completedLat);
+    this.completedLng = toNumberValue(data.completedLng);
+    this.completedAccuracyM = toNumberValue(data.completedAccuracyM);
 
     this.totalPrice = isDecimal(data.totalPrice)
       ? data.totalPrice.toNumber()
