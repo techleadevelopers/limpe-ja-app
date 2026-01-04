@@ -1,4 +1,4 @@
-import { Prisma, BookingStatus } from '@prisma/client';
+import { Prisma, BookingStatus, InsurancePlanId } from '@prisma/client';
 import { BookingsService } from '../../src/bookings/bookings.service';
 import { InsuranceService } from '../../src/insurance/insurance.service';
 
@@ -152,6 +152,87 @@ describe('BookingsService start/end flows', () => {
     const notifiedUserIds = notificationPayloads.map((payload) => payload.userId);
     expect(notifiedUserIds).toEqual(
       expect.arrayContaining(['client-user', 'provider-user']),
+    );
+  });
+
+  it('throws PROOF_GPS_REQUIRED when proof-required booking starts without GPS', async () => {
+    const booking = buildBooking({
+      status: BookingStatus.ARRIVED,
+      bookingInsurance: {
+        planId: InsurancePlanId.PREMIUM,
+        priceCents: 1000,
+        coverageCents: 5000,
+        deductibleCents: 100,
+        riskMultiplierBps: 1000,
+        proofRequired: true,
+        createdAt: new Date(),
+      },
+      paymentIntent: { status: 'PAID' },
+    });
+    const updated = { ...booking, status: BookingStatus.STARTED };
+    const queuesService = {
+      addNotificationJob: jest.fn().mockResolvedValue(undefined),
+      addJob: jest.fn().mockResolvedValue(undefined),
+    };
+    const prismaMock = {
+      booking: {
+        findUnique: jest.fn().mockResolvedValue(booking),
+        update: jest.fn().mockResolvedValue(updated),
+      },
+    };
+
+    const service = createService(prismaMock, queuesService);
+    await expect(
+      service.startService('booking-1', 'provider-user'),
+    ).rejects.toMatchObject({
+      response: { code: 'PROOF_GPS_REQUIRED' },
+    });
+  });
+
+  it('persists GPS when proof-required booking starts with location', async () => {
+    const booking = buildBooking({
+      status: BookingStatus.ARRIVED,
+      bookingInsurance: {
+        planId: InsurancePlanId.PREMIUM,
+        priceCents: 1000,
+        coverageCents: 5000,
+        deductibleCents: 100,
+        riskMultiplierBps: 1000,
+        proofRequired: true,
+        createdAt: new Date(),
+      },
+      paymentIntent: { status: 'PAID' },
+    });
+    const updated = {
+      ...booking,
+      status: BookingStatus.STARTED,
+      startedAt: new Date(),
+      startedByUser: { connect: { id: 'provider-user' } },
+    };
+    const queuesService = {
+      addNotificationJob: jest.fn().mockResolvedValue(undefined),
+      addJob: jest.fn().mockResolvedValue(undefined),
+    };
+    const prismaMock = {
+      booking: {
+        findUnique: jest.fn().mockResolvedValue(booking),
+        update: jest.fn().mockResolvedValue(updated),
+      },
+    };
+
+    const service = createService(prismaMock, queuesService);
+    const gps = { lat: -23.5, lng: -46.6, accuracyM: 8 };
+    const result = await service.startService('booking-1', 'provider-user', gps);
+
+    expect(result.status).toBe(BookingStatus.STARTED);
+    expect(prismaMock.booking.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          startedLat: gps.lat,
+          startedLng: gps.lng,
+          startedAccuracyM: gps.accuracyM,
+        }),
+      }),
     );
   });
 });
