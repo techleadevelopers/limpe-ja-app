@@ -3,30 +3,30 @@ import axios from 'axios';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    AccessibilityInfo,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { getUserMessage } from '../../../_shared/errors/uiFeedback';
 import ProviderNavBar from '../../../components/provider/navigation/ProviderNavBar';
 import Colors from '../../../constants/Colors';
 import {
-  createProviderPromotion,
-  listProviderPromotions,
-  updateProviderPromotion,
+    createProviderPromotion,
+    listProviderPromotions,
+    updateProviderPromotion,
 } from '../../../services/providerPromotionsService';
 import { ProviderPromotionDto } from '../../../types/backend/providerPromotions';
-import { getUserMessage } from '../../_shared/errors/uiFeedback';
 
 const PERCENT_OPTIONS = [5, 10, 15, 20];
 const DURATION_OPTIONS = [7, 14, 30];
