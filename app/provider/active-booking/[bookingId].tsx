@@ -13,22 +13,21 @@ import {
     View,
 } from 'react-native';
 
+import { toastUserError } from '../../../_shared/errors/uiFeedback';
+import ProofCaptureSheet from '../../../components/provider/ProofCaptureSheet';
 import { useAuth } from '../../../hooks/useAuth';
+import { useBookingStatusMeta } from '../../../hooks/useBookingStatusMeta';
 import { useProviderBookings } from '../../../hooks/useProviderBookings';
 import { getBookingDetails } from '../../../services/bookingService';
-import { submitCheckinProof, submitCheckoutProof } from '../../../services/proofService';
 import NotificationUIService from '../../../services/notificationUIService';
-import ProofCaptureSheet from '../../../components/provider/ProofCaptureSheet';
+import { submitCheckinProof, submitCheckoutProof } from '../../../services/proofService';
 import {
-  BookingDetails,
-  BookingStatus,
-  BookingProofPayload,
-  BookingProofType,
-  InsurancePlanId,
+    BookingDetails,
+    BookingProofPayload,
+    BookingProofType,
+    BookingStatus
 } from '../../../types/backend/bookings';
 import { PaymentIntentStatus } from '../../../types/backend/payments';
-import { toastUserError } from '../../_shared/errors/uiFeedback';
-import { useBookingStatusMeta } from '../../../hooks/useBookingStatusMeta';
 
 const PRIMARY = '#007AFF';
 const BG = '#F8F9FA';
