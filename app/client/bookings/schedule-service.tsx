@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   ActivityIndicator,
   Animated,
@@ -30,6 +31,7 @@ import { getProviderAvailability, getProviderDetails } from '../../../services/p
 import {
   BookingAddress,
   BookingDetails,
+  BookingQuoteRequest,
   CreateBookingDto,
   InsurancePlanId,
 } from '../../../types/backend/bookings';
@@ -40,8 +42,10 @@ import { formatBRL } from '../../../utils/formatters';
 
 import { generateDailySlots } from '../../../utils/timeSlots';
 import axios from 'axios';
-import { useBookingQuote } from '../../../hooks/useBookingQuote';
+import { useBookingQuote, QuoteStatus } from '../../../hooks/useBookingQuote';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { useCouponValidation } from '../../../utils/useCouponValidation';
+import { normalizeApiError } from '../../utils/errors';
 
 import AddressSection from '../../../components/client/booking/schedule/AddressSection';
 import ProviderBrief from '../../../components/client/booking/schedule/ProviderBrief';
@@ -52,15 +56,77 @@ import NotesInputSection from '../../../components/client/booking/schedule/Notes
 import ScheduleCalendar from '../../../components/client/booking/schedule/ScheduleCalendar';
 import ScheduleHeader from '../../../components/client/booking/schedule/ScheduleHeader';
 import VerificationNotice from '../../../components/client/explore/provider/VerificationNotice';
-import { InsuranceOptionsCard } from './components/InsuranceOptionsCard';
+import { InsuranceOptionsCard } from '../../../components/booking/InsuranceOptionsCard';
 
 import { useDevice } from '@/utils/responsive';
 import { AppColors, AppDurations, AppShadows, SCREEN_WIDTH } from '../../../constants/appStyles';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
-const DEFAULT_MIN_HOURLY_MINUTES = 240;
+type NormalizedBookingError = {
+  code: string;
+  message: string;
+  actionable: boolean;
+  blockAction: boolean;
+};
 
+const hasCompleteAddress = (address: BookingAddress) =>
+  Boolean(address.street && address.number && address.neighborhood && address.city && address.state);
+
+const isValidDuration = (duration: number | null | undefined) => typeof duration === 'number' && duration > 0;
+
+const calcMinHourlySlots = (minMinutes: number, stepMinutes: number) => {
+  const step = Math.max(stepMinutes, 1);
+  return Math.max(1, Math.ceil(minMinutes / step));
+};
+
+const normalizeBookingError = (error: any, t: TFunction): NormalizedBookingError => {
+  const apiError = normalizeApiError(error);
+  const messageIndicator = (error?.response?.data?.message || error?.message || '').toString().toUpperCase();
+  let message = apiError.messageHuman;
+  let code = apiError.code;
+  let blockAction = apiError.blockAction;
+
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    if (status === 401 || status === 403) {
+      message = t('schedule_service.session_expired', { defaultValue: 'Sua sessão expirou. Faça login novamente.' });
+      code = 'UNAUTHORIZED';
+      blockAction = true;
+    }
+  }
+
+  if (messageIndicator.includes('PIX') && messageIndicator.includes('EXPIRED')) {
+    message = t('schedule_service.pix_expired_message', {
+      defaultValue: 'Pagamento via PIX expirou. Gere um novo link de pagamento e tente novamente.',
+    });
+    code = 'PIX_EXPIRED';
+    blockAction = true;
+  } else if (messageIndicator.includes('NO_PROVIDER') || messageIndicator.includes('AVAILABLE')) {
+    message = t('schedule_service.no_provider_available', {
+      defaultValue: 'Neste momento não há prestadores disponíveis para o horário selecionado.',
+    });
+    code = 'NO_PROVIDER_AVAILABLE';
+    blockAction = false;
+  } else if (messageIndicator.includes('CONFLICT') || messageIndicator.includes('ALREADY_BOOKED')) {
+    message = t('schedule_service.slot_conflict_message', {
+      defaultValue: 'O horário entrou em conflito. Atualize a agenda ou escolha outro horário.',
+    });
+    code = 'SLOT_CONFLICT';
+    blockAction = false;
+  } else if (!message || message.length === 0) {
+    message = t('common.network_error', { defaultValue: 'Não foi possível concluir o agendamento. Tente novamente.' });
+    code = 'GENERIC';
+  }
+
+  const actionable = !blockAction;
+  return {
+    code,
+    message,
+    actionable,
+    blockAction,
+  };
+};
 const toMinutes = (time: string) => {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
@@ -70,6 +136,33 @@ const isHourlyService = (service?: ProviderServiceOffering | null | undefined) =
   Boolean(service && service.pricePerHour > 0 && !service.needsReview);
 
 const formatHourCount = (hours: number) => (Number.isInteger(hours) ? hours.toString() : hours.toFixed(1));
+const PRICING_VERSION = 'v1';
+const normalizeCoordinate = (value?: number) => Number((value ?? 0).toFixed(5));
+
+const buildQuoteRequestKey = (payload: BookingQuoteRequest) => {
+  const normalizedAddress = {
+    latitude: normalizeCoordinate(payload.address.latitude),
+    longitude: normalizeCoordinate(payload.address.longitude),
+    city: payload.address.city?.trim() || null,
+    state: payload.address.state?.trim() || null,
+    cep: payload.address.cep?.trim() || null,
+  };
+
+  const normalizedPayload = {
+    pricingVersion: PRICING_VERSION,
+    version: PRICING_VERSION,
+    providerId: payload.providerId,
+    providerServiceId: payload.providerServiceId,
+    scheduledDate: payload.scheduledDate,
+    scheduledTime: payload.scheduledTime,
+    durationMinutes: payload.durationMinutes ?? null,
+    insurancePlanId: payload.insurancePlanId ?? null,
+    couponCode: payload.couponCode?.trim() || null,
+    address: normalizedAddress,
+  };
+
+  return JSON.stringify(normalizedPayload);
+};
 
 const SafetyReminderBanner = () => (
   <View style={styles.safetyBannerContainer}>
@@ -117,8 +210,8 @@ interface BookingSummaryPreviewProps {
   t: any;
   notes: string;
   setNotes: React.Dispatch<React.SetStateAction<string>>;
-  couponCode: string;
-  setCouponCode: React.Dispatch<React.SetStateAction<string>>;
+  couponInputValue: string;
+  setCouponInputValue: React.Dispatch<React.SetStateAction<string>>;
   onApplyCoupon: () => Promise<void>;
   isApplyingCoupon: boolean;
   couponInputAnim: Animated.Value;
@@ -130,6 +223,8 @@ interface BookingSummaryPreviewProps {
   notesAnim?: Animated.Value;
   cupomAnim?: Animated.Value;
   summaryAnim?: Animated.Value;
+  quoteStatus?: QuoteStatus;
+  quoteRateLimitRemainingSeconds?: number;
 }
 
 const BookingSummaryPreview = ({
@@ -148,8 +243,8 @@ const BookingSummaryPreview = ({
   t,
   notes,
   setNotes,
-  couponCode,
-  setCouponCode,
+  couponInputValue,
+  setCouponInputValue,
   onApplyCoupon,
   isApplyingCoupon,
   couponInputAnim,
@@ -161,6 +256,8 @@ const BookingSummaryPreview = ({
   notesAnim,
   cupomAnim,
   summaryAnim,
+  quoteStatus,
+  quoteRateLimitRemainingSeconds = 0,
 }: BookingSummaryPreviewProps) => {
   const hasSelection = Boolean(selectedProviderService && selectedTime);
   const { isLargePhone } = useDevice();
@@ -331,8 +428,8 @@ const BookingSummaryPreview = ({
                 inputRange: [0, 1],
                 outputRange: [AppColors.mediumGray, AppColors.primaryInteractive],
               })}
-              value={couponCode}
-              onChangeText={setCouponCode}
+              value={couponInputValue}
+              onChangeText={setCouponInputValue}
               autoCapitalize="characters"
               editable={!isApplyingCoupon}
               onFocus={() =>
@@ -354,7 +451,7 @@ const BookingSummaryPreview = ({
             <TouchableOpacity
               style={styles.compactApplyCouponButton}
               onPress={onApplyCoupon}
-              disabled={isApplyingCoupon || !couponCode}
+              disabled={isApplyingCoupon || !couponInputValue}
             >
               {isApplyingCoupon ? (
                 <ActivityIndicator size="small" color={AppColors.white} />
@@ -493,6 +590,19 @@ const BookingSummaryPreview = ({
             {formatBRL(finalPrice)}
           </Animated.Text>
         </View>
+        {quoteStatus === 'refreshing' && (
+          <Text style={styles.quoteStatusText}>
+            {t('schedule_service.quote_refreshing', { defaultValue: 'Atualizando cotação...' })}
+          </Text>
+        )}
+        {quoteStatus === 'rateLimited' && quoteRateLimitRemainingSeconds > 0 && (
+          <Text style={styles.quoteStatusText}>
+            {t('schedule_service.rate_limit_hint', {
+              defaultValue: `Tente novamente em ${quoteRateLimitRemainingSeconds}s`,
+              seconds: quoteRateLimitRemainingSeconds,
+            })}
+          </Text>
+        )}
 
         <SafetyReminderBanner />
 
@@ -519,7 +629,47 @@ const availabilityCache = new Map<
     timestamp: number; // TTL: 1h = 3600000ms
   }
 >();
+const MIN_AVAILABILITY_COOLDOWN = 1200;
+const availabilityCooldownMap = new Map<string, number>();
+const availabilityPendingRequests = new Map<
+  string,
+  Promise<{ available: ProviderAvailability[]; occupiedTimes: string[] }>
+>();
 
+const fetchAvailabilityWithCooldown = async (
+  provId: string,
+  dateString: string,
+): Promise<{ available: ProviderAvailability[]; occupiedTimes: string[] }> => {
+  const cacheKey = `${provId}-${dateString}`;
+  const cached = availabilityCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < 3600000) {
+    return cached;
+  }
+
+  if (availabilityPendingRequests.has(cacheKey)) {
+    return availabilityPendingRequests.get(cacheKey)!;
+  }
+
+  const now = Date.now();
+  const lastRun = availabilityCooldownMap.get(cacheKey) ?? 0;
+  const waitMs = Math.max(0, MIN_AVAILABILITY_COOLDOWN - (now - lastRun));
+  if (waitMs > 0) {
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  }
+  availabilityCooldownMap.set(cacheKey, Date.now());
+
+  const promise = (async () => {
+    try {
+      const response = await getProviderAvailability(provId, dateString);
+      availabilityCache.set(cacheKey, { ...response, timestamp: Date.now() });
+      return response;
+    } finally {
+      availabilityPendingRequests.delete(cacheKey);
+    }
+  })();
+  availabilityPendingRequests.set(cacheKey, promise);
+  return promise;
+};
 export default function ScheduleServiceScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -559,7 +709,14 @@ export default function ScheduleServiceScreen() {
   const [durationInMinutes, setDurationInMinutes] = useState<number | null>(null);
   const [squareMeters, setSquareMeters] = useState<number | null>(null);
   const [insurancePlanId, setInsurancePlanId] = useState<InsurancePlanId | null>(null);
-  const [minHourlyMinutes, setMinHourlyMinutes] = useState(DEFAULT_MIN_HOURLY_MINUTES);
+  const [minHourlyMinutes, setMinHourlyMinutes] = useState<number | null>(null);
+  const [isPricingConfigLoading, setIsPricingConfigLoading] = useState(true);
+  const [pricingConfigError, setPricingConfigError] = useState<string | null>(null);
+  const [configReloadTrigger, setConfigReloadTrigger] = useState(0);
+  const [bookingBlockingError, setBookingBlockingError] = useState<NormalizedBookingError | null>(null);
+  const [providerRateLimited, setProviderRateLimited] = useState(false);
+  const [providerFetchErrorMessage, setProviderFetchErrorMessage] = useState<string | null>(null);
+  const [providerReloadTrigger, setProviderReloadTrigger] = useState(0);
 
   useEffect(() => {
     if (!selectedProviderService || !isHourlyService(selectedProviderService)) return;
@@ -576,25 +733,54 @@ export default function ScheduleServiceScreen() {
     setDurationInMinutes(sorted.length * 60);
   }, [selectedSlots, selectedProviderService]);
 
+  const reloadPricingConfig = useCallback(() => {
+    setConfigReloadTrigger((prev) => prev + 1);
+  }, []);
+
+  const handleReloadProvider = useCallback(() => {
+    setProviderRateLimited(false);
+    setProviderFetchErrorMessage(null);
+    setProviderReloadTrigger((prev) => prev + 1);
+  }, []);
+
   useEffect(() => {
     let active = true;
-    getPricingConfig()
-      .then((cfg) => {
-        if (active && typeof cfg.minHourlyMinutes === 'number' && cfg.minHourlyMinutes > 0) {
+    setIsPricingConfigLoading(true);
+    setPricingConfigError(null);
+    setMinHourlyMinutes(null);
+
+    (async () => {
+      try {
+        const cfg = await getPricingConfig();
+        if (!active) return;
+        if (typeof cfg.minHourlyMinutes === 'number' && cfg.minHourlyMinutes > 0) {
           setMinHourlyMinutes(cfg.minHourlyMinutes);
+          setPricingConfigError(null);
+          return;
         }
-      })
-      .catch((error) => {
-        if (__DEV__) {
-          console.warn('[ScheduleService] Falha ao carregar config de pricing', error);
+        setPricingConfigError(
+          t('schedule_service.pricing_config_invalid', {
+            defaultValue: 'Não foi possível carregar as regras de agendamento.',
+          }),
+        );
+      } catch (error) {
+        if (!active) return;
+        setPricingConfigError(t('common.network_error', { defaultValue: 'Erro de rede.' }));
+      } finally {
+        if (active) {
+          setIsPricingConfigLoading(false);
         }
-      });
+      }
+    })();
+
     return () => {
       active = false;
     };
-  }, []);
+  }, [configReloadTrigger, t]);
 
-  const [couponCode, setCouponCode] = useState(initialCouponCodeString ?? '');
+  const initialCoupon = (initialCouponCodeString ?? '').trim();
+  const [couponInputValue, setCouponInputValue] = useState(initialCoupon);
+  const [appliedCouponCode, setAppliedCouponCode] = useState(initialCoupon);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
@@ -606,6 +792,9 @@ export default function ScheduleServiceScreen() {
   const shineAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.3)).current;
 
   const [displaySlotsInfo, setDisplaySlotsInfo] = useState<{ time: string; isAvailable: boolean }[]>([]);
+
+  const shouldBlockBookingRequests = Boolean(bookingBlockingError?.blockAction);
+  const isPricingConfigReady = Boolean(minHourlyMinutes && !isPricingConfigLoading);
 
   const providerNeedsApproval =
     provider?.verificationStatus !== undefined &&
@@ -625,9 +814,11 @@ export default function ScheduleServiceScreen() {
     return step;
   }, [displaySlotsInfo]);
 
+  const enforcedMinHourlyMinutes = minHourlyMinutes ?? 0;
+
   const minHourlySlots = useMemo(
-    () => Math.max(1, Math.ceil(minHourlyMinutes / slotStepMinutes)),
-    [minHourlyMinutes, slotStepMinutes],
+    () => calcMinHourlySlots(enforcedMinHourlyMinutes, slotStepMinutes),
+    [enforcedMinHourlyMinutes, slotStepMinutes],
   );
   const hourlyBlockMinutes = useMemo(() => {
     if (!isHourlyService(selectedProviderService) || selectedSlots.length === 0) {
@@ -635,8 +826,8 @@ export default function ScheduleServiceScreen() {
     }
 
     const selectedMinutes = selectedSlots.length * slotStepMinutes;
-    return Math.max(selectedMinutes, minHourlyMinutes);
-  }, [selectedProviderService, selectedSlots.length, slotStepMinutes, minHourlyMinutes]);
+    return Math.max(selectedMinutes, enforcedMinHourlyMinutes);
+  }, [selectedProviderService, selectedSlots.length, slotStepMinutes, enforcedMinHourlyMinutes]);
   const hourlyBlockHours = useMemo(() => (hourlyBlockMinutes > 0 ? hourlyBlockMinutes / 60 : 0), [hourlyBlockMinutes]);
   const hasShownTodayAvailableToastRef = useRef(false);
 
@@ -645,10 +836,6 @@ export default function ScheduleServiceScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideUpAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const backgroundFloatAnim = useRef(new Animated.Value(0)).current;
-  const headerGlowAnim = useRef(new Animated.Value(0)).current;
   const calendarBreatheAnim = useRef(new Animated.Value(1)).current;
 
   const floatingSummaryAnim = useRef(new Animated.Value(0)).current;
@@ -660,7 +847,6 @@ export default function ScheduleServiceScreen() {
   const summaryAnim = useRef(new Animated.Value(0)).current;
 
   const slotBadgeScale = useRef(new Animated.Value(1)).current;
-  const slotBadgePulse = useRef(new Animated.Value(0)).current;
 
   const [currentStep, setCurrentStep] = useState<number>(1);
 
@@ -682,18 +868,102 @@ export default function ScheduleServiceScreen() {
     [selectedDate],
   );
 
-  const { quote, refreshQuote } = useBookingQuote({
-    providerId: provider?.id,
-    providerServiceId: selectedProviderService?.id,
-    scheduledDate: scheduledDateKey,
-    scheduledTime: selectedTime,
-    address,
-    durationMinutes: effectiveDurationInMinutes,
+  const isAddressReadyForQuote = useMemo(() => {
+    return (
+      address.latitude !== 0 &&
+      address.longitude !== 0 &&
+      Boolean(address.city?.trim()) &&
+      Boolean(address.state?.trim()) &&
+      Boolean(address.street?.trim()) &&
+      Boolean(address.number?.trim())
+    );
+  }, [address]);
+
+  const quotePayload = useMemo<BookingQuoteRequest | null>(() => {
+    if (
+      !provider?.id ||
+      !selectedProviderService?.id ||
+      !scheduledDateKey ||
+      !selectedTime ||
+      !isAddressReadyForQuote
+    ) {
+      return null;
+    }
+
+    const normalizedSquareMeters =
+      squareMeters && squareMeters > 0 ? squareMeters : undefined;
+
+    return {
+      providerId: provider.id,
+      providerServiceId: selectedProviderService.id,
+      scheduledDate: scheduledDateKey,
+      scheduledTime: selectedTime,
+      durationMinutes: effectiveDurationInMinutes ?? undefined,
+      squareMeters: normalizedSquareMeters,
+      roomCount: undefined,
+      couponCode: appliedCouponCode || undefined,
+      insurancePlanId: insurancePlanId ?? undefined,
+      address,
+    };
+  }, [
+    provider?.id,
+    selectedProviderService?.id,
+    scheduledDateKey,
+    selectedTime,
+    isAddressReadyForQuote,
+    effectiveDurationInMinutes,
     squareMeters,
-    roomCount: undefined,
-    couponCode,
+    appliedCouponCode,
     insurancePlanId,
+    address,
+  ]);
+
+  const debouncedQuotePayload = useDebouncedValue(quotePayload, 300);
+
+  const stableRequestKey = useMemo(() => {
+    if (!debouncedQuotePayload) {
+      return '';
+    }
+    return buildQuoteRequestKey(debouncedQuotePayload);
+  }, [debouncedQuotePayload]);
+
+  const {
+    quote,
+    status: quoteStatus,
+    refreshQuote,
+    rateLimitResetAt,
+  } = useBookingQuote({
+    requestKey: stableRequestKey,
+    payload: debouncedQuotePayload,
   });
+
+  const quoteLoading = quoteStatus === 'loading' || quoteStatus === 'refreshing';
+  const [rateLimitTick, setRateLimitTick] = useState(0);
+  useEffect(() => {
+    if (!rateLimitResetAt) {
+      setRateLimitTick(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setRateLimitTick((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [rateLimitResetAt]);
+
+  const rateLimitRemainingSeconds = useMemo(() => {
+    if (!rateLimitResetAt) return 0;
+    const remainingMs = rateLimitResetAt - Date.now();
+    return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0;
+  }, [rateLimitResetAt, rateLimitTick]);
+
+  const hourlyBasePrice = useMemo(() => {
+    return selectedProviderService?.pricePerHour ?? (paramServicePrice ? Number(paramServicePrice) : 0);
+  }, [selectedProviderService?.pricePerHour, paramServicePrice]);
+
+  const hourlyBlockPrice = useMemo(() => {
+    if (hourlyBlockHours <= 0) return null;
+    return hourlyBasePrice * hourlyBlockHours;
+  }, [hourlyBlockHours, hourlyBasePrice]);
 
   const resolvedServicePrice = useMemo(() => {
     if (selectedProviderService?.pricePerHour != null && selectedProviderService.pricePerHour > 0) {
@@ -707,7 +977,9 @@ export default function ScheduleServiceScreen() {
   }, [selectedProviderService?.pricePerHour, paramServicePrice]);
 
   const fallbackFinalPrice =
-    resolvedServicePrice ?? (selectedProviderService?.pricePerHour ?? 0);
+    hourlyBlockPrice != null && hourlyBlockPrice > 0
+      ? hourlyBlockPrice
+      : resolvedServicePrice ?? (selectedProviderService?.pricePerHour ?? 0);
   const displaySubtotal = quote?.subtotal ?? fallbackFinalPrice;
   const displayDiscount = quote?.discountAmount ?? 0;
   const insuranceFeeCents = quote?.insuranceFeeCents ?? 0;
@@ -731,13 +1003,13 @@ export default function ScheduleServiceScreen() {
     couponFeedbackIcon,
     handleApplyCoupon,
   } = useCouponValidation({
-    couponCode,
-    onApplyCoupon: refreshQuote,
+    couponValue: couponInputValue,
+    onApplyCoupon: async (value) => {
+      const normalized = value.trim();
+      setAppliedCouponCode(normalized);
+      setCouponInputValue(normalized);
+    },
   });
-
-    const hourlyBasePrice = useMemo(() => {
-      return selectedProviderService?.pricePerHour ?? (paramServicePrice ? Number(paramServicePrice) : 0);
-    }, [selectedProviderService?.pricePerHour, paramServicePrice]);
 
   const priceChangeAnim = useRef(new Animated.Value(0)).current;
   const lastFinalPriceRef = useRef<number>(finalCalculatedPrice);
@@ -789,25 +1061,17 @@ export default function ScheduleServiceScreen() {
       if (now - value.timestamp > 3600000) availabilityCache.delete(key);
     }
 
-    const prefetchDates: { dateString: string; cacheKey: string }[] = [];
-
-    for (let offset = -3; offset <= 3; offset++) {
+    const offsets = [-1, 0, 1];
+    for (const offset of offsets) {
       const prefetchDate = new Date(baseDate);
       prefetchDate.setDate(baseDate.getDate() + offset);
-
       const dateString = prefetchDate.toISOString().split('T')[0];
-      const cacheKey = `${provId}-${dateString}`;
-
-      if (!availabilityCache.has(cacheKey)) prefetchDates.push({ dateString, cacheKey });
+      try {
+        await fetchAvailabilityWithCooldown(provId, dateString);
+      } catch {
+        // Silenciar falhas de prefetch
+      }
     }
-
-    await Promise.allSettled(
-      prefetchDates.map(({ dateString, cacheKey }) =>
-        getProviderAvailability(provId, dateString).then((response) => {
-          availabilityCache.set(cacheKey, { ...response, timestamp: Date.now() });
-        }),
-      ),
-    );
   }, []);
 
   useEffect(() => {
@@ -858,119 +1122,10 @@ export default function ScheduleServiceScreen() {
       }),
     ]).start();
 
-    const pulseLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.02,
-          duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-
-    const rotateLoop = Animated.loop(
-      Animated.timing(rotateAnim, {
-        toValue: 1,
-        duration: 20000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    );
-
-    const floatLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(backgroundFloatAnim, {
-          toValue: 1,
-          duration: 4000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(backgroundFloatAnim, {
-          toValue: 0,
-          duration: 4000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-
-    const headerGlowLoop = Animated.loop(
-      Animated.timing(headerGlowAnim, {
-        toValue: 1,
-        duration: 3000,
-        easing: Easing.inOut(Easing.ease),
-        useNativeDriver: false,
-      }),
-    );
-
-    const calendarBreatheLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(calendarBreatheAnim, {
-          toValue: 1.005,
-          duration: 3000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(calendarBreatheAnim, {
-          toValue: 1,
-          duration: 3000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-
-    pulseLoop.start();
-    rotateLoop.start();
-    floatLoop.start();
-    headerGlowLoop.start();
-    calendarBreatheLoop.start();
-
     return () => {
       isMounted.current = false;
-      pulseLoop.stop();
-      rotateLoop.stop();
-      floatLoop.stop();
-      headerGlowLoop.stop();
-      calendarBreatheLoop.stop();
     };
-  }, [fadeAnim, slideUpAnim, scaleAnim, pulseAnim, rotateAnim, backgroundFloatAnim, headerGlowAnim, calendarBreatheAnim]);
-
-  useEffect(() => {
-    if (currentStep !== 2 || !isHourlyService(selectedProviderService) || selectedSlots.length === 0) {
-      slotBadgePulse.stopAnimation();
-      return;
-    }
-
-    slotBadgePulse.setValue(0);
-
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(slotBadgePulse, {
-          toValue: 1,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(slotBadgePulse, {
-          toValue: 0,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-
-    loop.start();
-    return () => loop.stop();
-  }, [currentStep, selectedProviderService, selectedSlots.length, slotBadgePulse]);
+  }, [fadeAnim, slideUpAnim, scaleAnim]);
 
   useEffect(() => {
     if (selectedSlots.length === 0) {
@@ -1279,21 +1434,37 @@ export default function ScheduleServiceScreen() {
   }, [currentStep, router, reviewStepAnim, fadeAnim, scaleAnim]);
 
   const handleConfirmBooking = useCallback(async () => {
+    if (shouldBlockBookingRequests) {
+      if (bookingBlockingError) {
+        NotificationUIService.showError(
+          bookingBlockingError.message,
+          t('common.error', { defaultValue: 'Erro' }),
+        );
+      }
+      return;
+    }
+
     if (
       !typedUser?.id ||
       !provider?.id ||
       !selectedProviderService?.id ||
       !selectedDate ||
       !selectedTime ||
-      !address.street ||
-      !address.number ||
-      !address.neighborhood ||
-      !address.city ||
-      !address.state
+      !hasCompleteAddress(address)
     ) {
       NotificationUIService.showError(
         t('schedule_service.booking_error_message', { defaultValue: 'Dados incompletos para agendar.' }),
         t('schedule_service.booking_error_title', { defaultValue: 'Erro no Agendamento' }),
+      );
+      return;
+    }
+
+    if (!isPricingConfigReady) {
+      NotificationUIService.showError(
+        t('schedule_service.pricing_config_invalid', {
+          defaultValue: 'Não foi possível carregar as regras de agendamento.',
+        }),
+        t('common.error', { defaultValue: 'Erro' }),
       );
       return;
     }
@@ -1308,10 +1479,7 @@ export default function ScheduleServiceScreen() {
       return;
     }
 
-    if (
-      isHourlyService(selectedProviderService) &&
-      (effectiveDurationInMinutes === null || effectiveDurationInMinutes === undefined || effectiveDurationInMinutes <= 0)
-    ) {
+    if (isHourlyService(selectedProviderService) && !isValidDuration(effectiveDurationInMinutes)) {
       NotificationUIService.showError(
         t('schedule_service.booking_error_duration_size', { field: t('common.duration', { defaultValue: 'duração' }) }),
         t('schedule_service.booking_error_title', { defaultValue: 'Erro no Agendamento' }),
@@ -1343,25 +1511,26 @@ export default function ScheduleServiceScreen() {
           longitude: address.longitude ?? 0,
         },
         requestedDurationMinutes,
-        couponCode: quote?.couponApplied ? couponCode : undefined,
+        couponCode: quote?.couponApplied ? appliedCouponCode : undefined,
         quoteId: quote?.quoteId,
         quoteHash: quote?.quoteHash,
+        quoteExpiresAt: quote?.expiresAt,
         insurancePlanId: insurancePlanId ?? undefined,
       };
 
       const newBooking: BookingDetails = await createBooking(bookingData);
       if (!isMounted.current) return;
 
-        router.replace({
-          pathname: '/client/bookings/success',
-          params: {
-            bookingId: newBooking.id,
-            totalPrice: newBooking.totalPrice.toString(),
-            paymentMethod: 'PIX',
-            couponApplied: quote?.couponApplied ? 'true' : 'false',
-            couponCode: quote?.couponApplied ? couponCode : undefined,
-          },
-        });
+      router.replace({
+        pathname: '/client/bookings/success',
+        params: {
+          bookingId: newBooking.id,
+          totalPrice: newBooking.totalPrice.toString(),
+          paymentMethod: 'PIX',
+          couponApplied: quote?.couponApplied ? 'true' : 'false',
+          couponCode: quote?.couponApplied ? appliedCouponCode : undefined,
+        },
+      });
 
       NotificationUIService.showSuccess(
         t('schedule_service.booking_success_message', { defaultValue: 'Agendamento realizado com sucesso!' }),
@@ -1399,8 +1568,15 @@ export default function ScheduleServiceScreen() {
         return;
       }
 
+      const normalized = normalizeBookingError(error, t);
+      if (normalized.blockAction) {
+        setBookingBlockingError(normalized);
+      } else {
+        setBookingBlockingError(null);
+      }
+
       NotificationUIService.showError(
-        error.response?.data?.message || t('common.network_error', { defaultValue: 'Erro de rede.' }),
+        normalized.message,
         t('common.error', { defaultValue: 'Erro' }),
       );
     } finally {
@@ -1417,15 +1593,22 @@ export default function ScheduleServiceScreen() {
     router,
     squareMeters,
     finalCalculatedPrice,
-    couponCode,
+    appliedCouponCode,
     quote,
     refreshQuote,
     t,
     effectiveDurationInMinutes,
     providerNeedsApproval,
+    bookingBlockingError,
+    shouldBlockBookingRequests,
+    isPricingConfigReady,
   ]);
 
   useEffect(() => {
+    if (providerRateLimited) {
+      return;
+    }
+
     const loadInitialData = async () => {
       if (isMounted.current) setIsLoading(true);
 
@@ -1512,12 +1695,7 @@ export default function ScheduleServiceScreen() {
         if (isMounted.current) setSelectedDate(new Date());
 
         const today = new Date();
-        const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-        const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-
         await prefetchAvailability(paramProviderId, today);
-        await prefetchAvailability(paramProviderId, nextMonth);
-        await prefetchAvailability(paramProviderId, prevMonth);
 
         if (initialCouponCodeString) {
           setTimeout(() => {
@@ -1525,13 +1703,28 @@ export default function ScheduleServiceScreen() {
           }, 500);
         }
       } catch (error: any) {
-        if (isMounted.current) {
-          NotificationUIService.showError(
-            error.response?.data?.message || t('common.network_error', { defaultValue: 'Erro de rede.' }),
-            t('common.error', { defaultValue: 'Erro' }),
-          );
-          router.replace('/client/explore');
+        if (!isMounted.current) return;
+
+        const normalized = normalizeApiError(error);
+        if (normalized.blockAction) {
+          const blockMessage =
+            normalized.code === 'RATE_LIMITED'
+              ? t('schedule_service.provider_rate_limited', {
+                  defaultValue:
+                    'Você atingiu o limite de requisições para obter detalhes deste prestador. Aguarde alguns segundos e tente novamente.',
+                })
+              : normalized.messageHuman;
+          setProviderFetchErrorMessage(blockMessage);
+          setProviderRateLimited(true);
+          NotificationUIService.showError(blockMessage, t('common.error', { defaultValue: 'Erro' }));
+          return;
         }
+
+        NotificationUIService.showError(
+          error.response?.data?.message || t('common.network_error', { defaultValue: 'Erro de rede.' }),
+          t('common.error', { defaultValue: 'Erro' }),
+        );
+        router.replace('/client/explore');
       } finally {
         if (isMounted.current) setIsLoading(false);
       }
@@ -1547,6 +1740,8 @@ export default function ScheduleServiceScreen() {
     initialCouponCodeString,
     handleApplyCoupon,
     t,
+    providerRateLimited,
+    providerReloadTrigger,
   ]);
 
   const animateShine = useCallback(() => {
@@ -1607,7 +1802,7 @@ export default function ScheduleServiceScreen() {
           }
 
           if (!backendResponse) {
-            backendResponse = await getProviderAvailability(provider.id, dateString);
+          backendResponse = await fetchAvailabilityWithCooldown(provider.id, dateString);
             availabilityCache.set(cacheKey, { ...backendResponse, timestamp: Date.now() });
           }
         } catch (err: any) {
@@ -1692,74 +1887,49 @@ export default function ScheduleServiceScreen() {
           setIsSearchingNextDate(true);
 
           let foundAvailableDate = false;
-          const searchPromises: Promise<{ date: Date; slots: { time: string; isAvailable: boolean }[] } | null>[] = [];
+          for (let i = 1; i <= 7 && !foundAvailableDate && !isCancelled; i++) {
+            const searchDate = new Date(selectedDate);
+            searchDate.setDate(selectedDate.getDate() + i);
 
-          for (let i = 1; i <= 7; i++) {
-            searchPromises.push(
-              (async (dayOffset: number) => {
-                if (isCancelled) return null;
+            const searchDateString = searchDate.toISOString().split('T')[0];
+            const searchCacheKey = `${provider.id}-${searchDateString}`;
 
-                const searchDate = new Date(selectedDate);
-                searchDate.setDate(selectedDate.getDate() + dayOffset);
+            let searchResponse: { available: ProviderAvailability[]; occupiedTimes: string[] } | undefined;
 
-                const searchDateString = searchDate.toISOString().split('T')[0];
-                const searchCacheKey = `${provider.id}-${searchDateString}`;
+            if (availabilityCache.has(searchCacheKey)) {
+              const cached = availabilityCache.get(searchCacheKey);
+              if (cached && Date.now() - cached.timestamp < 3600000) {
+                searchResponse = { available: cached.available, occupiedTimes: cached.occupiedTimes };
+              } else {
+                availabilityCache.delete(searchCacheKey);
+              }
+            }
 
-                let searchResponse: { available: ProviderAvailability[]; occupiedTimes: string[] } | undefined;
+            if (!searchResponse && !isCancelled) {
+              try {
+                    searchResponse = await fetchAvailabilityWithCooldown(provider.id, searchDateString);
+                availabilityCache.set(searchCacheKey, { ...searchResponse, timestamp: Date.now() });
+              } catch {
+                // Silenciar falhas pontuais para não saturar o log
+                await new Promise((resolve) => setTimeout(resolve, 200));
+                continue;
+              }
+            }
 
-                if (availabilityCache.has(searchCacheKey)) {
-                  const cached = availabilityCache.get(searchCacheKey);
-                  if (cached && Date.now() - cached.timestamp < 3600000) {
-                    searchResponse = { available: cached.available, occupiedTimes: cached.occupiedTimes };
-                  }
-                }
-
-                if (!searchResponse && !isCancelled) {
-                  try {
-                    searchResponse = await getProviderAvailability(provider.id, searchDateString);
-                    availabilityCache.set(searchCacheKey, { ...searchResponse, timestamp: Date.now() });
-                  } catch {
-                    return null;
-                  }
-                }
-
-                if (isCancelled) return null;
-
-                const searchSlots = generateDailySlots(
-                  searchDate,
-                  searchResponse?.available || [],
-                  searchResponse?.occupiedTimes || [],
-                  requiredDurationMin,
-                );
-
-                if (searchSlots.some((slot) => slot.isAvailable)) {
-                  return { date: searchDate, slots: searchSlots };
-                }
-                return null;
-              })(i),
-            );
-          }
-
-          const results = await Promise.allSettled(searchPromises);
-
-          for (const result of results) {
             if (isCancelled) break;
 
-            if (result.status === 'fulfilled' && result.value) {
-              const { date, slots } = result.value;
+            const searchSlots = generateDailySlots(
+              searchDate,
+              searchResponse?.available || [],
+              searchResponse?.occupiedTimes || [],
+              requiredDurationMin,
+            );
 
+            if (searchSlots.some((slot) => slot.isAvailable)) {
               if (isMounted.current && !isCancelled) {
-                setSelectedDate(date);
-                setDisplaySlotsInfo(slots);
+                setSelectedDate(searchDate);
+                setDisplaySlotsInfo(searchSlots);
                 foundAvailableDate = true;
-
-                NotificationUIService.showSuccess(
-                  t('schedule_service.found_available_date', {
-                    date: date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }),
-                    defaultValue: 'Horários encontrados!',
-                  }),
-                  t('common.success', { defaultValue: 'Sucesso' }),
-                );
 
                 Animated.sequence([
                   Animated.timing(scaleAnim, { toValue: 0.98, duration: 150, useNativeDriver: true }),
@@ -1775,6 +1945,8 @@ export default function ScheduleServiceScreen() {
                 setSelectedTime(null);
                 break;
               }
+            } else {
+              await new Promise((resolve) => setTimeout(resolve, 150));
             }
           }
 
@@ -1805,46 +1977,44 @@ export default function ScheduleServiceScreen() {
   }, [selectedDate, provider?.id, selectedProviderService, prefetchAvailability, t, fadeAnim, scaleAnim, isSearchingNextDate]);
 
   const isNextButtonDisabled = useMemo(() => {
+    if (!isPricingConfigReady) return true;
     if (currentStep === 1) {
       const needMinSlots = isHourlyService(selectedProviderService) && selectedSlots.length < minHourlySlots;
 
-      return (
-        selectedSlots.length === 0 ||
-        needMinSlots ||
-        !address.street ||
-        !address.number ||
-        !address.neighborhood ||
-        !address.city ||
-        !address.state
-      );
+      return selectedSlots.length === 0 || needMinSlots || !hasCompleteAddress(address);
     }
     return false;
-  }, [currentStep, selectedSlots, address, selectedProviderService, minHourlySlots]);
+  }, [currentStep, selectedSlots, address, selectedProviderService, minHourlySlots, isPricingConfigReady]);
 
   const isConfirmButtonDisabled = useMemo(() => {
-    if (!selectedProviderService) return true;
+    if (!isPricingConfigReady || !selectedProviderService) return true;
 
     const baseDisabled =
-      selectedSlots.length === 0 ||
-      !address.street ||
-      !address.number ||
-      !address.neighborhood ||
-      !address.city ||
-      !address.state ||
-      isBooking;
+      selectedSlots.length === 0 || !hasCompleteAddress(address) || isBooking || quoteLoading;
 
     if (!isHourlyService(selectedProviderService)) {
-      return baseDisabled || providerNeedsApproval;
+      return baseDisabled || providerNeedsApproval || shouldBlockBookingRequests;
     }
 
     return (
       baseDisabled ||
       selectedSlots.length < minHourlySlots ||
-      !durationInMinutes ||
-      durationInMinutes <= 0 ||
-      providerNeedsApproval
+      !isValidDuration(durationInMinutes) ||
+      providerNeedsApproval ||
+      shouldBlockBookingRequests
     );
-  }, [selectedSlots, address, selectedProviderService, durationInMinutes, isBooking, providerNeedsApproval, minHourlySlots]);
+  }, [
+    selectedSlots,
+    address,
+    selectedProviderService,
+    durationInMinutes,
+    isBooking,
+    providerNeedsApproval,
+    minHourlySlots,
+    quoteLoading,
+    isPricingConfigReady,
+    shouldBlockBookingRequests,
+  ]);
 
     const selectedHoursLabel = useMemo(() => {
       if (isHourlyService(selectedProviderService) && hourlyBlockHours > 0) {
@@ -1856,12 +2026,12 @@ export default function ScheduleServiceScreen() {
     }, [selectedProviderService, hourlyBlockHours]);
 
   const selectedSlotRange = useMemo(() => {
-    if (!selectedTime) {
+    if (!selectedTime || enforcedMinHourlyMinutes <= 0) {
       return null;
     }
 
     const startMinutes = toMinutes(selectedTime);
-    const endMinutes = startMinutes + minHourlyMinutes;
+    const endMinutes = startMinutes + enforcedMinHourlyMinutes;
     const formatHourLabel = (minutes: number) => {
       const normalized = minutes % (24 * 60);
       const hour = Math.floor(normalized / 60);
@@ -1870,14 +2040,9 @@ export default function ScheduleServiceScreen() {
 
     return {
       label: `${formatHourLabel(startMinutes)} – ${formatHourLabel(endMinutes)}`,
-      hours: Math.max(minHourlyMinutes / 60, 1),
+      hours: Math.max(enforcedMinHourlyMinutes / 60, 1),
     };
-  }, [selectedTime, minHourlyMinutes]);
-
-  const hourlyBlockPrice = useMemo(() => {
-    if (hourlyBlockHours <= 0) return null;
-    return hourlyBasePrice * hourlyBlockHours;
-  }, [hourlyBlockHours, hourlyBasePrice]);
+  }, [selectedTime, enforcedMinHourlyMinutes]);
 
   const shouldShowConfirmText = useMemo(
     () =>
@@ -1916,24 +2081,52 @@ export default function ScheduleServiceScreen() {
 
   const slotBadgeLabel = `${formatHourCount(hourlyBlockHours)}h`;
 
-  const slotBadgeGlowOpacity = slotBadgePulse.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, 0.45, 0],
-  });
+  const providerRateLimitMessage =
+    providerFetchErrorMessage ??
+    t('schedule_service.provider_rate_limited', {
+      defaultValue:
+        'Você atingiu o limite de requisições para obter detalhes deste prestador. Aguarde alguns segundos e tente novamente.',
+    });
+  const initialLoadingMessage =
+    pricingConfigError ??
+    t('schedule_service.loading_initial_data', { defaultValue: 'Carregando dados iniciais...' });
+  const isInitialSetupBusy = isLoading || !isPricingConfigReady;
 
-  const slotBadgeGlowScale = slotBadgePulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.2],
-  });
-
-  if (isLoading) {
+  if (providerRateLimited) {
     return (
       <View style={styles.centeredFeedback}>
         <Stack.Screen options={{ title: t('common.loading', { defaultValue: 'Carregando' }), headerShown: false }} />
         <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
-        <Text style={{ marginTop: 10, color: AppColors.textBody }}>
-          {t('schedule_service.loading_initial_data', { defaultValue: 'Carregando dados iniciais...' })}
-        </Text>
+        <Text style={{ marginTop: 10, color: AppColors.textBody }}>{providerRateLimitMessage}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={handleReloadProvider}>
+          <Text style={styles.retryButtonText}>
+            {t('schedule_service.retry_provider_details', { defaultValue: 'Recarregar prestador' })}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (isInitialSetupBusy) {
+    return (
+      <View style={styles.centeredFeedback}>
+        <Stack.Screen options={{ title: t('common.loading', { defaultValue: 'Carregando' }), headerShown: false }} />
+        <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
+        <Text style={{ marginTop: 10, color: AppColors.textBody }}>{initialLoadingMessage}</Text>
+        {pricingConfigError && (
+          <TouchableOpacity style={styles.retryButton} onPress={reloadPricingConfig}>
+            <Text style={styles.retryButtonText}>
+              {t('schedule_service.retry_pricing_config', { defaultValue: 'Recarregar regras' })}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {providerRateLimited && (
+          <TouchableOpacity style={styles.retryButton} onPress={handleReloadProvider}>
+            <Text style={styles.retryButtonText}>
+              {t('schedule_service.retry_provider_details', { defaultValue: 'Recarregar prestador' })}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -2038,15 +2231,15 @@ export default function ScheduleServiceScreen() {
                   )}
                 </View>
 
-                <TimeSlotsSection
-                  titleKey="schedule_service.available_times"
-                  date={selectedDate}
-                  displaySlotsInfo={displaySlotsInfo}
-                  isLoading={isFetchingSlots || isSearchingNextDate}
-                  selectedTime={selectedTime}
-                  onTimeSelect={handleTimeSelect}
-                  selectedSlots={selectedSlots}
-                />
+              <TimeSlotsSection
+                titleKey="schedule_service.available_times"
+                date={selectedDate}
+                displaySlotsInfo={displaySlotsInfo}
+                isLoading={isFetchingSlots}
+                selectedTime={selectedTime}
+                onTimeSelect={handleTimeSelect}
+                selectedSlots={selectedSlots}
+              />
               </Animated.View>
             </>
           )}
@@ -2061,23 +2254,16 @@ export default function ScheduleServiceScreen() {
                 ],
               }}
             >
-              {selectedProviderService && (
-                <>
-                  <Animated.View style={{ transform: [{ scale: serviceDetailsAnim }], opacity: serviceDetailsAnim, marginTop: 0 }}>
-                    {/* (mantido vazio como no original) */}
-                  </Animated.View>
-                  <InsuranceOptionsCard
-                    insuranceOptions={quote?.insuranceOptions ?? []}
-                    selectedPlanId={insurancePlanId}
-                    onSelectPlan={handleInsurancePlanChange}
-                  />
-                </>
-              )}
+          {selectedProviderService && (
+            <Animated.View style={{ transform: [{ scale: serviceDetailsAnim }], opacity: serviceDetailsAnim, marginTop: 0 }}>
+              {/* (mantido vazio como no original) */}
+            </Animated.View>
+          )}
 
-              <BookingSummaryPreview
-                provider={provider}
-                selectedProviderService={selectedProviderService}
-                selectedDate={selectedDate}
+          <BookingSummaryPreview
+            provider={provider}
+            selectedProviderService={selectedProviderService}
+            selectedDate={selectedDate}
                 selectedTime={selectedTime}
                 address={address}
                 durationInMinutes={effectiveDurationInMinutes}
@@ -2090,21 +2276,33 @@ export default function ScheduleServiceScreen() {
                 t={t}
                 notes={notes}
                 setNotes={setNotes}
-                couponCode={couponCode}
-                setCouponCode={setCouponCode}
+                couponInputValue={couponInputValue}
+                setCouponInputValue={setCouponInputValue}
                 onApplyCoupon={handleApplyCoupon}
                 isApplyingCoupon={isApplyingCoupon}
                 couponInputAnim={couponInputAnim}
                 couponFeedbackAnim={couponFeedbackAnim}
                 couponFeedbackColor={couponFeedbackColor}
                 couponFeedbackIcon={couponFeedbackIcon}
+                quoteStatus={quoteStatus}
+                quoteRateLimitRemainingSeconds={rateLimitRemainingSeconds}
                 reviewEntranceAnim={reviewStepAnim}
                 reviewStaggerDelay={0}
                 notesAnim={notesAnim}
                 cupomAnim={cupomAnim}
-                summaryAnim={summaryAnim}
+            summaryAnim={summaryAnim}
+          />
+
+          {selectedProviderService && (
+            <View style={styles.insuranceSection}>
+              <InsuranceOptionsCard
+                insuranceOptions={quote?.insuranceOptions ?? []}
+                selectedPlanId={insurancePlanId}
+                onSelectPlan={handleInsurancePlanChange}
               />
-            </Animated.View>
+            </View>
+          )}
+        </Animated.View>
           )}
         </Animated.ScrollView>
 
@@ -2180,7 +2378,6 @@ export default function ScheduleServiceScreen() {
 
         {slotBadgeVisible && (
           <TouchableOpacity style={styles.slotBadgeContainer} activeOpacity={0.9}>
-            <Animated.View style={[styles.slotBadgeGlow, { opacity: slotBadgeGlowOpacity, transform: [{ scale: slotBadgeGlowScale }] }]} />
             <Animated.View style={[styles.slotBadgeButton, { transform: [{ scale: slotBadgeScale }] }]}>
               <Text style={styles.slotBadgeText}>{slotBadgeLabel}</Text>
             </Animated.View>
@@ -2246,6 +2443,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FAFAFA',
+  },
+  retryButton: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    backgroundColor: AppColors.primaryInteractive,
+  },
+  retryButtonText: {
+    color: AppColors.white,
+    fontWeight: '700',
   },
   scrollContentContainer: {
     paddingBottom: 40,
@@ -2354,6 +2562,10 @@ const styles = StyleSheet.create({
         elevation: 0,
       },
     }),
+  },
+  insuranceSection: {
+    marginTop: 20,
+    marginBottom: 10,
   },
   safetyBannerTitle: {
     fontSize: 12,
@@ -2588,6 +2800,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: AppColors.primaryInteractive,
   },
+  quoteStatusText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: AppColors.textAuxiliary,
+    textAlign: 'center',
+  },
   cancellationPolicyLink: {
     marginTop: 12,
     alignSelf: 'center',
@@ -2742,18 +2960,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  slotBadgeGlow: {
-    position: 'absolute',
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FFCDD2',
-  },
   slotBadgeButton: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#E53935',
+    backgroundColor: '#35a4e5ad',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
