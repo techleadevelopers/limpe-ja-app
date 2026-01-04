@@ -12,7 +12,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { AUTH_ROUTES, CLIENT_ROUTES } from '../routes';
+import { AUTH_ROUTES, CLIENT_ROUTES } from '../_shared/routes';
 // import { LinearGradient } from 'expo-linear-gradient'; // Removido, não será mais usado diretamente nos botões
 
 // Certifique-se que o caminho para o seu logo está correto
