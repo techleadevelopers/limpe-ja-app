@@ -843,7 +843,7 @@ export default function ScheduleServiceScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
   const [isFetchingSlots, setIsFetchingSlots] = useState(false);
-  const [isSearchingNextDate, setIsSearchingNextDate] = useState(false);
+  const isSearchingNextDateRef = useRef(false);
   const [isCancellationOverlayVisible, setCancellationOverlayVisible] = useState(false);
 
   const [currentDisplayMonth, setCurrentDisplayMonth] = useState(new Date());
@@ -923,6 +923,7 @@ export default function ScheduleServiceScreen() {
   const timeSlotsRef = useRef<View>(null);
 
   const isMounted = useRef(true);
+  const inflightAvailabilityKeyRef = useRef<string | null>(null);
 
   const effectiveDurationInMinutes = useMemo(() => {
     if (isHourlyService(selectedProviderService)) {
@@ -1841,9 +1842,13 @@ export default function ScheduleServiceScreen() {
 
   useEffect(() => {
     let isCancelled = false;
+    const fetchKey =
+      provider?.id && selectedDate
+        ? `${provider.id}-${selectedDate.toISOString().split('T')[0]}`
+        : null;
 
     const fetchAndProcessSlotsForDate = async () => {
-      if (!provider?.id || !selectedDate || isCancelled) {
+      if (!fetchKey || isCancelled) {
         if (isMounted.current && !isCancelled) {
           setDisplaySlotsInfo([]);
           setSelectedTime(null);
@@ -1851,13 +1856,27 @@ export default function ScheduleServiceScreen() {
         return;
       }
 
-      if (isMounted.current) setIsFetchingSlots(true);
+      if (inflightAvailabilityKeyRef.current === fetchKey) {
+        return;
+      }
+      inflightAvailabilityKeyRef.current = fetchKey;
 
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      try {
+        if (!provider?.id || !selectedDate || isCancelled) {
+          if (isMounted.current && !isCancelled) {
+            setDisplaySlotsInfo([]);
+            setSelectedTime(null);
+          }
+          return;
+        }
 
-      const safeSelectedDate = selectedDate ?? new Date();
-      const dateString = safeSelectedDate.toISOString().split('T')[0];
-      const cacheKey = `${provider.id}-${dateString}`;
+        if (isMounted.current) setIsFetchingSlots(true);
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        const safeSelectedDate = selectedDate ?? new Date();
+        const dateString = safeSelectedDate.toISOString().split('T')[0];
+        const cacheKey = `${provider.id}-${dateString}`;
 
       let backendResponse: { available: ProviderAvailability[]; occupiedTimes: string[] } | undefined;
       let fetchAttempts = 0;
@@ -1956,8 +1975,8 @@ export default function ScheduleServiceScreen() {
           });
         }
 
-        if (!hasRealAvailableSlots && !isSearchingNextDate) {
-          setIsSearchingNextDate(true);
+        if (!hasRealAvailableSlots && !isSearchingNextDateRef.current) {
+          isSearchingNextDateRef.current = true;
 
           let foundAvailableDate = false;
           for (let i = 1; i <= 7 && !foundAvailableDate && !isCancelled; i++) {
@@ -2024,7 +2043,7 @@ export default function ScheduleServiceScreen() {
           }
 
           if (!isCancelled && isMounted.current) {
-            setIsSearchingNextDate(false);
+            isSearchingNextDateRef.current = false;
             if (!foundAvailableDate) {
               NotificationUIService.showError(
                 t('schedule_service.no_available_nearby', {
@@ -2035,10 +2054,14 @@ export default function ScheduleServiceScreen() {
             }
           }
         } else if (hasRealAvailableSlots) {
-          setIsSearchingNextDate(false);
+          isSearchingNextDateRef.current = false;
         }
 
         setIsFetchingSlots(false);
+      }
+    } finally {
+      if (inflightAvailabilityKeyRef.current === fetchKey) {
+        inflightAvailabilityKeyRef.current = null;
       }
     };
 
@@ -2047,7 +2070,7 @@ export default function ScheduleServiceScreen() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedDate, provider?.id, selectedProviderService, prefetchAvailability, t, fadeAnim, scaleAnim, isSearchingNextDate]);
+  }, [selectedDate, provider?.id, selectedProviderService, prefetchAvailability, t, fadeAnim, scaleAnim]);
 
   const isNextButtonDisabled = useMemo(() => {
     if (!isPricingConfigReady) return true;
