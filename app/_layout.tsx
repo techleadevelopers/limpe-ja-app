@@ -250,8 +250,6 @@ function FloatingActiveServicePill({
   );
 }
 
-// ✓ SOLUÇÃO GLOBAL: Ignora só o warning específico do LogBox (dev mode apenas; não afeta produção ou outros erros)
-LogBox.ignoreLogs(['Text strings must be rendered within a <Text>']);
 initializeObservability();
 
 SplashScreen.preventAutoHideAsync();
