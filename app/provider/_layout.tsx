@@ -63,6 +63,7 @@ export default function ProviderTabLayout() {
       />
       <Tabs.Screen
         name="profile" // Diretório
+        href="/provider/profile"
         options={{
           title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
