@@ -25,7 +25,7 @@ import { getChatMessages, sendMessage as sendChatMessage } from '../../../servic
 import { BookingStatus } from '../../../types/backend/bookings';
 import { Message, SendMessageDto } from '../../../types/backend/chat';
 import { alertUserError, getUserMessage } from '../../../_shared/errors/uiFeedback';
-import { normalizeApiError } from '../../utils/errors';
+import { normalizeApiError } from '../../_shared/utils/errors';
 import { shadow, textFix, inputFix, pressableFix } from '../../../_shared/ui/parity';
 
 
