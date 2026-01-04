@@ -18,13 +18,14 @@ import {
     View,
 } from 'react-native';
 import { io, Socket } from 'socket.io-client';
+import { alertUserError, getUserMessage } from '../../../_shared/errors/uiFeedback';
 import { appConfig } from '../../../config/appConfig';
 import { useAuth } from '../../../hooks/useAuth';
 import { getBookingDetails } from '../../../services/bookingService';
 import { getChatMessages, sendMessage as sendChatMessage } from '../../../services/chatService';
 import { BookingStatus } from '../../../types/backend/bookings';
 import { Message, SendMessageDto } from '../../../types/backend/chat';
-import { alertUserError, getUserMessage } from '../../_shared/errors/uiFeedback';
+import { normalizeApiError } from '../../utils/errors';
 
 const SOCKET_URL = appConfig.apiUrl.replace('http', 'ws');
 
@@ -110,118 +111,14 @@ export default function ProviderChatScreen() { // Renomeado para ProviderChatScr
           }
         }
       } catch (error: any) {
-        console.error('ProviderChatScreen: Erro ao carregar mensagens ou verificar agendamento:', error);
-        const normalized = getUserMessage(error);
-        if (error.message.includes("Não é possível acessar esta conversa") || error.message.includes("Não é possível enviar mensagens")) {
-          setChatBlockedMessage(normalized);
-        } else {
-          Alert.alert('Erro', 'Não foi possível carregar as mensagens do chat.');
-          setChatBlockedMessage("Não foi possível carregar as mensagens.");
-        }
-      } finally {
-        setIsLoading(false);
-        // Animação da entrada de texto (copiado do cliente)
-        Animated.timing(inputContainerAnim, {
-          toValue: 1,
-          duration: 300,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }).start();
-      }
-    };
-    loadChatData();
-
-    // 3. Conectar WebSocket
-    console.log(`ProviderChatScreen: Tentando conectar WebSocket em ${SOCKET_URL}`);
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket'],
-      auth: { token },
-    });
-
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
-      console.log('ProviderChatScreen: WebSocket conectado!', socket.id);
-      socket.emit('joinChat', chatId);
-    });
-
-    socket.on('newMessage', (newMessage: Message) => {
-      console.log('ProviderChatScreen: Nova mensagem recebida:', newMessage);
-      setMessages(prevMessages => [...prevMessages, newMessage]);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-    });
-
-    socket.on('errorMessage', (data: { event: string, message: string }) => {
-      console.error(`ProviderChatScreen: Erro no WebSocket para evento ${data.event}:`, data.message);
-      if (data.event === 'joinChat' || data.event === 'sendMessage') {
-        setChatBlockedMessage(data.message);
-      } else {
-        Alert.alert('Erro no Chat', data.message || 'Houve um problema com a conexão do chat.');
-      }
-    });
-
-    socket.on('disconnect', () => {
-      console.log('ProviderChatScreen: WebSocket desconectado.');
-      setChatBlockedMessage("Conexão com o chat perdida.");
-    });
-
-    return () => {
-      console.log('ProviderChatScreen: Desmontando componente, desconectando WebSocket.');
-      socket.disconnect();
-    };
-  }, [isAuthenticated, token, chatId, userId, bookingId, recipientName, inputContainerAnim]); // Dependências alinhadas ao uso
-
-  // Efeito para animação da mensagem de chat bloqueado (copiado do cliente)
-  useEffect(() => {
-    if (chatBlockedMessage) {
-      Animated.timing(chatBlockedAnim, {
-        toValue: 1,
-        duration: 300,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(chatBlockedAnim, {
-        toValue: 0,
-        duration: 200,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [chatBlockedMessage, chatBlockedAnim]);
-
-  const handleSendMessage = useCallback(async () => {
-    if (inputText.trim() === '' || !user?.id || !chatId || !recipientId || chatBlockedMessage) {
-      console.log("Não é possível enviar mensagem: input vazio, IDs ausentes ou chat bloqueado.");
-      return;
-    }
-
-    const newMessageData: SendMessageDto = {
-      chatId,
-      senderId: user.id,
-      receiverId: recipientId,
-      content: inputText.trim(),
-    };
-
-    try {
-      if (socketRef.current && socketRef.current.connected) {
-        console.log('ProviderChatScreen: Enviando mensagem via WebSocket:', newMessageData);
-        socketRef.current.emit('sendMessage', newMessageData);
-      } else {
-        console.warn('ProviderChatScreen: WebSocket não conectado. Enviando mensagem via REST.');
-        await sendChatMessage(newMessageData);
-      }
-      setInputText('');
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-
-    } catch (error: any) {
       console.error('ProviderChatScreen: Erro ao enviar mensagem:', error);
-      const normalized = getUserMessage(error);
-      if (error.message.includes("Não é possível enviar mensagens")) {
-        setChatBlockedMessage(normalized);
-      } else {
-        alertUserError(error, 'Erro ao enviar mensagem');
+      const apiError = normalizeApiError(error);
+      if (apiError.blockAction) {
+        setChatBlockedMessage(apiError.messageHuman);
+        return;
       }
+
+      alertUserError(error, 'Erro ao enviar mensagem');
     }
   }, [inputText, user, chatId, recipientId, chatBlockedMessage]);
 
