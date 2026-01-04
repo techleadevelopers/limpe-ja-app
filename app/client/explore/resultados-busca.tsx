@@ -43,10 +43,7 @@ export default function ResultadosBuscaScreen() {
 
   const handleProviderPress = (providerId: string) => {
     // FIX: Caminho correto para o perfil do provedor
-    router.push({
-      pathname: '/client/explore/[providerId]', // Caminho ajustado
-      params: { providerId: providerId }
-    });
+    router.push(`/client/explore/${providerId}`);
   };
 
   const renderContent = () => {
