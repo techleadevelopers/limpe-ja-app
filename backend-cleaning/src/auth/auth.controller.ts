@@ -61,12 +61,16 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: 'Dados de registro inválidos.' })
   async registerClient(
+    @Request() req: AuthenticatedRequest,
     @Body() registerClientDto: RegisterClientDto,
   ): Promise<AuthResponseDto> {
     this.logger.log(
       `[AuthController] registerClient: Recebida solicitação de registro para cliente: ${registerClientDto.email}`,
     );
-    return this.authService.registerClient(registerClientDto);
+    return this.authService.registerClient(
+      registerClientDto,
+      this.buildRegistrationContext(req, 'signup-client'),
+    );
   }
 
   // Existing register/provider - Mantido
@@ -79,12 +83,16 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: 'Dados de registro inválidos.' })
   async registerProvider(
+    @Request() req: AuthenticatedRequest,
     @Body() registerProviderDto: RegisterProviderDto,
   ): Promise<AuthResponseDto> {
     this.logger.log(
       `[AuthController] registerProvider: Recebida solicitação de registro para provedor: ${registerProviderDto.email}`,
     );
-    return this.authService.registerProvider(registerProviderDto);
+    return this.authService.registerProvider(
+      registerProviderDto,
+      this.buildRegistrationContext(req, 'signup-provider'),
+    );
   }
 
   // Existing login (email/password) - Mantido
@@ -181,6 +189,25 @@ export class AuthController {
     );
     return {
       message: 'Senha redefinida com sucesso.',
+    };
+  }
+
+  private buildRegistrationContext(
+    req: AuthenticatedRequest,
+    source: string,
+  ): { ip?: string; userAgent?: string; source: string } {
+    const userAgentHeader = req.headers['user-agent'];
+    const userAgent =
+      typeof userAgentHeader === 'string'
+        ? userAgentHeader
+        : Array.isArray(userAgentHeader)
+        ? userAgentHeader[0]
+        : undefined;
+
+    return {
+      ip: req.ip,
+      userAgent,
+      source,
     };
   }
 }
