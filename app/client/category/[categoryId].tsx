@@ -22,8 +22,8 @@ import { getProvidersByServiceCategory } from '../../../services/providerService
 // Importar a tipografia de ProviderDisplayInfo
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
 // Importar o NavBar e seus tipos (ajuste o caminho se necessário)
+import { setSafeError } from '../../../_shared/errors/uiFeedback';
 import NavBar from '../../../components/client/explore/home/NavBar';
-import { setSafeError } from '../../_shared/errors/uiFeedback';
 
 const FilteredProvidersScreen: React.FC = () => {
   const router = useRouter();
@@ -106,10 +106,7 @@ const FilteredProvidersScreen: React.FC = () => {
 
   // Função para lidar com o clique em um cartão de prestador
   const handleProviderPress = (providerId: string) => {
-    router.push({
-      pathname: '/client/explore/[providerId]',
-      params: { providerId: providerId }
-    });
+    router.push(`/client/explore/${providerId}`);
   };
 
   // Componente para exibir quando não há prestadores
