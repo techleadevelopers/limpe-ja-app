@@ -1,191 +1,183 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { quoteBooking } from '../services/quoteService';
 import {
-  BookingAddress,
-  BookingAddon,
   BookingQuoteRequest,
   BookingQuoteResponse,
-  InsurancePlanId,
 } from '../types/backend/bookings';
-import { quoteBooking } from '../services/quoteService';
 
-const DEBOUNCE_DELAY_MS = 300;
+const RATE_LIMIT_BACKOFF_MS = 2000;
+
+export type QuoteStatus =
+  | 'idle'
+  | 'loading'
+  | 'refreshing'
+  | 'success'
+  | 'invalid'
+  | 'rateLimited'
+  | 'error';
 
 interface UseBookingQuoteParams {
-  providerId?: string | null;
-  providerServiceId?: string | null;
-  scheduledDate?: string | null;
-  scheduledTime?: string | null;
-  address?: BookingAddress | null;
-  durationMinutes?: number | null;
-  squareMeters?: number | null;
-  roomCount?: number | null;
-  couponCode?: string | null;
-  subscriptionId?: string | null;
-  addons?: BookingAddon[] | null;
-  insurancePlanId?: InsurancePlanId | null;
+  requestKey: string;
+  payload: BookingQuoteRequest | null;
 }
 
 interface UseBookingQuoteResult {
   quote: BookingQuoteResponse | null;
-  isLoading: boolean;
+  status: QuoteStatus;
   error: Error | null;
   refreshQuote: () => Promise<void>;
-  quoteRequest: BookingQuoteRequest | null;
+  canQuote: boolean;
+  lastRequestKey: string | null;
+  rateLimitResetAt: number | null;
 }
 
-export function useBookingQuote(params: UseBookingQuoteParams): UseBookingQuoteResult {
+export function useBookingQuote({
+  requestKey,
+  payload,
+}: UseBookingQuoteParams): UseBookingQuoteResult {
   const [quote, setQuote] = useState<BookingQuoteResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<QuoteStatus>('idle');
   const [error, setError] = useState<Error | null>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const requestIdRef = useRef(0);
-  const lastPayloadKeyRef = useRef<string>('');
+  const [lastRequestKey, setLastRequestKey] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const inflightKeyRef = useRef<string | null>(null);
+  const lastSuccessKeyRef = useRef<string | null>(null);
+  const rateLimitRetryTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const rateLimitUntilRef = useRef(0);
+  const fetchRef = useRef<((opts?: { force?: boolean }) => Promise<void>) | null>(null);
+  const [rateLimitResetAt, setRateLimitResetAt] = useState<number | null>(null);
 
-  const quoteRequest = useMemo<BookingQuoteRequest | null>(() => {
-    if (
-      !params.providerId ||
-      !params.providerServiceId ||
-      !params.scheduledDate ||
-      !params.scheduledTime ||
-      !params.address
-    ) {
-      return null;
-    }
+  const canQuote = useMemo(() => Boolean(requestKey && payload), [requestKey, payload]);
 
-    const lat = params.address.latitude;
-    const lng = params.address.longitude;
-    if (
-      lat === undefined ||
-      lng === undefined ||
-      Number.isNaN(lat) ||
-      Number.isNaN(lng) ||
-      (lat === 0 && lng === 0)
-    ) {
-      return null;
-    }
-
-    return {
-      providerId: params.providerId,
-      providerServiceId: params.providerServiceId,
-      scheduledDate: params.scheduledDate,
-      scheduledTime: params.scheduledTime,
-      durationMinutes:
-        params.durationMinutes && params.durationMinutes > 0
-          ? params.durationMinutes
-          : undefined,
-      squareMeters:
-        params.squareMeters && params.squareMeters > 0
-          ? params.squareMeters
-          : undefined,
-      roomCount:
-        params.roomCount && params.roomCount > 0 ? params.roomCount : undefined,
-      couponCode: params.couponCode?.trim() || undefined,
-      subscriptionId: params.subscriptionId || undefined,
-      addons: params.addons || undefined,
-      insurancePlanId: params.insurancePlanId || undefined,
-      address: params.address,
-    };
-  }, [
-    params.providerId,
-    params.providerServiceId,
-    params.scheduledDate,
-    params.scheduledTime,
-    params.address,
-    params.durationMinutes,
-    params.squareMeters,
-    params.roomCount,
-    params.couponCode,
-    params.subscriptionId,
-    params.addons,
-    params.insurancePlanId,
-  ]);
-
-  const payloadKey = useMemo(() => {
-    return quoteRequest ? JSON.stringify(quoteRequest) : '';
-  }, [quoteRequest]);
-
-  const fetchQuote = useCallback(
-    async (options?: { immediate?: boolean }) => {
-      if (!quoteRequest) {
+  const executeFetch = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (!payload || !requestKey) {
         return;
       }
-      if (!options?.immediate && payloadKey === lastPayloadKeyRef.current) {
-        return;
+
+      const now = Date.now();
+      if (!options?.force) {
+        if (lastSuccessKeyRef.current === requestKey) {
+          return;
+        }
+        if (inflightKeyRef.current === requestKey) {
+          return;
+        }
+        if (rateLimitUntilRef.current > now) {
+          return;
+        }
       }
-      requestIdRef.current += 1;
-      const currentRequestId = requestIdRef.current;
-      setIsLoading(true);
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      inflightKeyRef.current = requestKey;
+      const nextStatus =
+        quote && !options?.force ? 'refreshing' : 'loading';
+      setStatus(nextStatus);
+      setLastRequestKey(requestKey);
+      setError(null);
+
       try {
-        const result = await quoteBooking(quoteRequest);
-        if (currentRequestId === requestIdRef.current) {
-          setQuote(result);
-          setError(null);
-          lastPayloadKeyRef.current = payloadKey;
+        const response = await quoteBooking(payload, { signal: controller.signal });
+        if (inflightKeyRef.current !== requestKey) {
+          return;
         }
-      } catch (err) {
-        if (currentRequestId === requestIdRef.current) {
-          setError(err as Error);
+        setQuote(response);
+        setStatus('success');
+        lastSuccessKeyRef.current = requestKey;
+        inflightKeyRef.current = null;
+        rateLimitUntilRef.current = 0;
+        setRateLimitResetAt(null);
+        if (rateLimitRetryTimerRef.current) {
+          clearTimeout(rateLimitRetryTimerRef.current);
+          rateLimitRetryTimerRef.current = null;
         }
-        throw err;
-      } finally {
-        if (currentRequestId === requestIdRef.current) {
-          setIsLoading(false);
+      } catch (err: any) {
+        if (err?.name === 'CanceledError') {
+          return;
+        }
+        if (inflightKeyRef.current !== requestKey) {
+          return;
+        }
+        inflightKeyRef.current = null;
+        const statusCode = err?.response?.status;
+        setError(err);
+        if (statusCode === 400) {
+          setStatus('invalid');
+        } else if (statusCode === 429) {
+          setStatus('rateLimited');
+          const resetAt = Date.now() + RATE_LIMIT_BACKOFF_MS;
+          rateLimitUntilRef.current = resetAt;
+          setRateLimitResetAt(resetAt);
+          if (rateLimitRetryTimerRef.current) {
+            clearTimeout(rateLimitRetryTimerRef.current);
+          }
+          rateLimitRetryTimerRef.current = setTimeout(() => {
+            fetchRef.current?.({ force: true });
+          }, RATE_LIMIT_BACKOFF_MS);
+        } else {
+          setStatus('error');
         }
       }
     },
-    [payloadKey, quoteRequest],
-  );
-
-  const scheduleFetch = useCallback(
-    (opts?: { immediate?: boolean }) => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-        debounceRef.current = null;
-      }
-      if (opts?.immediate) {
-        return fetchQuote({ immediate: true });
-      }
-      debounceRef.current = setTimeout(() => {
-        fetchQuote();
-      }, DEBOUNCE_DELAY_MS);
-      return Promise.resolve();
-    },
-    [fetchQuote],
+    [payload, requestKey, quote],
   );
 
   useEffect(() => {
-    if (!quoteRequest) {
-      setQuote(null);
+    fetchRef.current = executeFetch;
+  }, [executeFetch]);
+
+  useEffect(() => {
+    rateLimitUntilRef.current = 0;
+    setRateLimitResetAt(null);
+  }, [requestKey]);
+
+  useEffect(() => {
+    if (!canQuote) {
+      setStatus('idle');
       setError(null);
-      lastPayloadKeyRef.current = '';
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-        debounceRef.current = null;
+      setLastRequestKey(null);
+      inflightKeyRef.current = null;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      if (rateLimitRetryTimerRef.current) {
+        clearTimeout(rateLimitRetryTimerRef.current);
+        rateLimitRetryTimerRef.current = null;
       }
       return;
     }
 
-    scheduleFetch();
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-        debounceRef.current = null;
-      }
-    };
-  }, [quoteRequest, scheduleFetch]);
+    executeFetch();
+  }, [canQuote, executeFetch]);
 
   const refreshQuote = useCallback(async () => {
-    if (!quoteRequest) {
-      return;
-    }
-    await scheduleFetch({ immediate: true });
-  }, [quoteRequest, scheduleFetch]);
+    await executeFetch({ force: true });
+  }, [executeFetch]);
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (rateLimitRetryTimerRef.current) {
+        clearTimeout(rateLimitRetryTimerRef.current);
+      }
+    };
+  }, []);
 
   return {
     quote,
-    isLoading,
+    status,
     error,
     refreshQuote,
-    quoteRequest,
+    canQuote,
+    lastRequestKey,
+    rateLimitResetAt,
   };
 }
