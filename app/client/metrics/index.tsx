@@ -19,13 +19,13 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { useQuery } from '@tanstack/react-query';
+import { toastUserError } from '../../../_shared/errors/uiFeedback';
 import { AnalyticsService } from '../../../services/analyticsService';
 import { getLoyaltyRewards } from '../../../services/loyaltyService';
 import { metricsService } from '../../../services/metricsService';
 import { claimMission } from '../../../services/missionService';
 import NotificationUIService from '../../../services/notificationUIService';
 import { ClientMetrics } from '../../../types/backend/metrics';
-import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 import { EmptyState } from '../../../components/EmptyState';
 import { KPIValue } from '../../../components/KPIValue';
