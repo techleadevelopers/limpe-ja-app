@@ -94,6 +94,7 @@ export type ProviderServiceForFrontend = Omit<
   | 'pricingType'
   | 'pricePerSquareMeter'
   | 'pricePerRoom'
+  | 'pricePerHour'
 > & {
   price: number;
   service: ServiceForFrontend;
@@ -102,6 +103,7 @@ export type ProviderServiceForFrontend = Omit<
   pricingType: PricingType;
   pricePerSquareMeter: number | null;
   pricePerRoom: number | null;
+  pricePerHour: number;
 };
 
 export type ProviderWithCalculatedRating = {
@@ -401,6 +403,7 @@ export class ProvidersService {
         createdAt: ps.createdAt.toISOString(),
         updatedAt: ps.updatedAt.toISOString(),
         pricingType: ps.pricingType,
+        pricePerHour: ps.pricePerHour ? ps.pricePerHour.toNumber() : 0,
         pricePerSquareMeter: ps.pricePerSquareMeter?.toNumber() || null,
         pricePerRoom: ps.pricePerRoom?.toNumber() || null,
       })) as ProviderServiceForFrontend[],
@@ -1175,7 +1178,8 @@ export class ProvidersService {
                       'description', ps.description,
                       'pricingType', ps."pricingType",
                       'pricePerSquareMeter', ps."pricePerSquareMeter",
-                      'pricePerRoom', ps."pricePerRoom",
+                'pricePerHour', ps."pricePerHour",
+                'pricePerRoom', ps."pricePerRoom",
                       'service', json_build_object(
                           'id', s.id,
                           'name', s.name,
@@ -1298,6 +1302,9 @@ export class ProvidersService {
                     createdAt: ps.createdAt,
                     updatedAt: ps.updatedAt,
                     pricingType: ps.pricingType,
+                    pricePerHour: ps.pricePerHour
+                      ? new Decimal(ps.pricePerHour)
+                      : new Decimal(0),
                     pricePerSquareMeter: ps.pricePerSquareMeter
                       ? new Decimal(ps.pricePerSquareMeter)
                       : null,
@@ -1631,6 +1638,7 @@ export class ProvidersService {
                   'updatedAt', ps."updatedAt",
                   'description', ps.description,
                   'pricingType', ps."pricingType",
+                  'pricePerHour', ps."pricePerHour",
                   'pricePerSquareMeter', ps."pricePerSquareMeter",
                   'pricePerRoom', ps."pricePerRoom",
                   'service', json_build_object(
@@ -1763,6 +1771,9 @@ export class ProvidersService {
                 createdAt: ps.createdAt,
                 updatedAt: ps.updatedAt,
                 pricingType: ps.pricingType,
+                pricePerHour: ps.pricePerHour
+                  ? new Decimal(ps.pricePerHour)
+                  : new Decimal(0),
                 pricePerSquareMeter: ps.pricePerSquareMeter
                   ? new Decimal(ps.pricePerSquareMeter)
                   : null,
