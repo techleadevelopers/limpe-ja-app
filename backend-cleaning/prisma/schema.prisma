@@ -231,6 +231,22 @@ enum MissionStatus {
 }
 // ====== FIM MISSIONS ======
 
+enum PolicyLeakType {
+  PHONE
+  EMAIL
+  LINK
+}
+
+enum PolicyEnforcement {
+  SANITIZED
+  BLOCKED
+}
+
+enum PolicySource {
+  CHAT
+  DISPUTE
+}
+
 enum OfferTarget {
   GENERAL
   SPECIFIC_SERVICE
@@ -309,6 +325,7 @@ model User {
   provider              Provider?
   messagesSent          Message[]          @relation("SentMessages")
   messagesReceived      Message[]          @relation("ReceivedMessages")
+  policyHits            MessagePolicyHit[]
   notifications         Notification[]
   chatsAsParticipant1   Chat[]             @relation("ChatParticipant1")
   chatsAsParticipant2   Chat[]             @relation("ChatParticipant2")
@@ -585,6 +602,7 @@ model Booking {
   bookingInsurance BookingInsurance?
   bookingProofs    BookingProof[]
   notificationSchedules NotificationSchedule[]
+  policyHits        MessagePolicyHit[]
 
   // Metadata
   createdAt        DateTime         @default(now())
@@ -639,6 +657,7 @@ model Chat {
   participant2Id    String
   participant2      User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
   messages          Message[]
+  policyHits        MessagePolicyHit[]
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -658,6 +677,25 @@ model Message {
   isRead     Boolean  @default(false)
   targetUrl  String?
   createdAt  DateTime @default(now())
+}
+
+model MessagePolicyHit {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatId      String?
+  chat        Chat?            @relation(fields: [chatId], references: [id])
+  bookingId   String?
+  booking     Booking?         @relation(fields: [bookingId], references: [id])
+  disputeId   String?
+  dispute     Dispute?         @relation(fields: [disputeId], references: [id])
+  type        PolicyLeakType
+  hashedMatch String
+  enforcement PolicyEnforcement
+  source      PolicySource
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, type])
 }
 
 model Notification {
@@ -855,6 +893,7 @@ model Dispute {
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
   messages             DisputeMessage[] @relation("DisputeMessages")
+  policyHits           MessagePolicyHit[]
 
   // CORREÇÃO: Adicionado para relação bilateral com LedgerEntry
   ledgerEntries        LedgerEntry[]
@@ -878,6 +917,8 @@ model UserConsent {
   documentType String
   version      String
   consentedAt  DateTime @default(now())
+  ipAddress    String?
+  userAgent    String?
 
   @@id([userId, documentType])
 }
