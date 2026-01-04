@@ -1,4 +1,4 @@
-// LimpeJaApp/app/client/messages/[chatId].tsx
+﻿// LimpeJaApp/app/client/messages/[chatId].tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -24,8 +24,9 @@ import { getBookingDetails } from '../../../services/bookingService';
 import { getChatMessages, sendMessage as sendChatMessage } from '../../../services/chatService';
 import { BookingStatus } from '../../../types/backend/bookings';
 import { Message, SendMessageDto } from '../../../types/backend/chat';
-import { alertUserError, getUserMessage } from '../../_shared/errors/uiFeedback';
-import { shadow, textFix, inputFix, pressableFix } from '../../_shared/ui/parity';
+import { alertUserError, getUserMessage } from '../../../_shared/errors/uiFeedback';
+import { normalizeApiError } from '../../utils/errors';
+import { shadow, textFix, inputFix, pressableFix } from '../../../_shared/ui/parity';
 
 
 const SOCKET_URL = appConfig.apiUrl.replace('http', 'ws');
@@ -88,7 +89,7 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!isAuthenticated || !token || !chatId || !userId) {
       setIsLoading(false);
-      setChatBlockedMessage('Você precisa estar logado para acessar este chat.');
+      setChatBlockedMessage('VocĂŞ precisa estar logado para acessar este chat.');
       return;
     }
 
@@ -100,7 +101,7 @@ export default function ChatScreen() {
         const fetchedMessages = await getChatMessages(chatId, { limit: 50, offset: 0 });
         setMessages(fetchedMessages.reverse());
 
-        // 👇 Correção: Limpe o estado de erro após o sucesso da requisição
+        // đź‘‡ CorreĂ§ĂŁo: Limpe o estado de erro apĂłs o sucesso da requisiĂ§ĂŁo
         setChatBlockedMessage(null);
 
         if (bookingId) {
@@ -110,7 +111,7 @@ export default function ChatScreen() {
           } else if (bookingDetails.status === BookingStatus.CANCELLED) {
             setChatBlockedMessage('Este chat foi encerrado, pois o agendamento foi cancelado.');
           } else if (bookingDetails.status === BookingStatus.PENDING) {
-            // 👇 Aqui entra a mensagem mais humana
+            // đź‘‡ Aqui entra a mensagem mais humana
             setChatBlockedMessage(
               `Faça o pagamento do serviço para falar com ${recipientName || bookingDetails.providerFullName || 'o prestador'}.`
             );
@@ -263,7 +264,7 @@ export default function ChatScreen() {
       toValue: 0.9, 
       useNativeDriver: true,
       friction: 5, // Ajuste para mais "mola"
-      tension: 80, // Retorno rápido
+      tension: 80, // Retorno rĂˇpido
     }).start();
   };
   const onPressOutSendButton = () => {
@@ -321,7 +322,7 @@ export default function ChatScreen() {
           style={[chatStyles.input, isInputDisabled && chatStyles.disabledInput]}
           value={inputText}
           onChangeText={setInputText}
-          placeholder={isInputDisabled ? 'Chat indisponível' : 'Digite sua mensagem...'}
+          placeholder={isInputDisabled ? 'Chat indisponĂ­vel' : 'Digite sua mensagem...'}
           placeholderTextColor="#6C757D"
           multiline
           editable={!isInputDisabled}
@@ -525,6 +526,6 @@ const chatStyles = StyleSheet.create({
     marginBottom: Platform.OS === 'ios' ? 0 : 5,
   },
   disabledSendButton: {
-    backgroundColor: '#A0CFFF', // Azul mais claro para o botão desabilitado
+    backgroundColor: '#A0CFFF', // Azul mais claro para o botĂŁo desabilitado
   },
 });
