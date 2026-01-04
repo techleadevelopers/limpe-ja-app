@@ -158,4 +158,12 @@ export class CreateBookingDto {
   @IsOptional()
   @IsString()
   quoteHash?: string;
+
+  @ApiPropertyOptional({
+    description: 'Validade da cotação (ISO string)',
+    example: new Date().toISOString(),
+  })
+  @IsOptional()
+  @IsDateString()
+  quoteExpiresAt?: string;
 }
