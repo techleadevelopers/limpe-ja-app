@@ -20,6 +20,7 @@ import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingDetailsDto } from './dto/booking-details.dto';
 import { BookingAndPixResponseDto } from './dto/booking-and-pix-response.dto';
 import { BookingQuoteRequestDto } from './dto/quote-request.dto';
+import { BookingLocationDto } from './dto/booking-location.dto';
 import { BookingQuoteResponseDto } from './dto/quote-response.dto';
 import {
   BookingProofResponseDto,
@@ -593,9 +594,17 @@ export class BookingsController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
-  async arrive(@Req() req: RequestWithUser, @Param('id') id: string) {
+  async arrive(
+    @Req() req: RequestWithUser,
+    @Param('id') id: string,
+    @Body() location?: BookingLocationDto,
+  ) {
     const userId = req.user.userId;
-    const booking = await this.bookingsService.arriveAtLocation(id, userId);
+    const booking = await this.bookingsService.arriveAtLocation(
+      id,
+      userId,
+      location,
+    );
     return new BookingDetailsDto(
       this.bookingsService.withAllowedActions(
         booking,
@@ -615,9 +624,17 @@ export class BookingsController {
     description: 'Serviço iniciado com sucesso.',
     type: BookingDetailsDto,
   })
-  async start(@Req() req: RequestWithUser, @Param('id') id: string) {
+  async start(
+    @Req() req: RequestWithUser,
+    @Param('id') id: string,
+    @Body() location?: BookingLocationDto,
+  ) {
     const userId = req.user.userId;
-    const booking = await this.bookingsService.startService(id, userId);
+    const booking = await this.bookingsService.startService(
+      id,
+      userId,
+      location,
+    );
     return new BookingDetailsDto(
       this.bookingsService.withAllowedActions(
         booking,
@@ -637,9 +654,17 @@ export class BookingsController {
     description: 'Serviço concluído com sucesso.',
     type: BookingDetailsDto,
   })
-  async complete(@Req() req: RequestWithUser, @Param('id') id: string) {
+  async complete(
+    @Req() req: RequestWithUser,
+    @Param('id') id: string,
+    @Body() location?: BookingLocationDto,
+  ) {
     const userId = req.user.userId;
-    const booking = await this.bookingsService.completeService(id, userId);
+    const booking = await this.bookingsService.completeService(
+      id,
+      userId,
+      location,
+    );
     return new BookingDetailsDto(
       this.bookingsService.withAllowedActions(
         booking,
