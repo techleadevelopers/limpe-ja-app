@@ -15,7 +15,11 @@ const normalizeDecimal = (value: unknown): number => {
 
 export const getNumericPriceValue = (service: ProviderServiceOffering): number => {
   const pricePerHour = normalizeDecimal(service.pricePerHour);
-  return Math.max(0, pricePerHour);
+  if (pricePerHour > 0) {
+    return pricePerHour;
+  }
+  const legacyPrice = normalizeDecimal(service.price);
+  return Math.max(0, legacyPrice);
 };
 
 export const getFormattedServicePrice = (service: ProviderServiceOffering, t: (key: string) => string) => {
