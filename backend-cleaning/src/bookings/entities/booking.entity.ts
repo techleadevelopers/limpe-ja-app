@@ -28,13 +28,22 @@ export class BookingEntity implements PrismaBooking {
 
   // Auditoria de início/fim (alinhado ao schema)
   startedAt: Date | null;
+  startedLat: number | null;
+  startedLng: number | null;
+  startedAccuracyM: number | null;
   completedAt: Date | null;
+  completedLat: number | null;
+  completedLng: number | null;
+  completedAccuracyM: number | null;
   startedByUserId: string | null;
   completedByUserId: string | null;
 
   // ✅ CORREÇÃO: ADICIONADO os novos campos de fluxo (onTheWayAt, arrivedAt)
   onTheWayAt: Date | null;
   arrivedAt: Date | null;
+  arrivedLat: number | null;
+  arrivedLng: number | null;
+  arrivedAccuracyM: number | null;
 
   // CORREÇÃO AQUI: Propriedade addressId deve ser string | null
   addressId: string | null; // O tipo é string | null, conforme definido no schema.prisma (String?)
@@ -136,6 +145,12 @@ export class BookingEntity implements PrismaBooking {
     this.arrivedAt = partial.arrivedAt
       ? new Date(partial.arrivedAt as any)
       : null;
+    this.arrivedLat =
+      partial.arrivedLat !== undefined ? partial.arrivedLat : null;
+    this.arrivedLng =
+      partial.arrivedLng !== undefined ? partial.arrivedLng : null;
+    this.arrivedAccuracyM =
+      partial.arrivedAccuracyM !== undefined ? partial.arrivedAccuracyM : null;
 
     this.startedByUserId =
       partial.startedByUserId === undefined
@@ -145,6 +160,19 @@ export class BookingEntity implements PrismaBooking {
       partial.completedByUserId === undefined
         ? null
         : (partial.completedByUserId as any);
+
+    this.startedLat =
+      partial.startedLat !== undefined ? partial.startedLat : null;
+    this.startedLng =
+      partial.startedLng !== undefined ? partial.startedLng : null;
+    this.startedAccuracyM =
+      partial.startedAccuracyM !== undefined ? partial.startedAccuracyM : null;
+    this.completedLat =
+      partial.completedLat !== undefined ? partial.completedLat : null;
+    this.completedLng =
+      partial.completedLng !== undefined ? partial.completedLng : null;
+    this.completedAccuracyM =
+      partial.completedAccuracyM !== undefined ? partial.completedAccuracyM : null;
 
     this.durationMinutes =
       partial.durationMinutes !== undefined && partial.durationMinutes !== null
@@ -160,3 +188,6 @@ export class BookingEntity implements PrismaBooking {
       partial.isReviewed !== undefined ? partial.isReviewed : false;
   }
 }
+
+
+
