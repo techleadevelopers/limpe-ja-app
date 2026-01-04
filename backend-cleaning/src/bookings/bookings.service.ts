@@ -100,10 +100,17 @@ const DEFAULT_BOOKING_DETAILS_INCLUDE = {
   bookingProofs: true,
 } satisfies Prisma.BookingInclude;
 
-const QUOTE_HASH_VERSION = process.env.BOOKING_QUOTE_HASH_VERSION ?? '1';
+const PRICING_VERSION =
+  process.env.BOOKING_PRICING_VERSION ??
+  process.env.BOOKING_QUOTE_HASH_VERSION ??
+  'v1';
+const QUOTE_HASH_VERSION =
+  process.env.BOOKING_QUOTE_HASH_VERSION ?? PRICING_VERSION;
 const QUOTE_EXPIRATION_MS =
   Number(process.env.BOOKING_QUOTE_TTL_MS ?? 10 * 60 * 1000) ||
   10 * 60 * 1000;
+const QUOTE_CACHE_TTL_SECONDS = 60;
+const QUOTE_CACHE_KEY_PREFIX = 'quote:';
 
 export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
   include: typeof DEFAULT_BOOKING_DETAILS_INCLUDE;
@@ -132,6 +139,7 @@ interface QuoteHashPayload {
   };
   minHourlyMinutes: number;
   version: string;
+  pricingVersion: string;
   insurancePlanId?: InsurancePlanId | null;
 }
 
@@ -146,6 +154,8 @@ interface BookingQuoteCalculationOptions {
   subscriptionId?: string;
   addons?: Array<{ id: string; quantity?: number }>;
   insurancePlanId?: InsurancePlanId | null;
+  quoteHashPayload?: QuoteHashPayload;
+  requestKey?: string;
 }
 
 interface BookingQuoteCalculationResult {
@@ -776,6 +786,15 @@ export class BookingsService {
         );
       }
 
+      const quoteHashPayload = this.buildQuoteHashPayload({
+        providerService,
+        createBookingDto,
+        addons: createBookingDto.addons,
+        subscriptionId: createBookingDto.subscriptionId,
+        insurancePlanId: createBookingDto.insurancePlanId ?? null,
+      });
+      const requestKey = this.buildQuoteRequestKey(quoteHashPayload);
+
       const priceQuote = await this.calculateQuoteForBooking({
         clientId: client.id,
         clientUserId,
@@ -787,7 +806,21 @@ export class BookingsService {
         subscriptionId: createBookingDto.subscriptionId,
         addons: createBookingDto.addons,
         insurancePlanId: createBookingDto.insurancePlanId ?? null,
+        quoteHashPayload,
+        requestKey,
       });
+
+      if (createBookingDto.quoteExpiresAt) {
+        const expiresAt = new Date(createBookingDto.quoteExpiresAt);
+        if (expiresAt.getTime() < Date.now()) {
+          this.logger.warn(
+            `[BookingsService] create - Quote expired for client ${client.id} requestKey=${requestKey}`,
+          );
+          throw new ConflictException({
+            message: 'QUOTE_EXPIRED',
+          });
+        }
+      }
 
       if (
         createBookingDto.quoteHash &&
@@ -1084,18 +1117,58 @@ export class BookingsService {
       couponCode: bookingQuoteRequestDto.couponCode,
     } as CreateBookingDto;
 
-    const calculation = await this.calculateQuoteForBooking({
-      clientId: client.id,
-      clientUserId,
-      provider,
+    const quoteHashPayload = this.buildQuoteHashPayload({
       providerService,
       createBookingDto: quoteBookingDto,
-      locale,
-      clientCompletedBookingsCount: client.completedBookingsCount ?? 0,
       subscriptionId: bookingQuoteRequestDto.subscriptionId,
       addons: bookingQuoteRequestDto.addons,
       insurancePlanId: bookingQuoteRequestDto.insurancePlanId ?? null,
     });
+
+    const requestKey = this.buildQuoteRequestKey(quoteHashPayload);
+    this.logger.log(
+      `[BookingsService] quote.request requestKey=${requestKey} providerServiceId=${bookingQuoteRequestDto.providerServiceId}`,
+    );
+    const quoteHash = this.hashRequestKey(requestKey);
+    const cacheKey = `${QUOTE_CACHE_KEY_PREFIX}${quoteHash}`;
+
+    const cached = await this.cacheService.get<BookingQuoteResponseDto>(cacheKey);
+    if (cached) {
+      this.logger.log(`[BookingsService] quote.cache.hit requestKey=${requestKey}`);
+      return cached;
+    }
+
+    let calculation;
+    try {
+      calculation = await this.calculateQuoteForBooking({
+        clientId: client.id,
+        clientUserId,
+        provider,
+        providerService,
+        createBookingDto: quoteBookingDto,
+        locale,
+        clientCompletedBookingsCount: client.completedBookingsCount ?? 0,
+        subscriptionId: bookingQuoteRequestDto.subscriptionId,
+        addons: bookingQuoteRequestDto.addons,
+        insurancePlanId: bookingQuoteRequestDto.insurancePlanId ?? null,
+        quoteHashPayload,
+        requestKey,
+      });
+      await this.cacheService.set(
+        cacheKey,
+        calculation.quoteResponse,
+        QUOTE_CACHE_TTL_SECONDS,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `[BookingsService] quotePrice - erro ao calcular quote: ${error?.message || 'sem mensagem'}`,
+        error?.stack,
+      );
+      this.logger.error(
+        `[BookingsService] quotePrice - payload: ${JSON.stringify(bookingQuoteRequestDto)}`,
+      );
+      throw error;
+    }
 
     return calculation.quoteResponse;
   }
@@ -1113,6 +1186,19 @@ export class BookingsService {
       clientCompletedBookingsCount,
       insurancePlanId,
     } = options;
+
+    const requestPayload =
+      options.quoteHashPayload ??
+      this.buildQuoteHashPayload({
+        providerService,
+        createBookingDto,
+        addons,
+        subscriptionId: options.subscriptionId,
+        insurancePlanId,
+      });
+    const requestKey =
+      options.requestKey ?? this.buildQuoteRequestKey(requestPayload);
+    const quoteHash = this.hashRequestKey(requestKey);
 
     const priceResult = await calculateServiceTotalPrice({
       providerService,
@@ -1197,23 +1283,6 @@ export class BookingsService {
     const insuranceFeeDecimal = new Prisma.Decimal(insuranceFeeCents).dividedBy(100);
     finalPrice = finalPrice.add(insuranceFeeDecimal);
 
-    const quoteHash = this.buildQuoteHash({
-      providerId: createBookingDto.providerId,
-      providerServiceId: providerService.id,
-      serviceId: providerService.serviceId,
-      scheduledDate: createBookingDto.scheduledDate,
-      scheduledTime: createBookingDto.scheduledTime,
-      durationMinutes:
-        createBookingDto.requestedDurationMinutes ?? null,
-      couponCode: couponCode ?? null,
-      subscriptionId: options.subscriptionId ?? null,
-      addons: addons ?? [],
-      insurancePlanId: insurancePlanId ?? null,
-      address: createBookingDto.address,
-      minHourlyMinutes: MIN_HOURLY_MINUTES,
-      version: QUOTE_HASH_VERSION,
-    });
-
     const quoteId = quoteHash;
     const platformFee = finalPrice.mul(
       new Prisma.Decimal(Math.max(0, Math.min(1, COMMISSION_RATE))),
@@ -1281,6 +1350,48 @@ export class BookingsService {
   }
 
   private buildQuoteHash(payload: QuoteHashPayload): string {
+    const requestKey = this.buildQuoteRequestKey(payload);
+    return this.hashRequestKey(requestKey);
+  }
+
+  private buildQuoteHashPayload(options: {
+    providerService: ProviderService;
+    createBookingDto: CreateBookingDto;
+    addons?: Array<{ id: string; quantity?: number }>;
+    subscriptionId?: string;
+    insurancePlanId?: InsurancePlanId | null;
+  }): QuoteHashPayload {
+    const couponCode = options.createBookingDto.couponCode?.trim();
+    const normalizedAddons = (options.addons ?? []).map((addon) => ({
+      id: addon.id,
+      quantity: addon.quantity ?? 1,
+    }));
+
+    return {
+      providerId: options.createBookingDto.providerId,
+      providerServiceId: options.createBookingDto.providerServiceId,
+      serviceId: options.providerService.serviceId ?? undefined,
+      scheduledDate: options.createBookingDto.scheduledDate,
+      scheduledTime: options.createBookingDto.scheduledTime,
+      durationMinutes: options.createBookingDto.requestedDurationMinutes ?? null,
+      couponCode: couponCode || null,
+      subscriptionId: options.subscriptionId ?? null,
+      addons: normalizedAddons,
+      address: {
+        latitude: options.createBookingDto.address.latitude,
+        longitude: options.createBookingDto.address.longitude,
+        city: options.createBookingDto.address.city ?? null,
+        state: options.createBookingDto.address.state ?? null,
+        cep: options.createBookingDto.address.cep ?? null,
+      },
+      minHourlyMinutes: MIN_HOURLY_MINUTES,
+      version: QUOTE_HASH_VERSION,
+      pricingVersion: PRICING_VERSION,
+      insurancePlanId: options.insurancePlanId ?? null,
+    };
+  }
+
+  private buildQuoteRequestKey(payload: QuoteHashPayload): string {
     const normalizedAddons = (payload.addons ?? [])
       .map((addon) => ({
         id: addon.id,
@@ -1297,6 +1408,7 @@ export class BookingsService {
     };
 
     const normalizedPayload = {
+      pricingVersion: payload.pricingVersion,
       version: payload.version,
       providerId: payload.providerId,
       providerServiceId: payload.providerServiceId,
@@ -1309,11 +1421,14 @@ export class BookingsService {
       addons: normalizedAddons,
       address: normalizedAddress,
       minHourlyMinutes: payload.minHourlyMinutes,
+      insurancePlanId: payload.insurancePlanId ?? null,
     };
 
-    return createHash('sha256')
-      .update(JSON.stringify(normalizedPayload))
-      .digest('hex');
+    return JSON.stringify(normalizedPayload);
+  }
+
+  private hashRequestKey(requestKey: string): string {
+    return createHash('sha256').update(requestKey).digest('hex');
   }
 
   // NEW: Method to create a booking specifically from a subscription
