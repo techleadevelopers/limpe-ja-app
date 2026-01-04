@@ -31,9 +31,10 @@ export async function calculateServiceTotalPrice({
 }: BookingPriceCalculatorInput): Promise<BookingPriceCalculationResult> {
   const hourlyPrice = providerService.pricePerHour;
   if (!hourlyPrice || hourlyPrice.lessThanOrEqualTo(0)) {
-    throw new BadRequestException(
-      'Preco por hora nao configurado para este servico.',
-    );
+    throw new BadRequestException({
+      code: 'hourly_price_missing',
+      message: 'Preco por hora nao configurado para este servico.',
+    });
   }
 
   let requestedDuration = createBookingDto.requestedDurationMinutes;
@@ -49,7 +50,10 @@ export async function calculateServiceTotalPrice({
       'booking.badRequest.durationRequired',
       locale,
     );
-    throw new BadRequestException(message);
+    throw new BadRequestException({
+      code: 'duration_required',
+      message,
+    });
   }
 
   const normalizedDuration = Math.max(requestedDuration, minHourlyMinutes);
@@ -66,7 +70,10 @@ export async function calculateServiceTotalPrice({
 
   if (calculatedTotalPrice.lessThan(0)) {
     const message = await translate('booking.badRequest.negativePrice', locale);
-    throw new BadRequestException(message);
+    throw new BadRequestException({
+      code: 'negative_price',
+      message,
+    });
   }
 
   return {
