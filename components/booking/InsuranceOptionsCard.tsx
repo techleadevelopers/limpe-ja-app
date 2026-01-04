@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { formatBRL } from '../../utils/formatters';
@@ -16,15 +16,15 @@ type PlanTemplate = {
 const PLAN_TEMPLATES: PlanTemplate[] = [
   {
     id: 'ESSENCIAL',
-    title: 'Proteção Essencial',
+    title: 'Proteçao Essencial',
     badge: 'Recomendado',
     highlights: ['Cobertura básica contra danos leves', 'Acionamento digital em minutos'],
     detail:
-      'Ideal para residências com objetos eletrônicos e mobiliário. Garante suporte rápido e cobertura para pequenos incidentes.',
+      'Ideal para residencias com objetos eletrônicos e mobiliário. Garante suporte rápido e cobertura para pequenos incidentes.',
   },
   {
     id: 'PREMIUM',
-    title: 'Proteção Premium',
+    title: 'Proteçao Premium',
     badge: 'Premium',
     highlights: ['Cobertura até R$350 mil', 'Dedutível reduzido', 'Atendimento prioritário'],
     detail:
@@ -32,16 +32,16 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
   },
   {
     id: 'TOTAL',
-    title: 'Proteção Completa',
+    title: 'Proteçao Completa',
     badge: 'Cobertura Máxima',
-    highlights: ['Até R$1 milhão', 'Danos estruturais e pessoais decorrentes', 'Perícia especializada'],
+    highlights: ['Até R$1 milhao', 'Danos estruturais e pessoais decorrentes', 'Perícia especializada'],
     detail:
-      'Cobertura topo de linha com suporte a eventos estruturais, pessoais e assistência especializada para cada etapa do sinistro.',
+      'Cobertura topo de linha com suporte a eventos estruturais, pessoais e assistencia especializada para cada etapa do sinistro.',
   },
 ];
 
 const COMING_SOON_LABEL = 'Disponível em breve';
-const NO_PROTECTION_TITLE = 'Sem proteção';
+const NO_PROTECTION_TITLE = 'Sem proteçao';
 const NO_PROTECTION_DETAIL = 'Mantenha o orçamento sem custo adicional.';
 
 export interface InsuranceOptionsCardProps {
@@ -50,6 +50,8 @@ export interface InsuranceOptionsCardProps {
   onSelectPlan: (planId: InsurancePlanId | null) => void;
 }
 
+const PLAN_ORDER = new Map(PLAN_TEMPLATES.map((template, index) => [template.id, index]));
+
 export const InsuranceOptionsCard = ({
   insuranceOptions,
   selectedPlanId,
@@ -57,77 +59,27 @@ export const InsuranceOptionsCard = ({
 }: InsuranceOptionsCardProps) => {
   const { t } = useTranslation();
   const [detailPlan, setDetailPlan] = useState<PlanTemplate | null>(null);
-  const planMap = useMemo(() => {
-    const map = new Map<InsurancePlanId, InsurancePlanProposal>();
-    insuranceOptions.forEach((plan) => map.set(plan.id, plan));
-    return map;
+
+  const sortedPlans = useMemo(() => {
+    return [...insuranceOptions].sort((a, b) => {
+      const aOrder = PLAN_ORDER.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+      const bOrder = PLAN_ORDER.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+      return aOrder - bOrder;
+    });
   }, [insuranceOptions]);
 
-  const renderPlanCard = (template: PlanTemplate) => {
-    const plan = planMap.get(template.id);
-    const available = Boolean(plan && plan.eligible);
-    const priceLabel = available
-      ? `+${formatBRL((plan?.finalPriceCents ?? 0) / 100)}`
-      : t('schedule_service.insurance_option_coming_soon', { defaultValue: COMING_SOON_LABEL });
-    const isSelected = selectedPlanId === template.id;
-
-    return (
-      <TouchableOpacity
-        key={template.id}
-        activeOpacity={available ? 0.9 : 1}
-        testID={`insurance-option-${template.id}`}
-        style={[
-          styles.planCard,
-          isSelected && styles.planCardSelected,
-          !available && styles.planCardDisabled,
-        ]}
-        onPress={() => available && onSelectPlan(template.id)}
-      >
-        <View style={styles.planCardHeader}>
-          <Text style={styles.planCardTitle}>{template.title}</Text>
-          {template.badge && (
-            <View style={styles.planBadge}>
-              <Text style={styles.planBadgeText}>{template.badge}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={styles.planPrice}>{priceLabel}</Text>
-        <View style={styles.planHighlights}>
-          {template.highlights.map((item) => (
-            <View key={item} style={styles.planHighlightRow}>
-              <View style={styles.planHighlightDot} />
-              <Text style={styles.planHighlightText}>{item}</Text>
-            </View>
-          ))}
-        </View>
-        <View style={styles.planFooterRow}>
-          <TouchableOpacity
-            onPress={() => available && setDetailPlan(template)}
-            disabled={!available}
-          >
-            <Text style={[styles.planDetailsText, !available && styles.planDetailsDisabled]}>
-              {t('schedule_service.insurance_detail_action', { defaultValue: 'Ver detalhes' })}
-            </Text>
-          </TouchableOpacity>
-          <View style={[styles.planSelectIndicator, isSelected && styles.planSelectIndicatorActive]}>
-            {isSelected && <View style={styles.planSelectDot} />}
-          </View>
-        </View>
-        {!available && (
-          <Text style={styles.planComingSoon}>
-            {t('schedule_service.insurance_option_coming_soon', { defaultValue: COMING_SOON_LABEL })}
-          </Text>
-        )}
-      </TouchableOpacity>
-    );
-  };
+  const planTemplateMap = useMemo(() => {
+    const map = new Map<InsurancePlanId, PlanTemplate>();
+    PLAN_TEMPLATES.forEach((template) => map.set(template.id, template));
+    return map;
+  }, []);
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <Text style={styles.title}>
           {t('schedule_service.insurance_section_title', {
-            defaultValue: 'Proteção Residencial (opcional)',
+            defaultValue: 'Proteçao Residencial (opcional)',
           })}
         </Text>
         <Text style={styles.subtitle}>
@@ -152,7 +104,74 @@ export const InsuranceOptionsCard = ({
             {selectedPlanId === null && <View style={[styles.planSelectDot, styles.planSelectDotActive]} />}
           </View>
         </TouchableOpacity>
-        {PLAN_TEMPLATES.map(renderPlanCard)}
+        {sortedPlans.map((plan) => {
+          const template = planTemplateMap.get(plan.id);
+          const feeCents =
+            plan.feeCents ??
+            plan.insuranceFeeCents ??
+            plan.priceCents ??
+            plan.totalFeeCents ??
+            plan.finalPriceCents ??
+            0;
+          const available = plan.eligible;
+          const priceLabel = feeCents > 0 ? `+${formatBRL(feeCents / 100)}` : 'Grátis';
+          const isSelected = selectedPlanId === plan.id;
+          const highlightItems = template?.highlights ?? [];
+
+          return (
+            <TouchableOpacity
+              key={plan.id}
+              testID={`insurance-option-${plan.id}`}
+              activeOpacity={available ? 0.9 : 1}
+              style={[
+                styles.planCard,
+                isSelected && styles.planCardSelected,
+                !available && styles.planCardDisabled,
+              ]}
+              onPress={() => available && onSelectPlan(plan.id)}
+            >
+              <View style={styles.planCardHeader}>
+                <Text style={styles.planCardTitle}>{plan.name ?? template?.title ?? plan.id}</Text>
+                {template?.badge && (
+                  <View style={styles.planBadge}>
+                    <Text style={styles.planBadgeText}>{template.badge}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.planPrice}>
+                {available
+                  ? priceLabel
+                  : t('schedule_service.insurance_unavailable_label', { defaultValue: 'Indisponível' })}
+              </Text>
+              <View style={styles.planHighlights}>
+                {highlightItems.map((item) => (
+                  <View key={item} style={styles.planHighlightRow}>
+                    <View style={styles.planHighlightDot} />
+                    <Text style={styles.planHighlightText}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.planFooterRow}>
+                <TouchableOpacity
+                  onPress={() => available && template && setDetailPlan(template)}
+                  disabled={!available || !template}
+                >
+                  <Text style={[styles.planDetailsText, (!available || !template) && styles.planDetailsDisabled]}>
+                    {t('schedule_service.insurance_detail_action', { defaultValue: 'Ver detalhes' })}
+                  </Text>
+                </TouchableOpacity>
+                <View style={[styles.planSelectIndicator, isSelected && styles.planSelectIndicatorActive]}>
+                  {isSelected && <View style={styles.planSelectDot} />}
+                </View>
+              </View>
+              {!available && (
+                <Text style={styles.planComingSoon}>
+                  {t('schedule_service.insurance_option_coming_soon', { defaultValue: COMING_SOON_LABEL })}
+                </Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <Modal
