@@ -1,79 +1,86 @@
 // LimpeJaApp/app/provider/messages/[chatId].tsx
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router'; // Adicionado useRouter
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated, // Importado para animações
-    Easing,
-    FlatList, // Importado para easing das animações
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Easing,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { io, Socket } from 'socket.io-client';
-import { alertUserError, getUserMessage } from '../../../_shared/errors/uiFeedback';
+import { alertUserError } from '../../../_shared/errors/uiFeedback';
 import { appConfig } from '../../../config/appConfig';
 import { useAuth } from '../../../hooks/useAuth';
 import { getBookingDetails } from '../../../services/bookingService';
 import { getChatMessages, sendMessage as sendChatMessage } from '../../../services/chatService';
 import { BookingStatus } from '../../../types/backend/bookings';
 import { Message, SendMessageDto } from '../../../types/backend/chat';
-import { normalizeApiError } from '../../utils/errors';
+import { normalizeApiError } from '../../_shared/utils/errors';
 
 const SOCKET_URL = appConfig.apiUrl.replace('http', 'ws');
 
-// Componente CustomChatHeader copiado do arquivo do cliente
 const CustomChatHeader: React.FC<{
   recipientName?: string;
   recipientAvatarUrl?: string;
   onBackPress: () => void;
-}> = ({ recipientName, recipientAvatarUrl, onBackPress }) => {
-  return (
-    <View style={chatStyles.customHeader}>
-      <TouchableOpacity onPress={onBackPress} style={chatStyles.headerButton}>
-        <Ionicons name="arrow-back" size={24} color="#FFF" />
-      </TouchableOpacity>
-      <View style={chatStyles.headerRecipientInfo}>
-        <Image
-          source={recipientAvatarUrl ? { uri: recipientAvatarUrl } : require('../../../assets/images/default-avatar.png')}
-          style={chatStyles.headerAvatar}
-        />
-        <View>
-          <Text style={chatStyles.headerRecipientName}>{recipientName || 'Chat'}</Text>
-          <Text style={chatStyles.headerRecipientStatus}>Online</Text>
-        </View>
-      </View>
-      <View style={chatStyles.headerActions}>
-        <TouchableOpacity style={chatStyles.headerButton}>
-          <Ionicons name="videocam-outline" size={24} color="#FFF" />
-        </TouchableOpacity>
-        <TouchableOpacity style={chatStyles.headerButton}>
-          <Ionicons name="call-outline" size={24} color="#FFF" />
-        </TouchableOpacity>
+}> = ({ recipientName, recipientAvatarUrl, onBackPress }) => (
+  <View style={chatStyles.customHeader}>
+    <TouchableOpacity onPress={onBackPress} style={chatStyles.headerButton}>
+      <Ionicons name="arrow-back" size={24} color="#FFF" />
+    </TouchableOpacity>
+    <View style={chatStyles.headerRecipientInfo}>
+      <Image
+        source={
+          recipientAvatarUrl
+            ? { uri: recipientAvatarUrl }
+            : require('../../../assets/images/default-avatar.png')
+        }
+        style={chatStyles.headerAvatar}
+      />
+      <View>
+        <Text style={chatStyles.headerRecipientName}>{recipientName || 'Chat'}</Text>
+        <Text style={chatStyles.headerRecipientStatus}>Online</Text>
       </View>
     </View>
-  );
-};
+    <View style={chatStyles.headerActions}>
+      <TouchableOpacity style={chatStyles.headerButton}>
+        <Ionicons name="videocam-outline" size={24} color="#FFF" />
+      </TouchableOpacity>
+      <TouchableOpacity style={chatStyles.headerButton}>
+        <Ionicons name="call-outline" size={24} color="#FFF" />
+      </TouchableOpacity>
+    </View>
+  </View>
+);
 
-export default function ProviderChatScreen() { // Renomeado para ProviderChatScreen
-  const router = useRouter(); // Adicionado useRouter
-  const { chatId, recipientName, recipientId, recipientAvatarUrl, bookingId } = useLocalSearchParams<{ chatId?: string, recipientName?: string, recipientId?: string, recipientAvatarUrl?: string, bookingId?: string }>();
+export default function ProviderChatScreen() {
+  const router = useRouter();
+  const { chatId, recipientName, recipientAvatarUrl, recipientId, bookingId } =
+    useLocalSearchParams<{
+      chatId?: string;
+      recipientName?: string;
+      recipientAvatarUrl?: string;
+      recipientId?: string;
+      bookingId?: string;
+    }>();
   const { user, token, isAuthenticated } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [chatBlockedMessage, setChatBlockedMessage] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlatList<Message>>(null);
 
-  // Animações (copiado do cliente)
   const chatBlockedAnim = useRef(new Animated.Value(0)).current;
   const inputContainerAnim = useRef(new Animated.Value(0)).current;
   const sendButtonScaleAnim = useRef(new Animated.Value(1)).current;
@@ -82,54 +89,135 @@ export default function ProviderChatScreen() { // Renomeado para ProviderChatScr
 
   useEffect(() => {
     if (!isAuthenticated || !token || !chatId || !userId) {
-      console.log('ProviderChatScreen: Usuário não autenticado ou chat/user ID ausente.');
       setIsLoading(false);
-      setChatBlockedMessage("Você precisa estar logado para acessar este chat.");
+      setChatBlockedMessage('Você precisa estar logado para acessar este chat.');
       return;
     }
 
     const loadChatData = async () => {
       setIsLoading(true);
-      setChatBlockedMessage(null); // Limpa qualquer mensagem de bloqueio anterior
+      setChatBlockedMessage(null);
 
       try {
-        // 1. Carregar histórico de mensagens
         const fetchedMessages = await getChatMessages(chatId, { limit: 50, offset: 0 });
         setMessages(fetchedMessages.reverse());
 
-        // 2. Verificar status do agendamento se houver um bookingId associado
         if (bookingId) {
           const bookingDetails = await getBookingDetails(bookingId);
           if (bookingDetails.status === BookingStatus.COMPLETED) {
-            setChatBlockedMessage("Este chat foi encerrado, pois o serviço foi concluído.");
+            setChatBlockedMessage('Este chat foi encerrado, pois o serviço foi concluído.');
           } else if (bookingDetails.status === BookingStatus.CANCELLED) {
-            setChatBlockedMessage("Este chat foi encerrado, pois o agendamento foi cancelado.");
-          } else if (bookingDetails.status === BookingStatus.PENDING) { // Adicionado do cliente
+            setChatBlockedMessage('Este chat foi encerrado, pois o agendamento foi cancelado.');
+          } else if (bookingDetails.status === BookingStatus.PENDING) {
             setChatBlockedMessage(
-              `Aguardando pagamento do cliente para liberar o chat com ${recipientName || bookingDetails.clientFullName || 'o cliente'}.` // Mensagem ajustada para o provedor
+              `Aguardando pagamento do cliente para liberar o chat com ${
+                recipientName || bookingDetails.clientFullName || 'o cliente'
+              }.`
             );
           }
         }
-      } catch (error: any) {
-      console.error('ProviderChatScreen: Erro ao enviar mensagem:', error);
+      } catch (error: unknown) {
+        console.error('Erro ao carregar mensagens ou verificar agendamento:', error);
+        const apiError = normalizeApiError(error);
+        if (apiError.blockAction) {
+          setChatBlockedMessage(apiError.messageHuman);
+        } else {
+          Alert.alert('Erro', 'Não foi possível carregar as mensagens do chat.');
+          setChatBlockedMessage('Não foi possível carregar as mensagens.');
+        }
+      } finally {
+        setIsLoading(false);
+        Animated.timing(inputContainerAnim, {
+          toValue: 1,
+          duration: 300,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }).start();
+      }
+    };
+
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket'],
+      auth: { token },
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      socket.emit('joinChat', chatId);
+    });
+
+    socket.on('newMessage', (newMessage: Message) => {
+      setMessages((prev) => [...prev, newMessage]);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+    });
+
+    socket.on('errorMessage', (data: { event: string; message: string }) => {
+      if (data.event === 'joinChat' || data.event === 'sendMessage') {
+        setChatBlockedMessage(data.message);
+      } else {
+        Alert.alert('Erro no Chat', data.message || 'Houve um problema com a conexão do chat.');
+      }
+    });
+
+    socket.on('disconnect', () => {
+      setChatBlockedMessage('Conexão com o chat perdida.');
+    });
+
+    loadChatData();
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [bookingId, chatId, isAuthenticated, inputContainerAnim, recipientName, token, userId]);
+
+  useEffect(() => {
+    Animated.timing(chatBlockedAnim, {
+      toValue: chatBlockedMessage ? 1 : 0,
+      duration: chatBlockedMessage ? 300 : 200,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [chatBlockedAnim, chatBlockedMessage]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (inputText.trim() === '' || !user?.id || !chatId || !recipientId || chatBlockedMessage) {
+      return;
+    }
+
+      const newMessageData: SendMessageDto = {
+        chatId,
+        senderId: user.id,
+        receiverId: recipientId,
+        content: inputText.trim(),
+      };
+
+    try {
+      if (socketRef.current && socketRef.current.connected) {
+        socketRef.current.emit('sendMessage', newMessageData);
+      } else {
+        await sendChatMessage(newMessageData);
+      }
+      setInputText('');
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+    } catch (error: unknown) {
       const apiError = normalizeApiError(error);
       if (apiError.blockAction) {
         setChatBlockedMessage(apiError.messageHuman);
-        return;
+      } else {
+        alertUserError(error, 'Erro ao enviar mensagem');
       }
-
-      alertUserError(error, 'Erro ao enviar mensagem');
     }
-  }, [inputText, user, chatId, recipientId, chatBlockedMessage]);
+  }, [chatBlockedMessage, chatId, inputText, recipientId, user]);
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isMyMessage = item.senderId === userId;
     return (
       <View
         style={[
-          chatStyles.messageBubble, // Usando chatStyles
-          isMyMessage ? chatStyles.myMessage : chatStyles.theirMessage, // Usando chatStyles
-          chatStyles.messageShadow, // Adicionado do cliente
+          chatStyles.messageBubble,
+          isMyMessage ? chatStyles.myMessage : chatStyles.theirMessage,
+          chatStyles.messageShadow,
         ]}
       >
         <Text style={[chatStyles.messageContent, isMyMessage ? { color: '#FFFFFF' } : { color: '#212529' }]}>
@@ -137,7 +225,7 @@ export default function ProviderChatScreen() { // Renomeado para ProviderChatScr
         </Text>
         <Text
           style={[
-            chatStyles.messageTime, // Usando chatStyles
+            chatStyles.messageTime,
             isMyMessage ? { color: 'rgba(255,255,255,0.7)' } : { color: '#6C757D' },
           ]}
         >
@@ -149,50 +237,56 @@ export default function ProviderChatScreen() { // Renomeado para ProviderChatScr
 
   if (isLoading) {
     return (
-      <View style={chatStyles.loadingContainer}> {/* Usando chatStyles */}
-        <ActivityIndicator size="large" color="#4A90E2" /> {/* Cor do ActivityIndicator ajustada */}
-        <Text style={chatStyles.loadingText}>Carregando mensagens...</Text> {/* Usando chatStyles */}
+      <View style={chatStyles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4A90E2" />
+        <Text style={chatStyles.loadingText}>Carregando mensagens...</Text>
       </View>
     );
   }
 
   const isInputDisabled = !isAuthenticated || !!chatBlockedMessage;
 
-  // Animações do botão de envio (copiado do cliente)
   const onPressInSendButton = () => {
     Animated.spring(sendButtonScaleAnim, {
       toValue: 0.9,
       useNativeDriver: true,
-      friction: 5, // Ajuste para mais "mola"
-      tension: 80, // Retorno rápido
+      friction: 5,
+      tension: 80,
     }).start();
   };
+
   const onPressOutSendButton = () => {
     Animated.spring(sendButtonScaleAnim, {
       toValue: 1,
       friction: 5,
       tension: 80,
-      useNativeDriver: true
+      useNativeDriver: true,
     }).start();
   };
 
   return (
     <KeyboardAvoidingView
-      style={chatStyles.container} // Usando chatStyles
+      style={chatStyles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <Stack.Screen options={{ headerShown: false }} /> {/* Mantido headerShown: false para usar CustomChatHeader */}
+      <Stack.Screen options={{ headerShown: false }} />
       <CustomChatHeader
         recipientName={recipientName}
         recipientAvatarUrl={recipientAvatarUrl}
         onBackPress={() => router.back()}
       />
 
-      <Animated.View // Animação para mensagem de chat bloqueado (copiado do cliente)
+      <Animated.View
         style={[
           chatStyles.chatBlockedContainer,
-          { opacity: chatBlockedAnim, height: chatBlockedAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 50] }) },
+          {
+            opacity: chatBlockedAnim,
+            height: chatBlockedAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 50],
+            }),
+          },
         ]}
       >
         {chatBlockedMessage && (
@@ -208,44 +302,40 @@ export default function ProviderChatScreen() { // Renomeado para ProviderChatScr
         data={messages}
         keyExtractor={(item) => item.id}
         renderItem={renderMessage}
-        style={chatStyles.messagesList} // Usando chatStyles
-        contentContainerStyle={chatStyles.messagesListContent} // Usando chatStyles
+        style={chatStyles.messagesList}
+        contentContainerStyle={chatStyles.messagesListContent}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
       />
-      <Animated.View // Animação para o container de input (copiado do cliente)
-        style={[
-          chatStyles.inputContainer, // Usando chatStyles
-          { opacity: inputContainerAnim },
-          chatStyles.inputContainerShadow // Adicionado do cliente
-        ]}
+      <Animated.View
+        style={[chatStyles.inputContainer, { opacity: inputContainerAnim }, chatStyles.inputContainerShadow]}
       >
-        <TouchableOpacity style={chatStyles.inputIcon}> {/* Ícone de anexar (copiado do cliente) */}
-            <Ionicons name="attach-outline" size={24} color="#868E96" />
+        <TouchableOpacity style={chatStyles.inputIcon}>
+          <Ionicons name="attach-outline" size={24} color="#868E96" />
         </TouchableOpacity>
         <TextInput
-          style={[chatStyles.input, isInputDisabled && chatStyles.disabledInput]} // Usando chatStyles
+          style={[chatStyles.input, isInputDisabled && chatStyles.disabledInput]}
           value={inputText}
           onChangeText={setInputText}
-          placeholder={isInputDisabled ? "Chat indisponível" : "Digite sua mensagem..."}
+          placeholder={isInputDisabled ? 'Chat indisponível' : 'Digite sua mensagem...'}
           placeholderTextColor="#6C757D"
           multiline
           editable={!isInputDisabled}
         />
-        <TouchableOpacity style={chatStyles.inputIcon}> {/* Ícone de emoji (copiado do cliente) */}
-            <Ionicons name="happy-outline" size={24} color="#868E96" />
+        <TouchableOpacity style={chatStyles.inputIcon}>
+          <Ionicons name="happy-outline" size={24} color="#868E96" />
         </TouchableOpacity>
-        <TouchableOpacity style={chatStyles.inputIcon}> {/* Ícone de microfone (copiado do cliente) */}
-            <Ionicons name="mic-outline" size={24} color="#868E96" />
+        <TouchableOpacity style={chatStyles.inputIcon}>
+          <Ionicons name="mic-outline" size={24} color="#868E96" />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handleSendMessage}
           style={[
-            chatStyles.sendButton, // Usando chatStyles
-            isInputDisabled && chatStyles.disabledSendButton, // Usando chatStyles
-            { transform: [{ scale: sendButtonScaleAnim }] }, // Animação do botão (copiado do cliente)
+            chatStyles.sendButton,
+            isInputDisabled && chatStyles.disabledSendButton,
+            { transform: [{ scale: sendButtonScaleAnim }] },
           ]}
-          onPressIn={onPressInSendButton} // Animação do botão (copiado do cliente)
-          onPressOut={onPressOutSendButton} // Animação do botão (copiado do cliente)
+          onPressIn={onPressInSendButton}
+          onPressOut={onPressOutSendButton}
           disabled={isInputDisabled}
         >
           <Ionicons name="send" size={24} color="#FFFFFF" />
@@ -255,17 +345,16 @@ export default function ProviderChatScreen() { // Renomeado para ProviderChatScr
   );
 }
 
-// Estilos unificados (copiados e ajustados do arquivo do cliente)
 const chatStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F8FF', // Alterado para o azul claro do perfil
+    backgroundColor: '#F0F8FF',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F8FF', // Alterado para o azul claro do perfil
+    backgroundColor: '#F0F8FF',
   },
   loadingText: {
     marginTop: 10,
@@ -276,7 +365,7 @@ const chatStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
+    backgroundColor: '#4A90E2',
     paddingHorizontal: 15,
     paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
@@ -317,7 +406,7 @@ const chatStyles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
   },
-  panicBannerWrapper: { // Mantido para consistência, mesmo que não usado diretamente na UI
+  panicBannerWrapper: {
     marginHorizontal: 15,
     marginTop: 10,
     marginBottom: 5,
@@ -369,7 +458,7 @@ const chatStyles = StyleSheet.create({
   },
   myMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
+    backgroundColor: '#4A90E2',
     borderTopRightRadius: 18,
     borderBottomRightRadius: 4,
     borderTopLeftRadius: 18,
@@ -435,7 +524,7 @@ const chatStyles = StyleSheet.create({
     color: '#ADB5BD',
   },
   sendButton: {
-    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
+    backgroundColor: '#4A90E2',
     borderRadius: 25,
     width: 50,
     height: 50,
@@ -445,6 +534,6 @@ const chatStyles = StyleSheet.create({
     marginBottom: Platform.OS === 'ios' ? 0 : 5,
   },
   disabledSendButton: {
-    backgroundColor: '#A0CFFF', // Azul mais claro para o botão desabilitado
+    backgroundColor: '#A0CFFF',
   },
 });
