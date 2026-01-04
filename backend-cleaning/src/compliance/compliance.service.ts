@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { User, Prisma } from '@prisma/client'; // Adicionando a importação de 'Prisma'
+import { User, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ComplianceService {
@@ -20,9 +20,19 @@ export class ComplianceService {
    * @param version Versão do documento consentido.
    * @returns O registro de consentimento criado/atualizado.
    */
-  async recordConsent(userId: string, documentType: string, version: string) {
+  async recordConsent(
+    userId: string,
+    documentType: string,
+    version: string,
+    options?: {
+      source?: string;
+      ip?: string;
+      userAgent?: string;
+      acceptedAt?: Date;
+    },
+  ) {
     this.logger.log(
-      `[ComplianceService] Registrando consentimento para userId: ${userId}, tipo: ${documentType}, versão: ${version}`,
+      `[ComplianceService] Registrando consentimento para userId: ${userId}, tipo: ${documentType}, versão: ${version}, source=${options?.source ?? 'unknown'}, ip=${options?.ip ?? 'unknown'}`,
     );
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -40,13 +50,17 @@ export class ComplianceService {
       },
       update: {
         version: version,
-        consentedAt: new Date(),
+        consentedAt: options?.acceptedAt ?? new Date(),
+        ipAddress: options?.ip ?? undefined,
+        userAgent: options?.userAgent ?? undefined,
       },
       create: {
         userId: userId,
         documentType: documentType,
         version: version,
-        consentedAt: new Date(),
+        consentedAt: options?.acceptedAt ?? new Date(),
+        ipAddress: options?.ip ?? undefined,
+        userAgent: options?.userAgent ?? undefined,
       },
     });
 
@@ -94,6 +108,13 @@ export class ComplianceService {
       `[ComplianceService] Consentimento para ${documentType} (versão ${consent.version}) para userId: ${userId} é ${hasConsent ? 'válido' : 'inválido'} para a versão ${requiredVersion}.`,
     );
     return hasConsent;
+  }
+
+  async listUserConsents(userId: string) {
+    return this.prisma.userConsent.findMany({
+      where: { userId },
+      orderBy: { consentedAt: 'desc' },
+    });
   }
 
   /**
