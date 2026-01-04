@@ -20,7 +20,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import verificationService from '../../../services/verificationService';
 import { VerificationStatus } from '../../../types/backend/auth';
 import { DocumentPhotoType } from '../../../types/backend/verification';
-import { PROVIDER_ROUTES } from '../../routes';
+import { PROVIDER_ROUTES } from '../../_shared/routes';
 import DocumentUploadScreen from './verification/document-upload';
 
 const LOGO_IMAGE = require('../../../assets/images/logo.png');
