@@ -4,11 +4,11 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { setSafeError } from '../../../_shared/errors/uiFeedback';
 import Colors from '../../../constants/Colors';
 import { getBookingDetails, updateBookingStatus } from '../../../services/bookingService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { formatDate } from '../../../utils/helpers';
-import { setSafeError } from '../../_shared/errors/uiFeedback';
 
 function useTheme() {
   const scheme = (Colors as any)?.scheme || 'light';
