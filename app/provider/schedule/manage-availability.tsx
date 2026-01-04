@@ -17,10 +17,10 @@ import {
     View,
 } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
+import { alertUserError } from '../../../_shared/errors/uiFeedback';
 import { useAuth } from '../../../hooks/useAuth';
 import { getPricingConfig } from '../../../services/configService';
 import NotificationUIService from '../../../services/notificationUIService';
-import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 // Importações de serviços e tipos do backend
 import { getBookingsForUser } from '../../../services/bookingService';
