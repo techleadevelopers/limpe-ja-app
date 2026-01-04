@@ -17,12 +17,12 @@ import {
     useColorScheme,
     View,
 } from 'react-native';
+import { alertUserError } from '../../../_shared/errors/uiFeedback';
 import Colors from '../../../constants/Colors';
 import { PROVIDER_ROUTES } from '../../../constants/routes';
 import { useAuth } from '../../../hooks/useAuth';
 import { acceptProviderTerms, updateMyProviderProfile } from '../../../services/providerService';
 import userService from '../../../services/userService';
-import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 const AppLogo = require('../../../assets/images/logo2.png');
 
