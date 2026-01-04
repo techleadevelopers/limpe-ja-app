@@ -1,16 +1,16 @@
 // LimpeJaApp/src/components/common/Button.tsx
 import React, { useMemo } from 'react';
 import {
-  Pressable,
-  Text,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-  StyleProp,
-  useColorScheme,
+    Pressable,
+    StyleProp,
+    StyleSheet,
+    Text,
+    TextStyle,
+    useColorScheme,
+    ViewStyle,
 } from 'react-native';
+import { pressableBase, shadow, textBase } from '../../_shared/ui/parity';
 import Colors from '../../constants/Colors';
-import { pressableBase, shadow, textBase } from '../../app/_shared/ui/parity';
 
 interface ButtonProps {
   title: string;
