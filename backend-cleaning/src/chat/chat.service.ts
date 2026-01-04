@@ -7,9 +7,17 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Message, Prisma, Chat, BookingStatus } from '@prisma/client';
+import {
+  Message,
+  Prisma,
+  Chat,
+  BookingStatus,
+  PolicyEnforcement,
+  PolicySource,
+} from '@prisma/client';
 import { Message as MessageEntity } from './entities/message.entity';
 import { ChatDetailsDto } from './dto/chat-details.dto';
+import { ContactLeakPolicyService } from '../common/services/contact-leak-policy.service';
 
 export interface ConversationItem {
   id: string;
@@ -25,7 +33,10 @@ export interface ConversationItem {
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private contactLeakPolicyService: ContactLeakPolicyService,
+  ) {}
 
   async findOrCreateChat(
     clientId: string,
@@ -200,6 +211,27 @@ export class ChatService {
           'Você só pode iniciar um chat após ter um agendamento confirmado.',
         );
       }
+    }
+
+    const policyResult = await this.contactLeakPolicyService.evaluatePolicy({
+      userId: senderId,
+      content,
+      chatId,
+      bookingId: activeBooking?.id,
+      source: PolicySource.CHAT,
+    });
+
+    if (policyResult?.enforcement === PolicyEnforcement.BLOCKED) {
+      this.logger.warn(
+        `[ChatService] createMessage: Bloqueio por política de contato para senderId=${senderId}`,
+      );
+      throw new ForbiddenException(
+        'Sua mensagem foi bloqueada pela política de compartilhamento de contato.',
+      );
+    }
+
+    if (policyResult?.enforcement === PolicyEnforcement.SANITIZED) {
+      content = '***';
     }
 
     const message = await this.prisma.message.create({
