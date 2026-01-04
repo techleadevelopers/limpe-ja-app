@@ -297,11 +297,10 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     : require('../../../../assets/images/default-avatar.png');
 
   // --- Lógica para determinar o serviço principal a ser exibido como "A partir de" ---
-  const availableServices = (item.providerServices || []).filter(
-    service => !service.needsReview && getNumericPriceValue(service) > 0
-  );
+  const pricedServices = (item.providerServices || []).filter(service => getNumericPriceValue(service) > 0);
+  const bookableServiceForDisplay = pricedServices.find(service => !service.needsReview);
   let mainServiceForDisplay: ProviderServiceOffering | undefined =
-    availableServices[0] || item.providerServices?.[0];
+    bookableServiceForDisplay || pricedServices[0] || item.providerServices?.[0];
 
   // Formata a string do preço principal a ser exibida usando o helper
   const mainDisplayedPrice = mainServiceForDisplay
@@ -311,7 +310,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   // Obtém o valor numérico do preço principal para comparações futuras
   const numericMainPrice = mainServiceForDisplay ? getNumericPriceValue(mainServiceForDisplay) : null;
 
-  const minHourlyPrice = availableServices.reduce<number | null>((prev, service) => {
+  const minHourlyPrice = pricedServices.reduce<number | null>((prev, service) => {
     const hourlyPrice = getNumericPriceValue(service);
     if (hourlyPrice <= 0) return prev;
     if (prev === null || hourlyPrice < prev) {
