@@ -8,20 +8,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Dimensions,
-  Easing,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleProp,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  ViewStyle
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Dimensions,
+    Easing,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleProp,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    ViewStyle
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -29,21 +29,21 @@ import { formatAddressCompact } from '../../../utils/address';
 import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
 
+import { alertUserError } from '../../../_shared/errors/uiFeedback';
 import { AppColors } from '../../../constants/appStyles';
 import Colors from '../../../constants/Colors';
 import { useAuth } from '../../../hooks/useAuth';
 import { getBookingsForUser } from '../../../services/bookingService';
 import {
-  AppNotification,
-  getMyNotifications,
-  markNotificationAsRead,
+    AppNotification,
+    getMyNotifications,
+    markNotificationAsRead,
 } from '../../../services/notificationService';
 import { getProviderAvatar } from '../../../services/providerService';
+import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const NAVBAR_OFFSET = SCREEN_HEIGHT * 0;
-import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
-import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 import ScreenContainer from '@/components/layout/ScreenContainer';
 import { useDevice } from '@/utils/responsive';
