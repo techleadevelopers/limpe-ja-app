@@ -1,8 +1,8 @@
 // src/components/Card.tsx
 import React from 'react';
-import { View, StyleSheet, StyleProp, ViewStyle, useColorScheme } from 'react-native'; // Adicionado useColorScheme e StyleProp
+import { StyleProp, StyleSheet, View, ViewStyle, useColorScheme } from 'react-native'; // Adicionado useColorScheme e StyleProp
+import { shadow } from '../../_shared/ui/parity';
 import Colors from '../../constants/Colors'; // Assumindo que Colors.ts está em constants/Colors
-import { shadow } from '../../app/_shared/ui/parity';
 
 // Hook para acessar as cores do tema atual (reutilizado dos outros componentes)
 function useTheme() {
