@@ -2,9 +2,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { alertUserError, getUserMessage } from '../../../_shared/errors/uiFeedback';
 import { getSubscriptionDetails, updateSubscription } from '../../../services/subscriptionService';
 import { SubscriptionStatus, UpdateSubscriptionDto } from '../../../types/backend/subscriptions';
-import { alertUserError, getUserMessage } from '../../_shared/errors/uiFeedback';
 
 export default function SubscriptionDetailsScreen() {
   const { subscriptionId } = useLocalSearchParams();
