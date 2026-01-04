@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { toastUserError } from '../../../_shared/errors/uiFeedback';
 import Colors from '../../../constants/Colors';
 import { getMyCoupons as getMyCouponsService, MyCouponListItem } from '../../../services/couponService';
 import NotificationUIService from '../../../services/notificationUIService';
-import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 enum CouponType {
   PERCENTAGE = 'percentage',
