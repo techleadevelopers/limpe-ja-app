@@ -45,7 +45,7 @@ import axios from 'axios';
 import { useBookingQuote, QuoteStatus } from '../../../hooks/useBookingQuote';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { useCouponValidation } from '../../../utils/useCouponValidation';
-import { normalizeApiError } from '../../utils/errors';
+import { normalizeApiError } from '../../_shared/utils/errors';
 
 import AddressSection from '../../../components/client/booking/schedule/AddressSection';
 import ProviderBrief from '../../../components/client/booking/schedule/ProviderBrief';
@@ -225,6 +225,13 @@ interface BookingSummaryPreviewProps {
   summaryAnim?: Animated.Value;
   quoteStatus?: QuoteStatus;
   quoteRateLimitRemainingSeconds?: number;
+  insuranceLabel: string;
+  selectedInsuranceId: string | 'NONE';
+  onEditService: () => void;
+  onEditProvider: () => void;
+  onEditDateTime: () => void;
+  onEditAddress: () => void;
+  onEditInsurance: () => void;
 }
 
 const BookingSummaryPreview = ({
@@ -239,6 +246,8 @@ const BookingSummaryPreview = ({
   discountAmount,
   finalPrice,
   insuranceFeeCents,
+  insuranceLabel,
+  selectedInsuranceId,
   onShowCancellationPolicy,
   t,
   notes,
@@ -258,6 +267,11 @@ const BookingSummaryPreview = ({
   summaryAnim,
   quoteStatus,
   quoteRateLimitRemainingSeconds = 0,
+  onEditService,
+  onEditProvider,
+  onEditDateTime,
+  onEditAddress,
+  onEditInsurance,
 }: BookingSummaryPreviewProps) => {
   const hasSelection = Boolean(selectedProviderService && selectedTime);
   const { isLargePhone } = useDevice();
@@ -388,9 +402,86 @@ const BookingSummaryPreview = ({
       }
     : {};
 
-  const formattedAddress = useMemo(() => {
-    return `${address.street || ''}, ${address.number || ''} - ${address.neighborhood || ''}, ${address.city || ''}/${address.state || ''}`.trim();
-  }, [address]);
+  const changeLabel = t('schedule_service.summary_change_action', { defaultValue: 'Alterar' });
+  const addressLine1 = `${address.street || ''}${address.number ? `, ${address.number}` : ''}`.trim();
+  const addressLine2 = `${address.neighborhood || ''}${address.city ? ` · ${address.city}` : ''}${address.state ? `/${address.state}` : ''}`.trim();
+  const reviewRows = useMemo(() => {
+    return [
+      {
+        key: 'service',
+        icon: 'briefcase-outline',
+        label: t('schedule_service.summary_service', { defaultValue: 'Serviço' }),
+        value: selectedProviderService?.service?.name || t('common.na', { defaultValue: 'N/A' }),
+        action: onEditService,
+      },
+      {
+        key: 'provider',
+        icon: 'person-outline',
+        label: t('schedule_service.summary_provider', { defaultValue: 'Prestador' }),
+        value: provider?.fullName || t('common.na', { defaultValue: 'N/A' }),
+        action: onEditProvider,
+      },
+      {
+        key: 'datetime',
+        icon: 'calendar-outline',
+        label: t('schedule_service.summary_date_time', { defaultValue: 'Data e Hora' }),
+        value: `${formattedDate}, ${t('common.at', { defaultValue: 'às' })} ${selectedTime}`,
+        action: onEditDateTime,
+      },
+      {
+        key: 'address',
+        icon: 'location-outline',
+        label: t('schedule_service.summary_address', { defaultValue: 'Endereço' }),
+        value: (
+          <View>
+            <Text style={styles.reviewValueLine}>{addressLine1 || t('common.na', { defaultValue: 'N/A' })}</Text>
+            <Text style={styles.reviewValueLine}>{addressLine2 || t('common.na', { defaultValue: 'N/A' })}</Text>
+          </View>
+        ),
+        action: onEditAddress,
+      },
+      {
+        key: 'details',
+        icon: 'timer-outline',
+        label: t('schedule_service.summary_service_details', { defaultValue: 'Detalhes do Serviço' }),
+        value: serviceDetailsText,
+        action: onEditService,
+      },
+      {
+        key: 'insurance',
+        icon: 'shield-checkmark',
+        label: t('schedule_service.summary_insurance_label', { defaultValue: 'Seguro/Proteção' }),
+        value: (
+          <View style={styles.reviewInsuranceValue}>
+            <Text style={styles.reviewRowValue}>{insuranceLabel}</Text>
+            <Text style={styles.reviewInsurancePrice}>
+              {insuranceFeeCents > 0
+                ? `+${formatBRL(insuranceFeeCents / 100)}`
+                : t('schedule_service.insurance_none_price', { defaultValue: 'Sem custo' })}
+            </Text>
+          </View>
+        ),
+        action: onEditInsurance,
+      },
+    ];
+  }, [
+    provider,
+    selectedProviderService,
+    formattedDate,
+    selectedTime,
+    addressLine1,
+    addressLine2,
+    serviceDetailsText,
+    insuranceLabel,
+    insuranceFeeCents,
+    onEditService,
+    onEditProvider,
+    onEditDateTime,
+    onEditAddress,
+    onEditInsurance,
+    selectedInsuranceId,
+    t,
+  ]);
 
   if (!hasSelection || !selectedProviderService || !selectedTime) {
     return null;
@@ -493,106 +584,73 @@ const BookingSummaryPreview = ({
       )}
 
       <Animated.View style={[styles.summarySection, summarySectionAnim]}>
-        <View style={styles.summaryItem}>
-          <Animated.View style={animatedIconStyle}>
-            <Ionicons name="briefcase-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
-          </Animated.View>
-          <Text style={styles.summaryText}>
-            <Text style={styles.summaryLabel}>{t('schedule_service.summary_service', { defaultValue: 'Serviço' })}</Text>{' '}
-            <Text>{selectedProviderService.service?.name || t('common.na', { defaultValue: 'N/A' })}</Text>
-          </Text>
-        </View>
-
-        <View style={styles.summaryItem}>
-          <Animated.View style={animatedIconStyle}>
-            <Ionicons name="person-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
-          </Animated.View>
-          <Text style={styles.summaryText}>
-            <Text style={styles.summaryLabel}>{t('schedule_service.summary_provider', { defaultValue: 'Prestador' })}</Text>{' '}
-            <Text>{provider?.fullName || t('common.na', { defaultValue: 'N/A' })}</Text>
-          </Text>
-        </View>
-
-        <View style={styles.summaryItem}>
-          <Animated.View style={animatedIconStyle}>
-            <Ionicons name="calendar-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
-          </Animated.View>
-          <Text style={styles.summaryText}>
-            <Text style={styles.summaryLabel}>{t('schedule_service.summary_date_time', { defaultValue: 'Data e Hora' })}</Text>{' '}
-            <Text>
-              {formattedDate}, {t('common.at', { defaultValue: 'às' })} {selectedTime || ''}
-            </Text>
-          </Text>
-        </View>
-
-        <View style={styles.summaryItem}>
-          <Animated.View style={animatedIconStyle}>
-            <Ionicons name="location-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
-          </Animated.View>
-          <Text style={styles.summaryText}>
-            <Text style={styles.summaryLabel}>{t('schedule_service.summary_address', { defaultValue: 'Endereço' })}</Text>{' '}
-            <Text>{formattedAddress || t('common.na', { defaultValue: 'N/A' })}</Text>
-          </Text>
-        </View>
-
-        {isHourlyService(selectedProviderService) && (
-          <View style={styles.summaryItem}>
+        {reviewRows.map((row) => (
+          <View key={row.key} style={styles.reviewRow}>
             <Animated.View style={animatedIconStyle}>
-              <Ionicons name="timer-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
+              <Ionicons name={row.icon as any} size={20} color={AppColors.primaryInteractive} style={styles.reviewRowIcon} />
             </Animated.View>
-            <Text style={styles.summaryText}>
-              <Text style={styles.summaryLabel}>
-                {t('schedule_service.summary_service_details', { defaultValue: 'Detalhes do Serviço' })}
-              </Text>{' '}
-              <Text>{serviceDetailsText}</Text>
-            </Text>
+            <View style={styles.reviewRowContent}>
+              <Text style={styles.reviewRowLabel}>{row.label}</Text>
+              {typeof row.value === 'string' ? (
+                <Text style={styles.reviewRowValue}>{row.value}</Text>
+              ) : (
+                row.value
+              )}
+            </View>
+            {row.action && (
+              <TouchableOpacity onPress={row.action} style={styles.reviewAction}>
+                <Text style={styles.reviewActionText}>{changeLabel}</Text>
+              </TouchableOpacity>
+            )}
           </View>
-        )}
+        ))}
 
-        <View style={styles.priceSummary}>
-          <Text style={styles.priceLabel}>{t('schedule_service.subtotal', { defaultValue: 'Subtotal' })}</Text>
-          <Text style={styles.priceValue}>{formatBRL(subtotal)}</Text>
+        <View style={styles.paymentBreakdown}>
+          <View style={styles.paymentLine}>
+            <Text style={styles.paymentLabel}>{t('schedule_service.subtotal', { defaultValue: 'Subtotal' })}</Text>
+            <Text style={styles.paymentValue}>{formatBRL(subtotal)}</Text>
+          </View>
+          {discountAmount > 0 && (
+            <View style={styles.paymentLine}>
+              <Text style={styles.paymentLabel}>{t('schedule_service.discount', { defaultValue: 'Desconto' })}</Text>
+              <Text style={[styles.paymentValue, styles.discountValue]}>- {formatBRL(discountAmount)}</Text>
+            </View>
+          )}
+          {insuranceFeeCents > 0 && (
+            <View style={styles.paymentLine}>
+              <Text style={styles.paymentLabel}>{t('schedule_service.insurance_fee', { defaultValue: 'Seguro' })}</Text>
+              <Text style={styles.paymentValue}>{formatBRL(insuranceFeeCents / 100)}</Text>
+            </View>
+          )}
+          <View style={styles.paymentDivider} />
+          <View style={styles.paymentLine}>
+            <Text style={styles.totalPriceLabel}>{t('schedule_service.total_to_pay', { defaultValue: 'Total a Pagar' })}</Text>
+            <Animated.Text
+              style={[
+                styles.totalPriceValue,
+                {
+                  transform: [
+                    {
+                      scale: finalPriceAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.95, 1],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              {formatBRL(finalPrice)}
+            </Animated.Text>
+          </View>
+          <Text style={styles.paymentMicrocopy}>
+            {t('schedule_service.payment_microcopy', { defaultValue: 'PIX • Confirmação em instantes' })}
+          </Text>
         </View>
 
-        {discountAmount > 0 && (
-          <View style={styles.priceSummary}>
-            <Text style={styles.priceLabel}>{t('schedule_service.discount', { defaultValue: 'Desconto' })}</Text>
-            <Text style={[styles.priceValue, styles.discountValue]}>- {formatBRL(discountAmount)}</Text>
-          </View>
-        )}
-
-        {insuranceFeeCents > 0 && (
-          <View style={styles.priceSummary}>
-            <Text style={styles.priceLabel}>
-              {t('schedule_service.insurance_fee', { defaultValue: 'Seguro' })}
-            </Text>
-            <Text style={styles.priceValue}>{formatBRL(insuranceFeeCents / 100)}</Text>
-          </View>
-        )}
-
-        <View style={styles.totalPriceSummary}>
-          <Text style={styles.totalPriceLabel}>{t('schedule_service.total_to_pay', { defaultValue: 'Total a Pagar' })}</Text>
-          <Animated.Text
-            style={[
-              styles.totalPriceValue,
-              {
-                transform: [
-                  {
-                    scale: finalPriceAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.95, 1],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            {formatBRL(finalPrice)}
-          </Animated.Text>
-        </View>
         {quoteStatus === 'refreshing' && (
           <Text style={styles.quoteStatusText}>
-            {t('schedule_service.quote_refreshing', { defaultValue: 'Atualizando cotação...' })}
+            {t('schedule_service.quote_refreshing', { defaultValue: 'Atualizando cotaA§ALo...' })}
           </Text>
         )}
         {quoteStatus === 'rateLimited' && quoteRateLimitRemainingSeconds > 0 && (
@@ -851,6 +909,17 @@ export default function ScheduleServiceScreen() {
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   const scrollViewRef = useRef<ScrollView>(null);
+  const handleReviewEditStep = useCallback(
+    (step: number) => {
+      setCurrentStep(step);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    },
+    [],
+  );
+  const handleReviewEditInsurance = useCallback(() => {
+    setCurrentStep(2);
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, []);
   const timeSlotsRef = useRef<View>(null);
 
   const isMounted = useRef(true);
@@ -983,6 +1052,11 @@ export default function ScheduleServiceScreen() {
   const displaySubtotal = quote?.subtotal ?? fallbackFinalPrice;
   const displayDiscount = quote?.discountAmount ?? 0;
   const insuranceFeeCents = quote?.insuranceFeeCents ?? 0;
+  const selectedInsurancePlan = (quote?.insuranceOptions ?? []).find((plan) => plan.id === insurancePlanId);
+  const insuranceLabel =
+    selectedInsurancePlan?.name ??
+    t('schedule_service.insurance_default_label', { defaultValue: 'Sem proteção' });
+  const selectedInsuranceId = insurancePlanId ?? 'NONE';
   const finalCalculatedPrice =
     quote?.totalCents != null
       ? quote.totalCents / 100
@@ -1738,7 +1812,6 @@ export default function ScheduleServiceScreen() {
     router,
     prefetchAvailability,
     initialCouponCodeString,
-    handleApplyCoupon,
     t,
     providerRateLimited,
     providerReloadTrigger,
@@ -2266,30 +2339,37 @@ export default function ScheduleServiceScreen() {
             selectedDate={selectedDate}
                 selectedTime={selectedTime}
                 address={address}
-                durationInMinutes={effectiveDurationInMinutes}
-                squareMeters={squareMeters}
-                subtotal={displaySubtotal}
-                discountAmount={displayDiscount}
-                insuranceFeeCents={insuranceFeeCents}
-                finalPrice={finalCalculatedPrice}
-                onShowCancellationPolicy={showCancellationPolicy}
-                t={t}
-                notes={notes}
-                setNotes={setNotes}
+              durationInMinutes={effectiveDurationInMinutes}
+              squareMeters={squareMeters}
+              subtotal={displaySubtotal}
+              discountAmount={displayDiscount}
+              insuranceFeeCents={insuranceFeeCents}
+              insuranceLabel={insuranceLabel}
+              selectedInsuranceId={selectedInsuranceId}
+              finalPrice={finalCalculatedPrice}
+              onShowCancellationPolicy={showCancellationPolicy}
+              t={t}
+              notes={notes}
+              setNotes={setNotes}
                 couponInputValue={couponInputValue}
                 setCouponInputValue={setCouponInputValue}
                 onApplyCoupon={handleApplyCoupon}
                 isApplyingCoupon={isApplyingCoupon}
                 couponInputAnim={couponInputAnim}
                 couponFeedbackAnim={couponFeedbackAnim}
-                couponFeedbackColor={couponFeedbackColor}
-                couponFeedbackIcon={couponFeedbackIcon}
-                quoteStatus={quoteStatus}
-                quoteRateLimitRemainingSeconds={rateLimitRemainingSeconds}
-                reviewEntranceAnim={reviewStepAnim}
-                reviewStaggerDelay={0}
-                notesAnim={notesAnim}
-                cupomAnim={cupomAnim}
+              couponFeedbackColor={couponFeedbackColor}
+              couponFeedbackIcon={couponFeedbackIcon}
+              quoteStatus={quoteStatus}
+              quoteRateLimitRemainingSeconds={rateLimitRemainingSeconds}
+              reviewEntranceAnim={reviewStepAnim}
+              reviewStaggerDelay={0}
+              notesAnim={notesAnim}
+              cupomAnim={cupomAnim}
+              onEditService={() => handleReviewEditStep(1)}
+              onEditProvider={() => handleReviewEditStep(1)}
+              onEditDateTime={() => handleReviewEditStep(1)}
+              onEditAddress={() => handleReviewEditStep(1)}
+              onEditInsurance={handleReviewEditInsurance}
             summaryAnim={summaryAnim}
           />
 
@@ -2694,10 +2774,90 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  reviewRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  reviewRowIcon: {
+    marginRight: 12,
+  },
+  reviewRowContent: {
+    flex: 1,
+  },
+  reviewRowLabel: {
+    fontSize: 12,
+    color: AppColors.textAuxiliary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  reviewRowValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textBody,
+    marginTop: 2,
+  },
+  reviewValueLine: {
+    fontSize: 14,
+    color: AppColors.textBody,
+  },
+  reviewAction: {
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  reviewActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: AppColors.primaryInteractive,
+  },
+  reviewInsuranceValue: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  reviewInsurancePrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: AppColors.primaryInteractive,
+    marginLeft: 8,
+  },
   priceSummary: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 4,
+  },
+  paymentBreakdown: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: AppColors.backgroundNeutral,
+  },
+  paymentLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  paymentLabel: {
+    fontSize: 14,
+    color: AppColors.textAuxiliary,
+  },
+  paymentValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textBody,
+  },
+  paymentDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.backgroundNeutral,
+    marginVertical: 8,
+  },
+  paymentMicrocopy: {
+    fontSize: 12,
+    color: AppColors.textAuxiliary,
+    textAlign: 'center',
+    marginTop: 6,
   },
   timeSlotsHelperContainer: {
     marginHorizontal: 40,
