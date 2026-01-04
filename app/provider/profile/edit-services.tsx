@@ -3,35 +3,35 @@ import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Easing,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    AccessibilityInfo,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Easing,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useAuth } from '../../../hooks/useAuth';
 import { showOverlay } from '../../../hooks/useOverlayMessage';
 
 // Types
+import { alertUserError } from '../../../_shared/errors/uiFeedback';
 import { getServiceCategories } from '../../../services/commonServiceCatalog';
 import {
-  addProviderServiceOffering,
-  deleteProviderServiceOffering,
-  getProviderServicesOffered,
-  updateProviderServiceOffering,
+    addProviderServiceOffering,
+    deleteProviderServiceOffering,
+    getProviderServicesOffered,
+    updateProviderServiceOffering,
 } from '../../../services/providerService';
 import { ProviderServiceOffering as ProviderServiceType } from '../../../types/backend/provider-service';
 import { CreateProviderServiceData, UpdateProviderServiceData } from '../../../types/backend/providers';
 import { Service } from '../../../types/backend/services';
-import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 // ===== CatÃ¡logo fallback (garante opções como Residencial/Comercial se backend ainda não responder) =====
 const FALLBACK_SERVICES: Service[] = [
