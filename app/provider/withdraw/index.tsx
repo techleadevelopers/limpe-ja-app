@@ -22,10 +22,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Para alin
 import { PixKeyType, RequestWithdrawalDto } from '../../../types/backend/payments';
 
 // 🔗 Importar serviços reais
+import { setSafeError, toastUserError } from '../../../_shared/errors/uiFeedback';
 import { api } from '../../../services/api';
 import NotificationUIService from '../../../services/notificationUIService'; // Para toasts premium
 import { requestWithdrawal } from '../../../services/paymentService';
-import { setSafeError, toastUserError } from '../../_shared/errors/uiFeedback';
 
 // ===== Design Tokens (Premium UI - Clean, iOS/Android consistente) =====
 const Colors = {
