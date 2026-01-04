@@ -18,7 +18,7 @@ import {
 import { useAuth } from '../../../contexts/AuthContext';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
 import { RegisterProviderDto } from '../../../types/backend/auth';
-import { AUTH_ROUTES } from '../../routes';
+import { AUTH_ROUTES } from '../../_shared/routes';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
