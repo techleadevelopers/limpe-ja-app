@@ -1,13 +1,7 @@
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
-import LogRocket from 'logrocket-react-native';
 
 let observabilityInitialized = false;
-
-const getLogRocketAppId = () =>
-  Constants.expoConfig?.extra?.logRocketAppId ??
-  process.env.EXPO_PUBLIC_LOGROCKET_APP_ID ??
-  process.env.LOGROCKET_APP_ID;
 
 export const initializeObservability = () => {
   if (observabilityInitialized) return;
@@ -28,16 +22,6 @@ export const initializeObservability = () => {
   });
   Sentry.setTag('environment', environment);
 
-  const logRocketAppId = getLogRocketAppId();
-  if (logRocketAppId) {
-    try {
-      LogRocket.init(logRocketAppId);
-    } catch (initializerError) {
-      if (__DEV__) {
-        console.warn('[Observability] LogRocket init falhou:', initializerError);
-      }
-    }
-  }
 };
 
 export const captureException = (
@@ -50,7 +34,4 @@ export const captureException = (
     tags: context?.tags,
     extra: context?.extra,
   });
-  if (LogRocket?.captureException) {
-    LogRocket.captureException(resolvedError);
-  }
 };
