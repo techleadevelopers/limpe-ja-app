@@ -17,12 +17,12 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { reportIncident } from '../../../services/safetyService';
+import { toastUserError } from '../../../_shared/errors/uiFeedback';
 import { getBookingDetails } from '../../../services/bookingService';
 import { submitIncidentClaim } from '../../../services/incidentService';
-import { IncidentReportDto, IncidentType } from '../../../types/backend/safety';
+import { reportIncident } from '../../../services/safetyService';
 import { BookingDetails } from '../../../types/backend/bookings';
-import { toastUserError } from '../../_shared/errors/uiFeedback';
+import { IncidentReportDto, IncidentType } from '../../../types/backend/safety';
 
 export default function IncidentReportScreen() {
   const [incidentType, setIncidentType] = useState<IncidentType>(IncidentType.OTHER);
