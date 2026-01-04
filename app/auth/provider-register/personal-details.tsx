@@ -15,7 +15,7 @@ import {
     View,
 } from 'react-native';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
-import { AUTH_ROUTES } from '../../routes';
+import { AUTH_ROUTES } from '../../_shared/routes';
 
 // Importando os novos componentes
 import { DatePickerInput } from '../../../components/auth/components/DatePickerInput';
