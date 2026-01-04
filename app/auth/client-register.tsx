@@ -26,7 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'; // Imported but n
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
 import { fetchApi } from '../../services/api';
 import { ensureLocationPermission } from '../../services/locationService';
-import { CLIENT_ROUTES } from '../routes';
+import { CLIENT_ROUTES } from '../_shared/routes';
 
 import AnimatedReanimated, {
     Easing,
