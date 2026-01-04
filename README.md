@@ -1018,6 +1018,25 @@ estabilidade para a prestadora,
 
 defensabilidade jurídica para a empresa.
 
+1. Blindagem contra Desintermediação (Fechamento por fora)
+O uso de Cashback e Cupons é a estratégia mais inteligente de retenção.
+
+Valor Percebido: Se o cliente fecha por fora, ele economiza a taxa do app, mas perde o benefício financeiro acumulado. No longo prazo, o serviço via app sai mais barato ou com valor agregado muito maior (Seguro).
+
+Risco Trabalhista (O "Pulo do Gato"): Ao educar o cliente sobre o risco de vínculo trabalhista ao contratar um prestador recorrente sem a intermediação da plataforma, você cria um "medo positivo". O app atua como o anteparo jurídico.
+
+2. A barreira do Chat "Sandboxed"
+A proibição de links, números e URLs no chat é uma medida de segurança técnica vital.
+
+Dica Técnica para o Silas: Além do bloqueio de texto, implemente um Scoring de Intenção. Se o sistema detectar que o usuário está tentando "burlar" o chat (ex: escrevendo o número por extenso "nove oito sete..."), o sistema gera um alerta silencioso no painel administrativo para monitoramento.
+
+3. Verificação Antecipada (KYC - Know Your Customer)
+A aprovação manual ou assistida por IA antes do prestador entrar na base garante a qualidade do ecossistema.
+
+Análise de Risco: Isso reduz drasticamente a entrada de "bad actors".
+
+Fluxo de Aprovação: O uso da Google Vision API (conforme a arquitetura do Paulo) automatiza o OCR dos documentos, permitindo que o administrador apenas dê o "OK" final, ganhando escala.
+
 </div>
 
 <div style="cor de fundo: #f8f9fa; preenchimento: 20px; raio da borda: 8px; sombra da caixa: 0 2px 8px rgba(0, 0, 0, 0,08); largura: 45%; largura mínima: 300px; margem: 10px;">
