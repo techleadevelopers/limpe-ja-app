@@ -38,6 +38,11 @@ import { GeocodingService } from '../common/services/geocoding.service';
 import { ConfigService } from '@nestjs/config';
 import { ReferralsService } from '../referrals/referrals.service'; // NOVO: Importar ReferralsService
 import { UserWithIncludes } from '../users/users.service';
+import { ComplianceService } from '../compliance/compliance.service';
+import {
+  ConsentDocumentType,
+  DEFAULT_CONSENT_VERSIONS,
+} from '../compliance/compliance.constants';
 
 // --- INÍCIO DAS CORREÇÕES DE TIPAGEM E ESTRUTURA ---
 const loginProviderInclude = {
@@ -119,6 +124,12 @@ type NewUserProviderPayload = Prisma.UserGetPayload<{
   };
 }>;
 
+interface RegisterOptions {
+  ip?: string;
+  userAgent?: string;
+  source?: string;
+}
+
 // --- FIM DAS CORREÇÕES DE TIPAGEM E ESTRUTURA ---
 
 @Injectable()
@@ -131,6 +142,7 @@ export class AuthService {
     private emailService: EmailService,
     private geocodingService: GeocodingService,
     private configService: ConfigService,
+    private complianceService: ComplianceService,
     @Inject(forwardRef(() => ReferralsService)) // NOVO: Injetar ReferralsService
     private referralsService: ReferralsService,
   ) {}
@@ -203,6 +215,7 @@ export class AuthService {
 
   async registerClient(
     registerClientDto: RegisterClientDto,
+    options?: RegisterOptions,
   ): Promise<AuthResponseDto> {
     const { email, password, fullName, phone, address, cpf, referralCode } =
       registerClientDto; // NOVO: referralCode
@@ -303,6 +316,8 @@ export class AuthService {
       }
       // --- Fim da Lógica de Indicação ---
 
+      await this.recordDefaultConsents(newUserClient.id, options);
+
       // Telemetria: client_registered
       this.logger.log(
         `[TELEMETRY] client_registered: { userId: ${newUserClient.id}, email: ${newUserClient.email} }`,
@@ -356,6 +371,7 @@ export class AuthService {
 
   async registerProvider(
     registerProviderDto: RegisterProviderDto,
+    options?: RegisterOptions,
   ): Promise<AuthResponseDto> {
     this.logger.log('[AuthService] registerProvider VERSION=v5-minimal');
     const {
@@ -506,6 +522,8 @@ export class AuthService {
         await this.handleReferralCode(referralCode, createdUser.id);
       }
 
+      await this.recordDefaultConsents(createdUser.id, options);
+
       // Telemetria: provider_registered
       this.logger.log(
         `[TELEMETRY] provider_registered: { userId: ${createdUser.id}, email: ${createdUser.email} }`,
@@ -649,6 +667,27 @@ export class AuthService {
         `[TELEMETRY] forgot_password_email_failed: { email: ${email}, error: ${emailError.message} }`,
       );
     }
+  }
+
+  private async recordDefaultConsents(
+    userId: string,
+    options?: RegisterOptions,
+  ): Promise<void> {
+    const entries = Object.entries(DEFAULT_CONSENT_VERSIONS) as [
+      ConsentDocumentType,
+      string,
+    ][];
+    const source = options?.source ?? 'signup';
+
+    await Promise.all(
+      entries.map(([documentType, version]) =>
+        this.complianceService.recordConsent(userId, documentType, version, {
+          source,
+          ip: options?.ip,
+          userAgent: options?.userAgent,
+        }),
+      ),
+    );
   }
 
   async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
