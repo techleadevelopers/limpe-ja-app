@@ -1,23 +1,23 @@
-Ôªø# FRONT_STATE_PROJECT
+# FRONT_STATE_PROJECT
 
-## 1. Vis√É¬£o geral do front + √É¬°rvore de m√É¬≥dulos
+## 1. Vis√£o geral do front + √°rvore de m√≥dulos
 - O ponto de entrada `app/_layout.tsx` inicializa Sentry/SplashScreen/fonts, dispara `useNotificationsSocket`/`NotificationUIService`, envolve `AuthProvider`, `ProviderRegistrationProvider`, `AppQueryClientProvider` e `AppProvider`, monta o canal de overlays e exibe o `PaymentConfirmedOverlay` + a `FloatingActiveServicePill` para prestadores ativos.
-- A √É¬°rvore do `app/` √É¬© dividida em grupos l√É¬≥gicos: `(auth)` cont√É¬©m fluxo de login/cadastro, `client` entrega toda a UX de agendamento/mensagens/finan√É¬ßas, `provider` controla dashboard/agendamentos/empresa, `common` agrega feedback/safety/support/loyalty e `_shared` re√É¬∫ne helpers reutilizados.
-- Fora de `app/`, `components/` √É¬© organizado por dom√É¬≠nio (auth, client, provider, UI, navigation e gesto), `services/` centraliza as chamadas HTTP, `types/backend/` espelha contratos do backend, e `hooks/`, `utils/`, `contexts/` e `config/` sustentam estados, formata√É¬ß√É¬£o e vari√É¬°veis de ambiente.
-- Documentos auxiliares (`app/dev-panel.tsx`, `app/doc.md`, `app/frontend_routes.json/md`, `app/components.md`) e assets (`components/images`, `assets/`) ficam fora do roteamento principal mas est√É¬£o inclu√É¬≠dos no invent√É¬°rio abaixo para garantir 100% de cobertura.
+- A √°rvore do `app/` √© dividida em grupos l√≥gicos: `(auth)` cont√©m fluxo de login/cadastro, `client` entrega toda a UX de agendamento/mensagens/finan√ßas, `provider` controla dashboard/agendamentos/empresa, `common` agrega feedback/safety/support/loyalty e `_shared` re√∫ne helpers reutilizados.
+- Fora de `app/`, `components/` √© organizado por dom√≠nio (auth, client, provider, UI, navigation e gesto), `services/` centraliza as chamadas HTTP, `types/backend/` espelha contratos do backend, e `hooks/`, `utils/`, `contexts/` e `config/` sustentam estados, formata√ß√£o e vari√°veis de ambiente.
+- Documentos auxiliares (`app/dev-panel.tsx`, `app/doc.md`, `app/frontend_routes.json/md`, `app/components.md`) e assets (`components/images`, `assets/`) ficam fora do roteamento principal mas est√£o inclu√≠dos no invent√°rio abaixo para garantir 100% de cobertura.
 
 ## 1.1. Melhorias recentes de estabilidade
-- Implementamos cache com TTL de 60‚ÄØs + dedupe + limite de concorr√™ncia (2) e cooldown de 20‚ÄØs ap√≥s 429 para `/providers/:id/metrics`, garantindo que scrolls/filtragens n√£o disparem rajadas de chamadas nem travem o Explore.
-- O fluxo de quote foi barrado at√© o payload completo (debounce por pacote) e agora mostra indicadores de rate limit; o schedule-service bloqueia confirma√ß√µes enquanto dados cr√≠ticos e rate-limit hints n√£o chegam, mantendo a r√©stia de `BookingSummaryPreview` respondendo a `bookingBlockingError?.blockAction`.
-- Layout do `PrestadorCard` agora anima s√≥ opacidade e todos os `router.push`/`replace` usam `pathname` literal sem repetir `[providerId]`, apagando warnings do Expo Router, e o `normalizeApiError` centralizado em `app/utils/errors.ts` j√° √© usado em reservas e chats (cliente + provedor) para mostrar texto humano e impedir novas requisi√ß√µes ap√≥s 401/429/PIX.
+- Implementamos cache com TTL de 60?s + dedupe + limite de concorrÍncia (2) e cooldown de 20?s apÛs 429 para `/providers/:id/metrics`, garantindo que scrolls/filtragens n„o disparem rajadas de chamadas nem travem o Explore.
+- O fluxo de quote foi barrado atÈ o payload completo (debounce por pacote) e agora mostra indicadores de rate limit; o schedule-service bloqueia confirmaÁıes enquanto dados crÌticos e rate-limit hints n„o chegam, mantendo a rÈstia de `BookingSummaryPreview` respondendo a `bookingBlockingError?.blockAction`.
+- Layout do `PrestadorCard` agora anima sÛ opacidade e todos os `router.push`/`replace` usam `pathname` literal sem repetir `[providerId]`, apagando warnings do Expo Router, e o `normalizeApiError` centralizado em `app/_shared/utils/errors.ts` j· È usado em reservas e chats (cliente + provedor) para mostrar texto humano e impedir novas requisiÁıes apÛs 401/429/PIX.
 
 ## 2. Mapa real de rotas (Expo Router)
-- `RootLayout` usa `useAuth`, `segments` e `verify` para redirecionar guests para `/auth/register-options`, garantir que apenas clientes alcancem `/client/*` e que prestadores verificados permane√É¬ßam em `/provider/*` (mesmo bloqueando `client` quando o `UserRole` √É¬© `PROVIDER`). Rota QA (`/dev-panel`) s√É¬≥ abre com `process.env.EXPO_PUBLIC_ENABLE_QA_PANEL` ou no modo `__DEV__`.
-- A tabela abaixo cruza os caminhos do filesystem (`find app -type f`/`frontend_routes.json`) com as guardas aplicadas e os principais servi√É¬ßos/hooks envolvidos; `constants/routes.ts`/`app/routes.ts` abastecem redire√É¬ß√É¬µes e deep links usados em `welcome.tsx`, `_layout.tsx` e telas de cadastro.
+- `RootLayout` usa `useAuth`, `segments` e `verify` para redirecionar guests para `/auth/register-options`, garantir que apenas clientes alcancem `/client/*` e que prestadores verificados permane√ßam em `/provider/*` (mesmo bloqueando `client` quando o `UserRole` √© `PROVIDER`). Rota QA (`/dev-panel`) s√≥ abre com `process.env.EXPO_PUBLIC_ENABLE_QA_PANEL` ou no modo `__DEV__`.
+- A tabela abaixo cruza os caminhos do filesystem (`find app -type f`/`frontend_routes.json`) com as guardas aplicadas e os principais servi√ßos/hooks envolvidos; `constants/routes.ts`/`app/_shared/routes.ts` abastecem redire√ß√µes e deep links usados em `welcome.tsx`, `_layout.tsx` e telas de cadastro.
 
 | Route | File | Guard | Dependencies |
 | --- | --- | --- | --- |
-| `/` | `app/index.tsx` | Public spinner; `_layout` resolve expira√É¬ß√É¬£o/tokens antes de trocar para autentica√É¬ß√É¬£o. | `ActivityIndicator`, `Text`. |
+| `/` | `app/index.tsx` | Public spinner; `_layout` resolve expira√ß√£o/tokens antes de trocar para autentica√ß√£o. | `ActivityIndicator`, `Text`. |
 | `/welcome` | `app/welcome.tsx` | Public landing que sempre encaminha para `/auth/register-options`. | `react-native-reanimated`, `LinearGradient`, `expo-router`. |
 | `/auth/login` | `app/auth/login.tsx` | Public (guest only). | `useAuth` (`AuthContext`/`authService`), `CLIENT_ROUTES`, `PROVIDER_ROUTES`, `Toast` para erros. |
 | `/auth/register-options` | `app/auth/register-options.tsx` | Public guest funnel. | `router`, `AUTH_ROUTES`. |
@@ -101,36 +101,36 @@
 
 ## 3. Auditoria Client (app/client)
 
-### 3.1 Bookings & p√≥s-agendamento
+### 3.1 Bookings & pÛs-agendamento
 - pp/client/bookings/index.tsx agrupa todos os estados de agendamento (requests/upcoming/completed) com ookingService.getBookingsForUser, providerService.getProviderAvatar e 
-otificationService.getMyNotifications. Loading e pull-to-refresh est√£o alinhados com useDevice/Animated e protegem guests via _layout.
-- schedule-service.tsx orquestra disponibilidade (providerService.getProviderAvailability), precifica√ß√£o (o hook `useBookingQuote` chama `services/quoteService` e o endpoint `POST /bookings/quote` com debounce de 300ms para manter subtotal/total alinhados com o backend), cupons (useCouponValidation) e cria√ß√£o do agendamento (ookingService.createBooking). O fluxo posta Idempotency-Key e X-Client-Request-Id pelo interceptor global e trata 409 `PRICE_MISMATCH` reatravando o quote e exibindo um toast ‚ÄúPre√ßo atualizado‚Äù. A tela agora s√≥ habilita intera√ß√£o depois de carregar `configService` (sem fallback hardcoded para `minHourlyMinutes`), exibe loader/retry se o config falhar e mant√©m o bot√£o ‚ÄúConfirmar‚Äù bloqueado enquanto o backend sinaliza erros cr√≠ticos com mensagens normalizadas (PIX, 401, conflitos, aus√™ncia de prestadores). Todas as anima√ß√µes decorativas foram removidas para reduzir complexidade sem mudar o UX percebido.
-- P√≥s-booking (pp/client/bookings/success.tsx) reconcilia paymentService.fetchPaymentIntent/createPixCharge, ookingService, providerService, loyaltyService, clientService.getOffers e o overlay NotificationUIService. O componente vigia estados de polling e reage a PIX com PaymentIntentStatus.
-- Detalhes (pp/client/bookings/[bookingId].tsx) chamam ookingService.getBookingDetails/cancelBooking, providerService.getProviderDetails e useProviderServices, exibindo lembretes (TutorialOverlay) e valida√ß√µes de status para permitir cancelamentos/compartilhamentos.
+otificationService.getMyNotifications. Loading e pull-to-refresh est„o alinhados com useDevice/Animated e protegem guests via _layout.
+- schedule-service.tsx orquestra disponibilidade (providerService.getProviderAvailability), precificaÁ„o (o hook `useBookingQuote` chama `services/quoteService` e o endpoint `POST /bookings/quote` com debounce de 300ms para manter subtotal/total alinhados com o backend), cupons (useCouponValidation) e criaÁ„o do agendamento (ookingService.createBooking). O fluxo posta Idempotency-Key e X-Client-Request-Id pelo interceptor global e trata 409 `PRICE_MISMATCH` reatravando o quote e exibindo um toast ìPreÁo atualizadoî. A tela agora sÛ habilita interaÁ„o depois de carregar `configService` (sem fallback hardcoded para `minHourlyMinutes`), exibe loader/retry se o config falhar e mantÈm o bot„o ìConfirmarî bloqueado enquanto o backend sinaliza erros crÌticos com mensagens normalizadas (PIX, 401, conflitos, ausÍncia de prestadores). Todas as animaÁıes decorativas foram removidas para reduzir complexidade sem mudar o UX percebido.
+- PÛs-booking (pp/client/bookings/success.tsx) reconcilia paymentService.fetchPaymentIntent/createPixCharge, ookingService, providerService, loyaltyService, clientService.getOffers e o overlay NotificationUIService. O componente vigia estados de polling e reage a PIX com PaymentIntentStatus.
+- Detalhes (pp/client/bookings/[bookingId].tsx) chamam ookingService.getBookingDetails/cancelBooking, providerService.getProviderDetails e useProviderServices, exibindo lembretes (TutorialOverlay) e validaÁıes de status para permitir cancelamentos/compartilhamentos.
 
-### 3.2 Explora√ß√£o, descoberta e ofertas
+### 3.2 ExploraÁ„o, descoberta e ofertas
 - client/explore/* (index, [providerId], menu, 
-anking, security, servicos-por-categoria, 	odas-categorias, 	odos-prestadores-proximos, search-results) mistura clientService, searchService, providerService, locationService e ookingService. O useOverlayMessage al√©m de useTutorial entrega respostas contextualizadas e mapas de pr√≥ximos prestadores com CTA de seguran√ßa via common/safety.
-- A tela de prestador detalha ookingService.checkActiveChatBooking, chatService e useProviderServices para listar servi√ßos e reviews; CLIENT_ROUTES/PROVIDER_ROUTES guiam os deep links para chat, bookings e perfil.
+anking, security, servicos-por-categoria, 	odas-categorias, 	odos-prestadores-proximos, search-results) mistura clientService, searchService, providerService, locationService e ookingService. O useOverlayMessage alÈm de useTutorial entrega respostas contextualizadas e mapas de prÛximos prestadores com CTA de seguranÁa via common/safety.
+- A tela de prestador detalha ookingService.checkActiveChatBooking, chatService e useProviderServices para listar serviÁos e reviews; CLIENT_ROUTES/PROVIDER_ROUTES guiam os deep links para chat, bookings e perfil.
 - `components/client/explore/provider/BookServiceButton.tsx` now receives `verificationStatus`, disables the CTA when the provider is not `APPROVED`, and surfaces the verification notice with ?Em verifica??o/Aguardando aprova??o? plus the ?Entenda a verifica??o? link to `/client/explore/security`; `app/client/bookings/schedule-service.tsx` reuses the same notice, keeps the confirm button locked, and handles `provider-not-approved` errors with a localized message before returning to the booking flow.
-- client/ofertas/[ofertaId].tsx busca offerService.getOfferDetails, valida a exist√™ncia do cupom e conduz para schedule-service com setSafeError como fallback silencioso.
+- client/ofertas/[ofertaId].tsx busca offerService.getOfferDetails, valida a existÍncia do cupom e conduz para schedule-service com setSafeError como fallback silencioso.
 
-### 3.3 Mensagens, suporte e seguran√ßa
-- client/messages/[chatId] dependem do chatService (/chat/me/conversations, /chat/:chatId/messages) e exibem ConversationItems animados; a rota exige autentica√ß√£o e NotificationUIService lida com erros silenciosos.
+### 3.3 Mensagens, suporte e seguranÁa
+- client/messages/[chatId] dependem do chatService (/chat/me/conversations, /chat/:chatId/messages) e exibem ConversationItems animados; a rota exige autenticaÁ„o e NotificationUIService lida com erros silenciosos.
 - common/support (index, create-ticket, [ticketId]) consome supportService (/v1/support/tickets, /v1/support/tickets/:id/messages), com cards coloridos e retry logic (mensagens de erro reutilizam setSafeError).
-- common/safety/* (defense, incident-report, panic) s√£o canais est√°ticos que referenciam safetyService e fornecem links para common/support e outros recursos.
+- common/safety/* (defense, incident-report, panic) s„o canais est·ticos que referenciam safetyService e fornecem links para common/support e outros recursos.
 
-### 3.4 Wallet, loyalty, miss√µes, m√©tricas e programas
-- client/wallet, client/missions, client/metrics e common/loyalty consomem loyaltyService, missionService, metricsService e clientService.getClientMissions. Todos mant√™m estados isLoading/error/
-efresh, respeitando useAuth antes de mostrar gr√°ficos e badges (components/common/loyalty).
+### 3.4 Wallet, loyalty, missıes, mÈtricas e programas
+- client/wallet, client/missions, client/metrics e common/loyalty consomem loyaltyService, missionService, metricsService e clientService.getClientMissions. Todos mantÍm estados isLoading/error/
+efresh, respeitando useAuth antes de mostrar gr·ficos e badges (components/common/loyalty).
 - client/subscriptions junta subscriptionService e ookingService para mostrar planos, e client/referrals usa 
-eferralService + ppConfig.referrals para divulgar benef√≠cios.
+eferralService + ppConfig.referrals para divulgar benefÌcios.
 - client/profile e profile/edit sincronizam dados com clientService.getUserProfile/updateClientProfile e acionam AuthContext.updateUser para manter cache local e token.
 
 ### 3.5 Cupons, feedback e tutoriais
-- client/coupons combina clientService.getOffers e couponService com componentes como CouponPill e CouponNudge, validando c√≥digos em tela com NotificationUIService.
-- common/feedback, common/feedback/[targetId] e common/feedback/dispute/* fazem uso de disputeService e ookingService para registrar reclama√ß√µes, anexar provas e seguir o fluxo oficial de disputas.
-- Tutoriais (por exemplo useTutorial em ookings/[bookingId]) e content locks reaproveitam NotificationUIService para evitar toasts duplicados (o hook deduplica por t√≠tulo em 3s via useOverlayMessage).
+- client/coupons combina clientService.getOffers e couponService com componentes como CouponPill e CouponNudge, validando cÛdigos em tela com NotificationUIService.
+- common/feedback, common/feedback/[targetId] e common/feedback/dispute/* fazem uso de disputeService e ookingService para registrar reclamaÁıes, anexar provas e seguir o fluxo oficial de disputas.
+- Tutoriais (por exemplo useTutorial em ookings/[bookingId]) e content locks reaproveitam NotificationUIService para evitar toasts duplicados (o hook deduplica por tÌtulo em 3s via useOverlayMessage).
 
 ## 4. Auditoria Provider (app/provider)
 
@@ -142,32 +142,32 @@ otificationUIService, exibindo ProviderNavBar, ProviderNudgeContainer e quick ac
 
 ### 4.2 Agenda & disponibilidade
 - provider/schedule/index.tsx e manage-availability.tsx chamam providerService.getMyProviderAvailability e updateMyProviderAvailability e delegam a complexidade para useProviderAvailability, que aplica presets, bloqueia slots antigos e transforma selectedSlots em blocos usando convertSlotsToBlocks.
-- useProviderAvailability tamb√©m garante 	ermsAcceptedAt e filtra isPastSlot antes de chamar o service, o que refor√ßa o fluxo de aceita√ß√£o dos termos para mudan√ßas de agenda.
+- useProviderAvailability tambÈm garante 	ermsAcceptedAt e filtra isPastSlot antes de chamar o service, o que reforÁa o fluxo de aceitaÁ„o dos termos para mudanÁas de agenda.
 
-### 4.3 Servi√ßos, perfil e promo√ß√µes
-- provider/services/[serviceId] listam providerService.getProviderServicesOffered, listAllServices e permitem edi√ß√£o via providerService.updateProviderServiceOffering. profile/profile/edit-services chamam providerService.updateMyProviderProfile, uploadMyAvatar e cceptProviderTerms para manter ProviderDisplayInfo sincronizado.
+### 4.3 ServiÁos, perfil e promoÁıes
+- provider/services/[serviceId] listam providerService.getProviderServicesOffered, listAllServices e permitem ediÁ„o via providerService.updateProviderServiceOffering. profile/profile/edit-services chamam providerService.updateMyProviderProfile, uploadMyAvatar e cceptProviderTerms para manter ProviderDisplayInfo sincronizado.
 - provider/promotions usa providerPromotionsService e o Offer DTO; provider/reviews exibe 
 eviewService + ookingService para responder feedbacks.
 
-### 4.4 Miss√µes, notifica√ß√µes, mensagens e pagamentos
+### 4.4 Missıes, notificaÁıes, mensagens e pagamentos
 - provider/missions chama missionService e exibe progresso (via MissionProgressSnack), enquanto provider/notifications lista 
 otificationService com deep links.
-- provider/messages e [chatId] replicam o chatService do cliente; o componente MessagesOrchestrator √© respons√°vel por abrir chats internos.
-- provider/withdraw usa providerService.getMyProviderEarnings e paymentService.requestWithdrawal com idempotency-key; os erros s√£o notificados via NotificationUIService. provider/support conecta supportService para escalas.
+- provider/messages e [chatId] replicam o chatService do cliente; o componente MessagesOrchestrator È respons·vel por abrir chats internos.
+- provider/withdraw usa providerService.getMyProviderEarnings e paymentService.requestWithdrawal com idempotency-key; os erros s„o notificados via NotificationUIService. provider/support conecta supportService para escalas.
 
 ## 5. Components (components/)
 
-- **Dom√≠nio global:** components/common/*, components/ui/*, components/layout/* (ScreenContainer, CustomHeader, ToastProvider, OverlayMessage) fornecem √°tomos reutiliz√°veis com tokens (AppColors, AppShadows). PaymentConfirmedOverlay, OverlayPortal e Toast encapsulam o pipeline de notifica√ß√£o sem chamar services diretamente.
-- **Client:** components/client/booking/* cobre calend√°rio (ScheduleCalendar), hor√°rios, resumo, seguran√ßa (SecurityRef) e pagamento; o cluster components/client/explore/home monta cards e banners com PrestadorCard, CarouselBannerItem e NavBar. Componentes de cupons/referrals (CouponPill, ReferralSheet) injetam dados de clientService e 
+- **DomÌnio global:** components/common/*, components/ui/*, components/layout/* (ScreenContainer, CustomHeader, ToastProvider, OverlayMessage) fornecem ·tomos reutiliz·veis com tokens (AppColors, AppShadows). PaymentConfirmedOverlay, OverlayPortal e Toast encapsulam o pipeline de notificaÁ„o sem chamar services diretamente.
+- **Client:** components/client/booking/* cobre calend·rio (ScheduleCalendar), hor·rios, resumo, seguranÁa (SecurityRef) e pagamento; o cluster components/client/explore/home monta cards e banners com PrestadorCard, CarouselBannerItem e NavBar. Componentes de cupons/referrals (CouponPill, ReferralSheet) injetam dados de clientService e 
 eferralService via props.
-- **Provider:** components/provider/* inclui ProviderNudgeContainer, ProviderNavBar, GlassmorphicCard, EarningsSnapshotSection, UpcomingServicesSection e ProviderOverviewSection. ProviderServicesInline √© um dos poucos componentes que ainda exp√µe chamadas diretas a providerService e merece aten√ß√£o quando migrar para hooks.
-- **UI utilities & confian√ßa:** components/Skeleton, Toast, ErrorMessage, MissionReminderCard, BadgeMissionCard e ProviderBadge sustentam feedbacks cr√≠ticos, com props como ariant, status e onPrimaryAction. Componentes  trusted (ProviderBadge, PaymentConfirmedOverlay, SecurityInfoSection) refor√ßam o branding de seguran√ßa e pagamentos protegidos.
+- **Provider:** components/provider/* inclui ProviderNudgeContainer, ProviderNavBar, GlassmorphicCard, EarningsSnapshotSection, UpcomingServicesSection e ProviderOverviewSection. ProviderServicesInline È um dos poucos componentes que ainda expıe chamadas diretas a providerService e merece atenÁ„o quando migrar para hooks.
+- **UI utilities & confianÁa:** components/Skeleton, Toast, ErrorMessage, MissionReminderCard, BadgeMissionCard e ProviderBadge sustentam feedbacks crÌticos, com props como ariant, status e onPrimaryAction. Componentes  trusted (ProviderBadge, PaymentConfirmedOverlay, SecurityInfoSection) reforÁam o branding de seguranÁa e pagamentos protegidos.
 
 ## 6. Services/HTTP Client
 
-- services/api.ts cria a inst√¢ncia Axios com baseURL vindo de Constants.expoConfig.extra.backendApiUrl (queda para EXPO_PUBLIC_API_BASE_URL ou http://localhost:3000). Em produ√ß√£o √© verificado se ainda aponta para localhost. O interceptor de requisi√ß√£o adiciona Authorization, Idempotency-Key (paths listados: /bookings, /missions/track, /reviews, /payments/*, /providers/me/availability, /payouts/withdrawals), X-Client-Request-Id e mistura x-silent/config.meta.silent para toasts. O interceptor de resposta agora detecta o `code` retornado pelo backend: em `TOKEN_EXPIRED` dispara um refresh √∫nico via AuthService, emite `SESSION_REFRESHED` para que o AuthContext atualize token, reforce o push token e permita que o socket reconfigure o connection-id; em `TOKEN_REVOKED` limpa AsyncStorage, QueryClient e header Authorization, aciona a mesma mensagem `common.session_revoked` e emite `SESSION_REVOKED` para descadastrar push/socket antes de callar setUnauthorizedCallback. O fallback continua com retries exponenciais, dedupe de messageKey, NotificationUIService.showError (exceto x-silent), Sentry.captureException sem duplica√ß√£o e setUnauthorizedCallback para 401 gen√©ricos.
+- services/api.ts cria a inst‚ncia Axios com baseURL vindo de Constants.expoConfig.extra.backendApiUrl (queda para EXPO_PUBLIC_API_BASE_URL ou http://localhost:3000). Em produÁ„o È verificado se ainda aponta para localhost. O interceptor de requisiÁ„o adiciona Authorization, Idempotency-Key (paths listados: /bookings, /missions/track, /reviews, /payments/*, /providers/me/availability, /payouts/withdrawals), X-Client-Request-Id e mistura x-silent/config.meta.silent para toasts. O interceptor de resposta agora detecta o `code` retornado pelo backend: em `TOKEN_EXPIRED` dispara um refresh ˙nico via AuthService, emite `SESSION_REFRESHED` para que o AuthContext atualize token, reforce o push token e permita que o socket reconfigure o connection-id; em `TOKEN_REVOKED` limpa AsyncStorage, QueryClient e header Authorization, aciona a mesma mensagem `common.session_revoked` e emite `SESSION_REVOKED` para descadastrar push/socket antes de callar setUnauthorizedCallback. O fallback continua com retries exponenciais, dedupe de messageKey, NotificationUIService.showError (exceto x-silent), Sentry.captureException sem duplicaÁ„o e setUnauthorizedCallback para 401 genÈricos.
 
-| Service | M√©todos-chave | Endpoints principais | Cabe√ßalhos/resili√™ncia | Riscos e notas |
+| Service | MÈtodos-chave | Endpoints principais | CabeÁalhos/resiliÍncia | Riscos e notas |
 | --- | --- | --- | --- | --- |
 | uthService | login, 
 egisterClient, 
@@ -179,43 +179,43 @@ efreshPromise compartilha estado; 401 desencadeia logout e router replace. |
 | providerService | getProviderDetails, getMyProviderAvailability, updateMyProviderAvailability, getProviderServicesOffered, updateProviderServiceOffering, getMyProviderDashboard, getMyProviderEarnings, getProviderOffers, uploadMyAvatar, cceptProviderTerms | /providers/:id, /providers/me, /providers/me/dashboard, /providers/me/earnings, /providers/me/availability, /providers/:id/services | Normaliza uploads via multipart/form-data, usa VerificationStatus na UI | Endpoints como getServicesByCategoryId assumem /services?categoryId; cuide ao alinhar backend. |
 | paymentService | createPixCharge, 
 equestWithdrawal, etchPaymentIntent | POST /payments/pix-charge, POST /payouts/withdrawals, GET /payments/intent/:bookingId | Idempotency customizada e x-silent em etchPaymentIntent | Converte CANCELLED/CANCELED para EXPIRED; 401 salta para logout via AuthContext. |
-| chatService | indOrCreateChat, getChatMessages, sendMessage, getChatListForUser | GET /chat/find-or-create/provider/:providerId/client/:clientId, GET /chat/:chatId/messages, POST /chat/:chatId/messages, GET /chat/me/conversations | Sem cabe√ßalhos extras, centraliza ConversationItem | Nenhum fallback autom√°tico de pagina√ß√£o, erros lan√ßam Error simples. |
-| supportService | createTicket, getMeta, getTickets, getTicketDetails, ddMessageToTicket, updateTicketStatus | /v1/support/tickets, /v1/support/tickets/:id/messages, /v1/support/meta | Usa pi para todos os requests | Erros logados com console.error e relan√ßados, sem retries autom√°ticos. |
-| offerService | getOffers, getOfferDetails | GET /offers, GET /offers/:id | Normaliza OfferTarget e status | Converte status inesperados e sup√µe couponCode presente. |
-| notificationService | getMyNotifications, getNotificationStream, markAllNotificationsAsRead, markNotificationAsRead, ackNotification | /notifications/me, /notifications/stream, /notifications/me/mark-as-read, /notifications/:id/mark-as-read, /notifications/:id/ack | Normaliza AppEvent+Notification, apoia stream/ack/re-quote, exp√µe dedupeKey/ttl para a UI | useNotificationsSocket escuta AppEvents, envia ack silencioso e recarrega stream ao reconectar. |
+| chatService | indOrCreateChat, getChatMessages, sendMessage, getChatListForUser | GET /chat/find-or-create/provider/:providerId/client/:clientId, GET /chat/:chatId/messages, POST /chat/:chatId/messages, GET /chat/me/conversations | Sem cabeÁalhos extras, centraliza ConversationItem | Nenhum fallback autom·tico de paginaÁ„o, erros lanÁam Error simples. |
+| supportService | createTicket, getMeta, getTickets, getTicketDetails, ddMessageToTicket, updateTicketStatus | /v1/support/tickets, /v1/support/tickets/:id/messages, /v1/support/meta | Usa pi para todos os requests | Erros logados com console.error e relanÁados, sem retries autom·ticos. |
+| offerService | getOffers, getOfferDetails | GET /offers, GET /offers/:id | Normaliza OfferTarget e status | Converte status inesperados e supıe couponCode presente. |
+| notificationService | getMyNotifications, getNotificationStream, markAllNotificationsAsRead, markNotificationAsRead, ackNotification | /notifications/me, /notifications/stream, /notifications/me/mark-as-read, /notifications/:id/mark-as-read, /notifications/:id/ack | Normaliza AppEvent+Notification, apoia stream/ack/re-quote, expıe dedupeKey/ttl para a UI | useNotificationsSocket escuta AppEvents, envia ack silencioso e recarrega stream ao reconectar. |
 
 ## 7. Types/Contracts (types/backend)
 - 	ypes/backend/bookings.ts define BookingStatus (incluindo PENDING_PROVIDER_CONFIRMATION, RESCHEDULED, NO_SHOW) e BookingDetails (com couponId, discountAmount, subscriptionId, incidents). O frontend normaliza via 
-ormalizeBooking e mapBookingStatus para manter consist√™ncia com o Prisma.
-- 	ypes/backend/auth.ts cobre RegisterClientDto, RegisterProviderDto, UpdateProviderProfileDto, UserRole e VerificationStatus. Esses contratos alimentam o AuthContext, ProviderRegistrationContext e as valida√ß√µes de rota em _layout.
+ormalizeBooking e mapBookingStatus para manter consistÍncia com o Prisma.
+- 	ypes/backend/auth.ts cobre RegisterClientDto, RegisterProviderDto, UpdateProviderProfileDto, UserRole e VerificationStatus. Esses contratos alimentam o AuthContext, ProviderRegistrationContext e as validaÁıes de rota em _layout.
 - Os arquivos 	ypes/backend/payments.ts, providers.ts, provider-service.ts, offers.ts, missions.ts, 
-otifications.ts, support.ts e chat.ts s√£o usados pelas services e components. Aten√ß√£o: alguns fluxos ainda usam strings literais (status de ticket/pagamento) em vez de enums fortemente tipados.
+otifications.ts, support.ts e chat.ts s„o usados pelas services e components. AtenÁ„o: alguns fluxos ainda usam strings literais (status de ticket/pagamento) em vez de enums fortemente tipados.
 - 	ypes/backend/search.ts, clients.ts, 
-eferrals.ts e metrics.ts sustentam os DTOs exibidos em cards; qualquer altera√ß√£o nos enums como OfferTarget ou PaymentIntentStatus exige revis√£o conjunta com o backend.
+eferrals.ts e metrics.ts sustentam os DTOs exibidos em cards; qualquer alteraÁ„o nos enums como OfferTarget ou PaymentIntentStatus exige revis„o conjunta com o backend.
 
 ## 8. Notifications (in-app + push + socket)
 - pp/_layout.tsx instancia useNotificationsSocket (socket.io usando 
 esolveSocketUrl a partir de EXPO_PUBLIC_WS_URL ou do ackendApiUrl) e escuta eventos 
-otification, mission-progress, disparando NotificationUIService.showInfo, um som MP3 (via expo-av) para prestadores em foreground e notifica√ß√µes locais (expo-notifications) para refor√ßar servi√ßos cr√≠ticos.
-- `useNotificationsSocket` agora interpreta o envelope AppEvent (type + dedupeKey + payload), dispara `NotificationUIService.showAppEvent`, envia ack silencioso via `/notifications/:id/ack` e, ao reconectar ou voltar ao foreground, chama `/notifications/stream?since=` para processar eventos faltantes sem duplica√ß√µes.
+otification, mission-progress, disparando NotificationUIService.showInfo, um som MP3 (via expo-av) para prestadores em foreground e notificaÁıes locais (expo-notifications) para reforÁar serviÁos crÌticos.
+- `useNotificationsSocket` agora interpreta o envelope AppEvent (type + dedupeKey + payload), dispara `NotificationUIService.showAppEvent`, envia ack silencioso via `/notifications/:id/ack` e, ao reconectar ou voltar ao foreground, chama `/notifications/stream?since=` para processar eventos faltantes sem duplicaÁıes.
 
 - NotificationUIService deduplica mensagens, supre green toasts de agendamentos/Pix, amplia o texto em erros 5xx e usa showOverlay (com useOverlayMessage) para renderizar o componente OverlayMessage global.
-- pushService registra tokens Expo/FCM/APNs, pedindo permiss√µes (
+- pushService registra tokens Expo/FCM/APNs, pedindo permissıes (
 equestNotificationPermissions) e postando /notifications/register-token. O AuthContext chama 
-egisterDevicePushToken ap√≥s login/refresh e limpa os tokens depois de logout.
-- AuthContext tamb√©m cria um socket de pagamento (via socket.io) que escuta pixPaymentConfirmed, exibe o PaymentConfirmedOverlay, e apaga a notifica√ß√£o em 3,5 s. 
-otificationBus oferece um pub/sub local para casos que n√£o precisam do socket direto.
+egisterDevicePushToken apÛs login/refresh e limpa os tokens depois de logout.
+- AuthContext tambÈm cria um socket de pagamento (via socket.io) que escuta pixPaymentConfirmed, exibe o PaymentConfirmedOverlay, e apaga a notificaÁ„o em 3,5 s. 
+otificationBus oferece um pub/sub local para casos que n„o precisam do socket direto.
 
 ## 9. Config/Build
-- pp.config.ts define nome (LimpeJ√°), slug, vers√£o (1.0.14), orienta√ß√£o, √≠cones e plugins (expo-router, expo-localization, expo-build-properties com useFrameworks: dynamic). extra.backendApiUrl vem de EXPO_PUBLIC_API_BASE_URL (fallback Railway) e extra.eas.projectId exp√µe o ID do projeto EAS.
+- pp.config.ts define nome (LimpeJ·), slug, vers„o (1.0.14), orientaÁ„o, Ìcones e plugins (expo-router, expo-localization, expo-build-properties com useFrameworks: dynamic). extra.backendApiUrl vem de EXPO_PUBLIC_API_BASE_URL (fallback Railway) e extra.eas.projectId expıe o ID do projeto EAS.
 - eas.json declara perfis development, preflight_ios, internal_ios, pk_direct_test e production, amarrando imagem base (latest), 
-ode 20.19.5 e distribution/uildType. O perfil pk_direct_test injeta todas as vari√°veis Firebase (EXPO_PUBLIC_FIREBASE_*).
-- config/appConfig.ts centraliza piUrl (mesmo EXPO_PUBLIC_API_BASE_URL) e textos de referral (benef√≠cios do promotor/refereado mais link de termos). O objeto ppConfig.referrals alimenta client/referrals e banners de indica√ß√£o.
-- config/firebaseClient.ts l√™ Constants.expoConfig.extra.firebaseApiKey etc. Se alguma credencial estiver vazia, o m√≥dulo loga erros detalhados e rejeita a inicializa√ß√£o, exigindo que builds gerenciados preencham extra.firebase* no pp.config.ts ou .env.
+ode 20.19.5 e distribution/uildType. O perfil pk_direct_test injeta todas as vari·veis Firebase (EXPO_PUBLIC_FIREBASE_*).
+- config/appConfig.ts centraliza piUrl (mesmo EXPO_PUBLIC_API_BASE_URL) e textos de referral (benefÌcios do promotor/refereado mais link de termos). O objeto ppConfig.referrals alimenta client/referrals e banners de indicaÁ„o.
+- config/firebaseClient.ts lÍ Constants.expoConfig.extra.firebaseApiKey etc. Se alguma credencial estiver vazia, o mÛdulo loga erros detalhados e rejeita a inicializaÁ„o, exigindo que builds gerenciados preencham extra.firebase* no pp.config.ts ou .env.
 
-## 10. Ap√™ndice
+## 10. ApÍndice
 
-### Contagem de arquivos por diret√≥rio
+### Contagem de arquivos por diretÛrio
 - app/ 127 arquivos
 - components/ 233 arquivos
 - services/ 48 arquivos
@@ -349,7 +349,7 @@ ode 20.19.5 e distribution/uildType. O perfil pk_direct_test injeta todas as v
   app/provider/withdraw/index.tsx
   app/provider/_layout.tsx
   app/README.md
-  app/routes.ts
+  app/_shared/routes.ts
   app/welcome.tsx
   app/_layout.tsx
   app/_shared/errors/uiFeedback.ts
@@ -748,9 +748,9 @@ ode 20.19.5 e distribution/uildType. O perfil pk_direct_test injeta todas as v
   ```
 
 ### Lista de arquivos ignorados e motivo
-- node_modules/, android/, ios/, .expo/, build/, dist/: depend√™ncias, bin√°rios e builds que n√£o entram na auditoria de l√≥gica do app.
-- assets/* (fonts, images, sounds, js, lottie): ativos bin√°rios usados pelos components mas sem l√≥gica TypeScript execut√°vel.
-- .git/, .vscode/, logs/: configura√ß√µes e hist√≥ricos mantidos intactos.
+- node_modules/, android/, ios/, .expo/, build/, dist/: dependÍncias, bin·rios e builds que n„o entram na auditoria de lÛgica do app.
+- assets/* (fonts, images, sounds, js, lottie): ativos bin·rios usados pelos components mas sem lÛgica TypeScript execut·vel.
+- .git/, .vscode/, logs/: configuraÁıes e histÛricos mantidos intactos.
 
 ### Comandos usados
 - Get-ChildItem app -Recurse -File | Measure-Object
