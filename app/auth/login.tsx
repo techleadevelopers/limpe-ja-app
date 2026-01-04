@@ -31,9 +31,9 @@ import AnimatedReanimated, {
 
 import Toast from 'react-native-toast-message';
 
+import { showUserError } from '../../_shared/errors/userError';
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
 import { InputWithIcon } from '../../components/auth/components/InputWithIcon';
-import { showUserError } from '../_shared/errors/userError';
 import { CLIENT_ROUTES, PROVIDER_ROUTES } from '../routes';
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
