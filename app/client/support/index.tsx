@@ -24,9 +24,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // =============================================================
 // API
 // =============================================================
+import { toastUserError } from '../../../_shared/errors/uiFeedback';
 import { api } from '../../../services/api';
 import NotificationUIService from '../../../services/notificationUIService';
-import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 // =============================================================
 // STYLES (Movido para o topo para resolver erros de referência 'styles' antes da definição)
