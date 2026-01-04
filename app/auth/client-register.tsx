@@ -37,7 +37,7 @@ import AnimatedReanimated, {
     withRepeat,
     withTiming,
 } from 'react-native-reanimated';
-import { FieldErrorMap, showUserError } from '../_shared/errors/userError';
+import { FieldErrorMap, showUserError } from '../../_shared/errors/userError';
 
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
