@@ -16,6 +16,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { alertUserError } from '../../../_shared/errors/uiFeedback';
 import {
     AppNotification,
     getMyNotifications,
@@ -23,7 +24,6 @@ import {
     markNotificationAsRead,
 } from '../../../services/notificationService';
 import { formatDateTime, formatPriceBRL } from '../../../utils/formatters';
-import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 const formatNotificationTimestamp = (isoTimestamp: string, t: any): string => {
   const now = new Date();
