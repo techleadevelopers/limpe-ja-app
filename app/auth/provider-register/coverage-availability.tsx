@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 
 import { AppColors } from '../../../constants/appStyles';
 import { saveProviderSettings, bulkSetAvailability, TimeRange } from '../../../services/providerSettingsService';
-import { AUTH_ROUTES } from '../../routes';
+import { AUTH_ROUTES } from '../../_shared/routes';
 
 const MIN_KM = 1;
 const MAX_KM = 60;
