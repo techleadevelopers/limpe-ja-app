@@ -45,6 +45,7 @@ export default function ClientTabLayout() {
       />
       <Tabs.Screen
         name="profile"
+        href="/client/profile"
         options={{
           title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
