@@ -46,7 +46,57 @@ describe('calculateServiceTotalPrice', () => {
         locale: 'pt-BR',
         translate: async () => 'error',
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      response: { code: 'hourly_price_missing' },
+    });
+  });
+
+  it('throws duration_required when no duration can be inferred', async () => {
+    const providerService = {
+      id: 'ps-duration',
+      providerId: 'provider-1',
+      serviceId: 'service-duration',
+      description: 'No duration service',
+      pricePerHour: new Prisma.Decimal(120),
+      durationMinutes: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as ProviderService;
+
+    await expect(
+      calculateServiceTotalPrice({
+        providerService,
+        createBookingDto: buildDto({ requestedDurationMinutes: undefined }),
+        locale: 'pt-BR',
+        translate: async () => 'duration error',
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'duration_required' },
+    });
+  });
+
+  it('throws negative_price when calculated total becomes negative', async () => {
+    const providerService = {
+      id: 'ps-neg',
+      providerId: 'provider-1',
+      serviceId: 'service-neg',
+      description: 'Negative price',
+      pricePerHour: new Prisma.Decimal(-50),
+      durationMinutes: 60,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as ProviderService;
+
+    await expect(
+      calculateServiceTotalPrice({
+        providerService,
+        createBookingDto: buildDto({ requestedDurationMinutes: 60 }),
+        locale: 'pt-BR',
+        translate: async () => 'negative',
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'negative_price' },
+    });
   });
 
   it('enforces minimum 4h even when requested duration is 1h', async () => {
