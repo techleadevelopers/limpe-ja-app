@@ -546,8 +546,17 @@ model Booking {
   // Timestamps de progresso (FLUXO COMPLETO)
   onTheWayAt       DateTime?        // Quando prestador ativou "a caminho"
   arrivedAt        DateTime?        // Quando prestador ativou "cheguei"
+  arrivedLat       Float?
+  arrivedLng       Float?
+  arrivedAccuracyM Float?
   startedAt        DateTime?        // Quando serviço foi iniciado
+  startedLat       Float?
+  startedLng       Float?
+  startedAccuracyM Float?
   completedAt      DateTime?        // Quando serviço foi finalizado
+  completedLat     Float?
+  completedLng     Float?
+  completedAccuracyM Float?
 
   // Auditoria (quem fez a ação)
   startedByUserId    String?
@@ -609,6 +618,10 @@ model BookingProof {
   booking    Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   userId     String
   type       BookingProofType
+  latitude   Float?
+  longitude  Float?
+  accuracyMeters Float?
+  capturedAt DateTime?
   photos     Json
   videoUrl   String?
   hashes     Json?
