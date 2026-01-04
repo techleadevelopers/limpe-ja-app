@@ -1037,6 +1037,142 @@ Análise de Risco: Isso reduz drasticamente a entrada de "bad actors".
 
 Fluxo de Aprovação: O uso da Google Vision API (conforme a arquitetura do Paulo) automatiza o OCR dos documentos, permitindo que o administrador apenas dê o "OK" final, ganhando escala.
 
+🌍 Por que o LimpeJá existe
+
+O mercado de serviços domésticos no Brasil é enorme — e ao mesmo tempo extremamente informal, inseguro e ineficiente.
+
+Milhões de pessoas contratam serviços de limpeza todos os meses sem:
+
+qualquer garantia,
+
+qualquer proteção legal,
+
+qualquer previsibilidade,
+
+e muitas vezes com medo.
+
+Do outro lado, milhões de profissionais trabalham sem:
+
+renda estável,
+
+pagamento garantido,
+
+proteção contra calotes,
+
+acesso a crédito, benefícios ou crescimento profissional.
+
+O LimpeJá existe para organizar esse mercado.
+
+Nossa missão é transformar um setor informal e inseguro em uma plataforma previsível, profissional, segura e justa — para quem contrata e para quem trabalha.
+
+Não estamos apenas criando um app.
+Estamos criando infraestrutura para que pessoas possam confiar, trabalhar e prosperar juntas.
+
+🔄 A transformação que o LimpeJá promove
+Antes (mercado informal)
+
+Contratação baseada em indicação ou sorte
+
+Risco de furto, dano ou conflito sem mediação
+
+Nenhuma proteção jurídica ou seguro
+
+Pagamentos inconsistentes e atrasados
+
+Profissionais invisíveis, sem reputação estruturada
+
+Clientes com medo e insegurança
+
+Depois (com o LimpeJá)
+
+Profissionais verificados com identidade e histórico
+
+Agendamento estruturado e rastreável
+
+Start/End do serviço com evidência
+
+Seguro contra danos e suporte em incidentes
+
+Pagamento garantido no dia para a profissional
+
+Reputação, métricas e crescimento profissional
+
+Confiança sistêmica no lugar de improviso
+
+O LimpeJá transforma relações frágeis em relações confiáveis.
+
+⭐ Por que o LimpeJá é diferente
+
+Existem outras plataformas de serviços.
+Mas o LimpeJá foi construído com princípios diferentes.
+
+1️⃣ Pagamento no dia (não no mês)
+
+A profissional não precisa esperar, cobrar ou implorar.
+Trabalhou, recebeu. Isso cria confiança, retenção e dignidade.
+
+2️⃣ Seguro e evidência fazem parte do fluxo, não são extras
+
+O serviço é protegido por padrão:
+
+evidência de execução,
+
+seguro contra danos,
+
+suporte em caso de incidentes.
+
+Isso reduz conflito, protege ambas as partes e torna o mercado saudável.
+
+3️⃣ Compliance trabalhista embutido no produto
+
+O LimpeJá evita a criação de vínculos trabalhistas acidentais através de:
+
+regras de recorrência,
+
+rotatividade saudável,
+
+intermediação clara de plataforma.
+
+Isso protege clientes, profissionais e a própria plataforma juridicamente.
+
+4️⃣ Foco em empoderamento feminino
+
+O LimpeJá é uma das primeiras plataformas no Brasil pensadas para:
+
+dar renda previsível a mulheres,
+
+profissionalizar um trabalho historicamente informal,
+
+oferecer crescimento, reconhecimento e estabilidade.
+
+Não é só tecnologia. É inclusão econômica real.
+
+5️⃣ UX premium para um mercado que nunca teve isso
+
+A maioria das pessoas associa serviços domésticos a algo improvisado, feio e mal resolvido.
+
+O LimpeJá traz:
+
+design limpo,
+
+experiência fluida,
+
+comunicação clara,
+
+e sensação de produto profissional.
+
+Isso muda a percepção do mercado — e eleva o valor do serviço.
+
+🧠 Em resumo
+
+O LimpeJá não é apenas um intermediador de faxina.
+Ele é uma camada de organização, confiança e profissionalização sobre um mercado gigantesco e historicamente caótico.
+
+É assim que mercados grandes são criados:
+não inventando necessidades, mas organizando dores que sempre existiram.
+
+E é isso que estamos fazendo.
+
 </div>
 
 <div style="cor de fundo: #f8f9fa; preenchimento: 20px; raio da borda: 8px; sombra da caixa: 0 2px 8px rgba(0, 0, 0, 0,08); largura: 45%; largura mínima: 300px; margem: 10px;">
