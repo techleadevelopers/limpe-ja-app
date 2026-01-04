@@ -207,9 +207,8 @@ export default function ProviderConversationsListScreen() {
 
   const handleConversationPress = (item: ConversationItem) => {
     router.push({
-      pathname: '/provider/messages/[chatId]', // Atualizado para a rota do provedor
+      pathname: `/provider/messages/${item.id}`,
       params: {
-        chatId: item.id,
         recipientName: item.otherUserName,
         recipientId: item.otherUserId,
         recipientAvatarUrl: item.otherUserAvatarUrl
