@@ -15,10 +15,10 @@ import {
 } from 'react-native';
 
 // <--- ADICIONADO: Importar o serviço de ofertas e sua tipagem
+import { setSafeError } from '../../../_shared/errors/uiFeedback';
 import { getOfferDetails } from '../../../services/offerService'; // Importa a função getOfferDetails
 import { Offer } from '../../../types/backend/offers'; // Importa a interface Offer
 import { formatDate } from '../../../utils/helpers'; // Para formatar datas
-import { setSafeError } from '../../_shared/errors/uiFeedback';
 
 // REMOVIDO: interface OfferDetails local
 // REMOVIDO: MOCK_OFFERS
