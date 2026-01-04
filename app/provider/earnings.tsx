@@ -14,7 +14,7 @@ import {
     View,
 } from 'react-native';
 
-import { toastUserError } from '../_shared/errors/uiFeedback';
+import { toastUserError } from '../../_shared/errors/uiFeedback';
 
 import { PROVIDER_ROUTES } from '../../constants/routes';
 import { getMyProviderEarnings } from '../../services/earningService';
