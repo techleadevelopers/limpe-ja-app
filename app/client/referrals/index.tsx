@@ -5,10 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Image, ImageSourcePropType, Platform, RefreshControl, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { alertUserError } from '../../../_shared/errors/uiFeedback';
 import Toast from '../../../components/Toast';
 import Colors from '../../../constants/Colors';
 import { getReferralInfo, type ReferralInfo } from '../../../services/referralService';
-import { alertUserError } from '../../_shared/errors/uiFeedback';
 
 // Assets (3D icons)
 const Icons3D = {
