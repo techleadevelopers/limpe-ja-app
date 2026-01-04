@@ -1,20 +1,20 @@
 // src/components/PrimaryButton.tsx
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef } from 'react';
 import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ViewStyle,
-  TouchableOpacityProps,
-  Animated,
-  NativeSyntheticEvent,
-  NativeTouchEvent,
+    ActivityIndicator,
+    Animated,
+    NativeSyntheticEvent,
+    NativeTouchEvent,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    TouchableOpacityProps,
+    ViewStyle,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { pressableBase, shadow, textBase } from '../../_shared/ui/parity';
 import { colors } from './theme/colors';
 import { typography } from './theme/typography';
-import { pressableBase, shadow, textBase } from '../../app/_shared/ui/parity';
 
 // Estenda TouchableOpacityProps para herdar todas as propriedades padrão
 interface PrimaryButtonProps extends TouchableOpacityProps {
