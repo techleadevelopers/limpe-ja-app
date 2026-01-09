@@ -97,7 +97,7 @@ const createServiceWithMocks = (options?: {
       scheduledEnd: new Date('2025-12-31T11:00:00Z'),
       durationMinutes: 60,
       totalPrice: new Prisma.Decimal(100),
-      status: BookingStatus.PENDING,
+      status: BookingStatus.PENDING_PAYMENT,
       notes: null,
       addressId: 'address-id',
       couponId: null,
@@ -105,6 +105,7 @@ const createServiceWithMocks = (options?: {
       couponUsage: null,
       client: { id: 'client-id', userId: 'client-user' },
       provider: { id: 'provider-id', userId: 'provider-user' },
+      expiresAt: new Date(Date.now() + 1000),
       providerService: { id: 'provider-service-id', service: { id: 'service' } },
       review: null,
       address: { id: 'address-id' },
@@ -112,6 +113,7 @@ const createServiceWithMocks = (options?: {
       incidents: [],
       guaranteeClaims: [],
       bookingProofs: [],
+      expiresAt: new Date('2025-12-31T10:20:00Z'),
       coupon: null,
       paymentIntent: null,
       bookingInsurance: null,
@@ -381,7 +383,7 @@ describe('BookingsService weekly frequency guard', () => {
       providerId: 'provider-id',
       scheduledDate: new Date('2025-08-03'),
       scheduledTime: '10:00',
-      status: BookingStatus.PENDING,
+      status: BookingStatus.PENDING_PAYMENT,
       client: { userId: 'client-user' },
       provider: { id: 'provider-id', userId: 'provider-user' },
     } as unknown as BookingWithDetailsRelations;
@@ -439,7 +441,7 @@ describe('BookingsService quote & mismatch detection', () => {
   it('throws PRICE_MISMATCH when the quote hash diverges', async () => {
     const { service } = createServiceWithMocks();
     const dto = buildCreateBookingDto();
-    dto.quoteHash = 'invalid-hash';
+    dto.quoteIdHash = 'invalid-hash';
 
     await expect(
       service.create('client-user', dto, createRequest()),
