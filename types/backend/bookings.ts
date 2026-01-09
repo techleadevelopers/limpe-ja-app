@@ -68,7 +68,7 @@ export interface CreateBookingDto {
   couponCode?: string; // NOVO: Adicionado para permitir o envio do cA3digo do cupom
   subscriptionId?: string;
   addons?: BookingAddon[];
-  insurancePlanId?: InsurancePlanId;
+  insurancePlanId: InsurancePlanId | null;
   quoteId?: string;
   quoteHash?: string;
   quoteExpiresAt?: string;
@@ -233,7 +233,7 @@ export interface BookingQuoteRequest {
   subscriptionId?: string;
   addons?: BookingAddon[];
   address: BookingAddress;
-  insurancePlanId?: InsurancePlanId;
+  insurancePlanId: InsurancePlanId | null;
 }
 
 export interface BookingQuoteBreakdownItem {
