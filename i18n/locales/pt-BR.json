@@ -233,11 +233,13 @@
       "no_slots": "Nenhum horário disponível para esta data.",
       "review_booking_button": "Revisar Agendamento",
       "step1_validation_error": "Por favor, selecione a data, o horário e preencha o endereço completo para continuar.",
+      "continue_to_review_button": "Continuar para revisão",
       "searching_next_available": "Procurando próximo dia disponível...",
       "no_slots_title": "Buscando Horários",
       "found_available_date": "Horários encontrados!",
       "error_fetching_slots_day": "Erro ao carregar horários para este dia. Tente novamente.",
       "no_available_nearby": "Nenhum horário nos próximos 7 dias. Selecione outra data no calendário.",
+      "insurance_loading": "Carregando planos de proteção...",
       "provider_pending_title": "Provedor em verificação",
       "provider_pending_message": "Este profissional ainda está em verificação. Aguarde aprovação para agendar."
     },
