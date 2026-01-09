@@ -52,6 +52,66 @@ const toNumberValue = (value?: Decimal | number | null): number | null => {
   return isDecimal(value) ? value.toNumber() : value;
 };
 
+const toIsoString = (value: Date | string): string =>
+  value instanceof Date ? value.toISOString() : value;
+
+const toOptionalIsoString = (value?: Date | string | null): string | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  return new Date(value as any).toISOString();
+};
+
+const toCalendarDate = (value: Date | string): string => {
+  const iso = value instanceof Date ? value.toISOString() : value;
+  return iso.split('T')[0];
+};
+
+// ATUALIZAÇÃO: Agora lida corretamente com Date vindo do banco
+const normalizeScheduledTime = (
+  scheduledDate: string,
+  value?: Date | string | null,
+): string => {
+  if (!value) {
+    return `${scheduledDate}T00:00:00Z`;
+  }
+  
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return `${scheduledDate}T00:00:00Z`;
+    }
+    if (trimmed.includes('T')) {
+      return trimmed;
+    }
+    const segments = trimmed.split(':');
+    const normalizedTime =
+      segments.length === 1
+        ? `${trimmed}:00:00`
+        : segments.length === 2
+          ? `${trimmed}:00`
+          : trimmed;
+    return `${scheduledDate}T${normalizedTime}Z`;
+  }
+  return `${scheduledDate}T00:00:00Z`;
+};
+
+const parseIsoTimestamp = (value?: string | null): Date | null => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) ? parsed : null;
+};
+
 class BookingInsuranceSnapshotDto {
   @ApiProperty({
     description: 'Identificador do plano de seguro contratado',
@@ -117,10 +177,7 @@ class BookingInsuranceSnapshotDto {
     this.deductibleCents = data.deductibleCents;
     this.riskMultiplierBps = data.riskMultiplierBps;
     this.proofRequired = data.proofRequired;
-    this.createdAt =
-      data.createdAt instanceof Date
-        ? data.createdAt.toISOString()
-        : data.createdAt;
+    this.createdAt = toIsoString(data.createdAt);
   }
 }
 
@@ -268,8 +325,11 @@ export class BookingDetailsDto {
   @IsString()
   scheduledDate: string;
 
-  @ApiProperty({ description: 'Hora agendada (HH:mm)', example: '09:00' })
-  @IsString()
+  @ApiProperty({
+    description: 'Timestamp ISO do início agendado (horário completo).',
+    example: '2025-07-01T09:00:00.000Z',
+  })
+  @IsISO8601()
   scheduledTime: string;
 
   @ApiProperty({
@@ -383,7 +443,6 @@ export class BookingDetailsDto {
   @Type(() => BookingProofSnapshotDto)
   proofs?: BookingProofSnapshotDto[];
 
-  // Campos achatados do cliente/provedor/serviço para facilitar o consumo no frontend
   @ApiPropertyOptional({
     description: 'Nome completo do cliente',
     example: 'Nome do Cliente',
@@ -461,7 +520,6 @@ export class BookingDetailsDto {
   @IsString()
   providerServiceDescription?: string | null;
 
-  // Avaliação (se já realizada)
   @ApiPropertyOptional({
     description: 'ID da avaliação do booking',
     example: 'uuid-da-review',
@@ -640,7 +698,8 @@ export class BookingDetailsDto {
     providerId: string;
     providerServiceId: string;
     scheduledDate: Date | string;
-    scheduledTime: string;
+    // CORREÇÃO: Aceitando Date ou String no construtor
+    scheduledTime: Date | string; 
     scheduledStart?: Date | string | null;
     durationMinutes?: number | null;
     arrivedAt?: Date | string | null;
@@ -743,42 +802,29 @@ export class BookingDetailsDto {
     this.clientId = data.clientId;
     this.providerId = data.providerId;
     this.providerServiceId = data.providerServiceId;
-    this.scheduledDate =
-      data.scheduledDate instanceof Date
-        ? data.scheduledDate.toISOString().split('T')[0]
-        : data.scheduledDate.split('T')[0];
-    this.scheduledTime = data.scheduledTime;
+    this.scheduledDate = toCalendarDate(data.scheduledDate);
+    
+    // CORREÇÃO: scheduledTime agora é normalizado com segurança
+    this.scheduledTime = normalizeScheduledTime(
+      this.scheduledDate,
+      data.scheduledTime,
+    );
+
     this.status = data.status;
     this.statusLabel = statusLabelMap[data.status] || data.status;
     this.allowedActions = data.allowedActions ?? [];
-    this.scheduledStart = data.scheduledStart
-      ? data.scheduledStart instanceof Date
-        ? data.scheduledStart.toISOString()
-        : data.scheduledStart
-      : null;
+    this.scheduledStart = toOptionalIsoString(data.scheduledStart);
     this.durationMinutes =
       data.durationMinutes !== undefined ? data.durationMinutes : null;
-    this.arrivedAt = data.arrivedAt
-      ? data.arrivedAt instanceof Date
-        ? data.arrivedAt.toISOString()
-        : data.arrivedAt
-      : null;
+    this.arrivedAt = toOptionalIsoString(data.arrivedAt);
     this.arrivedLat = toNumberValue(data.arrivedLat);
     this.arrivedLng = toNumberValue(data.arrivedLng);
     this.arrivedAccuracyM = toNumberValue(data.arrivedAccuracyM);
-    this.startedAt = data.startedAt
-      ? data.startedAt instanceof Date
-        ? data.startedAt.toISOString()
-        : data.startedAt
-      : null;
+    this.startedAt = toOptionalIsoString(data.startedAt);
     this.startedLat = toNumberValue(data.startedLat);
     this.startedLng = toNumberValue(data.startedLng);
     this.startedAccuracyM = toNumberValue(data.startedAccuracyM);
-    this.completedAt = data.completedAt
-      ? data.completedAt instanceof Date
-        ? data.completedAt.toISOString()
-        : data.completedAt
-      : null;
+    this.completedAt = toOptionalIsoString(data.completedAt);
     this.completedLat = toNumberValue(data.completedLat);
     this.completedLng = toNumberValue(data.completedLng);
     this.completedAccuracyM = toNumberValue(data.completedAccuracyM);
@@ -787,14 +833,8 @@ export class BookingDetailsDto {
       ? data.totalPrice.toNumber()
       : data.totalPrice;
     this.notes = data.notes === undefined ? null : data.notes;
-    this.createdAt =
-      data.createdAt instanceof Date
-        ? data.createdAt.toISOString()
-        : data.createdAt;
-    this.updatedAt =
-      data.updatedAt instanceof Date
-        ? data.updatedAt.toISOString()
-        : data.updatedAt;
+    this.createdAt = toIsoString(data.createdAt);
+    this.updatedAt = toIsoString(data.updatedAt);
 
     this.addressId = data.addressId === undefined ? null : data.addressId;
     this.address = data.address
@@ -847,14 +887,12 @@ export class BookingDetailsDto {
         data.providerService.description ?? null;
     }
 
-    // Payment labels (se paymentIntent vier no include)
     const payStatus = data.paymentIntent?.status;
     this.paymentStatus = payStatus ?? null;
     this.paymentStatusLabel = payStatus
       ? paymentLabelMap[payStatus] || payStatus
       : null;
 
-    // Review mapping
     if (data.review) {
       this.reviewId = data.review.id;
       const ratingVal = data.review.rating;
@@ -870,16 +908,16 @@ export class BookingDetailsDto {
       this.isReviewed = false;
     }
 
-    this.scheduledDateTime = `${this.scheduledDate}T${this.scheduledTime}:00Z`;
-    // Estimativa de término: usa startedAt se houver, senão scheduledStart/durationMinutes
-    const baseEnd = this.startedAt
-      ? new Date(this.startedAt)
-      : this.scheduledStart
-        ? new Date(this.scheduledStart)
-        : new Date(this.scheduledDateTime);
-    const dur = this.durationMinutes ?? this.serviceDurationMinutes ?? null;
-    if (baseEnd instanceof Date && !Number.isNaN(baseEnd.getTime()) && dur) {
-      const end = new Date(baseEnd.getTime() + dur * 60000);
+    this.scheduledDateTime = this.scheduledStart ?? this.scheduledTime;
+    
+    const baseEnd =
+      parseIsoTimestamp(this.startedAt) ??
+      parseIsoTimestamp(this.scheduledStart) ??
+      parseIsoTimestamp(this.scheduledDateTime);
+    const durationMinutesValue =
+      this.durationMinutes ?? this.serviceDurationMinutes ?? null;
+    if (baseEnd && durationMinutesValue !== null) {
+      const end = new Date(baseEnd.getTime() + durationMinutesValue * 60000);
       this.scheduledEndTime = end.toISOString();
     } else {
       this.scheduledEndTime = null;
