@@ -45,4 +45,5 @@ export interface CouponApplicationResult {
   newTotalPrice: number;
   message: string;
   coupon?: Coupon;
+  errorCode?: string;
 }
