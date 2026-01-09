@@ -389,6 +389,7 @@ export class SchedulerService implements OnModuleInit {
     input: ScheduleNotificationInput,
     fireImmediately = false,
   ) {
+    await this.ensureReady();
     const record = await this.prisma.notificationSchedule.create({
       data: {
         bookingId: input.bookingId,
