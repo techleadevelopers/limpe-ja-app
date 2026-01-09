@@ -6,6 +6,7 @@ import {
 import {
   calculateExpectedEnd,
   calculateScheduledAtInSaoPaulo,
+  formatScheduledTime,
 } from './booking-time.utils';
 
 export type BookingAction =
@@ -30,7 +31,7 @@ export const BOOKING_ACTIONS: BookingAction[] = [
 export interface BookingActionContext {
   status: BookingStatus;
   scheduledDate: Date | string;
-  scheduledTime?: string | null;
+  scheduledTime?: string | Date | null;
   scheduledStart?: Date | string | null;
   startedAt?: Date | string | null;
   durationMinutes?: number | null;
@@ -62,6 +63,7 @@ const PROVIDER_OPEN_DISPUTE_STATUSES = new Set<BookingStatus>([
 ]);
 
 function canStartService(ctx: BookingActionContext): boolean {
+  const scheduledTimeValue = formatScheduledTime(ctx.scheduledTime);
   if (ctx.status !== BookingStatus.ARRIVED) return false;
   if (ctx.paymentIntentStatus !== PaymentIntentStatus.PAID) return false;
   const scheduledStart =
@@ -69,7 +71,7 @@ function canStartService(ctx: BookingActionContext): boolean {
       ? ctx.scheduledStart
       : typeof ctx.scheduledStart === 'string'
         ? new Date(ctx.scheduledStart)
-        : calculateScheduledAtInSaoPaulo(ctx.scheduledDate, ctx.scheduledTime);
+        : calculateScheduledAtInSaoPaulo(ctx.scheduledDate, scheduledTimeValue);
 
   if (Number.isNaN(scheduledStart.getTime())) return false;
   const now = new Date();
@@ -80,11 +82,12 @@ function canStartService(ctx: BookingActionContext): boolean {
 }
 
 function canCompleteService(ctx: BookingActionContext): boolean {
+  const scheduledTimeValue = formatScheduledTime(ctx.scheduledTime);
   if (ctx.status !== BookingStatus.STARTED) return false;
   if (ctx.paymentIntentStatus !== PaymentIntentStatus.PAID) return false;
   const expectedEnd = calculateExpectedEnd({
     scheduledDate: ctx.scheduledDate,
-    scheduledTime: ctx.scheduledTime,
+    scheduledTime: scheduledTimeValue,
     scheduledStart: ctx.scheduledStart,
     startedAt: ctx.startedAt,
     durationMinutes: ctx.durationMinutes,
@@ -99,9 +102,9 @@ function canCompleteService(ctx: BookingActionContext): boolean {
         ? new Date(ctx.startedAt)
         : ctx.scheduledStart instanceof Date
           ? ctx.scheduledStart
-          : typeof ctx.scheduledStart === 'string'
-            ? new Date(ctx.scheduledStart)
-            : calculateScheduledAtInSaoPaulo(ctx.scheduledDate, ctx.scheduledTime);
+            : typeof ctx.scheduledStart === 'string'
+              ? new Date(ctx.scheduledStart)
+              : calculateScheduledAtInSaoPaulo(ctx.scheduledDate, scheduledTimeValue);
   if (Number.isNaN(runReference.getTime())) return false;
   const runMinutes = Math.round(
     (now.getTime() - runReference.getTime()) / 60000,
