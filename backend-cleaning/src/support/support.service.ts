@@ -4,6 +4,9 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  HttpException,
+  HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
@@ -21,6 +24,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 
 @Injectable()
 export class SupportService {
+  private readonly logger = new Logger(SupportService.name);
   // Em um ambiente real, este ID seria configurável ou obtido dinamicamente.
   // Por exemplo, você poderia ter um serviço para buscar todos os IDs de usuários administradores.
   private readonly ADMIN_NOTIFICATION_USER_ID = 'SEU_ID_DE_USUARIO_ADMIN_AQUI'; // <-- ATENÇÃO: Substitua pelo ID real do usuário admin ou lógica para encontrá-lo.
@@ -38,19 +42,52 @@ export class SupportService {
     userRole: UserRole,
     createTicketDto: CreateTicketDto,
   ) {
-    const { subject, category, description, bookingId, attachments } =
-      createTicketDto;
+    const {
+      subject,
+      category: requestedCategory,
+      description,
+      bookingId,
+      attachments,
+      severity,
+    } = createTicketDto;
 
-    if (!Object.values(SupportTicketCategory).includes(category)) {
-      throw new BadRequestException(`Categoria inválida: ${category}`);
+    const sanitizedCategory = Object.values(SupportTicketCategory).includes(
+      requestedCategory as SupportTicketCategory,
+    )
+      ? (requestedCategory as SupportTicketCategory)
+      : SupportTicketCategory.OTHER;
+
+    const severityLabel = (severity ?? 'NORMAL').toUpperCase();
+
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentCount = await this.prisma.supportTicket.count({
+      where: {
+        userId,
+        createdAt: { gte: oneHourAgo },
+      },
+    });
+
+    if (recentCount >= 3) {
+      throw new HttpException(
+        {
+          code: 'support.rate_limited',
+          message:
+            'Você atingiu o limite de chamados por hora. Tente novamente mais tarde.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
+
+    this.logger.log(
+      `[SupportService] createTicket: user=${userId} category=${sanitizedCategory} severity=${severityLabel}`,
+    );
 
     const newTicket = await this.prisma.supportTicket.create({
       data: {
         userId,
         role: userRole,
         subject,
-        category,
+        category: sanitizedCategory,
         description,
         bookingId,
         status: SupportTicketStatus.OPEN,
@@ -78,7 +115,7 @@ export class SupportService {
     );
 
     // Agendar job de escalonamento SLA
-    const slaDueDate = this.slaPolicy.getSlaDueDate(category);
+    const slaDueDate = this.slaPolicy.getSlaDueDate(sanitizedCategory);
     if (slaDueDate) {
       await this.escalationsQueue.add(
         'check-sla',
