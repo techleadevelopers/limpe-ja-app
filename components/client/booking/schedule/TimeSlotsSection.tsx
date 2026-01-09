@@ -8,7 +8,6 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { AppColors } from '../../../../constants/appStyles';
@@ -45,19 +44,12 @@ const CARD_MARGIN_TOTAL = 25 * 2;
 const CARD_PADDING_TOTAL = 24 * 2;
 const HORIZONTAL_GUTTER = CARD_MARGIN_TOTAL + CARD_PADDING_TOTAL;
 
-const toMinutes = (t: string) => {
-  if (!t) return 0;
-  // Limpa formatos como "08:00-09:00" pegando apenas o início
-  const cleanTime = t.split('-')[0].trim();
-  const [h, m] = cleanTime.split(':').map(Number);
-  return (h || 0) * 60 + (m || 0);
-};
-
-const getPeriod = (time: string) => {
-  const mins = toMinutes(time);
-  if (mins < 12 * 60) return 'morning';
-  if (mins < 18 * 60) return 'afternoon';
-  return 'evening';
+const toMinutes = (time: string) => {
+  if (!time) return 0;
+  const [hour, minute] = time.split(':').map(Number);
+  const safeHour = Number.isFinite(hour) ? hour : 0;
+  const safeMinute = Number.isFinite(minute) ? minute : 0;
+  return safeHour * 60 + safeMinute;
 };
 
 export default function TimeSlotsSection({
@@ -72,27 +64,14 @@ export default function TimeSlotsSection({
   selectedSlots,
 }: TimeSlotsSectionProps) {
   const { t, i18n } = useTranslation();
-  const [showUnavailable, setShowUnavailable] = React.useState(false);
 
-  const dense = showUnavailable;
+  const dense = false;
   const currentGap = dense ? 0 : 8;
   const itemWidth = (SCREEN_WIDTH - HORIZONTAL_GUTTER - currentGap * (numColumns - 1)) / numColumns;
 
   const headerText = React.useMemo(() => {
     return title ?? (titleKey ? t(titleKey as any) : '');
   }, [title, titleKey, t]);
-
-  const headerDateText = React.useMemo(() => {
-    if (!date) return '';
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return '';
-    const locale = i18n?.language || 'pt-BR';
-    return d.toLocaleDateString(locale, {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  }, [date, i18n?.language]);
 
   const selectedSlotsSet = React.useMemo(
     () => new Set(selectedSlots ?? []),
@@ -128,59 +107,39 @@ export default function TimeSlotsSection({
     [selectedSlotsSet, selectedTime, handleSlotPress, dense, itemWidth],
   );
 
-  const sections = React.useMemo(() => {
+  const slotsToRender = React.useMemo(() => {
     if (!displaySlotsInfo) return [];
 
-    // NORMALIZAÇÃO: Garante que o frontend entenda o formato do backend
-    const normalized = displaySlotsInfo.map((s) => ({
-      ...s,
-      time: normalizeSlotLabel(s.time),
-    }));
+    return [...displaySlotsInfo]
+      .map((slot) => ({
+        ...slot,
+        time: normalizeSlotLabel(slot.time),
+      }))
+      .sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
+  }, [displaySlotsInfo]);
 
-    const filtered = showUnavailable ? normalized : normalized.filter(s => s.isAvailable);
-    const sorted = [...filtered].sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
+  const sections = React.useMemo(() => {
+    if (!slotsToRender || slotsToRender.length === 0) return [];
 
-    const isToday = date ? new Date(date).toDateString() === new Date().toDateString() : false;
-    const now = new Date();
-    const nowMins = now.getHours() * 60 + now.getMinutes();
-
-    const nextIdx = new Set<number>();
-    if (isToday) {
-      let c = 0;
-      for (let i = 0; i < sorted.length; i++) {
-        if (sorted[i].isAvailable && toMinutes(sorted[i].time) >= nowMins) {
-          nextIdx.add(i);
-          c++;
-          if (c >= 3) break;
-        }
-      }
-    }
-
-    const enriched: SlotItem[] = sorted.map((s, i) => ({
-      ...s,
-      isRecommended: nextIdx.has(i),
-    }));
-
-    const grouped: Record<'morning' | 'afternoon' | 'evening', SlotItem[]> = {
+    const grouped: Record<'morning' | 'afternoon', SlotItem[]> = {
       morning: [],
       afternoon: [],
-      evening: [],
     };
 
-    enriched.forEach(item => {
-      const p = getPeriod(item.time);
-      grouped[p].push(item);
+    slotsToRender.forEach((slot) => {
+      const period = toMinutes(slot.time) < 12 * 60 ? 'morning' : 'afternoon';
+      grouped[period].push(slot);
     });
 
-    const mk = (k: 'morning' | 'afternoon' | 'evening', label: string) =>
-      grouped[k].length ? [{ key: k, label, data: grouped[k] }] : [];
+    const mk = (key: 'morning' | 'afternoon', label: string) =>
+      grouped[key].length ? [{ key, label, data: grouped[key] }] : [];
 
     return [
       ...mk('morning', t('common.morning', { defaultValue: 'Manhã' })),
       ...mk('afternoon', t('common.afternoon', { defaultValue: 'Tarde' })),
-      ...mk('evening', t('common.evening', { defaultValue: 'Noite' })),
     ];
-  }, [displaySlotsInfo, showUnavailable, date, t]);
+  }, [slotsToRender, t]);
+
 
   return (
     <View style={[styles.card, isPreference && { marginTop: 12 }]}>
@@ -190,17 +149,11 @@ export default function TimeSlotsSection({
 
       {isLoading ? (
         <ActivityIndicator size="large" color={AppColors.primaryDark} style={{ marginVertical: 22 }} />
-      ) : displaySlotsInfo && displaySlotsInfo.length > 0 ? (
+      ) : sections.length > 0 ? (
         <>
-          {sections.map(section => (
-            <View key={section.key} style={{ marginBottom: 6 }}>
-              <View style={styles.periodHeaderRow}>
-                <Text style={styles.periodHeader}>{section.label}</Text>
-                {!!headerDateText && (
-                  <Text style={styles.periodDate}>{headerDateText}</Text>
-                )}
-              </View>
-
+          {sections.map((section) => (
+            <View key={section.key} style={{ marginBottom: 12 }}>
+              <Text style={styles.periodHeader}>{section.label}</Text>
               <FlatList
                 data={section.data}
                 keyExtractor={(item: SlotItem) => item.fullISO}
@@ -219,17 +172,6 @@ export default function TimeSlotsSection({
               />
             </View>
           ))}
-
-          <TouchableOpacity
-            onPress={() => setShowUnavailable(v => !v)}
-            style={[styles.toggleBtn, dense && { marginTop: 8 }]}
-          >
-            <Text style={styles.toggleText}>
-              {showUnavailable
-                ? t('schedule_service.hide_unavailable', { defaultValue: 'ocultar indisponíveis' })
-                : t('schedule_service.show_unavailable', { defaultValue: 'ver todos' })}
-            </Text>
-          </TouchableOpacity>
         </>
       ) : (
         <Text style={styles.empty} maxFontSizeMultiplier={1.2}>
@@ -286,24 +228,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  periodHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-    marginTop: 6,
-  },
   periodHeader: {
     fontSize: 12.5,
     fontWeight: '700',
     color: AppColors.textAuxiliary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-  },
-  periodDate: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: AppColors.textAuxiliary,
+    marginBottom: 8,
   },
   empty: {
     textAlign: 'center',
