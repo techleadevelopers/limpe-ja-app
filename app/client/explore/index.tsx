@@ -11,7 +11,6 @@ import {
     InteractionManager,
     Platform,
     RefreshControl,
-    Share,
     StyleProp,
     StyleSheet,
     Text,
@@ -36,7 +35,6 @@ import { useAndroidDialog } from '../../../hooks/useAndroidDialog';
 import { useAuth } from '../../../hooks/useAuth';
 import { getBookingsForUser } from '../../../services/bookingService';
 import {
-    getOffers,
     getServiceCategories,
     getUserProfile,
     searchProvidersWithLocation,
@@ -48,7 +46,6 @@ import {
 } from '../../../services/providerService';
 
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
-import { Offer } from '../../../types/backend/offers';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
 import { VerificationStatus } from '../../../types/backend/auth';
 import { Service } from '../../../types/backend/services';
@@ -77,17 +74,7 @@ import RecomendacaoCard from '../../../components/client/explore/home/Recomendac
 import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrestadores';
 import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRecomendacoes';
 import { normalizeProviderList } from '../../../components/client/explore/home/providerAvailability';
-import BottomSlideInCard from '../../../components/common/BottomSlideInCard';
-import SmartCouponNudge from '../../../components/coupons/CouponNudge';
-import { CouponPill } from '../../../components/coupons/CouponPill';
-import { HtmlCouponCard } from '../../../components/coupons/HtmlCouponCard';
-import { ReferralBanner } from '../../../components/referrals/ReferralBanner';
-import { ReferralSheet } from '../../../components/referrals/ReferralSheet';
 import { useTutorial } from '../../../hooks/useTutorial';
-
-// Importar os novos componentes Nudge
-import IncentiveNudge from '../../../components/nudges/IncentiveNudge';
-import SecurityNudge from '../../../components/nudges/SecurityNudge';
 
 // Fallback local: garante render do RecomendacaoCard mesmo se a API falhar
 const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
@@ -236,9 +223,6 @@ const bannerData: BannerDataItem[] = [
   },
 ];
 
-const WELCOME_COUPON_DISMISSED_KEY = '@LimpeJa:WelcomeCouponDismissed';
-const WELCOME_COUPON_REDEEMED_KEY = '@LimpeJa:WelcomeCouponRedeemed';
-const REFERRAL_BANNER_DISMISSED_KEY = '@LimpeJa:ReferralBannerDismissed';
 const PROTOCOL_PREMIUM_SEEN_KEY = '@LimpeJa:ProtocolPremiumSeen_v1';
 export default function ExploreClientScreen() {
   const router = useRouter();
@@ -287,9 +271,6 @@ export default function ExploreClientScreen() {
     locationHintRef.current = locationHint;
   }, [locationHint]);
 
-  const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
-  const [showPersistentCouponPill, setShowPersistentCouponPill] = useState(false);
-  const [showReferralSheet, setShowReferralSheet] = useState(false);
   const [pendingReview, setPendingReview] = useState<{
     bookingId: string;
     providerId: string;
@@ -297,12 +278,6 @@ export default function ExploreClientScreen() {
     providerAvatar?: string | null;
   } | null>(null);
 
-  const [activeBottomPromotion, setActiveBottomPromotion] = useState<'coupon' | 'referral' | null>(null);
-  const promotionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const referralCode = userProfile?.referralCode || 'LIMPEJA123';
-  const rewardReferrer = 'Ganhe R$20 ou +300 pts';
-  const rewardReferred = 'Seu amigo ganha 20% na primeira reserva';
   const headerAnim = useRef(new Animated.Value(0)).current;
   const categoriesAnim = useRef(new Animated.Value(0)).current;
   // Banner deve aparecer junto ao conteúdo; inicia visível
@@ -763,90 +738,6 @@ export default function ExploreClientScreen() {
     } as any);
   }, [pendingReview, router]);
 
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-
-      const loadAndSetPromotions = async () => {
-        const offersData = await getOffers();
-        if (cancelled) return;
-      // log removido para performance
-        const welcomeOffer = offersData.find(
-          (offer: any) => offer.target === 'NEW_CLIENTS' && offer.firstBookingOnly
-        );
-        if (welcomeOffer) {
-          if (isMounted.current) setWelcomeCouponOffer(welcomeOffer);
-        } else {
-          if (isMounted.current) {
-            setWelcomeCouponOffer({
-              id: 'fake-123',
-              couponCode: 'BEMVINDO20',
-              title: 'Ganhe 20%OFF !',
-              description: 'Use agora e economize',
-              target: 'NEW_CLIENTS',
-              firstBookingOnly: true,
-              validUntil: '2025-12-31T23:59:59.000Z',
-            } as any);
-          }
-        }
-
-        if (promotionTimeoutRef.current) {
-          clearTimeout(promotionTimeoutRef.current);
-        }
-
-        promotionTimeoutRef.current = setTimeout(async () => {
-          if (cancelled || !isMounted.current) return;
-
-          let shouldShowCoupon = false;
-          let shouldShowReferral = false;
-
-          if (welcomeOffer && userProfile) {
-            const dismissedCoupon = await AsyncStorage.getItem(WELCOME_COUPON_DISMISSED_KEY);
-            const redeemedCoupon = await AsyncStorage.getItem(WELCOME_COUPON_REDEEMED_KEY);
-            const isNewCustomer = (userProfile.clientDetails?.totalBookings || 0) === 0;
-            const isCouponExpired =
-              welcomeOffer.validUntil ? new Date(welcomeOffer.validUntil).getTime() < Date.now() : false;
-
-            if (isNewCustomer && !redeemedCoupon && !isCouponExpired) {
-              if (!dismissedCoupon) {
-                shouldShowCoupon = true;
-              } else {
-                if (isMounted.current) setShowPersistentCouponPill(true);
-              }
-            }
-          }
-
-          if (isAuthenticated && userProfile?.referralCode) {
-            const dismissedReferral = await AsyncStorage.getItem(REFERRAL_BANNER_DISMISSED_KEY);
-            if (!dismissedReferral) {
-              shouldShowReferral = true;
-            }
-          }
-
-          if (isMounted.current) {
-            if (shouldShowCoupon) {
-              setActiveBottomPromotion('coupon');
-            } else if (shouldShowReferral) {
-              setActiveBottomPromotion('referral');
-            } else {
-              setActiveBottomPromotion(null);
-            }
-          }
-        }, 5000) as unknown as NodeJS.Timeout;
-      };
-
-      if (userProfile !== null) {
-        loadAndSetPromotions();
-      }
-
-      return () => {
-        cancelled = true;
-        if (promotionTimeoutRef.current) {
-          clearTimeout(promotionTimeoutRef.current);
-        }
-      };
-    }, [userProfile, isAuthenticated])
-  );
 
   const handleProviderPress = useCallback(
     (provider: ProviderDisplayInfo) => {
@@ -969,70 +860,6 @@ export default function ExploreClientScreen() {
     fetchData();
     triggerLocationRefresh();
   }, [fetchData, triggerLocationRefresh]);
-
-  const handleUseWelcomeCoupon = useCallback(
-    async (code: string) => {
-      if (isMounted.current) {
-        setActiveBottomPromotion(null);
-        setShowPersistentCouponPill(false);
-      }
-      await AsyncStorage.setItem(WELCOME_COUPON_REDEEMED_KEY, 'true');
-      router.push({
-        pathname: CLIENT_ROUTES.SCHEDULE_SERVICE,
-        params: { couponCode: code },
-      } as any);
-    },
-    [router]
-  );
-
-  const handleDismissWelcomeCoupon = useCallback(async () => {
-    if (isMounted.current) setActiveBottomPromotion(null);
-    await AsyncStorage.setItem(WELCOME_COUPON_DISMISSED_KEY, 'true');
-  }, []);
-
-  const handleReopenWelcomeCoupon = useCallback(async () => {
-    if (isMounted.current) {
-      setShowPersistentCouponPill(false);
-      setActiveBottomPromotion('coupon');
-    }
-  }, []);
-
-  const handleDismissReferralBanner = useCallback(async () => {
-    if (isMounted.current) setActiveBottomPromotion(null);
-    await AsyncStorage.setItem(REFERRAL_BANNER_DISMISSED_KEY, 'true');
-  }, []);
-
-  const handleShareReferral = useCallback(async () => {
-    try {
-      const result = await Share.share({
-        message: `Use meu código de indicação ${referralCode} no LimpeJá e ganhe um desconto na sua primeira reserva!`,
-        url: 'https://limpeja.com/referral',
-        title: 'Indique um amigo e ganhe no LimpeJá!',
-      });
-      if (result.action === Share.sharedAction) {
-        if (result.activityType) {
-        // log removido para performance
-      } else {
-        // log removido para performance
-      }
-    } else if (result.action === Share.dismissedAction) {
-      // log removido para performance
-    }
-    } catch (error: any) {
-      alertUserError(error, 'Erro ao Compartilhar');
-    }
-    if (isMounted.current) {
-      setShowReferralSheet(false);
-      setActiveBottomPromotion(null);
-    }
-  }, [referralCode]);
-
-  const handleHowItWorksReferral = useCallback(() => {
-    if (isMounted.current) {
-      setShowReferralSheet(true);
-      setActiveBottomPromotion(null);
-    }
-  }, []);
 
   if (loading && !isRefreshing) {
     return (
@@ -1341,62 +1168,11 @@ export default function ExploreClientScreen() {
             },
           ]}
           pointerEvents="box-none"> {/* Não bloqueia scroll */}
-          <NavBar welcomeCouponOffer={welcomeCouponOffer} activeBottomPromotion={activeBottomPromotion} setActiveBottomPromotion={setActiveBottomPromotion} />
+          <NavBar />
         </Animated.View>
 
         {/* DEFENSE_SOS ÚNICO */}
         <DEFENSE_SOS bottomOffset={20} />
-
-        {/* SmartCouponNudge */}
-        {welcomeCouponOffer && (
-          <SmartCouponNudge
-            code={welcomeCouponOffer!.couponCode as string}
-            title={welcomeCouponOffer!.title}
-            subtitle={welcomeCouponOffer!.description}
-            delayMs={3000}
-            throttleHours={24}
-            showOnRoutes={['/client/explore']}
-            onApply={handleUseWelcomeCoupon}
-            pointerEvents="box-none" // Não bloqueia scroll
-          />
-        )}
-
-        {/* BottomSlideInCard para Cupom */}
-        {welcomeCouponOffer && (
-          <BottomSlideInCard isVisible={activeBottomPromotion === 'coupon'} pointerEvents="box-none">
-            <HtmlCouponCard
-              code={welcomeCouponOffer!.couponCode as string}
-              title={welcomeCouponOffer!.title}
-              subtitle={welcomeCouponOffer!.description}
-              expiresAt={welcomeCouponOffer!.validUntil}
-              onUseNow={handleUseWelcomeCoupon}
-              onDismiss={handleDismissWelcomeCoupon}
-              isVisible={activeBottomPromotion === 'coupon'}
-            />
-          </BottomSlideInCard>
-        )}
-
-        {/* BottomSlideInCard para Referral */}
-        {isAuthenticated && userProfile?.referralCode && (
-          <BottomSlideInCard isVisible={activeBottomPromotion === 'referral'} pointerEvents="box-none">
-            <ReferralBanner code={referralCode} rewardReferrer={rewardReferrer} rewardReferred={rewardReferred} onShare={handleShareReferral} onHowItWorks={handleHowItWorksReferral} onDismiss={handleDismissReferralBanner} />
-          </BottomSlideInCard>
-        )}
-
-        {/* CouponPill */}
-        {showPersistentCouponPill && activeBottomPromotion !== 'coupon' && welcomeCouponOffer && (
-          <CouponPill code={welcomeCouponOffer!.couponCode as string} onOpen={handleReopenWelcomeCoupon} />
-        )}
-
-        {/* ReferralSheet */}
-        <ReferralSheet
-          visible={showReferralSheet}
-          onClose={() => setShowReferralSheet(false)}
-          code={referralCode}
-          rewardReferrer={rewardReferrer}
-          rewardReferred={rewardReferred}
-          onShare={handleShareReferral}
-        />
 
         {/* Nudge de avaliação (somente se elegível via can-review) */}
         {pendingReview && (
@@ -1432,25 +1208,6 @@ export default function ExploreClientScreen() {
             </View>
           </TouchableOpacity>
         )}
-
-        {/* Nudges */}
-        <SecurityNudge
-          delayMs={3500}
-          throttleHours={24}
-          showOnRoutes={['/client/explore']}
-          bottomOffset={120} // Offset para não sobrepor NavBar
-          pointerEvents="box-none"
-        />
-
-        <IncentiveNudge
-          delayMs={5000}
-          throttleHours={24}
-          showOnRoutes={['/client/explore']}
-          bottomOffset={180} // Offset para empilhamento
-          points={100}
-          pointerEvents="box-none"
-        />
-
 
         {androidDialogElement}
 
