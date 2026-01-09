@@ -10,7 +10,7 @@ import { useProviderMetrics } from '../../../../hooks/useProviderMetrics';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 // Importar os novos formatadores e helpers
 import { AnalyticsService } from '../../../../services/analyticsService';
-import { formatDistance } from '../../../../utils/formatters';
+import { formatDistance, getNextAvailableDate } from '../../../../utils/formatters';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -19,7 +19,31 @@ interface PrestadorCardProps {
     onPress: (prestadorId: string) => void;
 }
 
-const ANDROID_PRESTADOR_SCALE = Platform.OS === 'android' ? 0.91 : 1;
+const PRESTADOR_CARD_SCALE = 0.91;
+const PRESTADOR_CARD_SHRINK_STYLE = {
+    transform: [{ scale: PRESTADOR_CARD_SCALE }],
+};
+
+const getNextSlotLabel = (
+    slot?: ProviderDisplayInfo['nextAvailable'] | ProviderDisplayInfo['nextSlot'],
+): string | null => {
+    const nextDate = getNextAvailableDate(slot);
+    if (!nextDate) return null;
+    const today = new Date();
+    const todayStart = new Date(today);
+    const slotStart = new Date(nextDate);
+    todayStart.setHours(0, 0, 0, 0);
+    slotStart.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((slotStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+    const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const dayLabel = diffDays === 0 ? 'Hoje' : diffDays === 1 ? 'Amanhã' : days[nextDate.getDay()] || 'Dia';
+    const timeLabel = new Intl.DateTimeFormat('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    }).format(nextDate);
+    return `${dayLabel} · ${timeLabel}`;
+};
 
 const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -30,7 +54,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
     const { t } = useTranslation();
-    const rootShrinkStyle = Platform.OS === 'android' ? { transform: [{ scale: ANDROID_PRESTADOR_SCALE }] } : undefined;
+    const rootShrinkStyle = PRESTADOR_CARD_SHRINK_STYLE;
     const providerMetrics = useProviderMetrics(item.id);
 
     // Animação de entrada (fade e slide)
@@ -115,6 +139,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
       typeof item.distance === 'number' && item.distance >= 0
         ? formatDistance(item.distance, undefined)
         : undefined;
+    const nextSlotLabel = getNextSlotLabel(item.nextSlot ?? item.nextAvailable);
 
 // Track impression (fire-and-forget)
     useEffect(() => {
@@ -154,10 +179,17 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                 {/* NOVO: Micro-Pill de Localização/Distância (Sutil e Compacto, flutuando no canto superior direito) */}
                 {distanceLabel && (
                     <View style={styles.distancePillSmall}>
-                        <Ionicons name="location-outline" size={10} color="#5da2ecff" />
-                        <Text style={styles.distancePillSmallText} numberOfLines={1} allowFontScaling={false}>
-                            {distanceLabel}
-                        </Text>
+                        <View style={styles.distanceRow}>
+                            <Ionicons name="location-outline" size={10} color="#5da2ecff" />
+                            <Text style={styles.distancePillSmallText} numberOfLines={1} allowFontScaling={false}>
+                                {distanceLabel}
+                            </Text>
+                        </View>
+                        {nextSlotLabel && (
+                            <Text style={styles.nextSlotText} numberOfLines={1} allowFontScaling={false}>
+                                {nextSlotLabel}
+                            </Text>
+                        )}
                     </View>
                 )}
 
@@ -202,7 +234,7 @@ const styles = StyleSheet.create({
     },
     animatedCardContainer: {
         marginRight: Platform.OS === 'android' ? 19 : 13,
-        left: Platform.OS === 'android' ? -6 : -15,
+        left: Platform.OS === 'android' ? -1 : -15,
         top: 0,
         marginBottom: 8,
         marginTop: 12,
@@ -240,25 +272,34 @@ const styles = StyleSheet.create({
         top: 69,
         right: -11,
         zIndex: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 3,
-        paddingVertical: 1,
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        paddingHorizontal: 6,
+        paddingVertical: 5,
         borderRadius: 8,
-        maxWidth: '60%',
+        maxWidth: '70%',
         overflow: 'hidden',
         ...Platform.select({
             ios: { backgroundColor: 'rgba(255,255,255,0.75)' }, // Blur/white 70-80%
             android: { backgroundColor: 'rgba(255,255,255,0.8)' },
         }),
-        // sombra sutilíssima (shadowOpacity 0.06, elevation 2)
-       
+    },
+    distanceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     distancePillSmallText: {
-        marginLeft: 1.5,
+        marginLeft: 3,
         fontSize: 8, // Fonte pequena para caber no card reduzido
         fontWeight: '600',
         color: '#334155',
+    },
+    nextSlotText: {
+        marginTop: 1,
+        fontSize: 7,
+        fontWeight: '500',
+        color: '#334155',
+        opacity: 0.85,
     },
     // NOVO ESTILO: Overlay de gradiente para fade na lateral direita
     gradientOverlay: {
