@@ -1,5 +1,5 @@
 import { AxiosError } from 'axios';
-import { normalizeAppError } from '../../_shared/errors/userError';
+import { normalizeAppError } from '../../../_shared/errors/userError';
 
 export type NormalizedApiError = {
   code: string;
