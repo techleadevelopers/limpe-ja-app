@@ -315,7 +315,7 @@ export default function ClientMenuScreen() {
         >
           <TouchableOpacity
             onPress={() => router.back()}
-            style={{ padding: 5, marginLeft: -5 }}
+            style={{ padding: 5, marginLeft: -5, marginTop: Platform.OS === 'ios' ? 0 : 12 }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="arrow-back" size={22} color={theme.text} />
@@ -437,10 +437,12 @@ const styles = StyleSheet.create({
   },
   topHeaderTitle: {
     fontWeight: '700',
-    letterSpacing: 0.8,
+    letterSpacing: Platform.OS === 'ios' ? 0.6 : 0.5,
+    marginTop: Platform.OS === 'ios' ? 0 : 15,
+    right: Platform.OS === 'ios' ? 0 : 4,
     flex: 1,
     textAlign: 'center',
-    fontSize: 18,
+    fontSize: Platform.OS === 'ios' ? 18 : 17,
   },
 
   profileBlock: { alignItems: 'center', paddingVertical: 8 },
