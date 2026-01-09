@@ -944,6 +944,17 @@ private getScheduledAtInSaoPaulo(
         `[BookingsService] create - Serviço do provedor encontrado: ${providerService.id}. Preço calculado: ${calculatedTotalPrice.toFixed(2)}`,
       );
 
+      const env = process.env.NODE_ENV ?? 'development';
+      const allowDtoPrice = env === 'development' || env === 'test';
+      const dtoTotalPrice =
+        createBookingDto.totalPrice != null
+          ? new Prisma.Decimal(createBookingDto.totalPrice)
+          : undefined;
+      const bookingTotalPrice =
+        allowDtoPrice && dtoTotalPrice && dtoTotalPrice.gt(0)
+          ? dtoTotalPrice
+          : calculatedTotalPrice;
+
       // scheduledStart/scheduledEnd (TZ-safe)
       const scheduledStart = this.getScheduledAtInSaoPaulo(
         createBookingDto.scheduledDate,
@@ -1045,7 +1056,7 @@ private getScheduledAtInSaoPaulo(
                   durationMinutes,
                   scheduledEnd,
 
-                  totalPrice: calculatedTotalPrice,
+                  totalPrice: bookingTotalPrice,
                   notes: createBookingDto.notes,
                   status: BookingStatus.PENDING_PAYMENT,
                   expiresAt: pendingPaymentExpiresAt,
@@ -1088,6 +1099,18 @@ private getScheduledAtInSaoPaulo(
         this.logger.log(
           `[BookingsService] create - Agendamento criado com sucesso no DB. ID: ${createdBooking.id}. ProviderId no booking retornado pelo Prisma: ${createdBooking.providerId}`,
         );
+
+        this.logger.log(
+          `[PAYMENT_FLOW] Gerando cobrança real de R$ ${bookingTotalPrice.toFixed(2)} para o agendamento ${createdBooking.id}`,
+        );
+        await this.paymentsService.createPixCharge(clientUserId, {
+          amount: bookingTotalPrice.toNumber(),
+          description:
+            createdBooking.providerService?.service?.name ??
+            `Pagamento do agendamento ${createdBooking.id}`,
+          bookingId: createdBooking.id,
+          providerId: createdBooking.providerId,
+        });
 
         try {
           await this.missionsService.trackEvent(
@@ -1711,6 +1734,9 @@ private getScheduledAtInSaoPaulo(
     );
 
     try {
+      this.logger.log(
+        `[BookingsService] createBookingAndPixCharge - calling PaymentsService.createPixCharge amount=${pixChargeDto.amount}`,
+      );
       const pixChargeResponse = await this.paymentsService.createPixCharge(
         clientUserId,
         pixChargeDto,
