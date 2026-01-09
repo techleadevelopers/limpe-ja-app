@@ -5,6 +5,7 @@ import { BookingsController } from './bookings.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ClientsModule } from '../clients/clients.module';
 import { ProvidersModule } from '../providers/providers.module';
+import { AvailabilityModule } from '../availability/availability.module';
 import { ProviderServicesModule } from '../provider-services/provider-services.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -23,6 +24,7 @@ import { SchedulerModule } from '../scheduler/scheduler.module';
 @Module({
   imports: [
     PrismaModule,
+    AvailabilityModule,
     ClientsModule,
     ProvidersModule,
     ProviderServicesModule,
