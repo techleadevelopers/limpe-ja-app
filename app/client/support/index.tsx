@@ -465,6 +465,14 @@ export interface CreateTicketDto {
 const DEFAULT_CATEGORIES: TicketCategory[] = ['PAGAMENTOS','AGENDAMENTOS','CONTA','TECNICO','SEGURANCA','OUTRO'];
 const DEFAULT_SEVERITIES: TicketSeverity[] = ['BAIXA','MEDIA','ALTA'];
 
+const getSupportRateLimitMessage = (error: unknown): string | null => {
+  const code = (error as Record<string, any>)?.response?.data?.code;
+  if (code === 'support.rate_limited') {
+    return 'Você atingiu o limite de chamados por hora. Tente novamente mais tarde.';
+  }
+  return null;
+};
+
 // =============================================================
 // Serviços HTTP
 // =============================================================
@@ -596,7 +604,12 @@ export default function SupportIndex() {
       NotificationUIService.showSuccess('Seu ticket foi criado com sucesso.', 'Enviado');
     } catch (e: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      toastUserError(e, 'Erro ao enviar');
+      const rateLimitMsg = getSupportRateLimitMessage(e);
+      if (rateLimitMsg) {
+        Alert.alert('Limite atingido', rateLimitMsg);
+      } else {
+        toastUserError(e, 'Erro ao enviar');
+      }
     } finally {
       setSubmitting(false);
     }
