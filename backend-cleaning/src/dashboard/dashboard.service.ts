@@ -1,9 +1,6 @@
 // dashboard.service.ts
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import {
-  ProvidersService,
-  ProviderWithIncludes,
-} from '../providers/providers.service'; // Importar ProviderWithIncludes
+import { ProvidersService } from '../providers/providers.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { EarningsService } from '../earnings/earnings.service';
 import { ReviewsService } from '../reviews/reviews.service';
@@ -27,9 +24,36 @@ export class DashboardService {
       `[DashboardService] getDashboardData: Iniciando busca para userId: ${userId}`,
     );
 
-    // PRIMEIRO PASSO: Encontrar o provedor pelo userId (CORRETO)
-    // provider agora será do tipo ProviderWithIncludes, que possui userId
-    const provider = await this.providersService.findByUserId(userId);
+    const providerPromise = this.providersService.findByUserId(userId);
+    const earningsPromise = this.earningsService
+      .getEarnings(userId)
+      .catch((error) => {
+        this.logger.error(
+          `[DashboardService] getDashboardData: Falha ao buscar ganhos para userId ${userId}: ${error?.message || error}`,
+          error?.stack,
+        );
+        return { totalEarnings: 0, pendingWithdrawals: 0 };
+      });
+    const reviewsPromise = providerPromise
+      .then((provider) => {
+        if (!provider) {
+          return [];
+        }
+        return this.reviewsService.findRecentReviewsByProviderId(provider.id);
+      })
+      .catch((error) => {
+        this.logger.error(
+          `[DashboardService] getDashboardData: Falha ao buscar avaliações recentes para userId ${userId}: ${error?.message || error}`,
+          error?.stack,
+        );
+        return [];
+      });
+
+    const [provider, earningsSummary, recentReviews] = await Promise.all([
+      providerPromise,
+      earningsPromise,
+      reviewsPromise,
+    ]);
 
     if (!provider) {
       this.logger.error(
@@ -37,56 +61,49 @@ export class DashboardService {
       );
       throw new NotFoundException('Provedor não encontrado.');
     }
-    // A propriedade userId agora existe em 'provider'
+
     this.logger.log(
       `[DashboardService] getDashboardData: Provedor encontrado: ${provider.fullName} (ID: ${provider.id}, userId: ${provider.userId})`,
     );
-
-    // SEGUNDO PASSO: Buscar agendamentos futuros (passando o provider.id, que é o que bookingsService espera para agendamentos)
     this.logger.log(
-      `[DashboardService] getDashboardData: Buscando agendamentos futuros para provider.id: ${provider.id}`,
+      `[DashboardService] getDashboardData: Sumário de ganhos obtido para userId: ${userId}.`,
     );
-    const upcomingBookingsRaw = await this.bookingsService.findUpcomingBookings(
-      provider.id,
-    );
+
+    let upcomingBookingsRaw = [];
+    try {
+      upcomingBookingsRaw = await this.bookingsService.findUpcomingBookings(
+        provider.id,
+      );
+    } catch (error) {
+      this.logger.error(
+        `[DashboardService] getDashboardData: Falha ao buscar agendamentos futuros para providerId ${provider.id}: ${error?.message || error}`,
+        error?.stack,
+      );
+      upcomingBookingsRaw = [];
+    }
     this.logger.log(
       `[DashboardService] getDashboardData: Agendamentos futuros encontrados: ${upcomingBookingsRaw.length}`,
     );
 
-    const upcomingBookings = upcomingBookingsRaw.map(
-      (booking) => new BookingViewDto(booking, { userRole: UserRole.PROVIDER }),
+    const upcomingBookings = upcomingBookingsRaw.map((booking) =>
+      new BookingViewDto(booking, { userRole: UserRole.PROVIDER }),
     );
 
-    // TERCEIRO PASSO: Buscar sumário de ganhos (Passando o userId original, pois earningsService.getEarnings espera um userId)
-    this.logger.log(
-      `[DashboardService] getDashboardData: Buscando sumário de ganhos para userId: ${userId}`,
-    );
-    const earningsSummary = await this.earningsService.getEarnings(userId);
-    this.logger.log(
-      `[DashboardService] getDashboardData: Sumário de ganhos encontrado.`,
-    );
-
-    // NOVO PASSO: Buscar avaliações recentes para o provedor
-    this.logger.log(
-      `[DashboardService] getDashboardData: Buscando avaliações recentes para provider.id: ${provider.id}`,
-    );
-    const recentReviews =
-      await this.reviewsService.findRecentReviewsByProviderId(provider.id);
     this.logger.log(
       `[DashboardService] getDashboardData: Avaliações recentes encontradas: ${recentReviews.length}`,
     );
-
     this.logger.log(
       `[DashboardService] getDashboardData: Retornando dados do dashboard.`,
     );
+
     return {
       fullName: provider.fullName,
       upcomingBookings,
       totalEarnings: earningsSummary.totalEarnings,
       pendingWithdrawals: earningsSummary.pendingWithdrawals,
       reviews: recentReviews,
-      fiveStarReviewCount: provider.fiveStarReviewCount, // Include new field
-      monthlyBookingsCount: provider.monthlyBookingsCount, // Include new field
+      fiveStarReviewCount: provider.fiveStarReviewCount,
+      monthlyBookingsCount: provider.monthlyBookingsCount,
     };
   }
 }
