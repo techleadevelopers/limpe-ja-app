@@ -6,6 +6,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from '
 import { LinearGradient } from 'expo-linear-gradient';
 import { Platform } from 'react-native';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
+import { normalizeProviderAvailability } from './providerAvailability';
 
 interface SecaoPrestadoresProps {
   titulo: string;
@@ -31,15 +32,17 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
   const safeData = useMemo(
     () =>
       Array.isArray(data)
-        ? data.filter(
-            (item) =>
-              item &&
-              typeof item === 'object' &&
-              typeof (item as any).id === 'string' &&
-              (item as any).id.trim() !== '' &&
-              typeof (item as any).fullName === 'string' &&
-              (item as any).fullName.trim() !== '',
-          )
+        ? data
+            .filter(
+              (item) =>
+                item &&
+                typeof item === 'object' &&
+                typeof (item as any).id === 'string' &&
+                (item as any).id.trim() !== '' &&
+                typeof (item as any).fullName === 'string' &&
+                (item as any).fullName.trim() !== '',
+            )
+            .map((item) => normalizeProviderAvailability(item) ?? item)
         : [],
     [data],
   );
