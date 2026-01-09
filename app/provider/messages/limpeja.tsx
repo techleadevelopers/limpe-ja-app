@@ -285,7 +285,7 @@ export default function LimpejaSupportChatScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { paddingTop: 80, paddingHorizontal: 16, paddingBottom: 12, top: -15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  header: { paddingTop: Platform.OS === 'android' ? 40 : 80, paddingHorizontal: 16, paddingBottom: 12, top: -15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle: { fontSize: 17, fontWeight: '800', color: '#1A2538' },
   listContent: { paddingHorizontal: 12, paddingBottom: 12 },
   bubble: { alignSelf: 'flex-start', maxWidth: '80%', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 14, marginVertical: 6 },
