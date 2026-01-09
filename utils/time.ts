@@ -1,16 +1,20 @@
 // utils/time.ts
 // Helpers centralizados para lidar com data/hora no fuso de S\u00e3o Paulo (Brasil) e slots de agenda.
 
-const BRAZIL_TZ = 'America/Sao_Paulo';
-
-// Retorna a data/hora atual no fuso de S\u00e3o Paulo.
-export const getNowInBrazil = (): Date => {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: BRAZIL_TZ }));
+const BRAZIL_TZ_OFFSET_MINUTES = 180;
+const toBrazilTimestamp = (date: Date) => {
+  const diffMinutes = BRAZIL_TZ_OFFSET_MINUTES - date.getTimezoneOffset();
+  return date.getTime() + diffMinutes * 60_000;
 };
 
-// Normaliza uma data para o fuso de S\u00e3o Paulo (mantendo a mesma representa\u00e7\u00e3o local).
+// Retorna a data/hora atual no fuso de São Paulo.
+export const getNowInBrazil = (): Date => {
+  return new Date(toBrazilTimestamp(new Date()));
+};
+
+// Normaliza uma data para o fuso de São Paulo (mantendo a mesma representação local).
 export const toBrazilDate = (date: Date): Date => {
-  return new Date(date.toLocaleString('en-US', { timeZone: BRAZIL_TZ }));
+  return new Date(toBrazilTimestamp(date));
 };
 
 export const isSameDayInBrazil = (a: Date, b: Date): boolean => {
@@ -54,6 +58,43 @@ export const formatBrazilDateKey = (date: Date): string => {
   const month = String(brazilDate.getMonth() + 1).padStart(2, '0');
   const day = String(brazilDate.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+const parseBrazilDateKey = (dateKey: string) => {
+  const [yearStr, monthStr, dayStr] = dateKey.split('-');
+  if (!yearStr || !monthStr || !dayStr) {
+    return null;
+  }
+
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  return { year, month, day };
+};
+
+const buildBrazilStartOfDayTimestamp = (year: number, month: number, day: number) =>
+  Date.UTC(year, month - 1, day) + BRAZIL_TZ_OFFSET_MINUTES * 60_000;
+
+export const getBrazilDayOfWeekFromKey = (dateKey: string): number | null => {
+  const components = parseBrazilDateKey(dateKey);
+  if (!components) {
+    return null;
+  }
+  const timestamp = buildBrazilStartOfDayTimestamp(components.year, components.month, components.day);
+  return new Date(timestamp).getUTCDay();
+};
+
+export const buildBrazilDateFromKey = (dateKey: string): Date | null => {
+  const components = parseBrazilDateKey(dateKey);
+  if (!components) {
+    return null;
+  }
+  const timestamp = buildBrazilStartOfDayTimestamp(components.year, components.month, components.day);
+  return new Date(timestamp);
 };
 
 const SLOT_TIME_REGEX = /(\d{1,2}):(\d{2})/;
