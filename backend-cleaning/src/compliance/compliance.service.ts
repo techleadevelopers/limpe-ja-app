@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, Prisma } from '@prisma/client';
+import { formatScheduledTime } from '../bookings/booking-time.utils';
 
 @Injectable()
 export class ComplianceService {
@@ -29,6 +30,7 @@ export class ComplianceService {
       ip?: string;
       userAgent?: string;
       acceptedAt?: Date;
+      documentHash?: string;
     },
   ) {
     this.logger.log(
@@ -41,23 +43,13 @@ export class ComplianceService {
     }
 
     // Cria ou atualiza o registro de consentimento
-    const consent = await this.prisma.userConsent.upsert({
-      where: {
-        userId_documentType: {
-          userId: userId,
-          documentType: documentType,
-        },
-      },
-      update: {
-        version: version,
-        consentedAt: options?.acceptedAt ?? new Date(),
-        ipAddress: options?.ip ?? undefined,
-        userAgent: options?.userAgent ?? undefined,
-      },
-      create: {
-        userId: userId,
-        documentType: documentType,
-        version: version,
+    const consent = await this.prisma.userConsent.create({
+      data: {
+        userId,
+        documentType,
+        version,
+        documentHash: options?.documentHash,
+        source: options?.source,
         consentedAt: options?.acceptedAt ?? new Date(),
         ipAddress: options?.ip ?? undefined,
         userAgent: options?.userAgent ?? undefined,
@@ -86,13 +78,12 @@ export class ComplianceService {
       `[ComplianceService] Verificando consentimento para userId: ${userId}, tipo: ${documentType}, versão mínima: ${requiredVersion}`,
     );
 
-    const consent = await this.prisma.userConsent.findUnique({
+    const consent = await this.prisma.userConsent.findFirst({
       where: {
-        userId_documentType: {
-          userId: userId,
-          documentType: documentType,
-        },
+        userId,
+        documentType,
       },
+      orderBy: { consentedAt: 'desc' },
     });
 
     if (!consent) {
@@ -103,11 +94,35 @@ export class ComplianceService {
     }
 
     // Lógica simples de comparação de versão (pode ser mais complexa dependendo do formato da versão)
-    const hasConsent = consent.version >= requiredVersion;
+        const hasConsent = this.compareDocumentVersions(consent.version, requiredVersion) >= 0;
     this.logger.log(
       `[ComplianceService] Consentimento para ${documentType} (versão ${consent.version}) para userId: ${userId} é ${hasConsent ? 'válido' : 'inválido'} para a versão ${requiredVersion}.`,
     );
     return hasConsent;
+  }
+
+  private compareDocumentVersions(a: string, b: string): number {
+    const segmentsA = this.parseVersionSegments(a);
+    const segmentsB = this.parseVersionSegments(b);
+    if (segmentsA.length === 0 && segmentsB.length === 0) {
+      return a.localeCompare(b);
+    }
+    const maxLength = Math.max(segmentsA.length, segmentsB.length);
+    for (let i = 0; i < maxLength; i += 1) {
+      const left = segmentsA[i] ?? 0;
+      const right = segmentsB[i] ?? 0;
+      if (left > right) return 1;
+      if (left < right) return -1;
+    }
+    return 0;
+  }
+
+  private parseVersionSegments(version: string): number[] {
+    return version
+      .split(/[^0-9]+/)
+      .filter((segment) => segment.length > 0)
+      .map((segment) => Number.parseInt(segment, 10))
+      .filter((value) => Number.isFinite(value));
   }
 
   async listUserConsents(userId: string) {
@@ -151,7 +166,7 @@ export class ComplianceService {
       providerName: booking.provider.fullName,
       clientName: booking.client.fullName,
       scheduledDate: booking.scheduledDate.toISOString().split('T')[0],
-      scheduledTime: booking.scheduledTime,
+      scheduledTime: formatScheduledTime(booking.scheduledTime),
       address: `${booking.address.street}, ${booking.address.number}, ${booking.address.neighborhood}, ${booking.address.city} - ${booking.address.state}`,
       items: [
         {
