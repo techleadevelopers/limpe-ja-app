@@ -42,23 +42,24 @@ export default function ProviderServiceDetailsScreen() {
     return () => { mounted = false; };
   }, [serviceId]);
 
+  type MaterialCommunityIconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
   const statusStyle = React.useMemo(() => {
     const s = data?.status;
     switch (s) {
       case BookingStatus.PENDING:
-        return { text: '#FF6F00', bg: '#FFF3E0', icon: 'clock-outline' as const, label: 'Pendente' };
+        return { text: '#FF6F00', bg: '#FFF3E0', icon: 'clock-outline' as MaterialCommunityIconName, label: 'Pendente' };
       case BookingStatus.CONFIRMED:
-        return { text: '#2E7D32', bg: '#E8F5E9', icon: 'check-circle-outline' as const, label: 'Confirmado' };
+        return { text: '#2E7D32', bg: '#E8F5E9', icon: 'check-circle-outline' as MaterialCommunityIconName, label: 'Confirmado' };
       case BookingStatus.IN_PROGRESS:
-        return { text: '#007AFF', bg: '#E3F2FD', icon: 'sync-circle-outline' as const, label: 'Em andamento' };
+        return { text: '#007AFF', bg: '#E3F2FD', icon: 'sync-circle-outline' as MaterialCommunityIconName, label: 'Em andamento' };
       case BookingStatus.COMPLETED:
-        return { text: '#546E7A', bg: '#ECEFF1', icon: 'check-all' as const, label: 'Concluído' };
+        return { text: '#546E7A', bg: '#ECEFF1', icon: 'check-all' as MaterialCommunityIconName, label: 'Concluído' };
       case BookingStatus.CANCELLED:
-        return { text: '#D32F2F', bg: '#FFEBEE', icon: 'close-circle-outline' as const, label: 'Cancelado' };
+        return { text: '#D32F2F', bg: '#FFEBEE', icon: 'close-circle-outline' as MaterialCommunityIconName, label: 'Cancelado' };
       case BookingStatus.REJECTED:
-        return { text: '#757575', bg: '#F5F5F5', icon: 'minus-circle-outline' as const, label: 'Recusado' };
+        return { text: '#757575', bg: '#F5F5F5', icon: 'minus-circle-outline' as MaterialCommunityIconName, label: 'Recusado' };
       default:
-        return { text: '#546E7A', bg: '#ECEFF1', icon: 'information-outline' as const, label: 'Desconhecido' };
+        return { text: '#546E7A', bg: '#ECEFF1', icon: 'information-outline' as MaterialCommunityIconName, label: 'Desconhecido' };
     }
   }, [data?.status]);
 
@@ -105,7 +106,7 @@ export default function ProviderServiceDetailsScreen() {
       {isLoading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={{ marginTop: 8, color: theme.textMuted }}>Carregando...</Text>
+          
         </View>
       ) : error || !data ? (
         <View style={styles.centered}>
