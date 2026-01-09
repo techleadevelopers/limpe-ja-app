@@ -15,6 +15,12 @@ interface NormalizedProviderProfile {
   newProvider: boolean;
 }
 
+interface InsurancePlansCalculationContext {
+  clientCompleted: number;
+  estimateTotalCents: number;
+  provider: NormalizedProviderProfile;
+}
+
 export interface InsurancePlansInput {
   clientCompleted?: number;
   estimateTotalCents?: number;
@@ -31,12 +37,13 @@ export interface InsurancePlanProposal extends InsurancePlanDefinition {
 @Injectable()
 export class InsuranceService {
   getPlans(input: InsurancePlansInput): InsurancePlanProposal[] {
-    const { clientCompleted, estimateTotalCents, provider } = this.normalizeInput(input);
+    const normalizedInput = this.normalizeInput(input);
+    const { clientCompleted, estimateTotalCents, provider } = normalizedInput;
     const riskModifier = this.calculateRiskModifier(clientCompleted, estimateTotalCents, provider);
     const riskMultiplierBps = Math.round(riskModifier * 10000);
 
     return INSURANCE_PLANS.map((plan) => {
-      const { eligible, reasons } = this.evaluateEligibility(plan.id, clientCompleted, provider);
+      const { eligible, reasons } = this.evaluateEligibility();
       return {
         ...plan,
         finalPriceCents: this.applyRisk(plan.basePriceCents, riskModifier),
@@ -47,7 +54,7 @@ export class InsuranceService {
     });
   }
 
-  private normalizeInput(input: InsurancePlansInput) {
+  private normalizeInput(input: InsurancePlansInput): InsurancePlansCalculationContext {
     return {
       clientCompleted: this.toNonNegativeNumber(input.clientCompleted),
       estimateTotalCents: this.toNonNegativeNumber(input.estimateTotalCents),
@@ -63,29 +70,10 @@ export class InsuranceService {
     };
   }
 
-  private evaluateEligibility(
-    planId: InsurancePlanId,
-    clientCompleted: number,
-    provider: NormalizedProviderProfile,
-  ) {
-    const reasons: string[] = [];
-
-    if (planId === 'PREMIUM' && clientCompleted < 2) {
-      reasons.push('Premium requires at least 2 completed client bookings.');
-    }
-
-    if (planId === 'TOTAL') {
-      if (clientCompleted < 5) {
-        reasons.push('Total requires at least 5 completed client bookings.');
-      }
-      if (provider.rating < 4.85) {
-        reasons.push('Total requires a provider rating of 4.85 or higher.');
-      }
-    }
-
+  private evaluateEligibility(): { eligible: true; reasons: string[] } {
     return {
-      eligible: reasons.length === 0,
-      reasons,
+      eligible: true,
+      reasons: [],
     };
   }
 
