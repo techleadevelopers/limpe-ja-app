@@ -259,32 +259,33 @@ export default function ProviderServicesScreen() {
     }).start(async () => {
       try {
         let data: BookingDetails[] = [];
+        const getScheduledTimestamp = (booking: BookingDetails) => {
+          const candidate = booking.scheduledTime
+            ? new Date(booking.scheduledTime)
+            : booking.scheduledDate
+              ? new Date(`${booking.scheduledDate}T00:00:00`)
+              : new Date();
+          const time = candidate.getTime();
+          return Number.isNaN(time) ? 0 : time;
+        };
 
         switch (currentFilter) {
           case 'requests':
             data = await getBookingsForUser(BookingStatus.PENDING);
             break;
-          case 'upcoming':
+          case 'upcoming': {
             const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
             const now = new Date();
-            data = confirmedBookings.filter(s => {
-              const scheduledDateTime = new Date(`${s.scheduledDate}T${s.scheduledTime}`);
-              return scheduledDateTime >= now;
-            }).sort((a, b) => {
-              const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`).getTime();
-              const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`).getTime();
-              return dateA - dateB;
-            });
+            data = confirmedBookings
+              .filter((s) => getScheduledTimestamp(s) >= now.getTime())
+              .sort((a, b) => getScheduledTimestamp(a) - getScheduledTimestamp(b));
             break;
+          }
           case 'completed':
             const completed = await getBookingsForUser(BookingStatus.COMPLETED);
             const cancelled = await getBookingsForUser(BookingStatus.CANCELLED);
             const rejected = await getBookingsForUser(BookingStatus.REJECTED);
-            data = [...completed, ...cancelled, ...rejected].sort((a, b) => {
-              const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`).getTime();
-              const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`).getTime();
-              return dateB - dateA;
-            });
+            data = [...completed, ...cancelled, ...rejected].sort((a, b) => getScheduledTimestamp(b) - getScheduledTimestamp(a));
             break;
           default:
             data = [];
