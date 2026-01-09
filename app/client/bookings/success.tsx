@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BookingSummaryCard from '../../../components/client/booking/success/BookingSummaryCard';
@@ -39,6 +39,10 @@ type SuccessRouteParams = {
   couponApplied?: string | string[];
   couponCode?: string | string[];
 };
+
+export const shouldStopPollingForStatus = (
+  status?: PaymentIntentStatus | null,
+): boolean => status === PaymentIntentStatus.PAID;
 
 type ReturnCouponData = {
   code: string;
@@ -100,17 +104,34 @@ export default function BookingSuccessScreen() {
   const [paid, setPaid] = useState<boolean>(false);
   const [shouldPollIntent, setShouldPollIntent] = useState<boolean>(false);
   const [isRegeneratingPix, setIsRegeneratingPix] = useState<boolean>(false);
+  const [pixFallbackActive, setPixFallbackActive] = useState(false);
+  const [pixFallbackMessage, setPixFallbackMessage] = useState<string | null>(null);
 
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const pollAttemptsRef = useRef<number>(0);
   const onceRef = useRef(false);
   const unauthorizedHandledRef = useRef(false);
   const paymentToastIntentRef = useRef<string | null>(null);
+  const MAX_POLL_ATTEMPTS = 12;
 
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const contentTranslateY = useRef(new Animated.Value(24)).current;
 
   const bookingId = bookingIdParam;
+  const routeTotalPrice = Number(extractFirst(params.totalPrice) ?? '');
+  const effectiveTotalPrice =
+    Number.isFinite(routeTotalPrice) && routeTotalPrice > 0
+      ? routeTotalPrice
+      : undefined;
+  const summaryBooking =
+    booking &&
+    ({
+      ...booking,
+      totalPrice:
+        effectiveTotalPrice !== undefined
+          ? effectiveTotalPrice
+          : booking.totalPrice,
+    } as BookingDetails);
 
   const formattedAddressLine1 = useMemo(
     () => formatAddressLine1(booking?.address as any),
@@ -141,18 +162,22 @@ export default function BookingSuccessScreen() {
 
   const loadData = useCallback(async () => {
     if (!bookingId) {
-      setError('Agendamento não encontrado.');
+      setError('Agendamento nÃ£o encontrado.');
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     setError(null);
+    setPixFallbackActive(false);
+    setPixFallbackMessage(null);
+    pollAttemptsRef.current = 0;
+    onceRef.current = false;
 
     try {
       const bookingDetails = await getBookingDetails(bookingId);
       if (!bookingDetails) {
-        throw new Error('Agendamento não encontrado.');
+        throw new Error('Agendamento nÃ£o encontrado.');
       }
       // log removido para performance
       setBooking(bookingDetails);
@@ -181,7 +206,7 @@ export default function BookingSuccessScreen() {
           if (candidate?.couponCode) {
             setReturnCoupon({
               code: candidate.couponCode,
-              title: candidate.title || 'Cupom especial para sua próxima reserva',
+              title: candidate.title || 'Cupom especial para sua prÃ³xima reserva',
               subtitle: candidate.description ?? undefined,
               expiresAt: candidate.validUntil ? new Date(candidate.validUntil) : undefined,
             });
@@ -247,7 +272,7 @@ export default function BookingSuccessScreen() {
       const message =
         loadError?.message ||
         loadError?.response?.data?.message ||
-        'Não foi possível carregar os detalhes do agendamento.';
+        'NÃ£o foi possÃ­vel carregar os detalhes do agendamento.';
       setError(message);
       setIsLoading(false);
       setShouldPollIntent(false);
@@ -266,7 +291,7 @@ export default function BookingSuccessScreen() {
       const intentKey = paymentIntent.id ?? booking?.id ?? 'paid';
       if (paymentToastIntentRef.current !== intentKey) {
         NotificationUIService.showInfo(
-          'Pagamento confirmado. Seu atendimento está garantido.',
+          'Pagamento confirmado. Seu atendimento estÃ¡ garantido.',
           'Pagamento confirmado',
         );
         paymentToastIntentRef.current = intentKey;
@@ -279,10 +304,10 @@ export default function BookingSuccessScreen() {
   const startPolling = useCallback(() => {
     if (!bookingId || !shouldPollIntent) return;
     const poll = async () => {
+      pollAttemptsRef.current += 1;
       try {
         const intent = await fetchPaymentIntent(bookingId);
         if (!intent) {
-          pollAttemptsRef.current += 1;
           if (pollAttemptsRef.current > 20 && pollRef.current) {
             clearInterval(pollRef.current);
             pollRef.current = null;
@@ -290,7 +315,7 @@ export default function BookingSuccessScreen() {
           }
           return;
         }
-        if (intent.status === PaymentIntentStatus.PAID) {
+        if (shouldStopPollingForStatus(intent.status)) {
           setPaid(true);
           if (!onceRef.current) {
             onceRef.current = true;
@@ -308,6 +333,24 @@ export default function BookingSuccessScreen() {
               router.replace('/client/bookings?highlightNew=true' as any);
             }, 1200);
           }
+          return;
+        }
+        if (
+          pollAttemptsRef.current >= MAX_POLL_ATTEMPTS &&
+          !pixFallbackActive
+        ) {
+          if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+          setShouldPollIntent(false);
+          setPixFallbackActive(true);
+          try {
+            const refreshed = await getBookingDetails(bookingId);
+            setBooking(refreshed);
+          } catch {
+            // Silently ignore refresh failures; no user message needed here.
+          }
         }
       } catch (err: any) {
         const status = err?.status ?? err?.response?.status;
@@ -320,7 +363,7 @@ export default function BookingSuccessScreen() {
           setShouldPollIntent(false);
           NotificationUIService.showInfo(
             'Sessão atualizada',
-            'Sua sessão de pagamento foi renovada. Voltamos para a página inicial para garantir sua segurança.'
+            'Sua sessão de pagamento foi renovada. Voltamos para a página inicial para garantir sua segurança.',
           );
           setTimeout(() => {
             router.replace('/client/explore' as any);
@@ -332,7 +375,7 @@ export default function BookingSuccessScreen() {
     };
     poll();
     pollRef.current = setInterval(poll, 3000);
-  }, [bookingId, router, shouldPollIntent]);
+  }, [bookingId, router, shouldPollIntent, pixFallbackActive]);
 
   useEffect(() => {
     pollAttemptsRef.current = 0;
@@ -415,6 +458,13 @@ export default function BookingSuccessScreen() {
     router.push('/client/missions' as any);
   }, [router]);
 
+  const handleSupportCTA = useCallback(() => {
+    NotificationUIService.showInfo(
+      'Nossa equipe de suporte jÃ¡ recebeu o caso. Caso precise, podemos acompanhar de perto.',
+      'Suporte disponÃ­vel',
+    );
+  }, []);
+
   const handleRebookNow = useCallback(
     (code: string) => {
       if (!booking) return;
@@ -462,20 +512,34 @@ export default function BookingSuccessScreen() {
         </View>
 
         {!isLoading && !error && booking ? (
-              <>
-                {paymentMethod === 'PIX' && (
-                  <View style={styles.paymentStatusContainer}>
+          <>
+            {paymentMethod === 'PIX' && (
+              <View style={styles.paymentStatusContainer}>
                     {paymentIntent?.status === PaymentIntentStatus.PAID ? (
                       <View testID="booking-success-primary-cta">
                         <PaymentConfirmationCard onPressCta={handleGoToBookings} />
                       </View>
-                    ) : (
-                      <Text style={styles.pendingStatusText}>Aguardando confirmação</Text>
+                    ) : null}
+                    {pixFallbackActive && (
+                      <View style={styles.paymentFallbackCard}>
+                        <Text style={styles.paymentFallbackText}>
+                          {pixFallbackMessage ??
+                            'Pagamento em análise. Atualizaremos assim que o status mudar.'}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.supportButton}
+                          onPress={handleSupportCTA}
+                        >
+                          <Text style={styles.supportButtonText}>
+                            Falar com suporte
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     )}
                   </View>
                 )}
             <BookingSummaryCard
-              booking={booking}
+              booking={summaryBooking ?? booking}
               provider={provider}
               providerRating={providerRating}
               pixChargeDetails={pixCharge}
@@ -564,6 +628,31 @@ const createStyles = (insetsTop: number) =>
       textAlign: 'center',
       marginBottom: 6,
     },
+    paymentFallbackCard: {
+      marginTop: 12,
+      width: '100%',
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: AppColors.border,
+      backgroundColor: AppColors.backgroundLight,
+    },
+    paymentFallbackText: {
+      ...textFix({ fontSize: 14, lineHeight: 20 }),
+      color: AppColors.textBody,
+    },
+    supportButton: {
+      marginTop: 10,
+      alignSelf: 'flex-start',
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 999,
+      backgroundColor: AppColors.primaryInteractive,
+    },
+    supportButtonText: {
+      ...textFix({ fontWeight: '700', fontSize: 14 }),
+      color: AppColors.white,
+    },
     bottomSpacer: {
       height: 32,
     },
@@ -582,3 +671,4 @@ const createStyles = (insetsTop: number) =>
       color: HEADER_PRIMARY_COLOR,
     },
   });
+
