@@ -16,16 +16,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '../../../../constants/Colors';
 
-interface NavBarProps {
-  welcomeCouponOffer?: any;
-  activeBottomPromotion?: 'coupon' | 'referral' | null;
-  setActiveBottomPromotion?: (val: 'coupon' | 'referral' | null) => void;
-}
-
-const NavBar: React.FC<NavBarProps> = ({
-  welcomeCouponOffer,
-  setActiveBottomPromotion,
-}) => {
+const NavBar: React.FC = () => {
   const router = useRouter();
   const currentRoute = usePathname();
   const scheme = (Colors as any)?.scheme || 'light';
@@ -110,11 +101,7 @@ const NavBar: React.FC<NavBarProps> = ({
           <Pressable
             key={item.name}
             style={styles.navItem}
-            onPress={() => {
-              if (item.name === 'Cupons' && welcomeCouponOffer) {
-                setActiveBottomPromotion?.('coupon');
-              } else navigateTo(item.route);
-            }}
+            onPress={() => navigateTo(item.route)}
             onPressIn={() => onPressIn(index)}
             onPressOut={() => onPressOut(index)}
           >
