@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
-import { fetchProviderAppointments, ProviderAppointment } from '../services/providerScheduleService';
+import { fetchProviderAppointments } from '../services/providerScheduleService';
 import { useCancelableLoadable } from './useCancelableLoadable';
+import { BookingDetails } from '../types/backend/bookings';
 
-export function useProviderSchedule() {
-  const loader = useCancelableLoadable<ProviderAppointment[]>({
-    factory: (signal) => fetchProviderAppointments(undefined, undefined, signal),
+export function useProviderSchedule(range?: { start?: string; end?: string }) {
+  const loader = useCancelableLoadable<BookingDetails[]>({
+    factory: (signal) => fetchProviderAppointments(range, signal),
     timeoutMs: 8000,
+    dependencies: range ? [range.start, range.end] : [],
   });
 
   const appointments = useMemo(() => loader.data ?? [], [loader.data]);
