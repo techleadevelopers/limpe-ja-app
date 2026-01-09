@@ -233,6 +233,24 @@ export class CouponsService {
       };
     }
 
+    const existingUsage = await this.prisma.couponUsage.findFirst({
+      where: {
+        couponId: coupon.id,
+        userId,
+      },
+    });
+    if (existingUsage) {
+      this.logger.warn(
+        `[CouponsService] applyCoupon: Cupom ${code} já foi utilizado por userId ${userId}.`,
+      );
+      return {
+        discountAmount: 0,
+        newTotalPrice: originalPrice,
+        message: 'Este cupom já foi utilizado.',
+        errorCode: 'coupon.already_used',
+      };
+    }
+
     // Se o cupom foi emitido para um usuário específico, verificar se é o usuário correto
     if (coupon.issuedToUserId && coupon.issuedToUserId !== userId) {
       this.logger.warn(
