@@ -676,7 +676,7 @@ export default function EditProviderServicesScreen() {
             accessibilityLabel="Selecionar tipo de serviço"
           >
             <Text style={styles.selectFieldText}>
-              {selectedService?.name || (availableBaseServices.length === 0 ? 'Carregando...' : 'Selecione...')}
+              {selectedService?.name || (availableBaseServices.length === 0 ? '' : 'Selecione...')}
             </Text>
             <Text style={styles.selectFieldAction}>{isEditing ? 'Bloqueado' : 'Alterar'}</Text>
           </TouchableOpacity>
