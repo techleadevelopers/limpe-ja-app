@@ -2,10 +2,10 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
   ForbiddenException,
   Logger,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitReviewDto } from './dto/submit-review.dto';
@@ -111,6 +111,8 @@ type ProviderWithRelationsForSuggestions = Prisma.ProviderGetPayload<{
 @Injectable()
 export class ReviewsService {
   private readonly logger = new Logger(ReviewsService.name);
+  private static readonly REVIEW_RATE_LIMIT = 3;
+  private static readonly REVIEW_LOOKBACK_DAYS = 30;
 
   constructor(
     private prisma: PrismaService,
@@ -119,13 +121,29 @@ export class ReviewsService {
     private missionsService: MissionsService,
   ) {}
 
-  private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
+private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
     const baseDate = new Date(booking.scheduledDate);
-    const [hourStr = '0', minuteStr = '0'] = (booking.scheduledTime ?? '00:00')
-      .split(':')
-      .map((value) => value.trim());
-    const hour = Number.parseInt(hourStr, 10) || 0;
-    const minute = Number.parseInt(minuteStr, 10) || 0;
+    
+    // 1. Pegamos o valor e forçamos o TS a tratá-lo como 'any' temporariamente 
+    // para evitar a inferência de 'never'.
+    const rawTime: any = booking.scheduledTime;
+    let timeStr = '00:00';
+
+    if (rawTime instanceof Date) {
+      // Se for objeto Date (vinda do Prisma)
+      timeStr = rawTime.toISOString().split('T')[1].substring(0, 5);
+    } else if (typeof rawTime === 'string') {
+      // Se for string (ISO completa ou HH:mm)
+      timeStr = rawTime.includes('T') 
+        ? rawTime.split('T')[1].substring(0, 5) 
+        : rawTime;
+    }
+
+    // 2. Agora fazemos o split em uma variável que o TS tem certeza que é string
+    const parts = (timeStr || '00:00').split(':');
+    const hour = parseInt(parts[0] || '0', 10) || 0;
+    const minute = parseInt(parts[1] || '0', 10) || 0;
+
     baseDate.setHours(hour, minute, 0, 0);
     return baseDate;
   }
@@ -246,10 +264,37 @@ export class ReviewsService {
           throw new BadRequestException('Pagamento não confirmado.');
         }
 
-        if (booking.isReviewed || booking.review) {
-          throw new ConflictException(
-            `Agendamento com ID "${bookingId}" já possui uma avaliação.`,
+        const existingReview = await tx.review.findFirst({
+          where: { bookingId },
+        });
+        if (existingReview) {
+          throw new BadRequestException(
+            {
+              code: 'review.already_exists_for_booking',
+              message: 'Este agendamento já possui uma avaliação registrada.',
+            },
           );
+        }
+
+        const rateLimitWindowStart = new Date();
+        rateLimitWindowStart.setDate(
+          rateLimitWindowStart.getDate() - ReviewsService.REVIEW_LOOKBACK_DAYS,
+        );
+
+        const recentReviewCount = await tx.review.count({
+          where: {
+            clientId: booking.clientId,
+            providerId: booking.providerId,
+            createdAt: { gte: rateLimitWindowStart },
+          },
+        });
+
+        if (recentReviewCount >= ReviewsService.REVIEW_RATE_LIMIT) {
+          throw new BadRequestException({
+            code: 'review.rate_limited',
+            message:
+              'Você atingiu o limite de avaliações para este prestador nas últimas 30 dias.',
+          });
         }
 
         const review = await tx.review.create({
