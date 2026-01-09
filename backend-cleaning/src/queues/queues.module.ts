@@ -31,7 +31,7 @@ import { RedisLockModule } from '../common/locks/redis-lock.module';
           attempts: 3,
           backoff: { type: 'exponential', delay: 1000 },
           removeOnComplete: true,
-          removeOnFail: false,
+          removeOnFail: 500,
         },
       }),
     }),
