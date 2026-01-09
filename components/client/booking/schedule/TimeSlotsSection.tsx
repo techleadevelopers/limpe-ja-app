@@ -13,10 +13,13 @@ import {
 } from 'react-native';
 import { AppColors } from '../../../../constants/appStyles';
 import TimeSlotButton from './TimeSlotButton';
+import { TimeSlot } from '../../../../utils/timeSlots';
+import { normalizeSlotLabel } from '../../../../utils/time';
 
 interface SlotItem {
   time: string;
   isAvailable: boolean;
+  fullISO: string;
   isRecommended?: boolean;
 }
 
@@ -25,16 +28,13 @@ interface TimeSlotsSectionProps {
   title?: string;
   date?: Date | string | number;
 
-  displaySlotsInfo: Array<{ time: string; isAvailable: boolean }>;
+  displaySlotsInfo: TimeSlot[];
   isLoading: boolean;
 
-  // Seleção "clássica" (um único horário) – mantida para compatibilidade
   selectedTime: string | null;
-  onTimeSelect: (time: string) => void;
+  onTimeSelect: (slotIso: string) => void;
 
   isPreference?: boolean;
-
-  // NOVO: suporte a seleção múltipla (contígua)
   selectedSlots?: string[];
 }
 
@@ -46,8 +46,11 @@ const CARD_PADDING_TOTAL = 24 * 2;
 const HORIZONTAL_GUTTER = CARD_MARGIN_TOTAL + CARD_PADDING_TOTAL;
 
 const toMinutes = (t: string) => {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
+  if (!t) return 0;
+  // Limpa formatos como "08:00-09:00" pegando apenas o início
+  const cleanTime = t.split('-')[0].trim();
+  const [h, m] = cleanTime.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
 };
 
 const getPeriod = (time: string) => {
@@ -81,10 +84,8 @@ export default function TimeSlotsSection({
 
   const headerDateText = React.useMemo(() => {
     if (!date) return '';
-
     const d = new Date(date);
     if (isNaN(d.getTime())) return '';
-
     const locale = i18n?.language || 'pt-BR';
     return d.toLocaleDateString(locale, {
       day: '2-digit',
@@ -99,11 +100,9 @@ export default function TimeSlotsSection({
   );
 
   const handleSlotPress = React.useCallback(
-    (time: string, alreadySelected: boolean) => {
-      if (alreadySelected) {
-        return;
-      }
-      onTimeSelect(time);
+    (slotIso: string, alreadySelected: boolean) => {
+      if (alreadySelected) return;
+      onTimeSelect(slotIso);
     },
     [onTimeSelect],
   );
@@ -111,13 +110,13 @@ export default function TimeSlotsSection({
   const renderSlotItem = React.useCallback(
     ({ item }: { item: SlotItem }) => {
       const isInMultiSelection = selectedSlotsSet.size > 0 && selectedSlotsSet.has(item.time);
-      const isSlotSelected = isInMultiSelection || selectedTime === item.time;
+      const isSlotSelected = isInMultiSelection || selectedTime === item.fullISO;
 
       return (
         <TimeSlotButton
           time={item.time}
           isSelected={isSlotSelected}
-          onPress={() => handleSlotPress(item.time, isSlotSelected)}
+          onPress={() => handleSlotPress(item.fullISO, isSlotSelected)}
           isAvailable={item.isAvailable}
           itemWidth={itemWidth}
           isRecommended={item.isRecommended && dense}
@@ -130,14 +129,21 @@ export default function TimeSlotsSection({
   );
 
   const sections = React.useMemo(() => {
-    const filtered = showUnavailable ? displaySlotsInfo : displaySlotsInfo.filter(s => s.isAvailable);
+    if (!displaySlotsInfo) return [];
+
+    // NORMALIZAÇÃO: Garante que o frontend entenda o formato do backend
+    const normalized = displaySlotsInfo.map((s) => ({
+      ...s,
+      time: normalizeSlotLabel(s.time),
+    }));
+
+    const filtered = showUnavailable ? normalized : normalized.filter(s => s.isAvailable);
     const sorted = [...filtered].sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
 
     const isToday = date ? new Date(date).toDateString() === new Date().toDateString() : false;
     const now = new Date();
-    const nowMins = toMinutes(
-      `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-    );
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+
     const nextIdx = new Set<number>();
     if (isToday) {
       let c = 0;
@@ -150,7 +156,7 @@ export default function TimeSlotsSection({
       }
     }
 
-    const enriched: SlotItem[] = sorted.map((s: SlotItem, i: number) => ({
+    const enriched: SlotItem[] = sorted.map((s, i) => ({
       ...s,
       isRecommended: nextIdx.has(i),
     }));
@@ -160,7 +166,11 @@ export default function TimeSlotsSection({
       afternoon: [],
       evening: [],
     };
-    enriched.forEach(item => grouped[getPeriod(item.time)].push(item));
+
+    enriched.forEach(item => {
+      const p = getPeriod(item.time);
+      grouped[p].push(item);
+    });
 
     const mk = (k: 'morning' | 'afternoon' | 'evening', label: string) =>
       grouped[k].length ? [{ key: k, label, data: grouped[k] }] : [];
@@ -193,14 +203,9 @@ export default function TimeSlotsSection({
 
               <FlatList
                 data={section.data}
-                keyExtractor={(item: SlotItem) => item.time}
+                keyExtractor={(item: SlotItem) => item.fullISO}
                 numColumns={numColumns}
                 renderItem={renderSlotItem}
-                getItemLayout={(data, index) => ({
-                  length: dense ? 40 : 44,
-                  offset: (dense ? 40 : 44) * index,
-                  index,
-                })}
                 scrollEnabled={false}
                 columnWrapperStyle={{
                   justifyContent: 'flex-start',
@@ -210,17 +215,7 @@ export default function TimeSlotsSection({
                 contentContainerStyle={{
                   paddingVertical: dense ? 3 : 6,
                   paddingBottom: dense ? 8 : 12,
-                  paddingLeft: 0,
-                  paddingRight: 0,
                 }}
-                ListEmptyComponent={() => (
-                  <Text style={styles.emptySlotText}>Nenhum horário disponível</Text>
-                )}
-                ListFooterComponent={null}
-                initialNumToRender={12}
-                maxToRenderPerBatch={12}
-                windowSize={21}
-                removeClippedSubviews={false}
               />
             </View>
           ))}
@@ -316,11 +311,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginVertical: 16,
     fontWeight: '700',
-  },
-  emptySlotText: {
-    textAlign: 'center',
-    color: AppColors.textAuxiliary,
-    fontSize: 14,
-    paddingVertical: 20,
   },
 });
