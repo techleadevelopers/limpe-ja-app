@@ -17,7 +17,7 @@ export const INSURANCE_PLANS: InsurancePlanDefinition[] = [
   {
     id: InsurancePlanId.ESSENCIAL,
     name: 'Essencial',
-    basePriceCents: 2490,
+    basePriceCents: 3290,
     coverageCents: 70000,
     deductibleCents: 20000,
     proofRequired: false,
