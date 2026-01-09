@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, Animated } from 'react-native';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
 
@@ -25,6 +25,10 @@ export default function TimeSlotButton({
 }: Props) {
   const pressAnim = useRef(new Animated.Value(1)).current;
 
+  React.useEffect(() => {
+    console.log('[TimeSlotButton] render', { time, isAvailable, isSelected });
+  }, [time, isAvailable, isSelected]);
+
   const onPressIn = () => {
     Animated.spring(pressAnim, { toValue: 0.98, useNativeDriver: true }).start();
   };
@@ -41,6 +45,15 @@ export default function TimeSlotButton({
   // ✅ Espaçamento vai no WRAPPER (evita “estourar” e cortar o último item da linha)
   const horizontalPad = noHorizontalMargin ? 0 : 6;
 
+  const formatSlotLabel = (value: string) => {
+    if (!value) return value;
+    const [hour, minute] = value.split(':');
+    if (minute === '00') {
+      return `${hour}h`;
+    }
+    return `${hour}h${minute}`;
+  };
+
   return (
     <Animated.View
       style={[
@@ -48,7 +61,7 @@ export default function TimeSlotButton({
         {
           transform: [{ scale: pressAnim }],
           paddingHorizontal: horizontalPad,
-          // se você passa itemWidth, ele vira o tamanho da célula
+          
           width: itemWidth,
         },
       ]}
@@ -60,7 +73,7 @@ export default function TimeSlotButton({
           styles.buttonBase,
           // ✅ Botão ocupa a célula inteira (sem marginHorizontal aqui)
           // ✅ minWidth menor pra não “forçar” o layout a vazar
-          { minWidth: dense ? 72 : 78 },
+          { minWidth: dense ? 40 : 40, minHeight: 44 },
           !isAvailable ? styles.unavailable : isSelected ? styles.selected : styles.available,
         ]}
         activeOpacity={0.9}
@@ -75,7 +88,7 @@ export default function TimeSlotButton({
             maxFontSizeMultiplier={1.1}
             allowFontScaling={false}
           >
-            {time}
+            {formatSlotLabel(time)}
           </Text>
         </View>
       </TouchableOpacity>
@@ -91,16 +104,17 @@ const styles = StyleSheet.create({
   },
 
   buttonBase: {
-    height: 30,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
+    height: 44,
+    paddingHorizontal: 10,
+    paddingVertical: 0,
+    left: 9,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
 
     // ✅ crucial: botão não pode vazar da célula
-    width: '100%',
+    width: '70%',
     flexShrink: 1,
 
     overflow: 'hidden',
@@ -129,7 +143,7 @@ const styles = StyleSheet.create({
   },
 
   text: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: '800',
     color: AppColors.textBody,
     letterSpacing: -0.2,
