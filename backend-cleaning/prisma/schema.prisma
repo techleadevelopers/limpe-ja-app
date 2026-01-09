@@ -55,6 +55,7 @@ enum TransactionStatus {
 
 enum BookingStatus {
   PENDING
+  PENDING_PAYMENT
   PENDING_PROVIDER_CONFIRMATION
   CONFIRMED
   ON_THE_WAY    // Prestador a caminho
@@ -62,6 +63,7 @@ enum BookingStatus {
   STARTED       // Serviço iniciado
   FINISHED      // Serviço finalizado
   CANCELED
+  EXPIRED
   PENDING_DISPUTE
   RESCHEDULED
   REJECTED
@@ -389,10 +391,12 @@ model Client {
   reviewsMade             Review[]         @relation("ClientReviews")
   noShowCount             Int              @default(0)
   cancellationCount       Int              @default(0)
+  cancellationCooldownUntil DateTime?
   subscriptions           Subscription[]
   guaranteeClaims         GuaranteeClaim[]
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
+  slotHoldStrikes         SlotHoldStrike[]
 }
   
 
@@ -481,6 +485,7 @@ model Provider {
 
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
+  slotHoldStrikes         SlotHoldStrike[]
 
   @@index([verificationStatus, yearsOfExperience])
 }
@@ -549,11 +554,12 @@ model Booking {
 
   // Agendamento
   scheduledDate    DateTime
-  scheduledTime    String
+  scheduledTime    DateTime
   scheduledStart   DateTime?
   durationMinutes  Int?
   scheduledEnd     DateTime?        // ✅ NOVO: derivado (scheduledStart + durationMinutes)
-  status           BookingStatus    @default(PENDING)
+  status           BookingStatus    @default(PENDING_PAYMENT)
+  expiresAt        DateTime?
 
   // Preço e descontos
   totalPrice       Decimal          @db.Decimal(10, 2)
@@ -612,6 +618,7 @@ model Booking {
   @@index([providerId, status, scheduledDate])
   @@index([clientId, status, scheduledDate])
   @@index([status, scheduledDate])
+  @@index([status, expiresAt])
   @@index([providerId, scheduledStart, scheduledEnd]) // ✅ NOVO: overlap fast
 }
 
@@ -853,6 +860,20 @@ model Availability {
   @@index([providerId, dayOfWeek])
 }
 
+model SlotHoldStrike {
+  id         String    @id @default(cuid())
+  clientId   String
+  providerId String
+  start      DateTime
+  createdAt  DateTime  @default(now())
+
+  client     Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  provider   Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, providerId, start])
+  @@index([providerId, start, createdAt])
+}
+
 model FAQItem {
   id        String   @id @default(uuid())
   question  String   @unique
@@ -911,16 +932,23 @@ model DisputeMessage {
   dispute      Dispute       @relation("DisputeMessages", fields: [disputeId], references: [id])
 }
 
+// MIGRATION PLAN:
+// 1. Add this model change to a new migration (e.g., `npx prisma migrate dev --name consent-history`).
+// 2. Backfill the `id` column with UUIDs in SQL or via a migration script so existing rows remain.
+// 3. Ensure `userId`, `documentType`, and `consentedAt` remain indexed for fast lookups.
 model UserConsent {
+  id           String   @id @default(uuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   documentType String
   version      String
+  documentHash String?
+  source       String?
   consentedAt  DateTime @default(now())
   ipAddress    String?
   userAgent    String?
 
-  @@id([userId, documentType])
+  @@index([userId, documentType, consentedAt])
 }
 
 model Subscription {
