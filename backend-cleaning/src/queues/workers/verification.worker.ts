@@ -2,6 +2,7 @@
 import { OnWorkerEvent, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
+import * as Sentry from '@sentry/node';
 import { DocumentProcessingService } from '../../document-processing/document-processing.service';
 import { ProvidersService } from '../../providers/providers.service';
 import { VerificationService } from '../../verification/verification.service';
@@ -12,10 +13,12 @@ import { VerificationStatus } from '../../shared/enums/verification-status.enum'
 import { QueuesService } from '../queues.service';
 import { NotificationsService } from '../../notifications/notifications.service'; // Importar NotificationsService
 import { I18nService } from '../../common/i18n/i18n.service'; // Importar I18nService
+import { queueJobProcessingDuration } from '../../metrics/prometheus';
 
 @Injectable()
 export class VerificationWorker extends WorkerHost {
   private readonly logger = new Logger(VerificationWorker.name);
+  private isShuttingDown = false;
 
   constructor(
     private readonly documentProcessingService: DocumentProcessingService,
@@ -27,13 +30,22 @@ export class VerificationWorker extends WorkerHost {
     private readonly i18n: I18nService, // Injetar I18nService
   ) {
     super();
+    process.once('SIGTERM', () => this.handleShutdown('SIGTERM'));
+    process.once('SIGINT', () => this.handleShutdown('SIGINT'));
   }
 
   async process(job: Job<any, any, string>): Promise<any> {
+    if (this.isShuttingDown) {
+      throw new Error('Worker is shutting down');
+    }
     const { providerId, fileUrl, type, selfieUrl, documentFrontUrl } = job.data;
     this.logger.log(
       `[VerificationWorker] Processando job '${job.name}' para providerId: ${providerId}`,
     );
+    const endTimer = queueJobProcessingDuration.startTimer({
+      queue: 'verification',
+      job: job.name,
+    });
 
     let processingErrorReason: string | null = null; // Para capturar o motivo específico do erro
     let notificationMessageKey: string = 'verification.processingFailedGeneric'; // Chave padrão para i18n
@@ -179,6 +191,8 @@ export class VerificationWorker extends WorkerHost {
       }
 
       throw error; // Re-throw o erro para que o BullMQ marque o job como falho e lide com as retentativas.
+    } finally {
+      endTimer();
     }
   }
 
@@ -207,9 +221,35 @@ export class VerificationWorker extends WorkerHost {
   }
 
   @OnWorkerEvent('failed')
-  onFailed(job: Job<any, any, string>, error: Error) {
+  async onFailed(job: Job<any, any, string>, error: Error) {
     this.logger.error(
       `[VerificationWorker] Job '${job.name}' com ID '${job.id}' falhou com erro: ${error.message}`,
+    );
+    if (job.attemptsMade >= (job.opts.attempts ?? 3)) {
+      await this.captureDeadLetter(job, error);
+    }
+  }
+
+  private async captureDeadLetter(job: Job<any, any, string>, error: Error) {
+    Sentry.captureException(error, {
+      level: 'error',
+      extra: {
+        queue: 'verification',
+        jobId: job.id,
+        attempts: job.attemptsMade,
+      },
+    });
+    this.logger.warn(
+      `[DLQ] verification job ${job.id} movido para dead letter após ${job.attemptsMade} tentativas.`,
+    );
+    await job.remove();
+  }
+
+  private handleShutdown(signal: string) {
+    if (this.isShuttingDown) return;
+    this.isShuttingDown = true;
+    this.logger.warn(
+      `VerificationWorker recebeu ${signal}; aguardando conclusão do job atual antes de encerrar.`,
     );
   }
 }
