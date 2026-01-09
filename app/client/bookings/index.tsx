@@ -26,7 +26,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatAddressCompact } from '../../../utils/address';
-import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
+import { formatDateTime, formatPriceBRL, parseDateTimeParts, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
 
 import { alertUserError } from '../../../_shared/errors/uiFeedback';
@@ -386,7 +386,7 @@ export default function MyBookingsScreen() {
         if (!user?.id) {
           console.warn('[MyBookingsScreen] Usuário ausente; abortando fetch.');
           setIsLoading(false);
-          setHeaderTitle('Meus agendamentos');
+          setHeaderTitle('Agendamentos');
           setIsRefreshing(false);
           return;
         }
@@ -430,18 +430,17 @@ export default function MyBookingsScreen() {
           }
 
           const now = new Date();
+          const getBookingTimestamp = (booking: BookingDetails) =>
+            parseDateTimeParts(booking.scheduledDate, booking.scheduledTime)?.getTime() ?? Number.POSITIVE_INFINITY;
           const filteredAndSortedBookings = rawBookings
             .filter((b) => {
-              const bookingDateTime = new Date(`${b.scheduledDate}T${b.scheduledTime}`);
+              const bookingDateTime = parseDateTimeParts(b.scheduledDate, b.scheduledTime);
+              if (!bookingDateTime) return false;
               if (currentFilter === 'requests' || currentFilter === 'upcoming') return bookingDateTime >= now;
               if (currentFilter === 'completed') return bookingDateTime < now;
               return true;
             })
-            .sort((a, b) => {
-              const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`).getTime();
-              const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`).getTime();
-              return dateA - dateB;
-            });
+            .sort((a, b) => getBookingTimestamp(a) - getBookingTimestamp(b));
 
           if (__DEV__) {
             filteredAndSortedBookings.forEach((b) => console.log('Bookings carregados - Avatar URL:', b.providerAvatarUrl));
