@@ -79,6 +79,7 @@ export default function RegisterProviderScreen() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [cpfError, setCpfError] = useState<string | null>(null);
   const [dateOfBirthError, setDateOfBirthError] = useState<string | null>(null);
+  const [dateOfBirthTouched, setDateOfBirthTouched] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [cepInputError, setCepInputError] = useState<string | null>(null);
   const [streetError, setStreetError] = useState<string | null>(null);
@@ -455,6 +456,7 @@ export default function RegisterProviderScreen() {
   }, [cpf]);
 
   const handleDateOfBirthBlur = useCallback(() => {
+    setDateOfBirthTouched(true);
     setDateOfBirthError(null);
     if (!dateOfBirth.trim()) {
       setDateOfBirthError('A data de nascimento eh obrigatoria.');
@@ -1077,7 +1079,7 @@ export default function RegisterProviderScreen() {
           {/* Step 3: DateOfBirth + Password */}
           {currentStep === 3 && (
             <View style={styles.stepContent}>
-              <View style={[styles.inputWrapper, dateOfBirthError ? styles.inputWrapperError : {}]}>
+          <View style={[styles.inputWrapper, dateOfBirthTouched && dateOfBirthError ? styles.inputWrapperError : {}]}>
                 <View style={styles.iconCircle}>
                   <Ionicons name="calendar-outline" size={23} color="#00BCD4" />
                 </View>
@@ -1086,16 +1088,17 @@ export default function RegisterProviderScreen() {
                   placeholder="Data de nascimento (DD/MM/AAAA)"
                   placeholderTextColor="#A0AEC0"
                   value={dateOfBirth}
-                  onChangeText={(text) => {
-                    setDateOfBirth(formatDateForDisplay(text));
-                    setDateOfBirthError(null);
-                  }}
+                    onChangeText={(text) => {
+                      setDateOfBirth(formatDateForDisplay(text));
+                      setDateOfBirthError(null);
+                      setDateOfBirthTouched(false);
+                    }}
                   onBlur={handleDateOfBirthBlur}
                   keyboardType="numeric"
                   maxLength={10}
                 />
               </View>
-              <AnimatedErrorMessage message={dateOfBirthError} isVisible={!!dateOfBirthError} centered={false} />
+          <AnimatedErrorMessage message={dateOfBirthError} isVisible={dateOfBirthTouched && !!dateOfBirthError} centered={false} />
 
               <View style={[styles.inputWrapper, passwordError ? styles.inputWrapperError : {}]}>
                 <View style={styles.iconCircle}>
