@@ -187,7 +187,7 @@ export default function RankingScreen() {
         {/* Alterado para azul */}
         <Text style={[styles.podiumScore, { color: '#9b3ffdd3' }]}>{e.score}</Text>
         {/* Alterado para azul com opacidade */}
-        <Text style={[styles.podiumHandle, { color: withAlpha('#007BFF', 0.8) }]}>{e.handle || e.displayName}</Text>
+        <Text style={[styles.podiumHandle, { color: withAlpha('#007BFF', 0.8) }]}>{e.handle || e.fullName}</Text>
       </View>
     );
   };
@@ -275,7 +275,7 @@ export default function RankingScreen() {
     <View style={{ marginHorizontal: 16, marginBottom: 8 }}>
       <RankingCard
         rank={item.rank}
-        name={item.displayName}
+        name={item.fullName}
         score={item.score}
         avatarUrl={item.avatarUrl ?? undefined}
         isCurrentUser={!!item.isCurrentUser}
