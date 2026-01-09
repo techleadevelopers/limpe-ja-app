@@ -134,6 +134,70 @@ export function formatDistance(distanceMeters: unknown, fallback: string | null 
   return `${Math.round(km)} km`;
 }
 
+const TIME_ONLY_REGEX = /^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+
+const parseCandidateDate = (value: unknown): Date | null => {
+  if (value == null) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = new Date(trimmed);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
+};
+
+const isTimeOnlyString = (value?: unknown): boolean => {
+  return typeof value === 'string' && TIME_ONLY_REGEX.test(value.trim());
+};
+
+export function parseDateTimeParts(dateInput?: unknown, timeInput?: unknown): Date | null {
+  const dateCandidate = parseCandidateDate(dateInput);
+  const timeCandidate = parseCandidateDate(timeInput);
+  const timeStr = typeof timeInput === 'string' ? timeInput.trim() : '';
+  const timeOnly = isTimeOnlyString(timeStr);
+
+  if (timeInput != null && typeof timeInput === 'string' && !timeOnly && timeCandidate) {
+    return timeCandidate;
+  }
+
+  if (dateCandidate) {
+    if (timeOnly) {
+      const normalizedTime = timeStr.length === 5 ? `${timeStr}:00` : timeStr;
+      const isoDate = dateCandidate.toISOString().split('T')[0];
+      const combined = parseCandidateDate(`${isoDate}T${normalizedTime}`);
+      if (combined) return combined;
+    }
+    if (timeCandidate && !timeOnly) {
+      return timeCandidate;
+    }
+    return dateCandidate;
+  }
+
+  if (timeCandidate && !timeOnly) {
+    return timeCandidate;
+  }
+
+  return null;
+}
+
+export function getNextAvailableDate(
+  next?: { date?: unknown; time?: unknown } | string | Date,
+): Date | null {
+  if (!next) return null;
+  if (typeof next === 'string' || next instanceof Date) {
+    return parseCandidateDate(next);
+  }
+  return parseDateTimeParts(next.date, next.time);
+}
+
 /**
  * Formata uma data e/ou hora para o padrão brasileiro.
  * Esta função é muito similar a `safeFormatDate` e pode ser consolidada.
@@ -145,17 +209,9 @@ export function formatDistance(distanceMeters: unknown, fallback: string | null 
  * @returns Uma string formatada da data/hora ou o fallback.
  */
 export function formatDateTime(dateString: unknown, timeString?: unknown, opts?: Intl.DateTimeFormatOptions, fallback: string = '--'): string {
-  let dateToFormat: Date;
-  const ds = String(dateString || '');
-  const ts = String(timeString || '');
+  const dateToFormat = parseDateTimeParts(dateString, timeString);
 
-  if (ts) {
-    dateToFormat = new Date(`${ds}T${ts}`);
-  } else {
-    dateToFormat = new Date(ds);
-  }
-
-  if (isNaN(dateToFormat.getTime())) {
+  if (!dateToFormat) {
     return fallback;
   }
 
