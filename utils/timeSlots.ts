@@ -1,6 +1,13 @@
 // utils/timeSlots.ts
 import { ProviderAvailability } from '../types/backend/providers';
-import { buildDateTimeForSlot, isPastSlotForDate, toBrazilDate } from './time';
+import {
+  buildDateTimeForSlot,
+  isPastSlotForDate,
+  formatBrazilDateKey,
+  getBrazilDayOfWeekFromKey,
+  buildBrazilDateFromKey,
+  toBrazilDate,
+} from './time';
 
 export interface TimeSlot {
   time: string;
@@ -42,9 +49,12 @@ export const generateDailySlots = (
   occupiedTimesFromBackend: string[],
   requiredDurationMin?: number | null,
   intervalMinutes: number = SLOT_INTERVAL_MINUTES,
+  brazilDateKey?: string,
 ): TimeSlot[] => {
-  const normalizedDate = toBrazilDate(selectedDate);
-  const dayOfWeekSelected = normalizedDate.getDay(); // 0 (Dom) a 6 (Sáb)
+  const dateKey = brazilDateKey ?? formatBrazilDateKey(selectedDate);
+  const normalizedDate = buildBrazilDateFromKey(dateKey) ?? toBrazilDate(selectedDate);
+  const dayOfWeekSelected =
+    getBrazilDayOfWeekFromKey(dateKey) ?? normalizedDate.getUTCDay();
 
   // Normalize occupied times to a Set for quick lookup
   const toSlotIso = (time: string) => buildDateTimeForSlot(normalizedDate, time).toISOString();
