@@ -1,9 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useRef } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import {
+  Animated,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Platform } from 'react-native';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
+import { normalizeProviderAvailability } from './providerAvailability';
 
 interface SecaoRecomendacoesProps {
   titulo: string;
@@ -12,7 +22,15 @@ interface SecaoRecomendacoesProps {
   titleColor?: string;
   noDataText?: string;
   horizontal?: boolean;
-  renderItem: ({ item, index }: { item: ProviderDisplayInfo; index: number }) => React.ReactElement | null;
+  renderItem: ({
+    item,
+    index,
+    isVisible,
+  }: {
+    item: ProviderDisplayInfo;
+    index: number;
+    isVisible?: boolean;
+  }) => React.ReactElement | null;
 }
 
 const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
@@ -27,25 +45,55 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
   const safeData = useMemo(
     () =>
       Array.isArray(data)
-        ? data.filter(
-            (item) =>
-              item &&
-              typeof item === 'object' &&
-              typeof (item as any).id === 'string' &&
-              (item as any).id.trim() !== '' &&
-              typeof (item as any).fullName === 'string' &&
-              (item as any).fullName.trim() !== '',
-          )
+        ? data
+            .filter(
+              (item) =>
+                item &&
+                typeof item === 'object' &&
+                typeof (item as any).id === 'string' &&
+                (item as any).id.trim() !== '' &&
+                typeof (item as any).fullName === 'string' &&
+                (item as any).fullName.trim() !== '',
+            )
+            .map((item) => normalizeProviderAvailability(item) ?? item)
         : [],
     [data],
   );
 
   const CARD_SCALE = 1.07;
-  const CARD_BASE_WIDTH = 115 * CARD_SCALE;
+  const CARD_BASE_WIDTH = 105 * CARD_SCALE;
   const CARD_MARGIN_RIGHT = 15 * CARD_SCALE;
   const ITEM_FULL_SIZE = CARD_BASE_WIDTH + CARD_MARGIN_RIGHT;
+  const VISIBILITY_BUFFER = ITEM_FULL_SIZE * 0.6;
 
   const scrollX = useRef(new Animated.Value(0)).current;
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const { width: windowWidth } = useWindowDimensions();
+  const [carouselWidth, setCarouselWidth] = useState(windowWidth);
+  const pendingFrameRef = useRef<number | null>(null);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offset = event.nativeEvent.contentOffset.x || 0;
+    if (pendingFrameRef.current != null) {
+      cancelAnimationFrame(pendingFrameRef.current);
+    }
+    pendingFrameRef.current = requestAnimationFrame(() => {
+      pendingFrameRef.current = null;
+      setScrollOffset(offset);
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pendingFrameRef.current != null) {
+        cancelAnimationFrame(pendingFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setCarouselWidth(windowWidth);
+  }, [windowWidth]);
 
   return (
     <View style={styles.container}>
@@ -65,47 +113,66 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.cardsScrollContainer}
             decelerationRate="fast"
+            onLayout={(event) => {
+              const width = event.nativeEvent.layout.width;
+              if (width > 0 && width !== carouselWidth) {
+                setCarouselWidth(width);
+              }
+            }}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
               useNativeDriver: true,
+              listener: handleScroll,
             })}
             scrollEventThrottle={16}
           >
-            {safeData.map((item, index) => {
-              const inputRange = [
-                (index - 1) * ITEM_FULL_SIZE,
-                index * ITEM_FULL_SIZE,
-                (index + 1) * ITEM_FULL_SIZE,
-              ];
+          {safeData.map((item, index) => {
+            const inputRange = [
+              (index - 1) * ITEM_FULL_SIZE,
+              index * ITEM_FULL_SIZE,
+              (index + 1) * ITEM_FULL_SIZE,
+            ];
 
-              const scale = scrollX.interpolate({
-                inputRange,
-                outputRange: [0.94, 1.02, 0.94],
-                extrapolate: 'clamp',
-              });
-              const translateY = scrollX.interpolate({
-                inputRange,
-                outputRange: [2, 0, 2],
-                extrapolate: 'clamp',
-              });
-              const opacity = scrollX.interpolate({
-                inputRange,
-                outputRange: [0.9, 1, 0.9],
-                extrapolate: 'clamp',
-              });
+            const scale = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.94, 1.02, 0.94],
+              extrapolate: 'clamp',
+            });
+            const translateY = scrollX.interpolate({
+              inputRange,
+              outputRange: [2, 0, 2],
+              extrapolate: 'clamp',
+            });
+            const opacity = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.9, 1, 0.9],
+              extrapolate: 'clamp',
+            });
 
-              if (
-                !item ||
-                typeof item !== 'object' ||
-                typeof (item as any).id !== 'string' ||
-                typeof (item as any).fullName !== 'string'
-              ) {
-                return null;
-              }
+            if (
+              !item ||
+              typeof item !== 'object' ||
+              typeof (item as any).id !== 'string' ||
+              typeof (item as any).fullName !== 'string'
+            ) {
+              return null;
+            }
 
-              const rendered = renderItem({ item, index });
-              if (!React.isValidElement(rendered)) {
-                return null;
-              }
+            const cardStart = index * ITEM_FULL_SIZE;
+            const cardEnd = cardStart + ITEM_FULL_SIZE;
+            const viewportLeft = Math.max(0, scrollOffset - VISIBILITY_BUFFER);
+            const viewportRight = scrollOffset + carouselWidth + VISIBILITY_BUFFER;
+            const isVisible = cardEnd >= viewportLeft && cardStart <= viewportRight;
+
+            let rendered: React.ReactElement | null = null;
+            try {
+              rendered = renderItem({ item, index, isVisible });
+            } catch (err) {
+              console.error(`[SecaoRecomendacoes] Erro ao renderizar item no Indice ${index}:`, err);
+              return null;
+            }
+            if (!React.isValidElement(rendered)) {
+              return null;
+            }
 
               return (
                 <Animated.View
@@ -144,7 +211,7 @@ const styles = StyleSheet.create({
   container: {
     marginTop: Platform.OS === 'android' ? -5 : -9,
     marginBottom: -10,
-    paddingHorizontal: 6,
+    paddingHorizontal: Platform.OS === 'android' ?10 : 6,
     backgroundColor: 'transparent',
   },
   header: {
@@ -155,12 +222,13 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   sectionTitle: {
-    fontSize: Platform.OS === 'android' ? 14 : 15.5,
+    fontSize: Platform.OS === 'android' ? 16 : 15.5,
     fontFamily: 'Montserrat-Regular',
-    fontWeight: '600',
+    fontWeight: Platform.OS === 'android' ? '600' : '600',
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
     marginTop: 22,
+    right: Platform.OS === 'android' ? 4 : 0,
   },
   viewAllButton: {
     flexDirection: 'row',
@@ -182,15 +250,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     bottom: 10,
-    width: 28,
+    width: 60,
     zIndex: 2,
   },
   edgeLeft: {
-    left: -16,
+    left: -27,
     bottom: 0,
   },
   edgeRight: {
-    right: -16,
+    right: -34,
   },
   emptyText: {
     flex: 1,
@@ -202,5 +270,3 @@ const styles = StyleSheet.create({
 });
 
 export default SecaoRecomendacoes;
-
-
