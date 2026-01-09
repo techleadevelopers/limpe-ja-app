@@ -66,7 +66,7 @@ const feedbackStyles = StyleSheet.create({
 const ShimmerComponent = () => (
   <View style={[feedbackStyles.centered, { backgroundColor: AppColors.backgroundLight }]}>
     <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
-    <Text style={feedbackStyles.loadingText}>Carregando...</Text>
+    <Text style={feedbackStyles.loadingText}></Text>
   </View>
 );
 
