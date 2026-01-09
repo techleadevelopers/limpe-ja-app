@@ -43,8 +43,24 @@ export class ReviewsController {
 
   constructor(private readonly reviewsService: ReviewsService) {}
 
+  /**
+   * Helper para sanitizar objetos de review vindos do Prisma (Date -> String)
+   * Isso resolve o erro TS2345 onde o ReviewEntity espera string e recebe Date
+   */
+  private mapToEntity(review: any): ReviewEntity {
+    if (review?.booking) {
+      if (review.booking.scheduledDate instanceof Date) {
+        review.booking.scheduledDate = review.booking.scheduledDate.toISOString();
+      }
+      if (review.booking.scheduledTime instanceof Date) {
+        review.booking.scheduledTime = review.booking.scheduledTime.toISOString();
+      }
+    }
+    return new ReviewEntity(review);
+  }
+
   @Post()
-  @Roles(UserRole.CLIENT) // Apenas clientes podem enviar avaliacoes
+  @Roles(UserRole.CLIENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -54,16 +70,6 @@ export class ReviewsController {
     status: 201,
     description: 'Avaliacao enviada com sucesso.',
     type: ReviewEntity,
-  })
-  @ApiResponse({ status: 401, description: 'Nao autorizado.' })
-  @ApiResponse({ status: 403, description: 'Acesso proibido.' })
-  @ApiResponse({
-    status: 404,
-    description: 'Agendamento nao encontrado ou nao concluido.',
-  })
-  @ApiResponse({
-    status: 409,
-    description: 'Agendamento ja possui uma avaliacao.',
   })
   async submitReview(
     @Req() req: RequestWithUser,
@@ -77,7 +83,7 @@ export class ReviewsController {
       userId,
       submitReviewDto,
     );
-    return new ReviewEntity(review);
+    return this.mapToEntity(review);
   }
 
   @Get()
@@ -87,18 +93,14 @@ export class ReviewsController {
     description: 'Lista de avaliacoes.',
     type: [ReviewEntity],
   })
-  @ApiResponse({
-    status: 404,
-    description: 'Nenhuma avaliacao encontrada com os filtros fornecidos.',
-  })
   async getReviews(
     @Query() getReviewsDto: GetReviewsDto,
   ): Promise<ReviewEntity[]> {
     const reviews = await this.reviewsService.findReviews(getReviewsDto);
-    return reviews.map((review) => new ReviewEntity(review));
+    // Resolve TS2345 mapeando cada item
+    return reviews.map((review) => this.mapToEntity(review));
   }
 
-  // NEW ENDPOINT: Get reviews for a specific provider
   @Get('provider/:providerId')
   @ApiOperation({
     summary: 'Obter todas as avaliacoes para um provedor especifico',
@@ -108,22 +110,17 @@ export class ReviewsController {
     description: 'Lista de avaliacoes do provedor.',
     type: [ReviewEntity],
   })
-  @ApiResponse({
-    status: 404,
-    description: 'Nenhuma avaliacao encontrada para o provedor.',
-  })
   async getReviewsByProviderId(
     @Param('providerId') providerId: string,
   ): Promise<ReviewEntity[]> {
     this.logger.log(
       `[ReviewsController] getReviewsByProviderId: Buscando avaliacoes para provedor ID: ${providerId}`,
     );
-    const reviews = await this.reviewsService.findReviews({ providerId }); // Reusing findReviews with providerId filter
+    const reviews = await this.reviewsService.findReviews({ providerId });
     if (!reviews || reviews.length === 0) {
-      // Melhor retornar um array vazio do que lancar 404 para um endpoint de lista
       return [];
     }
-    return reviews.map((review) => new ReviewEntity(review));
+    return reviews.map((review) => this.mapToEntity(review));
   }
 
   @Get(':id')
@@ -133,13 +130,12 @@ export class ReviewsController {
     description: 'Detalhes da avaliacao.',
     type: ReviewEntity,
   })
-  @ApiResponse({ status: 404, description: 'Avaliacao nao encontrada.' })
   async getReviewById(@Param('id') id: string): Promise<ReviewEntity> {
     const review = await this.reviewsService.findOne(id);
     if (!review) {
       throw new NotFoundException(`Avaliacao com ID "${id}" nao encontrada.`);
     }
-    return new ReviewEntity(review);
+    return this.mapToEntity(review);
   }
 
   @Get('provider/:providerId/breakdown')
@@ -160,12 +156,10 @@ export class ReviewsController {
   @ApiOperation({
     summary: 'Obter sugestoes inteligentes baseadas em IA para o provedor',
   })
-  @ApiResponse({ status: 200, description: 'Lista de sugestoes inteligentes.' })
   async getSmartSuggestions(
     @Param('providerId') providerId: string,
     @Req() req: RequestWithUser,
   ) {
-    // Verificar se o usuario tem permissao para ver as sugestoes deste provedor
     const user = req.user;
     if (!user) {
       throw new ForbiddenException('Usuario nao autorizado.');
