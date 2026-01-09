@@ -52,7 +52,7 @@ export default function RevenueChart() {
         <CardContent>
           {isLoading ? (
             <div className="h-64 flex items-center justify-center">
-              <p className="text-gray-500">Carregando dados do gráfico...</p>
+              <p className="text-gray-500"></p>
             </div>
           ) : isError ? (
             <div className="h-64 flex items-center justify-center text-red-600">
