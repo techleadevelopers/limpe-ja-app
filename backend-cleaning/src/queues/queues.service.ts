@@ -7,6 +7,10 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue, JobOptions } from 'bull';
+import {
+  queueJobProcessingDuration,
+  queueWaitingGauge,
+} from '../metrics/prometheus';
 
 // Interface para estender as opções de tarefa do Bull.js
 interface CustomJobOptions extends JobOptions {
@@ -67,6 +71,8 @@ export class QueuesService {
         return this.emailsQueue;
       case 'support-escalations':
         return this.supportEscalationsQueue;
+      case 'payouts':
+        return this.payoutsQueue;
       default:
         this.logger.error(`Fila desconhecida: ${queueName}`);
         throw new BadRequestException(`Fila desconhecida: ${queueName}`);
@@ -98,6 +104,7 @@ export class QueuesService {
       };
 
       await queue.add(jobName, data, finalOptions);
+      await this.updateQueueDepth(queueName, queue);
       this.logger.log(
         `Tarefa '${jobName}' adicionada à fila '${queueName}' com dados: ${JSON.stringify(data)}.`,
       );
@@ -137,6 +144,29 @@ export class QueuesService {
         `Falha ao remover job da fila: ${error.message}`,
       );
     }
+  }
+
+  private async updateQueueDepth(queueName: string, queue: Queue): Promise<void> {
+    try {
+      const waiting = await queue.getWaitingCount();
+      queueWaitingGauge.set({ queue: queueName }, waiting);
+    } catch (error) {
+      this.logger.debug(
+        `Falha ao atualizar métrica de fila '${queueName}': ${error.message}`,
+      );
+    }
+  }
+
+  async pauseQueue(queueName: string): Promise<void> {
+    const queue = this.getQueueInstance(queueName);
+    await queue.pause(true);
+    this.logger.warn(`Fila '${queueName}' pausada manualmente.`);
+  }
+
+  async resumeQueue(queueName: string): Promise<void> {
+    const queue = this.getQueueInstance(queueName);
+    await queue.resume();
+    this.logger.log(`Fila '${queueName}' retomada.`);
   }
 
   /**
