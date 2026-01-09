@@ -1318,9 +1318,9 @@ export class ProvidersService {
         const rawProviders: any[] = await this.prisma.$queryRaw(
   Prisma.sql`
     SELECT 
-      p.id, 
-      p."userId", 
-      p."displayName", 
+        p.id, 
+        p."userId", 
+        p."fullName", 
       p."avatarUrl", 
       ST_Distance(location, ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)) * 111.32 AS distance
     FROM "Provider" p
