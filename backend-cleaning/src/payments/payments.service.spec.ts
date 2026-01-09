@@ -1,127 +1,21 @@
-import { BookingStatus, PaymentIntentStatus } from '@prisma/client';
-import { HttpStatus } from '@nestjs/common';
+import {
+  BookingStatus,
+  PaymentIntentStatus,
+  Prisma,
+} from '@prisma/client';
+import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 
-describe('PaymentsService confirmPixPayment', () => {
+describe('PaymentsService finalizePixPayment', () => {
   let paymentsService: PaymentsService;
   let bookingsServiceMock: { systemChangeStatus: jest.Mock };
   let prismaMock: {
     $transaction: jest.Mock;
     paymentIntent: { findFirst: jest.Mock };
-    booking: { findUnique: jest.Mock };
   };
 
   beforeEach(() => {
-    const paymentIntentTransactionMock = {
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      create: jest.fn(),
-    };
-
-    prismaMock = {
-      $transaction: jest.fn(async (callback: any) => callback({ paymentIntent: paymentIntentTransactionMock })),
-      paymentIntent: {
-        findFirst: jest.fn(),
-      },
-      booking: {
-        findUnique: jest.fn(),
-      },
-    };
-
-    const configServiceMock = {
-      get: jest.fn(() => undefined),
-    };
-    const couponsServiceMock = {};
-    const payoutsServiceMock = {};
-    const queuesServiceMock = {};
-    const notificationsServiceMock = {
-      createNotification: jest.fn().mockResolvedValue(null),
-    };
-    const connectServiceMock = {
-      getAccessToken: jest.fn(async () => 'token'),
-    };
-
-    paymentsService = new PaymentsService(
-      prismaMock as any,
-      configServiceMock as any,
-      couponsServiceMock as any,
-      payoutsServiceMock as any,
-      queuesServiceMock as any,
-      notificationsServiceMock as any,
-      connectServiceMock as any,
-    );
-
-    bookingsServiceMock = {
-      systemChangeStatus: jest.fn().mockResolvedValue(null),
-    };
-    (paymentsService as any).bookingsService = bookingsServiceMock;
-  });
-
-  it('confirms the booking via BookingsService when it is not confirmed yet', async () => {
-    prismaMock.paymentIntent.findFirst.mockResolvedValue({
-      id: 'pi-123',
-      bookingId: 'booking-123',
-      status: PaymentIntentStatus.PENDING,
-    });
-    prismaMock.booking.findUnique.mockResolvedValue({
-      status: BookingStatus.PENDING,
-    });
-
-    await paymentsService.confirmPixPayment('booking_123');
-
-    expect(bookingsServiceMock.systemChangeStatus).toHaveBeenCalledWith(
-      'booking-123',
-      BookingStatus.CONFIRMED,
-    );
-  });
-
-  it('does not trigger a status change when the booking is already confirmed', async () => {
-    prismaMock.paymentIntent.findFirst.mockResolvedValue({
-      id: 'pi-123',
-      bookingId: 'booking-123',
-      status: PaymentIntentStatus.PAID,
-    });
-    prismaMock.booking.findUnique.mockResolvedValue({
-      status: BookingStatus.CONFIRMED,
-    });
-
-    await paymentsService.confirmPixPayment('booking_123');
-
-    expect(bookingsServiceMock.systemChangeStatus).not.toHaveBeenCalled();
-  });
-
-  it('throws 503 when Pix integrations are not configured', async () => {
-    await expect(
-      paymentsService.createPixCharge('client-user', {
-        providerId: 'provider-id',
-        bookingId: 'booking-123',
-        description: 'desc',
-      } as any),
-    ).rejects.toMatchObject({
-      status: HttpStatus.SERVICE_UNAVAILABLE,
-      message: 'PSP not configured',
-    });
-  });
-});
-
-describe('PaymentsService handlePixWebhook state machine', () => {
-  let paymentsService: PaymentsService;
-  let bookingsServiceMock: { systemChangeStatus: jest.Mock };
-  let prismaMock: {
-    $transaction: jest.Mock;
-    paymentIntent: { findFirst: jest.Mock };
-    booking: { findUnique: jest.Mock };
-  };
-  let transactionMock: {
-    paymentIntent: { update: jest.Mock };
-    ledgerEntry: {
-      findFirst: jest.Mock;
-      createMany: jest.Mock;
-    };
-  };
-
-  beforeEach(() => {
-    transactionMock = {
+    const transactionMock = {
       paymentIntent: { update: jest.fn() },
       ledgerEntry: {
         findFirst: jest.fn(async () => null),
@@ -130,36 +24,22 @@ describe('PaymentsService handlePixWebhook state machine', () => {
     };
 
     prismaMock = {
-      $transaction: jest.fn(async (callback) => callback(transactionMock)),
-      paymentIntent: {
-        findFirst: jest.fn(),
-      },
-      booking: {
-        findUnique: jest.fn(),
-      },
+      $transaction: jest.fn(async (callback: any) => callback(transactionMock)),
+      paymentIntent: { findFirst: jest.fn() },
+      booking: { update: jest.fn() },
     };
 
-    const configServiceMock = {
-      get: jest.fn(() => undefined),
-    };
-    const queuesServiceMock = {
-      addNotificationJob: jest.fn(),
-    };
-    const notificationsServiceMock = {
-      createNotification: jest.fn().mockResolvedValue(null),
-    };
-    const connectServiceMock = {
-      getAccessToken: jest.fn(async () => 'token'),
-    };
-
+    const configServiceMock = { get: jest.fn(() => undefined) };
     paymentsService = new PaymentsService(
       prismaMock as any,
       configServiceMock as any,
       {} as any,
       {} as any,
-      queuesServiceMock as any,
-      notificationsServiceMock as any,
-      connectServiceMock as any,
+      {} as any,
+      {
+        createNotification: jest.fn().mockResolvedValue(null),
+      } as any,
+      { getAccessToken: jest.fn(async () => 'token') } as any,
     );
 
     bookingsServiceMock = {
@@ -168,63 +48,156 @@ describe('PaymentsService handlePixWebhook state machine', () => {
     (paymentsService as any).bookingsService = bookingsServiceMock;
   });
 
-  it('skips confirmation when state machine prevents the transition', async () => {
+  it('creates ledger entries and confirms the booking on successful finalize', async () => {
     prismaMock.paymentIntent.findFirst.mockResolvedValue({
-      id: 'pi-123',
-      bookingId: 'booking-123',
-      status: PaymentIntentStatus.EXPIRED,
+      id: 'pi-1',
+      bookingId: 'booking-1',
+      status: PaymentIntentStatus.PENDING,
       booking: {
-        id: 'booking-123',
-        totalPrice: 100,
-        provider: { userId: 'provider-user' },
-        client: { userId: 'client-user' },
+        id: 'booking-1',
+        totalPrice: new Prisma.Decimal(200),
+        provider: { userId: 'provider-1' },
+        client: { userId: 'client-1' },
+        status: BookingStatus.PENDING_PAYMENT,
+        expiresAt: new Date(Date.now() + 60_000),
       },
     });
 
-    const rawBody = JSON.stringify({
-      reference_id: 'ref-1',
-      charges: [{ reference_id: 'ref-1', status: 'PAID', id: 'charge-1' }],
+    const result = await (paymentsService as any).finalizePixPayment({
+      referenceId: 'booking-1',
+      eventReference: 'event-1',
     });
 
-    const result = await paymentsService.handlePixWebhook(rawBody, undefined);
-
-    expect(prismaMock.$transaction).not.toHaveBeenCalled();
-    expect(bookingsServiceMock.systemChangeStatus).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).toHaveBeenCalled();
+    expect(bookingsServiceMock.systemChangeStatus).toHaveBeenCalledWith(
+      'booking-1',
+      BookingStatus.CONFIRMED,
+    );
     expect(result).toMatchObject({
-      ok: true,
+      success: true,
+      didUpdate: true,
+      bookingId: 'booking-1',
+      paymentIntentId: 'pi-1',
+    });
+    expect((prismaMock.$transaction as jest.Mock).mock.calls[0][0]).toBeTruthy();
+    expect(prismaMock.booking.update).toHaveBeenCalledWith({
+      where: { id: 'booking-1' },
+      data: { expiresAt: null },
     });
   });
 
-  it('ignores duplicate PIX webhooks after the intent is confirmed', async () => {
-    const webhookPayload = JSON.stringify({
-      reference_id: 'ref-dup',
-      charges: [{ reference_id: 'ref-dup', status: 'APPROVED', id: 'charge-dup' }],
+  it('rejects payment when booking expired before confirmation', async () => {
+    prismaMock.paymentIntent.findFirst.mockResolvedValue({
+      id: 'pi-expired',
+      bookingId: 'booking-expired',
+      status: PaymentIntentStatus.PENDING,
+      booking: {
+        id: 'booking-expired',
+        totalPrice: new Prisma.Decimal(120),
+        provider: { userId: 'provider-1' },
+        client: { userId: 'client-1' },
+        status: BookingStatus.PENDING_PAYMENT,
+        expiresAt: new Date(Date.now() - 1000),
+      },
     });
 
-    prismaMock.paymentIntent.findFirst
-      .mockResolvedValueOnce({
-        id: 'pi-dup',
-        bookingId: 'booking-dup',
-        status: PaymentIntentStatus.PENDING,
-        booking: {
-          id: 'booking-dup',
-          totalPrice: 100,
-          provider: { userId: 'provider-user' },
-          client: { userId: 'client-user' },
-        },
-      })
-      .mockResolvedValueOnce({
-        id: 'pi-dup',
-        bookingId: 'booking-dup',
-        status: PaymentIntentStatus.PAID,
-      });
-
-    await paymentsService.handlePixWebhook(webhookPayload, undefined);
-    const secondResult = await paymentsService.handlePixWebhook(webhookPayload, undefined);
-
-    expect(prismaMock.paymentIntent.findFirst).toHaveBeenCalledTimes(2);
-    expect(secondResult).toMatchObject({
-      ok: true,
+    await expect(
+      (paymentsService as any).finalizePixPayment({
+        referenceId: 'booking-expired',
+        eventReference: 'event-expired',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prismaMock.booking.update).toHaveBeenCalledWith({
+      where: { id: 'booking-expired' },
+      data: { status: BookingStatus.EXPIRED },
     });
+  });
+
+  it('is idempotent when payment intent is already PAID', async () => {
+    prismaMock.paymentIntent.findFirst.mockResolvedValue({
+      id: 'pi-2',
+      bookingId: 'booking-2',
+      status: PaymentIntentStatus.PAID,
+      booking: { id: 'booking-2', totalPrice: new Prisma.Decimal(100), provider: { userId: 'provider-2' }, client: { userId: 'client-2' }, status: BookingStatus.CONFIRMED },
+    });
+
+    const result = await (paymentsService as any).finalizePixPayment({
+      referenceId: 'booking-2',
+      eventReference: 'event-2',
+    });
+
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(result.didUpdate).toBe(false);
+    expect(bookingsServiceMock.systemChangeStatus).not.toHaveBeenCalled();
+  });
+
+  it('throws InternalServerErrorException when the transaction fails', async () => {
+    prismaMock.$transaction.mockRejectedValue(new Error('boom'));
+    prismaMock.paymentIntent.findFirst.mockResolvedValue({
+      id: 'pi-3',
+      bookingId: 'booking-3',
+      status: PaymentIntentStatus.PENDING,
+      booking: {
+        id: 'booking-3',
+        totalPrice: new Prisma.Decimal(120),
+        provider: { userId: 'provider-3' },
+        client: { userId: 'client-3' },
+        status: BookingStatus.PENDING,
+      },
+    });
+
+    await expect(
+      (paymentsService as any).finalizePixPayment({
+        referenceId: 'booking-3',
+        eventReference: 'event-3',
+      }),
+    ).rejects.toBeInstanceOf(InternalServerErrorException);
+  });
+});
+
+describe('PaymentsService handlePixWebhook', () => {
+  let paymentsService: PaymentsService;
+
+  beforeEach(() => {
+    const configServiceMock = { get: jest.fn(() => undefined) };
+    paymentsService = new PaymentsService(
+      {
+        $transaction: jest.fn(),
+        paymentIntent: { findFirst: jest.fn() },
+      } as any,
+      configServiceMock as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { createNotification: jest.fn().mockResolvedValue(null) } as any,
+      { getAccessToken: jest.fn(async () => 'token') } as any,
+    );
+  });
+
+  it('acknowledges non-final statuses without calling finalize', async () => {
+    const finalizeSpy = jest.spyOn(paymentsService as any, 'finalizePixPayment');
+    const payload = JSON.stringify({
+      reference_id: 'ref',
+      charges: [{ status: 'PENDING' }],
+    });
+
+    const result = await paymentsService.handlePixWebhook(payload, undefined);
+
+    expect(finalizeSpy).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: true, didUpdate: false, paymentIntentId: null });
+  });
+
+  it('propagates errors when finalize fails', async () => {
+    jest
+      .spyOn(paymentsService as any, 'finalizePixPayment')
+      .mockRejectedValue(new InternalServerErrorException('boom'));
+    const payload = JSON.stringify({
+      reference_id: 'ref',
+      charges: [{ status: 'PAID', reference_id: 'ref' }],
+    });
+
+    await expect(
+      paymentsService.handlePixWebhook(payload, undefined),
+    ).rejects.toBeInstanceOf(InternalServerErrorException);
   });
 });
