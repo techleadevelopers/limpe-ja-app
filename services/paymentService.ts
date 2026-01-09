@@ -59,8 +59,12 @@ export const fetchPaymentIntent = async (bookingId: string): Promise<PaymentInte
   } catch (error: any) {
     if (axios.isAxiosError(error) && error.response) {
       if (error.response.status === 404) {
-        // PaymentIntent inexistente ainda - tratar como null sem logar erro
-        return null;
+        const intentNotFoundMsg =
+          error.response.data?.message ??
+          'Nenhuma transação de pagamento foi encontrada para este agendamento.';
+        const notFoundError = new Error(intentNotFoundMsg);
+        (notFoundError as any).status = 404;
+        throw notFoundError;
       }
       if (error.response.status === 401) {
         const unauthorizedError = new Error('Sessão expirada. Faça login novamente.');
