@@ -25,6 +25,7 @@ const basePayload = (): BookingQuoteRequest => ({
     complement: null,
     neighborhood: 'Centro',
   },
+  insurancePlanId: null,
 });
 
 const createResponse = (price: number): BookingQuoteResponse => ({
