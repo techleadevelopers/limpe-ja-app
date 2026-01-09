@@ -60,7 +60,7 @@ export class SearchQueryDto {
 ```ts
 export class ProviderServiceSearchResultDto {
   provider: {
-    id: string; displayName: string; avatarUrl?: string;
+    id: string; fullName: string; avatarUrl?: string;
     rating: number; reviewsCount: number;
     acceptanceRate: number; avgResponseTimeSec: number;
   };
@@ -162,7 +162,7 @@ GET /search/services?lat=-22.90&lon=-47.06&radiusKm=10&categoryId=clean_full&onl
 {
   "items": [
     {
-      "provider": {"id":"p_01","displayName":"Ana Lima","rating":4.9,"reviewsCount":124,"acceptanceRate":0.93,"avgResponseTimeSec":420},
+      "provider": {"id":"p_01","fullName":"Ana Lima","rating":4.9,"reviewsCount":124,"acceptanceRate":0.93,"avgResponseTimeSec":420},
       "service": {"id":"svc_1","title":"Faxina Completa","pricingModel":"HOURLY","priceFrom":135,"defaultDurationMin":180},
       "discovery": {"distanceKm":2.3, "nextAvailableAt":"2025-08-25T10:00:00-03:00", "score":0.87}
     }
