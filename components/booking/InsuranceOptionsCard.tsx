@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { formatBRL } from '../../utils/formatters';
 import { AppColors } from '../../constants/appStyles';
@@ -50,8 +50,6 @@ export interface InsuranceOptionsCardProps {
   onSelectPlan: (planId: InsurancePlanId | null) => void;
 }
 
-const PLAN_ORDER = new Map(PLAN_TEMPLATES.map((template, index) => [template.id, index]));
-
 export const InsuranceOptionsCard = ({
   insuranceOptions,
   selectedPlanId,
@@ -61,11 +59,36 @@ export const InsuranceOptionsCard = ({
   const [detailPlan, setDetailPlan] = useState<PlanTemplate | null>(null);
 
   const sortedPlans = useMemo(() => {
-    return [...insuranceOptions].sort((a, b) => {
-      const aOrder = PLAN_ORDER.get(a.id) ?? Number.MAX_SAFE_INTEGER;
-      const bOrder = PLAN_ORDER.get(b.id) ?? Number.MAX_SAFE_INTEGER;
-      return aOrder - bOrder;
-    });
+    const planMap = new Map(insuranceOptions.map((plan) => [plan.id, plan]));
+    const complete: InsurancePlanProposal[] = [];
+
+    for (const template of PLAN_TEMPLATES) {
+      const plan = planMap.get(template.id);
+      if (plan) {
+        complete.push(plan);
+        planMap.delete(template.id);
+        continue;
+      }
+
+      complete.push({
+        id: template.id,
+        name: template.title,
+        basePriceCents: 0,
+        coverageCents: 0,
+        deductibleCents: 0,
+        proofRequired: false,
+        finalPriceCents: 0,
+        eligible: false,
+        reasons: [],
+        riskMultiplierBps: 0,
+      });
+    }
+
+    if (planMap.size > 0) {
+      planMap.forEach((plan) => complete.push(plan));
+    }
+
+    return complete;
   }, [insuranceOptions]);
 
   const planTemplateMap = useMemo(() => {
@@ -106,15 +129,15 @@ export const InsuranceOptionsCard = ({
         </TouchableOpacity>
         {sortedPlans.map((plan) => {
           const template = planTemplateMap.get(plan.id);
-          const feeCents =
-            plan.feeCents ??
-            plan.insuranceFeeCents ??
-            plan.priceCents ??
-            plan.totalFeeCents ??
-            plan.finalPriceCents ??
-            0;
-          const available = plan.eligible;
-          const priceLabel = feeCents > 0 ? `+${formatBRL(feeCents / 100)}` : 'Grátis';
+          const hasFinalPrice = typeof plan.finalPriceCents === 'number';
+          const feeCents = hasFinalPrice ? plan.finalPriceCents : null;
+          const available = plan.eligible && hasFinalPrice;
+          const priceLabel =
+            hasFinalPrice && feeCents !== null
+              ? feeCents > 0
+                ? `+${formatBRL(feeCents / 100)}`
+                : 'Grátis'
+              : '—';
           const isSelected = selectedPlanId === plan.id;
           const highlightItems = template?.highlights ?? [];
 
@@ -212,7 +235,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'android' ? 17 : 18,
     fontWeight: '600',
     color: AppColors.textBody,
   },
