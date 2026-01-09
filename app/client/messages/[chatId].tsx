@@ -22,6 +22,7 @@ import { appConfig } from '../../../config/appConfig';
 import { useAuth } from '../../../hooks/useAuth';
 import { getBookingDetails } from '../../../services/bookingService';
 import { getChatMessages, sendMessage as sendChatMessage } from '../../../services/chatService';
+import NotificationUIService from '../../../services/notificationUIService';
 import { BookingStatus } from '../../../types/backend/bookings';
 import { Message, SendMessageDto } from '../../../types/backend/chat';
 import { alertUserError, getUserMessage } from '../../../_shared/errors/uiFeedback';
@@ -161,8 +162,12 @@ export default function ChatScreen() {
       if (data.event === 'joinChat' || data.event === 'sendMessage') {
         setChatBlockedMessage(data.message);
       } else {
-        Alert.alert('Erro no Chat', data.message || 'Houve um problema com a conexão do chat.');
+        Alert.alert('Erro no Chat', data.message || 'Houve um problema com a conexao do chat.');
       }
+    });
+
+    socket.on('messageRejected', () => {
+      NotificationUIService.showError('Mensagem bloqueada por política');
     });
 
     socket.on('disconnect', () => {
