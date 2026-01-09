@@ -11,12 +11,16 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  Image,
   View,
 } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { AppColors } from '../../../../constants/appStyles';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Adicione 'inactive' à lista de strings permitidas
+type DayState = 'selected' | 'disabled' | 'today' | 'filler' | 'inactive' | 'normal' | '';
 
 // ====== Locale PT-BR (Calendário) ======
 LocaleConfig.locales['pt-br'] = {
@@ -212,8 +216,66 @@ interface ScheduleCalendarProps {
   selectionAnim: Animated.Value;
   calendarBreatheAnim: Animated.Value;
   markedDates?: MarkedDate;
+  dimmedDates?: string[];
   disablePastDates?: boolean;
 }
+
+type DayCellProps = {
+  date?: DateData;
+  state?: DayState; // Agora o TS vai encontrar o nome 'DayState' aqui (Linha 222)
+  marking?: MarkedDate[keyof MarkedDate];
+  handleDayPress: (date: DateData) => void;
+};
+
+const DayCell = memo(({ date, state, marking, handleDayPress }: DayCellProps) => {
+  if (!date) {
+    return null;
+  }
+
+  const isSelected = (marking as any)?.selected === true;
+  const resolvedState: DayState = state ?? 'normal';
+  const isDisabled = (marking as any)?.disabled || resolvedState === 'disabled';
+
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <TouchableOpacity
+        onPress={() => !isDisabled && handleDayPress(date)}
+        activeOpacity={0.9}
+        disabled={isDisabled}
+        style={[
+          styles.dayButton,
+          isSelected && { backgroundColor: Colors.primary },
+          isDisabled && styles.dayButtonDimmed,
+        ]}
+      >
+        {isSelected && (
+          <LinearGradient
+            colors={['rgba(92, 168, 248, 1)', 'rgba(62, 149, 241, 1)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        )}
+        <Text
+          style={{
+            color: isDisabled ? Colors.textMuted : isSelected ? '#FFFFFF' : Colors.text,
+            fontWeight: isSelected ? '700' : '600',
+          }}
+        >
+          {(date as any)?.day}
+        </Text>
+        {isDisabled && (
+          <Ionicons
+            name="close"
+            size={20}
+            color={Colors.textMuted}
+            style={{ position: 'absolute', opacity: 0.3 }}
+          />
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+});
 
 const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(
   ({
@@ -228,6 +290,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(
     calendarBreatheAnim,
     markedDates = {},
     disablePastDates = true,
+    dimmedDates = [],
   }) => {
     // today fixo (memo) em horário local
     const today = React.useMemo(() => {
@@ -272,29 +335,32 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(
       [currentDisplayMonth, onPrevMonth, onNextMonth],
     );
 
-    const handleDayPress = useCallback(
-      (day: DateData) => {
-        if (!day || typeof day.dateString !== 'string') return;
+   const handleDayPress = useCallback(
+  (day: DateData) => {
+    // Se o calendário clicar em algo inexistente ou NaN, ignora
+    if (!day || !day.dateString || day.dateString.includes('NaN')) return;
 
-        const todayLocal = new Date();
-        todayLocal.setHours(0, 0, 0, 0);
+    const todayLocal = new Date();
+    todayLocal.setHours(0, 0, 0, 0);
 
-        // ✅ parse local seguro
-        const selected = parseYMDLocal(day.dateString);
+    const selected = parseYMDLocal(day.dateString);
 
-        if (disablePastDates && selected < todayLocal) {
-          Alert.alert('Data Inválida', 'Não é possível selecionar uma data passada.');
-          return;
-        }
+    if (disablePastDates && selected < todayLocal) {
+      Alert.alert('Data Inválida', 'Não é possível selecionar uma data passada.');
+      return;
+    }
 
-        onDaySelect(selected);
+    // ✅ Só envia para o componente pai se for uma data real
+    if (!isNaN(selected.getTime())) {
+      onDaySelect(selected);
+    }
 
-        if (Platform.OS === 'ios') {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
-      },
-      [onDaySelect, disablePastDates],
-    );
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  },
+  [onDaySelect, disablePastDates],
+);
 
     const finalMarkedDates = React.useMemo(() => {
       const marks: MarkedDate = { ...markedDates };
@@ -330,8 +396,22 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(
         });
       }
 
-      return marks;
-    }, [markedDates, selectedDate, disablePastDates]);
+    if (dimmedDates.length > 0) {
+      dimmedDates.forEach((dateStr) => {
+        if (typeof dateStr !== 'string' || !dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) return;
+        if ((marks[dateStr] as any)?.selected) {
+          return;
+        }
+        marks[dateStr] = {
+          ...(marks[dateStr] ?? {}),
+          disableTouchEvent: true,
+          disabled: true,
+        };
+      });
+    }
+
+    return marks;
+  }, [markedDates, selectedDate, disablePastDates, dimmedDates]);
 
     // ✅ FIX ANDROID: Calendar current precisa ser YYYY-MM-DD (não YYYY-MM)
     const currentMonthStr = `${currentDisplayMonth.getFullYear()}-${String(currentDisplayMonth.getMonth() + 1).padStart(2, '0')}-01`;
@@ -396,66 +476,14 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(
             style={styles.calendarStyle}
             accessibilityLabel="Calendário de agendamentos"
             accessibilityHint="Selecione uma data para agendamento"
-            dayComponent={({ date, state, marking }) => {
-              const isSelected = (marking as any)?.selected === true;
-              const isDisabled = (marking as any)?.disabled || state === 'disabled';
-
-              const popAnim = React.useRef(new Animated.Value(isSelected ? 1 : 0)).current;
-
-              React.useEffect(() => {
-                Animated.timing(popAnim, {
-                  toValue: isSelected ? 1 : 0,
-                  duration: 180,
-                  easing: easeOut,
-                  useNativeDriver: true,
-                }).start();
-              }, [isSelected, popAnim]);
-
-              const scale = popAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
-              const opacity = popAnim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] });
-
-              // ✅ FIX ANDROID: não chame o onPress interno com objeto incompleto
-              // use o date completo (DateData) e passe pelo handleDayPress
-              const handlePress = () => {
-                if (!isDisabled && date) handleDayPress(date as any);
-              };
-
-              return (
-                <Animated.View style={{ alignItems: 'center', justifyContent: 'center', transform: [{ scale }], opacity }}>
-                  <TouchableOpacity
-                    onPress={handlePress}
-                    activeOpacity={0.9}
-                    disabled={isDisabled}
-                    style={{
-                      width: 36,
-                      height: 32,
-                      borderRadius: 10,
-                      overflow: 'hidden',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {isSelected ? (
-                      <LinearGradient
-                        colors={['rgba(92, 168, 248, 1)', 'rgba(62, 149, 241, 1)']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={StyleSheet.absoluteFillObject}
-                      />
-                    ) : null}
-
-                    <Text
-                      style={{
-                        color: isDisabled ? Colors.textMuted : isSelected ? '#FFFFFFFF' : Colors.text,
-                        fontWeight: isSelected ? '700' : '600',
-                      }}
-                    >
-                      {(date as any)?.day}
-                    </Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            }}
+            dayComponent={({ date, state, marking }) => (
+              <DayCell
+                date={date}
+                state={state}
+                marking={marking}
+                handleDayPress={handleDayPress}
+              />
+            )}
           />
         </View>
       </Animated.View>
@@ -502,9 +530,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   iconBtn: {
-    padding: Spacing.sm,
-    width: 44,
-    height: 44,
+    padding: 5,
+    width: Platform.OS === 'android' ? 39 : 44,
+    height: Platform.OS === 'android' ? 39 : 44,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: Radii.sm,
@@ -512,9 +540,28 @@ const styles = StyleSheet.create({
   month: {
     flex: 1,
     textAlign: 'center',
-    fontSize: Platform.select({ ios: 18, android: 17 }),
+    fontSize: Platform.select({ ios: 18, android: 18 }),
     fontWeight: '800',
-    color: Colors.primaryDark,
+    color: '#43aef1ff',
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
+  },
+  dayButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 19,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayButtonDimmed: {
+    borderRadius: 19,
+    backgroundColor: 'transparent',
+  },
+  disabledIcon: {
+    position: 'absolute',
+    width: 29,
+    height: 29,
+    top: 4,
+    opacity: 0.65,
   },
 });
