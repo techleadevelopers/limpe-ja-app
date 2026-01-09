@@ -17,14 +17,14 @@ export class CreateTicketDto {
   @IsNotEmpty()
   subject: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Categoria do ticket de suporte',
     enum: SupportTicketCategory,
     example: SupportTicketCategory.QUALITY,
   })
+  @IsOptional()
   @IsEnum(SupportTicketCategory)
-  @IsNotEmpty()
-  category: SupportTicketCategory;
+  category?: SupportTicketCategory;
 
   @ApiProperty({ description: 'Descrição detalhada do problema ou dúvida' })
   @IsString()
@@ -45,4 +45,12 @@ export class CreateTicketDto {
   @IsArray()
   @IsString({ each: true })
   attachments?: string[]; // URLs para arquivos no GCS
+
+  @ApiPropertyOptional({
+    description: 'Prioridade (severity) do ticket de suporte',
+    example: 'NORMAL',
+  })
+  @IsOptional()
+  @IsString()
+  severity?: string;
 }
