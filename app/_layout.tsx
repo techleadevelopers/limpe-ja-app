@@ -17,7 +17,7 @@ import {
     View,
 } from 'react-native';
 import 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import PaymentConfirmedOverlay from "../components/global/PaymentConfirmedOverlay"; // 🔵 ADICIONADO
 import AppQueryClientProvider from '../components/provider/query-client-provider';
@@ -266,6 +266,8 @@ function RootLayoutContent() {
     const { paymentOverlayVisible } = useAuth();  // 🔵 ADICIONADO
     const pathname = usePathname();
     const { t } = useTranslation();
+    const [appReady, setAppReady] = useState(false);
+    const [initializationError, setInitializationError] = useState<string | null>(null);
 
     // ativa o socket de notificações somente quando o app estiver pronto e o token disponível,
     // evitando chamadas de overlay enquanto o layout inicial ainda está escondido.
@@ -295,9 +297,6 @@ function RootLayoutContent() {
         })();
         return () => { try { sub?.remove?.(); } catch {} };
     }, [router]);
-
-    const [appReady, setAppReady] = useState(false);
-    const [initializationError, setInitializationError] = useState<string | null>(null);
 
     useEffect(() => {
         const prepareApp = async () => {
@@ -555,7 +554,7 @@ function RootLayoutContent() {
                 {initializationError ? (
                     <Text style={styles.loadingText}>{t("common.error")}: {initializationError}</Text>
                 ) : (
-                    <Text style={styles.loadingText}>{t("common.loading")} ...</Text>
+                    <Text style={styles.loadingText}>{t("common.loading")}</Text>
                 )}
             </View>
         );
@@ -591,15 +590,17 @@ function RootLayoutContent() {
 export default Sentry.wrap(function RootLayout() {
     return (
         <I18nextProvider i18n={i18n}>
-            <AuthProvider>
-                <ProviderRegistrationProvider>
-                    <AppQueryClientProvider>
-                        <AppProvider>
-                            <RootLayoutContent />
-                        </AppProvider>
-                    </AppQueryClientProvider>
-                </ProviderRegistrationProvider>
-            </AuthProvider>
+            <SafeAreaProvider>
+                <AuthProvider>
+                    <ProviderRegistrationProvider>
+                        <AppQueryClientProvider>
+                            <AppProvider>
+                                <RootLayoutContent />
+                            </AppProvider>
+                        </AppQueryClientProvider>
+                    </ProviderRegistrationProvider>
+                </AuthProvider>
+            </SafeAreaProvider>
         </I18nextProvider>
     );
 });
