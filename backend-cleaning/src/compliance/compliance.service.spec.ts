@@ -5,86 +5,81 @@ describe('ComplianceService', () => {
   let service: ComplianceService;
   let prismaMock: {
     user: { findUnique: jest.Mock };
-    userConsent: { upsert: jest.Mock };
+    userConsent: { create: jest.Mock; findFirst: jest.Mock };
   };
 
   beforeEach(() => {
     prismaMock = {
       user: { findUnique: jest.fn().mockResolvedValue({ id: 'user-1' }) },
-      userConsent: { upsert: jest.fn() },
+      userConsent: {
+        create: jest.fn(),
+        findFirst: jest.fn(),
+      },
     };
     service = new ComplianceService(prismaMock as unknown as PrismaService);
   });
 
-  it('upserts a consent with metadata', async () => {
-    const acceptedAt = new Date('2025-01-01T10:00:00Z');
+  it('creates a consent record with metadata and hash', async () => {
+    const acceptedAt = new Date('2025-01-01T00:00:00Z');
     const consentRecord = {
+      id: 'consent-1',
       userId: 'user-1',
       documentType: 'TERMS',
-      version: 'terms-v1',
-      consentedAt: acceptedAt,
-      ipAddress: '1.2.3.4',
-      userAgent: 'jest-agent',
-    };
-    prismaMock.userConsent.upsert.mockResolvedValue(consentRecord);
-
-    const result = await service.recordConsent('user-1', 'TERMS', 'terms-v1', {
+      version: 'v2',
+      documentHash: 'hash',
       source: 'api',
-      ip: '1.2.3.4',
+      consentedAt: acceptedAt,
+    };
+    prismaMock.userConsent.create.mockResolvedValue(consentRecord);
+
+    const result = await service.recordConsent('user-1', 'TERMS', 'v2', {
+      source: 'api',
+      ip: '127.0.0.1',
       userAgent: 'jest-agent',
       acceptedAt,
+      documentHash: 'hash',
     });
 
-    expect(result).toEqual(consentRecord);
-    expect(prismaMock.userConsent.upsert).toHaveBeenCalledWith(
+    expect(prismaMock.userConsent.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
-          userId_documentType: {
-            userId: 'user-1',
-            documentType: 'TERMS',
-          },
-        },
-        update: expect.objectContaining({
-          version: 'terms-v1',
-          consentedAt: acceptedAt,
-          ipAddress: '1.2.3.4',
-          userAgent: 'jest-agent',
-        }),
-        create: expect.objectContaining({
-          ipAddress: '1.2.3.4',
+        data: expect.objectContaining({
+          userId: 'user-1',
+          documentType: 'TERMS',
+          version: 'v2',
+          documentHash: 'hash',
+          source: 'api',
+          ipAddress: '127.0.0.1',
           userAgent: 'jest-agent',
         }),
       }),
     );
+    expect(result).toEqual(consentRecord);
   });
 
-  it('updates the consent when called again with a new version', async () => {
-    prismaMock.userConsent.upsert
-      .mockResolvedValueOnce({
-        userId: 'user-1',
-        documentType: 'TERMS',
-        version: 'terms-v1',
-      })
-      .mockResolvedValueOnce({
-        userId: 'user-1',
-        documentType: 'TERMS',
-        version: 'terms-v2',
-      });
+  it('compares numeric versions', async () => {
+    prismaMock.userConsent.findFirst
+      .mockResolvedValueOnce({ version: '2.1' })
+      .mockResolvedValueOnce({ version: '3.0' });
 
-    await service.recordConsent('user-1', 'TERMS', 'terms-v1');
-    const secondResult = await service.recordConsent(
-      'user-1',
-      'TERMS',
-      'terms-v2',
-    );
+    await expect(
+      service.checkConsent('user-1', 'TERMS', '2.0'),
+    ).resolves.toBe(true);
+    await expect(
+      service.checkConsent('user-1', 'TERMS', '3.1'),
+    ).resolves.toBe(false);
+  });
 
-    expect(prismaMock.userConsent.upsert).toHaveBeenCalledTimes(2);
-    expect(prismaMock.userConsent.upsert).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        update: expect.objectContaining({ version: 'terms-v2' }),
-      }),
-    );
-    expect(secondResult.version).toBe('terms-v2');
+  it('falls back to lexical comparison when no digits are available', async () => {
+    prismaMock.userConsent.findFirst.mockResolvedValue({ version: 'alpha' });
+    await expect(
+      service.checkConsent('user-1', 'TERMS', 'beta'),
+    ).resolves.toBe(false);
+  });
+
+  it('returns false when consent is missing', async () => {
+    prismaMock.userConsent.findFirst.mockResolvedValue(null);
+    await expect(
+      service.checkConsent('user-1', 'TERMS', '1.0'),
+    ).resolves.toBe(false);
   });
 });
