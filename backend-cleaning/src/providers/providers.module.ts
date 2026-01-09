@@ -12,6 +12,7 @@ import { MissionsModule } from '../missions/missions.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
 import { EarningsModule } from '../earnings/earnings.module';
 import { ProviderPromotionsService } from './provider-promotions.service';
+import { AvailabilityModule } from '../availability/availability.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ProviderPromotionsService } from './provider-promotions.service';
     MissionsModule,
     LoyaltyModule,
     forwardRef(() => EarningsModule),
+    forwardRef(() => AvailabilityModule),
   ],
   controllers: [ProvidersController],
   providers: [ProvidersService, ProviderPromotionsService],
