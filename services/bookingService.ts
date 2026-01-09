@@ -44,10 +44,16 @@ export const createBooking = async (data: CreateBookingDto): Promise<BookingDeta
  * @param status Opcional: status para filtrar os agendamentos.
  * @returns Promessa com um array de objetos BookingDetails.
  */
-export async function getBookingsForUser(status?: BookingStatus): Promise<BookingDetails[]> {
+export async function getBookingsForUser(
+  status?: BookingStatus,
+  timeframe?: { start?: string; end?: string },
+): Promise<BookingDetails[]> {
     try {
         const statusForApi = status === (BookingStatus as any).CANCELLED ? 'CANCELED' : (status as any);
-        const params = status ? { status: statusForApi } : {};
+        const params: Record<string, string> = {};
+        if (status) params.status = statusForApi;
+        if (timeframe?.start) params.start = timeframe.start;
+        if (timeframe?.end) params.end = timeframe.end;
         const response: AxiosResponse<BookingDetails[]> = await api.get<BookingDetails[]>('/bookings/me', { params });
         return mapBookingStatusArray(response.data);
     } catch (error: any) {
