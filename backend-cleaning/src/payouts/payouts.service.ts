@@ -5,6 +5,7 @@
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
   forwardRef,
   Inject,
 } from '@nestjs/common';
@@ -26,6 +27,7 @@ import axios from 'axios';
 import { ConnectService } from '../connect/connect.service';
 import * as fs from 'fs';
 import * as https from 'https';
+import * as Sentry from '@sentry/node';
 
 interface GatewayUpdateInput {
   payoutId: string;
@@ -52,6 +54,10 @@ export class PayoutsService {
   private readonly pspBaseUrl: string;
   private readonly pspToken?: string;
   private pspHttpsAgent?: https.Agent;
+  private gatewayFailureCount = 0;
+  private gatewayPauseUntil = 0;
+  private readonly gatewayFailureThreshold = 3;
+  private readonly gatewayPauseDurationMs = 5 * 60 * 1000;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -485,6 +491,11 @@ export class PayoutsService {
             // Aqui, podemos querer adicionar uma notificaÃ§Ã£o de erro ou um job de retry.
           }
         } else {
+          if (!this.isGatewayHealthy()) {
+            throw new ServiceUnavailableException(
+              'Gateway de pagamentos em manutenção. Tente novamente em breve.',
+            );
+          }
           await this.queues.addJob(
             'payouts',
             'process-payout',
@@ -924,6 +935,11 @@ export class PayoutsService {
     idempotencyKey?: string,
   ): Promise<string> {
     if (!this.pspToken) throw new Error('PSP token not configured');
+    if (!this.isGatewayHealthy()) {
+      throw new ServiceUnavailableException(
+        'Gateway de pagamentos temporariamente suspenso. Tente novamente em alguns minutos.',
+      );
+    }
 
     const payload: any = {
       reference_id: payoutId,
@@ -950,13 +966,53 @@ export class PayoutsService {
       });
       const txnId =
         res.data?.id || res.data?.transaction_id || `gw_${payoutId}`;
+      await this.markGatewaySuccess();
       return String(txnId);
     } catch (e: any) {
       this.logger.error(
-        `PSP payout error: ${e?.response?.status} ${JSON.stringify(e?.response?.data || e.message)}`,
+        `PSP payout error: ${e?.response?.status} ${JSON.stringify(
+          e?.response?.data || e.message,
+        )}`,
       );
-      throw new Error('PSP payout initiation failed');
+      const err = e instanceof Error ? e : new Error('PSP payout initiation failed');
+      await this.markGatewayFailure(err);
+      throw err;
     }
+  }
+
+  private isGatewayHealthy(): boolean {
+    return Date.now() >= this.gatewayPauseUntil;
+  }
+
+  private async markGatewayFailure(error: Error): Promise<void> {
+    this.gatewayFailureCount += 1;
+    Sentry.captureException(error, {
+      level: 'error',
+      extra: {
+        queue: 'payouts',
+        failureCount: this.gatewayFailureCount,
+      },
+    });
+    this.logger.warn(
+      `markGatewayFailure: gateway falhou (${this.gatewayFailureCount} falhas consecutivas).`,
+    );
+    if (this.gatewayFailureCount >= this.gatewayFailureThreshold) {
+      this.gatewayPauseUntil = Date.now() + this.gatewayPauseDurationMs;
+      await this.queues.pauseQueue('payouts');
+      this.logger.error(
+        'Circuit breaker acionado: fila de payouts pausada até o gateway recuperar.',
+      );
+    }
+  }
+
+  private async markGatewaySuccess(): Promise<void> {
+    if (this.gatewayFailureCount === 0 && this.gatewayPauseUntil === 0) {
+      return;
+    }
+    this.gatewayFailureCount = 0;
+    this.gatewayPauseUntil = 0;
+    await this.queues.resumeQueue('payouts');
+    this.logger.log('Gateway de payouts está saudável; fila retomada.');
   }
 }
 
