@@ -79,6 +79,7 @@ import { HttpMetricsMiddleware } from './common/middleware/http-metrics.middlewa
 import { TracingInterceptor } from './common/interceptors/tracing.interceptor';
 import { ConfigController } from './config/config.controller';
 import { APP_GUARD } from '@nestjs/core';
+import { ExpireBookingsJob } from './worker/expire-bookings.job';
 
 @Module({
   imports: [
@@ -99,8 +100,8 @@ import { APP_GUARD } from '@nestjs/core';
       useFactory: (config: ConfigService) => ({
         throttlers: [
           {
-            ttl: config.get<number>('throttle.ttl', 60) * 1000,
-            limit: config.get<number>('throttle.limit', 10),
+            ttl: config.get<number>('throttle.ttl', 120) * 1000,
+            limit: config.get<number>('throttle.limit', 30),
           },
         ],
       }),
@@ -160,6 +161,7 @@ import { APP_GUARD } from '@nestjs/core';
   controllers: [AppController, ConfigController],
   providers: [
     AppService,
+    ExpireBookingsJob,
     TracingInterceptor,
     {
       provide: APP_GUARD,
