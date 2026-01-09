@@ -86,13 +86,13 @@ export class AvailabilityController {
     @Param('providerId') providerId: string,
     @Query() query: GetAvailabilityDto,
   ) {
-    this.validateProviderId(providerId); // Valida o providerId
-    const availability = await this.availabilityService.getAvailability(
-      providerId,
-      query,
-    );
-    // NOVO: Opcionalmente, calcular nextAvailable aqui se necessário para integração com cards
-    return availability;
+    this.validateProviderId(providerId);
+    
+    const result = await this.availabilityService.getAvailability(providerId, query);
+    
+    // Se o service retorna { available, occupiedTimes }, mande apenas o available 
+    // para o frontend não quebrar
+    return result.available || result; 
   }
 
   @Patch()
