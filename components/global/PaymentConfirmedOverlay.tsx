@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text } from "react-native";
+import { Animated, StyleSheet, Text, ViewStyle } from "react-native";
 
 export default function PaymentConfirmedOverlay({ visible }: { visible: boolean }) {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -20,35 +20,45 @@ export default function PaymentConfirmedOverlay({ visible }: { visible: boolean 
   if (!visible) return null;
 
   return (
-    <Animated.View style={[styles.overlay, { opacity }]}>
+    <Animated.View style={[styles.toastWrapper, { opacity }]} pointerEvents="none">
       <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
-        <Ionicons name="checkmark-circle" size={60} color="#4ADE80" />
-        <Text style={styles.text}>Pagamento Confirmado!</Text>
+        <Ionicons name="checkmark-circle" size={44} color="#4ADE80" style={styles.icon} />
+        <Text style={styles.text}>Pagamento confirmado!</Text>
       </Animated.View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  toastWrapper: {
     position: "absolute",
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    justifyContent: "center",
+    left: 16,
+    right: 16,
+    bottom: 40,
     alignItems: "center",
+    elevation: 999,
     zIndex: 999,
+    pointerEvents: "none" as ViewStyle["pointerEvents"],
   },
   card: {
-    backgroundColor: "#fff",
-    padding: 25,
-    borderRadius: 20,
+    backgroundColor: "#f1f2f1",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 14,
     alignItems: "center",
-    elevation: 0,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+    flexDirection: "row",
   },
   text: {
-    marginTop: 12,
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "600",
-    color: "#16A34A",
+    color: "#0B0B0B",
+  },
+  icon: {
+    marginRight: 8,
   },
 });
