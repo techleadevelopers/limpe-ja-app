@@ -152,6 +152,7 @@ export default function ClientRegisterScreen() {
     const [cityInputY, setCityInputY] = useState(0);
     const stateInputRef = useRef<TextInput | null>(null);
     const [stateInputY, setStateInputY] = useState(0);
+    const lastFetchedCepRef = useRef<string>('');
 
     // Adicionadas e movidas para cima: Estados de erro (corrigindo uso antes da declaração e block scope)
     const [emailError, setEmailError] = useState<string | null>(null);
@@ -467,7 +468,7 @@ export default function ClientRegisterScreen() {
     // Automatic and robust CEP fetching: Trigger when exactly 8 digits are entered (debounced for robustness)
     useEffect(() => {
         const cleanedCep = cep.replace(/\D/g, '');
-        if (cleanedCep.length === 8 && !cepLoading) {
+        if (cleanedCep.length === 8 && !cepLoading && lastFetchedCepRef.current !== cleanedCep) {
             // Debounce to avoid rapid API calls
             const timer = setTimeout(() => {
                 fetchAddressByCepApi(cep);
@@ -475,11 +476,13 @@ export default function ClientRegisterScreen() {
             return () => clearTimeout(timer);
         } else if (cleanedCep.length > 0 && cleanedCep.length !== 8) {
             // Clear fields if CEP is invalid/incomplete for robustness
+            lastFetchedCepRef.current = '';
             setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
             setCepInputError(cleanedCep.length < 8 ? "CEP incompleto. Digite os 8 dígitos." : null);
             setGeneralError(null);
         } else if (cleanedCep.length === 0) {
             // Clear on empty
+            lastFetchedCepRef.current = '';
             setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
             setCepInputError(null);
             setGeneralError(null);
@@ -505,6 +508,7 @@ export default function ClientRegisterScreen() {
             setCity(data.localidade);
             setState(data.uf);
             setComplement(data.complemento);
+            lastFetchedCepRef.current = cleanedCep;
             setCepInputError(null);
         } catch (error: any) {
             devError("Erro ao buscar CEP:", error);
@@ -951,7 +955,7 @@ export default function ClientRegisterScreen() {
                 break;
             case 4:
                 stepText = `Código de Indicação`;
-                microcopy = 'Insira um código de indicação se tiver um (opcional). Isso pode dar benefícios no app!';
+                microcopy = 'Insira um código de indicação se tiver um (opcional).';
                 break;
             case 5:
                 switch (subStepAddress) {
@@ -960,7 +964,7 @@ export default function ClientRegisterScreen() {
                         microcopy = 'Informe seu CEP e buscamos o endereço automaticamente.';
                         break;
                     case 2:
-                        stepText = `Endereço (Detalhes)`;
+                        stepText = ``;
                         microcopy = 'Confirme e complete os detalhes do seu endereço.';
                         break;
                     case 3:
@@ -999,12 +1003,12 @@ export default function ClientRegisterScreen() {
             case 3:
                 return '';
             case 4:
-                return 'Indicação Opcional';
+                return '';
             case 5:
                 switch (subStepAddress) {
-                    case 1: return 'Endereço: CEP';
-                    case 2: return 'Endereço: Detalhes';
-                    case 3: return 'Endereço: Complemento';
+                    case 1: return '';
+                    case 2: return '';
+                    case 3: return '';
                     default: return 'Endereço';
                 }
             default:
@@ -1085,7 +1089,13 @@ export default function ClientRegisterScreen() {
                     style={StyleSheet.absoluteFillObject}
                 />
 
-                <ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled" >
+                <ScrollView
+                    ref={scrollRef}
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContentContainer}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
                     <Stack.Screen
                         options={{
                             headerShown: true,
@@ -1369,12 +1379,36 @@ export default function ClientRegisterScreen() {
                                                 placeholder="CEP (apenas números)"
                                                 placeholderTextColor="#A0AEC0"
                                                 value={cep}
-                                                onChangeText={(text) => {
-                                                    setCep(text.replace(/\D/g, ''));
+                                                onChangeText={async (text) => {
+                                                    const cleanedCep = text.replace(/\D/g, '');
+                                                    setCep(cleanedCep);
                                                     setCepInputError(null);
                                                     setGeneralError(null);
-                                                    if (text.replace(/\D/g, '').length < 8) {
-                                                        setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
+
+                                                    if (cleanedCep.length === 8) {
+                                                        setCepLoading(true);
+                                                        try {
+                                                            const response = await fetch(`https://viacep.com.br/ws/${cleanedCep}/json/`);
+                                                            const data = await response.json();
+
+                                                            if (!data.erro) {
+                                                                setStreet(data.logradouro || '');
+                                                                setNeighborhood(data.bairro || '');
+                                                                setCity(data.localidade || '');
+                                                                setState(data.uf || '');
+                                                                setComplement(data.complemento || '');
+                                                                lastFetchedCepRef.current = cleanedCep;
+                                                            } else {
+                                                                setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
+                                                                setCepInputError("CEP não encontrado.");
+                                                            }
+                                                        } catch (error) {
+                                                            devError("Erro ao validar CEP:", error);
+                                                            setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
+                                                            setCepInputError("Erro ao validar CEP.");
+                                                        } finally {
+                                                            setCepLoading(false);
+                                                        }
                                                     }
                                                 }}
                                                 onBlur={handleCepBlur}
@@ -1649,7 +1683,7 @@ const styles = StyleSheet.create({
         borderRadius: 28,
         height: Platform.OS === 'android' ? 39 :  45,
         bottom: 10,
-        marginBottom: 10, // Espaço mínimo para o erro ficar colado abaixo
+        marginBottom: 4, // Espaço mínimo para o erro ficar colado abaixo
         paddingHorizontal: 0,
         borderWidth: 1,
         borderColor: 'transparent',
@@ -1679,6 +1713,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 0,
     },
     inlineErrorLift: {
+        minHeight: 20,
+        marginTop: 2,
+        marginBottom: 5,
         transform: [{ translateY: -7 }], // Aproxima o erro 15% da altura do input (45px)
     },
     passwordHint: {
