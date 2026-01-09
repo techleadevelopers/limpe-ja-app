@@ -157,22 +157,6 @@ const toMinutes = (time: string) => {
   return hours * 60 + minutes;
 };
 
-const hasFourHourWindow = (index: number, slots: TimeSlot[]): boolean => {
-  const gap = 60;
-  for (let offset = 0; offset <= 3; offset++) {
-    const current = slots[index + offset];
-    if (!current || !current.isAvailable) return false;
-    if (offset > 0) {
-      const prev = slots[index + offset - 1];
-      if (!prev) return false;
-      if (toMinutes(current.time) - toMinutes(prev.time) !== gap) {
-        return false;
-      }
-    }
-  }
-  return true;
-};
-
 const formatTimeFromISO = (iso: string) => {
   const date = new Date(iso);
   const hours = date.getHours().toString().padStart(2, '0');
@@ -1036,12 +1020,12 @@ const slotStepMinutes = useMemo(() => {
     const normalizedSquareMeters =
       squareMeters && squareMeters > 0 ? squareMeters : undefined;
 
-    return {
-      providerId: provider.id,
-      providerServiceId: selectedProviderService.id,
-      scheduledDate: scheduledDateKey,
-      scheduledTime: selectedTime,
-      durationMinutes: effectiveDurationInMinutes ?? undefined,
+      return {
+        providerId: provider.id,
+        providerServiceId: selectedProviderService.id,
+        scheduledDate: scheduledDateKey,
+        scheduledTime: selectedTimeLabel ?? selectedTime,
+        durationMinutes: effectiveDurationInMinutes ?? undefined,
       squareMeters: normalizedSquareMeters,
       roomCount: undefined,
       couponCode: appliedCouponCode || undefined,
@@ -1614,91 +1598,47 @@ const handleDaySelect = useCallback(
         }),
       ]).start();
 
-      const expandToMinSlots = (baseTime: string) => {
-        const availableTimes = displaySlotsInfo
-          .filter((s) => s.isAvailable)
-          .map((s) => normalizeSlotLabel(s.time))
-          .sort((a, b) => toMinutes(a) - toMinutes(b));
-
-        const index = availableTimes.indexOf(baseTime);
-        if (index === -1) return [baseTime];
-
-        const result: string[] = [baseTime];
-
-        // forward
-        for (let i = index + 1; i < availableTimes.length && result.length < minHourlySlots; i++) {
-          const last = result[result.length - 1];
-          if (toMinutes(availableTimes[i]) - toMinutes(last) === slotStepMinutes) {
-            result.push(availableTimes[i]);
-          } else {
-            break;
-          }
-        }
-
-        // backward
-        for (let i = index - 1; i >= 0 && result.length < minHourlySlots; i--) {
-          const first = result[0];
-          if (toMinutes(first) - toMinutes(availableTimes[i]) === slotStepMinutes) {
-            result.unshift(availableTimes[i]);
-          } else {
-            break;
-          }
-        }
-
-        return result.sort((a, b) => toMinutes(a) - toMinutes(b));
-      };
-
       const baseTime = normalizeSlotLabel(selectedSlot.time);
+      const requiredSlots = Math.max(minHourlySlots, 4);
+      const stepMinutes = Math.max(slotStepMinutes, 1);
+      const baseMinutes = toMinutes(baseTime);
 
-      if (isHourlyService(selectedProviderService)) {
-        setSelectedSlots(() => {
-          const next = expandToMinSlots(baseTime);
+      const availableMinutes = new Map<number, string>();
+      displaySlotsInfo.forEach((slot) => {
+        if (!slot.isAvailable) return;
+        const normalizedTime = normalizeSlotLabel(slot.time);
+        const minuteValue = toMinutes(normalizedTime);
+        if (!availableMinutes.has(minuteValue)) {
+          availableMinutes.set(minuteValue, normalizedTime);
+        }
+      });
 
-          if (next.length < minHourlySlots) {
-            NotificationUIService.showError(
-              t('schedule_service.min_hourly_block', {
-                defaultValue:
-                  'Este horario nao possui 4h disponiveis. Selecione um horario com pelo menos 4h contiguas.',
-              }),
-              t('schedule_service.min_hourly_block_title', { defaultValue: 'Minimo de 4h' }),
-            );
-            setSelectedTime(null);
-            setDurationInMinutes(null);
-            return [];
-          }
-
-          const normalizedNext = next.map(normalizeSlotLabel);
-          const firstIso =
-            displaySlotsInfo.find((slot) => normalizeSlotLabel(slot.time) === normalizedNext[0])?.fullISO ??
-            selectedSlot.fullISO;
-          setSelectedTime(ensureValidSlotISO(firstIso, selectedDate, normalizedNext[0]));
-          setDurationInMinutes(normalizedNext.length * slotStepMinutes);
-
-          return normalizedNext;
-        });
-        return;
-      }
-
-      setSelectedSlots(() => {
-        if (selectedSlots.includes(baseTime)) {
+      setSelectedSlots((prev) => {
+        if (prev.includes(baseTime)) {
           setSelectedTime(null);
           setDurationInMinutes(null);
           return [];
         }
-        setSelectedTime(ensureValidSlotISO(selectedSlot.fullISO, selectedDate, baseTime));
-        setDurationInMinutes(60);
-        return [baseTime];
+        const sequentialSlots: string[] = [];
+        for (let offset = 0; offset < requiredSlots; offset++) {
+          const targetMinutes = baseMinutes + offset * stepMinutes;
+          const normalizedTime = availableMinutes.get(targetMinutes);
+          if (!normalizedTime) {
+            NotificationUIService.showInfo(
+              t('common.minimum_hours', { defaultValue: 'Mínimo 4h' }),
+              t('common.info', { defaultValue: 'Aviso' }),
+            );
+            return prev;
+          }
+          sequentialSlots.push(normalizedTime);
+        }
+
+        setSelectedTime(ensureValidSlotISO(selectedSlot.fullISO, selectedDate, sequentialSlots[0]));
+        setDurationInMinutes(sequentialSlots.length * 60);
+        return sequentialSlots;
       });
     },
-    [
-      displaySlotsInfo,
-      selectionAnim,
-      t,
-      selectedProviderService,
-      minHourlySlots,
-      slotStepMinutes,
-      selectedSlots,
-    ],
+    [displaySlotsInfo, selectionAnim, t, selectedDate, slotStepMinutes, minHourlySlots],
   );
 
   const showCancellationPolicy = useCallback(() => setCancellationOverlayVisible(true), []);
@@ -1855,7 +1795,7 @@ const handleDaySelect = useCallback(
         providerId: provider.id,
         providerServiceId: selectedProviderService.id,
         scheduledDate: formatBrazilDateKey(safeSelectedDate),
-        scheduledTime: selectedTime,
+        scheduledTime: selectedTimeLabel ?? (selectedTime ? formatTimeFromISO(selectedTime) : ''),
         totalPrice: finalCalculatedPrice,
         notes,
         address: {
@@ -1871,6 +1811,7 @@ const handleDaySelect = useCallback(
       insurancePlanId,
       };
 
+      console.log('[ScheduleService] bookingData.totalPrice', bookingData.totalPrice);
       const newBooking: BookingDetails = await createBooking(bookingData);
       if (!isMounted.current) return;
 
@@ -2241,25 +2182,35 @@ const handleDaySelect = useCallback(
         debouncedSelectedDate,
         providerConfiguredSlots,
         backendResponse.occupiedTimes || [],
-        selectedProviderService?.durationMinutes || null
+        selectedProviderService?.durationMinutes || null,
+        undefined,
+        dateString,
       );
 
       console.log('[DEBUG] Slots encontrados:', finalDisplaySlots.length);
-      const fourHourSlots = finalDisplaySlots.filter((_, index, arr) => hasFourHourWindow(index, arr));
-      const slotsToRender = fourHourSlots.length > 0 ? fourHourSlots : finalDisplaySlots;
-      const normalizedDisplaySlots = slotsToRender.map((slot) => {
+      const normalizedDisplaySlots = finalDisplaySlots.map((slot) => {
         const normalizedTime = normalizeSlotLabel(slot.time);
         return {
           ...slot,
           time: normalizedTime,
-          isAvailable: Boolean(slot.isAvailable),
+          isAvailable: true,
           fullISO: ensureValidSlotISO(slot.fullISO, debouncedSelectedDate, normalizedTime),
         };
       });
 
+      const slotsForDisplay = normalizedDisplaySlots.filter((slot) => slot.time.endsWith(':00'));
+
+      console.log(
+        '[DEBUG] Slots backend disponíveis:',
+        finalDisplaySlots.length,
+        '→ após filtro hora cheia:',
+        slotsForDisplay.length,
+      );
+
       // --- 6. ATUALIZAÇÃO DA UI ---
       if (isMounted.current && !isCancelled) {
-        setDisplaySlotsInfo(normalizedDisplaySlots);
+        console.log('[DEBUG] Slots renderizados (hora cheia):', slotsForDisplay.length);
+        setDisplaySlotsInfo(slotsForDisplay);
         const hasRealAvailableSlots = finalDisplaySlots.some((slot) => slot.isAvailable);
         markDateAvailability(dateString, hasRealAvailableSlots);
 
