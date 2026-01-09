@@ -129,7 +129,7 @@ export class BookingQuoteRequestDto {
   })
   @IsOptional()
   @IsIn(INSURANCE_PLAN_IDS)
-  insurancePlanId?: InsurancePlanId;
+  insurancePlanId?: InsurancePlanId | null;
 
   @ApiProperty({
     description: 'Endereço do atendimento (precisa de latitude/longitude)',
