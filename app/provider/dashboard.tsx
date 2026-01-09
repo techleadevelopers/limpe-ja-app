@@ -145,9 +145,7 @@ const DashboardHeader: React.FC<{
       Platform.OS === 'android' && { paddingTop: androidPaddingTopValue },
     ]}>
       <View style={headerStyles.greetingContainer}>
-        <Text style={headerStyles.greetingText} testID="providerDashboardTitle">
-          Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!
-        </Text>
+        <Text style={headerStyles.greetingText}>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
         <Text style={headerStyles.currentDateText}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
       </View>
       <TouchableOpacity
@@ -193,6 +191,7 @@ const headerStyles = StyleSheet.create({
       android: { elevation: 0 },
     }),
     marginBottom: Platform.OS === 'android' ? 10 : Spacing.lg,
+    marginTop: Platform.OS === 'android' ? 16 : 0,
   },
   greetingContainer: {
     flex: 1,
@@ -679,10 +678,14 @@ const RequestItem: React.FC<{
   const chatTouchAnimation = useAnimatedTouch();
   const clientId: string | undefined = item.clientId;
   const clientName: string = item.clientFullName || 'Cliente';
-  // CORREÇÃO: Usar item.scheduledDate e item.scheduledTime
-  const combinedDateTimeString = `${item.scheduledDate}T${item.scheduledTime}:00`;
-  const scheduledDate = new Date(combinedDateTimeString).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
-  const scheduledTime = new Date(combinedDateTimeString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const scheduledTimeDate = item.scheduledTime
+    ? new Date(item.scheduledTime)
+    : item.scheduledDate
+      ? new Date(`${item.scheduledDate}T00:00:00`)
+      : new Date();
+  const safeScheduledTimeDate = Number.isNaN(scheduledTimeDate.getTime()) ? new Date() : scheduledTimeDate;
+  const scheduledDate = safeScheduledTimeDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+  const scheduledTime = safeScheduledTimeDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return (
     <Animated.View style={[
       styles.requestItem,
@@ -732,8 +735,7 @@ const RequestItem: React.FC<{
           onPressOut={detailsTouchAnimation.onPressOut}
           accessibilityRole="button"
           accessibilityLabel={`Ver detalhes do serviço ${item.serviceName}`}
-        accessibilityHint="Abre a tela com todas as informações do agendamento."
-        testID={`pendingRequest-${item.id}`}
+          accessibilityHint="Abre a tela com todas as informações do agendamento."
         >
           <Animated.View style={[styles.secondaryActionContent, { transform: [{ scale: detailsTouchAnimation.scaleAnim }] }]}>
             <Ionicons name="eye-outline" size={18} color={ICON_PRIMARY} accessibilityHidden={true} />
@@ -828,10 +830,14 @@ const ConfirmedServiceItem: React.FC<{
   isReducedMotionEnabled: boolean;
 }> = ({ item, onPress, entryAnim, isReducedMotionEnabled }) => {
   const touchAnimation = useAnimatedTouch();
-  // CORREÇÃO: Usar item.scheduledDate e item.scheduledTime
-  const combinedDateTimeString = `${item.scheduledDate}T${item.scheduledTime}:00`;
-  const scheduledDate = new Date(combinedDateTimeString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-  const scheduledTime = new Date(combinedDateTimeString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const scheduledTimeDate = item.scheduledTime
+    ? new Date(item.scheduledTime)
+    : item.scheduledDate
+      ? new Date(`${item.scheduledDate}T00:00:00`)
+      : new Date();
+  const safeScheduledTimeDate = Number.isNaN(scheduledTimeDate.getTime()) ? new Date() : scheduledTimeDate;
+  const scheduledDate = safeScheduledTimeDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  const scheduledTime = safeScheduledTimeDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return (
     <Animated.View style={{
       opacity: entryAnim,
@@ -848,7 +854,6 @@ const ConfirmedServiceItem: React.FC<{
         accessibilityRole="button"
         accessibilityLabel={`Ver detalhes do serviço ${item.serviceName} com ${item.clientFullName}`}
         accessibilityHint="Toque para ver detalhes do serviço confirmado."
-        testID={`upcomingService-${item.id}`}
       >
         <Animated.View style={[styles.serviceItemContent, { transform: [{ scale: touchAnimation.scaleAnim }] }]}>
           <View style={styles.serviceItemIconWrapper}>
@@ -954,7 +959,14 @@ export default function ProviderDashboardScreen() {
       // Buscar listas reais como no provider/index.tsx
       const pendingBookings = await getBookingsForUser(BookingStatus.PENDING);
       const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
-      const toTs = (b: BookingDetails) => new Date(`${b.scheduledDate}T${b.scheduledTime}:00`).getTime();
+      const toTs = (b: BookingDetails) => {
+        const parsed = b.scheduledTime
+          ? new Date(b.scheduledTime)
+          : b.scheduledDate
+            ? new Date(`${b.scheduledDate}T00:00:00`)
+            : new Date();
+        return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+      };
       setPendingRequests([...pendingBookings].sort((a, b) => toTs(a) - toTs(b)));
       setUpcomingServices([...confirmedBookings].sort((a, b) => toTs(a) - toTs(b)));
       // Animate sections in stagger (respeitando reduced motion)
