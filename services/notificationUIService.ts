@@ -1,12 +1,14 @@
 // app/services/notificationUIService.ts
 import i18n from '../i18n';
 import { showOverlay } from '../hooks/useOverlayMessage';
+import Toast from 'react-native-toast-message';
 
 interface ToastOptions {
   type: 'success' | 'error' | 'info';
   title: string;
   message: string;
   position?: 'top' | 'bottom';
+  overlay?: boolean;
 }
 
 class NotificationUIService {
@@ -144,7 +146,20 @@ class NotificationUIService {
     // Exibir toast (garantindo text1/text2 sejam strings)
     // Premium overlay com fundo escuro e auto-hide ~5s
     const variant = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'info' ? 'info' : 'warning';
-    showOverlay({ title, subtitle: message, variant, durationMs: 2000 });
+    const useOverlay = options.overlay ?? true;
+    if (useOverlay) {
+      showOverlay({ title, subtitle: message, variant, durationMs: 2000 });
+      return;
+    }
+
+    Toast.show({
+      type: variant,
+      text1: title,
+      text2: message,
+      position: options.position ?? 'bottom',
+      visibilityTime: 2000,
+      autoHide: true,
+    });
   }
 
   showSuccess(message: string, title: string = i18n.t('common.success')) {
@@ -200,6 +215,8 @@ class NotificationUIService {
     message: string;
     type?: ToastOptions['type'];
     deepLink?: string;
+    overlay?: boolean;
+    position?: 'top' | 'bottom';
   }) {
     if (this.shouldDeduplicate(event.dedupeKey)) {
       return;
@@ -208,6 +225,8 @@ class NotificationUIService {
       type: event.type ?? 'info',
       title: event.title,
       message: event.message,
+      overlay: event.overlay,
+      position: event.position,
     });
   }
 }
