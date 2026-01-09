@@ -21,13 +21,16 @@ import { alertUserError } from '../../../_shared/errors/uiFeedback';
 import { useAuth } from '../../../hooks/useAuth';
 import { getPricingConfig } from '../../../services/configService';
 import NotificationUIService from '../../../services/notificationUIService';
+import { buildDateTimeForSlot, isSameDayInBrazil } from '../../../utils/time';
 
 // Importações de serviços e tipos do backend
 import { getBookingsForUser } from '../../../services/bookingService';
 import {
     getMyProviderAvailability,
     updateMyProviderAvailability,
+    deleteMyProviderAvailability,
 } from '../../../services/providerService';
+import { invalidateAvailabilityCache } from '../../client/bookings/availabilityCache';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { ProviderAvailability, UpdateAvailabilityData } from '../../../types/backend/providers';
 
@@ -177,7 +180,16 @@ const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: 
 
 const ALL_POSSIBLE_SLOTS = generateTimeSlots(4, 19, 60);
 
+const calendarDateStringToLocalDate = (value: string | null | undefined): Date | null => {
+  if (!value) return null;
+  const parts = value.split('-').map((segment) => parseInt(segment, 10));
+  if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return null;
+  const [year, month, day] = parts;
+  return new Date(year, month - 1, day);
+};
+
 const SLOT_STEP_MINUTES = 60;
+const BOOKING_SLOT_STEP_MINUTES = 30;
 const DEFAULT_MIN_HOURLY_MINUTES = 240;
 
 const slotToMinutes = (slot: string) => {
@@ -189,6 +201,47 @@ const minutesToSlot = (value: number) => {
   const hours = Math.floor(value / 60);
   const minutes = value % 60;
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
+const buildBookedSlotsFromBooking = (booking: BookingDetails): string[] => {
+  const parseIso = (value?: string | null | undefined) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const startDate =
+    parseIso(booking.scheduledStart) ??
+    parseIso(booking.scheduledTime) ??
+    parseIso(booking.scheduledDate);
+  if (!startDate) return [];
+
+  const durationMinutes =
+    booking.durationMinutes ??
+    booking.serviceDurationMinutes ??
+    BOOKING_SLOT_STEP_MINUTES;
+
+  const endDate =
+    parseIso(booking.scheduledEndTime) ??
+    new Date(startDate.getTime() + durationMinutes * 60000);
+
+  if (Number.isNaN(endDate.getTime())) {
+    return [];
+  }
+
+  const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
+  const endMinutes = Math.max(
+    endDate.getHours() * 60 + endDate.getMinutes(),
+    startMinutes + BOOKING_SLOT_STEP_MINUTES,
+  );
+
+  const slots: string[] = [];
+  for (let time = startMinutes; time < endMinutes; time += BOOKING_SLOT_STEP_MINUTES) {
+    const hour = Math.floor(time / 60);
+    const minute = time % 60;
+    slots.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+  }
+  return slots;
 };
 
 const getSelectedBlock = (target: string, slots: string[]) => {
@@ -633,27 +686,14 @@ export default function ManageAvailabilityScreen() {
 
   // getBookedSlotsForDay (mantido como useCallback, movido para cima - depende de bookings)
   const getBookedSlotsForDay = useCallback((dayOfWeek: number): string[] => {
-    const bookedTimes: string[] = [];
-    const confirmedBookings = bookings.filter(b => b.status === BookingStatus.CONFIRMED);
-
-    confirmedBookings.forEach(booking => {
+    const bookedTimes = new Set<string>();
+    bookings.forEach((booking) => {
+      if (booking.status !== BookingStatus.CONFIRMED) return;
       const bookingDate = new Date(booking.scheduledDate);
-      if (bookingDate.getDay() === dayOfWeek) {
-        const [startHour, startMinute] = booking.scheduledTime.split(':').map(Number);
-        const startTotalMinutes = startHour * 60 + startMinute;
-
-        const endTotalMinutes = booking.scheduledEndTime
-          ? parseInt(booking.scheduledEndTime.split(':')[0]) * 60 + parseInt(booking.scheduledEndTime.split(':')[1])
-          : startTotalMinutes + 30;
-
-        for (let time = startTotalMinutes; time < endTotalMinutes; time += 30) {
-          const hour = Math.floor(time / 60);
-          const minute = time % 60;
-          bookedTimes.push(`${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}`);
-        }
-      }
+      if (Number.isNaN(bookingDate.getTime()) || bookingDate.getDay() !== dayOfWeek) return;
+      buildBookedSlotsFromBooking(booking).forEach((slot) => bookedTimes.add(slot));
     });
-    return Array.from(new Set(bookedTimes));
+    return Array.from(bookedTimes);
   }, [bookings]);
 
   const handleToggleDay = useCallback((dayOfWeek: number, isEnabled: boolean) => {
@@ -699,45 +739,31 @@ export default function ManageAvailabilityScreen() {
 
     const sortedSlots = [...slots].sort();
     const blocks: { startTime: string; endTime: string }[] = [];
-
     let currentBlockStart = sortedSlots[0];
     let currentBlockEnd = sortedSlots[0];
 
-    for (let i = 0; i < sortedSlots.length; i++) {
-      const currentSlot = sortedSlots[i];
-      const [currentHour, currentMinute] = currentSlot.split(':').map(Number);
-      const currentTotalMinutes = currentHour * 60 + currentMinute;
+    for (let i = 1; i < sortedSlots.length; i++) {
+      const nextSlot = sortedSlots[i];
+      const previousMinutes = slotToMinutes(currentBlockEnd);
+      const nextMinutes = slotToMinutes(nextSlot);
 
-      if (i === sortedSlots.length - 1) {
-        const [endHour, endMinute] = currentBlockEnd.split(':').map(Number);
-        const finalEndTotalMinutes = endHour * 60 + endMinute + 30;
-        const finalEndHour = Math.floor(finalEndTotalMinutes / 60);
-        const finalEndMinute = finalEndTotalMinutes % 60;
+      if (nextMinutes === previousMinutes + SLOT_STEP_MINUTES) {
+        currentBlockEnd = nextSlot;
+      } else {
         blocks.push({
           startTime: currentBlockStart,
-          endTime: `${finalEndHour < 10 ? '0' : ''}${finalEndHour}:${finalEndMinute < 10 ? '0' : ''}${finalEndMinute}`
+          endTime: minutesToSlot(previousMinutes + SLOT_STEP_MINUTES),
         });
-      } else {
-        const nextSlot = sortedSlots[i + 1];
-        const [nextHour, nextMinute] = nextSlot.split(':').map(Number);
-        const nextTotalMinutes = nextHour * 60 + nextMinute;
-
-        if (nextTotalMinutes === currentTotalMinutes + 30) {
-          currentBlockEnd = currentSlot;
-        } else {
-          const [endHour, endMinute] = currentBlockEnd.split(':').map(Number);
-          const finalEndTotalMinutes = endHour * 60 + endMinute + 30;
-          const finalEndHour = Math.floor(finalEndTotalMinutes / 60);
-          const finalEndMinute = finalEndTotalMinutes % 60;
-          blocks.push({
-            startTime: currentBlockStart,
-            endTime: `${finalEndHour < 10 ? '0' : ''}${finalEndHour}:${finalEndMinute < 10 ? '0' : ''}${finalEndMinute}`
-          });
-          currentBlockStart = nextSlot;
-          currentBlockEnd = nextSlot;
-        }
+        currentBlockStart = nextSlot;
+        currentBlockEnd = nextSlot;
       }
     }
+
+    const finalMinutes = slotToMinutes(currentBlockEnd);
+    blocks.push({
+      startTime: currentBlockStart,
+      endTime: minutesToSlot(finalMinutes + SLOT_STEP_MINUTES),
+    });
     return blocks;
   }, []);
 
@@ -771,7 +797,7 @@ export default function ManageAvailabilityScreen() {
           const startMinutes = parseInt(avail.startTime.split(':')[0]) * 60 + parseInt(avail.startTime.split(':')[1]);
           const endMinutes = parseInt(avail.endTime.split(':')[0]) * 60 + parseInt(avail.endTime.split(':')[1]);
           const currentSlots: string[] = [];
-          for (let time = startMinutes; time < endMinutes; time += 30) {
+          for (let time = startMinutes; time < endMinutes; time += SLOT_STEP_MINUTES) {
             const hour = Math.floor(time / 60);
             const minute = time % 60;
             currentSlots.push(`${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}`);
@@ -786,7 +812,6 @@ export default function ManageAvailabilityScreen() {
         }
       });
       setWeeklyAvailability(initialWeekly);
-
       setSpecificDateOverrides([]);
 
       const allBookings: BookingDetails[] = await getBookingsForUser(BookingStatus.CONFIRMED);
@@ -1053,9 +1078,12 @@ export default function ManageAvailabilityScreen() {
     if (!selectedDateForOverride) return;
     setSpecificDateOverrides(prev => prev.filter(o => o.date !== selectedDateForOverride));
     setSelectedDateForOverride(null);
+    if (user?.id) {
+      invalidateAvailabilityCache(user.id, selectedDateForOverride);
+    }
     if (Platform.OS === 'ios') Haptics.selectionAsync();
     AccessibilityInfo.announceForAccessibility('Exceção removida para esta data.');
-  }, [selectedDateForOverride]);
+  }, [selectedDateForOverride, user?.id]);
 
   const handleSaveAvailability = useCallback(async () => {
     if (!user?.id) {
@@ -1063,20 +1091,27 @@ export default function ManageAvailabilityScreen() {
       return;
     }
 
+    const providerId = user.id;
     setIsSaving(true);
 
     try {
       const allAvailabilityUpdates: UpdateAvailabilityData[] = [];
+      const refreshDays = new Set<number>();
+      const touchedDates = new Set<string>();
+      if (selectedDateForOverride) {
+        touchedDates.add(selectedDateForOverride);
+      }
 
       const now = new Date();
       const todayDow = now.getDay();
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
       for (const day of weeklyAvailability) {
-        // Ignora dias passados na semana atual
         if (day.dayOfWeek < todayDow) continue;
 
-        // Filtra slots passados para hoje
+        const availabilityDate = dateForDayOfWeek(day.dayOfWeek);
+        const baseDateForDay = calendarDateStringToLocalDate(availabilityDate) ?? new Date(availabilityDate);
+
         const validSlots = day.selectedSlots.filter(slot => {
           const [h, m] = slot.split(':').map(n => parseInt(n, 10));
           const minutes = h * 60 + m;
@@ -1085,19 +1120,63 @@ export default function ManageAvailabilityScreen() {
         });
 
         const newBlocks = convertSlotsToBlocks(validSlots);
+        const hadOriginalSlots = (day.originalSlots || []).length > 0;
+        const removedAllSlots = (!day.isEnabled || newBlocks.length === 0) && hadOriginalSlots;
+        if (removedAllSlots) {
+          refreshDays.add(day.dayOfWeek);
+          touchedDates.add(availabilityDate);
+        }
+
         if (day.isEnabled && newBlocks.length > 0) {
+          refreshDays.add(day.dayOfWeek);
+          touchedDates.add(availabilityDate);
           newBlocks.forEach(block => {
+            const startTimeIso = buildDateTimeForSlot(baseDateForDay, block.startTime).toISOString();
+            const endTimeIso = buildDateTimeForSlot(baseDateForDay, block.endTime).toISOString();
             allAvailabilityUpdates.push({
               dayOfWeek: day.dayOfWeek,
-              startTime: block.startTime,
-              endTime: block.endTime,
+              startTime: startTimeIso,
+              endTime: endTimeIso,
               isAvailable: true,
             });
           });
         }
       }
 
-      await updateMyProviderAvailability(allAvailabilityUpdates);
+      const dateForDayOfWeek = (dayOfWeek: number) => {
+        const diff = (dayOfWeek - now.getDay() + 7) % 7;
+        const targetDate = new Date(now);
+        targetDate.setDate(now.getDate() + diff);
+        return targetDate.toISOString().split('T')[0];
+      };
+
+      refreshDays.forEach((dayOfWeek) => touchedDates.add(dateForDayOfWeek(dayOfWeek)));
+
+      const slotsToDelete: ProviderAvailability[] = [];
+      for (const dayOfWeek of refreshDays) {
+        try {
+          const availabilityDate = dateForDayOfWeek(dayOfWeek);
+          const { available } = await getMyProviderAvailability(availabilityDate);
+          slotsToDelete.push(...available);
+        } catch (error: any) {
+          console.warn(
+            `[ManageAvailability] falha ao buscar disponibilidade existente para o dia ${dayOfWeek}:`,
+            error,
+          );
+        }
+      }
+
+      if (slotsToDelete.length > 0) {
+        await Promise.all(slotsToDelete.map(slot => deleteMyProviderAvailability(slot.id)));
+      }
+
+      if (allAvailabilityUpdates.length > 0) {
+        await updateMyProviderAvailability(allAvailabilityUpdates);
+      }
+
+      if (touchedDates.size > 0) {
+        touchedDates.forEach((date) => invalidateAvailabilityCache(providerId, date));
+      }
 
       for (const override of specificDateOverrides) {
         if (override.type === 'blocked') {
@@ -1130,24 +1209,14 @@ export default function ManageAvailabilityScreen() {
   }, [user?.id, weeklyAvailability, specificDateOverrides, convertSlotsToBlocks, router, loadData]);
 
   const getBookedSlotsForSpecificDate = useCallback((date: string): string[] => {
-    const bookedTimes: string[] = [];
-    const confirmedBookings = bookings.filter(b => b.status === BookingStatus.CONFIRMED && b.scheduledDate === date);
-
-    confirmedBookings.forEach(booking => {
-      const [startHour, startMinute] = booking.scheduledTime.split(':').map(Number);
-      const startTotalMinutes = startHour * 60 + startMinute;
-
-      const endTotalMinutes = booking.scheduledEndTime
-        ? parseInt(booking.scheduledEndTime.split(':')[0]) * 60 + parseInt(booking.scheduledEndTime.split(':')[1])
-        : startTotalMinutes + 30;
-
-      for (let time = startTotalMinutes; time < endTotalMinutes; time += 30) {
-        const hour = Math.floor(time / 60);
-        const minute = time % 60;
-        bookedTimes.push(`${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}`);
-      }
+    const bookedTimes = new Set<string>();
+    const confirmedBookings = bookings.filter(
+      (b) => b.status === BookingStatus.CONFIRMED && b.scheduledDate === date,
+    );
+    confirmedBookings.forEach((booking) => {
+      buildBookedSlotsFromBooking(booking).forEach((slot) => bookedTimes.add(slot));
     });
-    return Array.from(new Set(bookedTimes));
+    return Array.from(bookedTimes);
   }, [bookings]);
 
   const pendingChangesCount = useMemo(() => {
@@ -1161,23 +1230,36 @@ export default function ManageAvailabilityScreen() {
   }, [weeklyAvailability, specificDateOverrides]);
 
   const currentOverride = useMemo(() => {
-    return specificDateOverrides.find(o => o.date === selectedDateForOverride);
+    if (!selectedDateForOverride) return undefined;
+    const selectedDateObj = calendarDateStringToLocalDate(selectedDateForOverride);
+    if (!selectedDateObj) return undefined;
+    return specificDateOverrides.find((override) => {
+      const overrideDateObj = calendarDateStringToLocalDate(override.date);
+      return overrideDateObj ? isSameDayInBrazil(overrideDateObj, selectedDateObj) : false;
+    });
   }, [specificDateOverrides, selectedDateForOverride]);
 
   const markedDates = useMemo(() => {
     const dates: { [key: string]: any } = {};
-    specificDateOverrides.forEach(override => {
+    const selectedDateObj = calendarDateStringToLocalDate(selectedDateForOverride);
+    specificDateOverrides.forEach((override) => {
+      const overrideDateObj = calendarDateStringToLocalDate(override.date);
+      const isSameDateInBrazil = selectedDateObj && overrideDateObj
+        ? isSameDayInBrazil(overrideDateObj, selectedDateObj)
+        : false;
+      const isSelected = isSameDateInBrazil || selectedDateForOverride === override.date;
+
       if (override.type === 'blocked') {
         dates[override.date] = {
-          selected: selectedDateForOverride === override.date,
-          selectedColor: selectedDateForOverride === override.date ? Colors.primary : Colors.danger,
+          selected: isSelected,
+          selectedColor: isSelected ? Colors.primary : Colors.danger,
           dotColor: Colors.danger,
           marked: true,
         };
       } else if (override.type === 'custom') {
         dates[override.date] = {
-          selected: selectedDateForOverride === override.date,
-          selectedColor: selectedDateForOverride === override.date ? Colors.primary : Colors.primary,
+          selected: isSelected,
+          selectedColor: Colors.primary,
           dotColor: Colors.primary,
           marked: true,
         };
@@ -1190,104 +1272,37 @@ export default function ManageAvailabilityScreen() {
   }, [specificDateOverrides, selectedDateForOverride]);
 
   const todayDow = new Date().getDay();
-  const tomorrowDow = (todayDow + 1) % 7;
-  const quickTileActions = useMemo(() => [
-    {
-      id: 'today-morning',
-      title: 'Hoje — Manhã',
-      subtitle: '08-12',
-      onPress: () => {
-        if (Platform.OS === 'ios') Haptics.selectionAsync();
-        handleApplyPreset(todayDow, 'morning', 'Disponibilidade salva para hoje 08-12');
-      },
-      accessibilityLabel: 'Aplicar manhã para hoje',
-    },
-    {
-      id: 'today-afternoon',
-      title: 'Hoje — Tarde',
-      subtitle: '13-17',
-      onPress: () => {
-        if (Platform.OS === 'ios') Haptics.selectionAsync();
-        handleApplyPreset(todayDow, 'afternoon', 'Disponibilidade salva para hoje 13-17');
-      },
-      accessibilityLabel: 'Aplicar tarde para hoje',
-    },
-    {
-      id: 'today-evening',
-      title: 'Hoje — Noite',
-      subtitle: '18-21',
-      onPress: () => {
-        if (Platform.OS === 'ios') Haptics.selectionAsync();
-        handleApplyPreset(todayDow, 'evening', 'Disponibilidade salva para hoje 18-21');
-      },
-      accessibilityLabel: 'Aplicar noite para hoje',
-    },
-    {
-      id: 'tomorrow',
-      title: 'Agendar amanhã',
-      subtitle: 'Manhã 08-12',
-      onPress: () => {
-        if (Platform.OS === 'ios') Haptics.selectionAsync();
-        handleApplyPreset(tomorrowDow, 'morning', 'Disponibilidade salva para amanhã 08-12');
-      },
-      accessibilityLabel: 'Agendar amanhã pela manhã',
-    },
-    {
-      id: 'day-off',
-      title: 'Folga hoje',
-      subtitle: 'Dia bloqueado',
-      onPress: () => {
-        handleClearSlots(todayDow);
-        handleToggleDay(todayDow, false);
-        AccessibilityInfo.announceForAccessibility?.('Folga registrada para hoje');
-        if (Platform.OS === 'ios') Haptics.selectionAsync();
-      },
-      accessibilityLabel: 'Marcar folga para hoje',
-    },
-    {
-      id: 'repeat-week',
-      title: 'Copiar semana padrão',
-      subtitle: 'Reaplicar blocos',
-      onPress: () => {
-        openCopyModal(todayDow);
-        setCopyTargets([1, 2, 3, 4, 5]);
-        AccessibilityInfo.announceForAccessibility?.('Semana padrão pronta para copiar');
-        if (Platform.OS === 'ios') Haptics.selectionAsync();
-      },
-      accessibilityLabel: 'Copiar disponibilidade para a semana inteira',
-    },
-  ], [handleApplyPreset, handleClearSlots, handleToggleDay, openCopyModal, todayDow, tomorrowDow, setCopyTargets]);
 
   // Apply preset actions when navigated with preset query param
-const didRunPresetRef = useRef(false);
-useEffect(() => {
-  if (didRunPresetRef.current) return; // guard against StrictMode double-invoke and rerenders
-  didRunPresetRef.current = true;
+  const didRunPresetRef = useRef(false);
+  useEffect(() => {
+    if (didRunPresetRef.current) return; // guard against StrictMode double-invoke and rerenders
+    didRunPresetRef.current = true;
 
-  if (!preset) return;
+    if (!preset) return;
 
-  const d = new Date();
-  const dow = d.getDay();
+    const d = new Date();
+    const dow = d.getDay();
 
-  switch (preset) {
-    case 'today-morning':
-      handleApplyPreset(dow, 'morning');
-      break;
-    case 'tomorrow-afternoon':
-      handleApplyPreset((dow + 1) % 7, 'afternoon');
-      break;
-    case 'block-today':
-      handleClearSlots(dow);
-      handleToggleDay(dow, false);
-      break;
-    case 'repeat-week':
-      openCopyModal(dow);
-      setCopyTargets([1, 2, 3, 4, 5]);
-      break;
-  }
+    switch (preset) {
+      case 'today-morning':
+        handleApplyPreset(dow, 'morning');
+        break;
+      case 'tomorrow-afternoon':
+        handleApplyPreset((dow + 1) % 7, 'afternoon');
+        break;
+      case 'block-today':
+        handleClearSlots(dow);
+        handleToggleDay(dow, false);
+        break;
+      case 'repeat-week':
+        openCopyModal(dow);
+        setCopyTargets([1, 2, 3, 4, 5]);
+        break;
+    }
 
-  if (Platform.OS === 'ios') Haptics.selectionAsync();
-}, [preset, handleApplyPreset, handleClearSlots, handleToggleDay, openCopyModal]);
+    if (Platform.OS === 'ios') Haptics.selectionAsync();
+  }, [preset, handleApplyPreset, handleClearSlots, handleToggleDay, openCopyModal]);
 
   useEffect(() => {
     loadData();
@@ -1328,26 +1343,11 @@ useEffect(() => {
 
         {activeTab === 'weekly' && (
           <>
-            <View style={styles.quickTilesRow}>
-              {quickTileActions.map((action) => (
-                <TouchableOpacity
-                  key={action.id}
-                  onPress={action.onPress}
-                  style={styles.quickTile}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel={action.accessibilityLabel ?? action.title}
-                >
-                  <Text style={styles.quickTileText}>{action.title}</Text>
-                  {action.subtitle && <Text style={styles.quickTileSub}>{action.subtitle}</Text>}
-                </TouchableOpacity>
-              ))}
-            </View>
             <Text style={styles.sectionTitleImproved}>Disponibilidade Semanal</Text>
             <Text style={styles.sectionHint}>
               Toque em um período para abrir sua agenda. Para horários diferentes, toque em Mais horários.
             </Text>
-            <InfoCard text="Defina seus horÇ­rios da semana. VocÇ¦s pode usar horÇ­rios prontos e copiar para os outros dias." />
+            
             {([...weeklyAvailability]
               .sort((a, b) => ((a.dayOfWeek - new Date().getDay() + 7) % 7) - ((b.dayOfWeek - new Date().getDay() + 7) % 7)))
               .map(day => (
@@ -1919,38 +1919,6 @@ const styles = StyleSheet.create({
   quickActionsRow: {
     flexDirection: 'row',
     marginBottom: Spacing.sm,
-  },
-  // Quick action tiles (top of weekly tab)
-  quickTilesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginHorizontal: px(20),
-    marginTop: px(8),
-  },
-  quickTile: {
-    width: '48%',
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.md,
-    paddingVertical: px(14),
-    paddingHorizontal: px(12),
-    marginBottom: px(10),
-    borderWidth: 0.5,
-    borderColor: Colors.border,
-    alignItems: 'flex-start',
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 }, android: { elevation: 0 } }),
-    gap: 3,
-  },
-  quickTileText: {
-    color: Colors.text,
-    fontWeight: '700',
-    fontSize: 16,
-    marginTop: 4,
-  },
-  quickTileSub: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
   },
   // Period toggles inside day card
   periodRow: {
