@@ -10,7 +10,7 @@ interface ConfirmBookingButtonProps {
   onConfirmBooking: () => void;
   isBooking: boolean;
   confirmButtonText: string;
-  selectedTime: string | null;
+  selectedTimeLabel: string | null;
   shouldShowConfirmText: boolean;
 }
 
@@ -19,7 +19,7 @@ const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
   onConfirmBooking,
   isBooking,
   confirmButtonText,
-  selectedTime,
+  selectedTimeLabel,
   shouldShowConfirmText,
 }) => {
   const pulse = useRef(new Animated.Value(1)).current;
@@ -111,7 +111,7 @@ const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
           <ActivityIndicator color={AppColors.white} />
         ) : (
           <Text style={s.text}>
-            {selectedTime && shouldShowConfirmText ? confirmButtonText : 'Selecione Data, Hora e Endereço'}
+            {selectedTimeLabel && shouldShowConfirmText ? confirmButtonText : 'Selecione Data, Hora e Endereço'}
           </Text>
         )}
       </TouchableOpacity>
