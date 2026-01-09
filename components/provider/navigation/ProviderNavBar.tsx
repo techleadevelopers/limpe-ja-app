@@ -26,7 +26,7 @@ const ProviderNavBar: React.FC = () => {
     { name: 'Início', icon: 'home', route: '/provider' },
     { name: 'Agenda', icon: 'calendar', route: '/provider/schedule' },
     { name: 'Cupons', icon: 'pricetag', route: '/provider/promotions' },
-    { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/provider/messages' },
+    { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/provider/messages/limpeja' },
     { name: 'Perfil', icon: 'person', route: '/provider/profile' },
   ];
 
