@@ -35,7 +35,7 @@ const NavBar: React.FC<NavBarProps> = ({
     { name: 'Início', icon: 'home', route: '/client/explore' },
     { name: 'Cupons', icon: 'pricetag', route: '/client/coupons' },
     { name: 'Reservas', icon: 'calendar', route: '/client/bookings' },
-    { name: 'Suporte', icon: 'chatbubble-ellipses', route: '/common/support' },
+    { name: 'Chat', icon: 'chatbubble-ellipses', route: '/client/messages' },
     { name: 'Perfil', icon: 'person', route: '/client/profile' },
   ];
   const BASE_ICON_SIZE = 23;
