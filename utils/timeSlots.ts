@@ -1,9 +1,11 @@
 // utils/timeSlots.ts
 import { ProviderAvailability } from '../types/backend/providers';
+import { buildDateTimeForSlot, isPastSlotForDate, toBrazilDate } from './time';
 
 export interface TimeSlot {
   time: string;
   isAvailable: boolean;
+  fullISO: string;
 }
 
 // Janela e intervalo padrão compartilhados (30min das 08:00 às 20:00)
@@ -41,10 +43,20 @@ export const generateDailySlots = (
   requiredDurationMin?: number | null,
   intervalMinutes: number = SLOT_INTERVAL_MINUTES,
 ): TimeSlot[] => {
-  const dayOfWeekSelected = selectedDate.getDay(); // 0 (Dom) a 6 (Sáb)
+  const normalizedDate = toBrazilDate(selectedDate);
+  const dayOfWeekSelected = normalizedDate.getDay(); // 0 (Dom) a 6 (Sáb)
 
   // Normalize occupied times to a Set for quick lookup
-  const occupiedSet = new Set(occupiedTimesFromBackend || []);
+  const toSlotIso = (time: string) => buildDateTimeForSlot(normalizedDate, time).toISOString();
+  const occupiedSet = new Set(
+    (occupiedTimesFromBackend || [])
+      .map((value) => {
+        if (!value) return null;
+        if (value.includes('T')) return value;
+        return toSlotIso(value);
+      })
+      .filter((value): value is string => Boolean(value)),
+  );
 
   // Expand provider availability blocks into discrete start times for the selected day
   const startCandidates: string[] = [];
@@ -66,12 +78,9 @@ export const generateDailySlots = (
     }
   }
 
-  // Remove duplicates, keep only full-hour slots (:00) and sort
+  // Remove duplicates, sort and keep all 30-min candidates
   const uniqueCandidates = Array.from(new Set(startCandidates))
-    .filter((time) => time.endsWith(':00'))
     .sort();
-
-  const now = new Date();
 
   const isWithinAnyBlock = (timeMinutes: number): boolean => {
     return blocksForDay.some((b) => {
@@ -94,24 +103,33 @@ export const generateDailySlots = (
       const mm = (t % 60).toString().padStart(2, '0');
       const key = `${hh}:${mm}`;
       // Cannot collide with a booked start
-      if (occupiedSet.has(key)) return false;
+      if (occupiedSet.has(toSlotIso(key))) return false;
     }
     return true;
   };
 
   const finalDisplaySlots: TimeSlot[] = uniqueCandidates.map((time) => {
     const [hours, minutes] = time.split(':').map(Number);
-    const slotDateTime = new Date(selectedDate);
-    slotDateTime.setHours(hours, minutes, 0, 0);
+    const slotDateTime = buildDateTimeForSlot(normalizedDate, time);
+    const fullISO = slotDateTime.toISOString();
 
-    const isPast = slotDateTime.getTime() < now.getTime();
+    const isPast = isPastSlotForDate(normalizedDate, time);
     const startMinutes = hours * 60 + minutes;
-    const isSlotOccupied = occupiedSet.has(time);
+    const isSlotOccupied = occupiedSet.has(fullISO);
     const fitsWindow = hasContiguousWindow(startMinutes);
+
+    console.log('[TimeSlots] slot-check', {
+      time,
+      isPast,
+      isSlotOccupied,
+      fitsWindow,
+      normalizedDate: normalizedDate.toISOString().split('T')[0],
+    });
 
     return {
       time,
       isAvailable: !isPast && !isSlotOccupied && fitsWindow,
+      fullISO,
     };
   });
 
