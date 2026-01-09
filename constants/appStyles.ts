@@ -9,11 +9,11 @@ export const AppColors = {
   primaryDark: '#2A72E7',
   successStandard: '#28A745',
   successStrong: '#218838',
-  attentionYellow: '#FFD700',
-  warningYellow: '#FFC107', // Adicionado: Cor para avisos/amarelo
-  errorRed: '#D32F2F',
-  border: '#D0D2D6',
-  danger: '#D32F2F',
+  attentionYellow: '#348eefff',
+  warningYellow: '#2b4794ff', // Adicionado: Cor para avisos/amarelo
+  errorRed: '#9f9595ff',
+  border: '#e3beb9ff',
+  danger: '#f07171ff',
   backgroundLight: '#F8FAFB',
   backgroundNeutral: '#F0F2F5',
   borderNeutral: '#E0E0E0',
