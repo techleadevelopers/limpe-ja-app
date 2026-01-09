@@ -172,13 +172,7 @@ export default function ConversationsListScreen() {
       try {
         const fetchedConversations = await getChatListForUser();
 
-        // mock opcional mantido
-        const mockConversations: ConversationItem[] = [
-          { id: 'chat1', otherUserId: 'user1', otherUserName: 'Larry Machigo', otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/1.jpg', lastMessage: 'Ah. Deixe-me verificar', lastMessageTimestamp: new Date().toISOString(), unreadCount: 0, isPinned: true, isTyping: false, messageType: 'text' },
-          { id: 'chat2', otherUserId: 'user2', otherUserName: 'Natalie Nara', otherUserAvatarUrl: 'https://randomuser.me/api/portraits/women/2.jpg', lastMessage: 'Natalie está digitando...', lastMessageTimestamp: new Date().toISOString(), unreadCount: 2, isTyping: true, messageType: 'text' },
-          ...fetchedConversations
-        ];
-        setConversations(mockConversations);
+        setConversations(fetchedConversations);
       } catch (error) {
         console.error('Erro ao carregar conversas:', error);
       } finally {
@@ -237,7 +231,7 @@ export default function ConversationsListScreen() {
             <Ionicons name="arrow-back" size={24} color="#4A5568" />
           </TouchableOpacity>
           <View style={styles.greetingContainer}>
-            <Text style={styles.greetingSubText}>Olá, {loggedInUserName}</Text>
+            
             <Text style={styles.greetingText}>Mensagens</Text>
           </View>
           <View style={styles.headerIcons}>
@@ -297,6 +291,7 @@ const styles = StyleSheet.create({
   },
   headerBackButton: {
     padding: 8,
+    top: Platform.OS === 'ios' ? 0 : 8,
     borderRadius: 12,
   },
   greetingContainer: {
@@ -305,11 +300,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   greetingText: {
-    fontSize: 18, // Aumentado para 18px para um look mais premium e legível
+    fontSize: Platform.OS === 'ios' ? 18 : 17, // Aumentado para 18px para um look mais premium e legível
     fontFamily: 'Montserrat-Regular',
     fontWeight: '700', // Bold para ênfase premium
     color: '#4A5568', // Preto mais claro premium (cinza escuro suave)
     textAlign: 'center',
+     top: Platform.OS === 'ios' ? 0 : 6, // Pequeno ajuste para alinhamento visual
+    right: Platform.OS === 'ios' ? 3 : 18,
     letterSpacing: 0.8, // Espaçamento refinado para feel premium
     marginTop: 2, // Pequeno espaçamento abaixo do subtítulo
   },
