@@ -83,7 +83,9 @@ export default function BookingSummaryCard({
   });
 
   // Usando formatPriceBRL do novo utilitário
-  const formattedPaymentValue = formatPriceBRL(totalPrice);
+  const insuranceFee = insurance?.priceCents ?? 0;
+  const bookingTotalWithInsurance = totalPrice + insuranceFee / 100;
+  const formattedPaymentValue = formatPriceBRL(bookingTotalWithInsurance);
   const displayPaymentMethod = paymentMethod || 'PIX';
 
   // ✅ NOVO: ReduceMotion para A11y no copy
@@ -171,7 +173,6 @@ export default function BookingSummaryCard({
 
           {/* ✅ NOVO: Barra de total "tint" (ênfase elegante, hierarquia premium sem poluir) */}
           <View style={styles.totalBar}>
-            <Text style={styles.totalLabel}>Total a Pagar</Text>
             <Text style={styles.totalValue}>{formattedPaymentValue}</Text>
           </View>
 
@@ -236,19 +237,11 @@ const styles = StyleSheet.create({
   totalBar: {
     marginTop: 12,
     paddingVertical: 12,
-    paddingHorizontal: 16, // Gap consistente (16px)
+    paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: 'rgba(42, 114, 231, 0.06)', // Tint azul sutil da marca
-    flexDirection: 'row',
+    backgroundColor: 'rgba(42, 114, 231, 0.06)',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2F3A4A', // Body premium (escuro, legível)
-    fontFamily: 'Montserrat-SemiBold', // Consistente com tipografia
+    justifyContent: 'center',
   },
   totalValue: {
     fontSize: 20,
