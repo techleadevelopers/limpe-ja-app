@@ -44,3 +44,48 @@ export const startOfDayBrazil = (date: Date): Date => {
   d.setHours(0, 0, 0, 0);
   return d;
 };
+
+/**
+ * Formata uma data para a chave YYYY-MM-DD baseada no fuso de São Paulo.
+ */
+export const formatBrazilDateKey = (date: Date): string => {
+  const brazilDate = toBrazilDate(date);
+  const year = brazilDate.getFullYear();
+  const month = String(brazilDate.getMonth() + 1).padStart(2, '0');
+  const day = String(brazilDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const SLOT_TIME_REGEX = /(\d{1,2}):(\d{2})/;
+
+export const normalizeSlotLabel = (value?: string | null): string => {
+  if (!value) {
+    return '00:00';
+  }
+
+  const fragments = value.split(/[\sT]+/).filter(Boolean);
+  const candidate = fragments.length ? fragments[fragments.length - 1] : value;
+  const primary = candidate.split('-')[0];
+  const match = (primary && primary.match(SLOT_TIME_REGEX)) || value.match(SLOT_TIME_REGEX);
+  if (!match) {
+    return '00:00';
+  }
+
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const safeHour = Number.isFinite(hour) ? Math.max(0, Math.min(23, hour)) : 0;
+  const safeMinute = Number.isFinite(minute) ? Math.max(0, Math.min(59, minute)) : 0;
+  return `${String(safeHour).padStart(2, '0')}:${String(safeMinute).padStart(2, '0')}`;
+};
+
+export const ensureValidSlotISO = (iso: string | undefined, date: Date, slotTime?: string): string => {
+  if (iso) {
+    const parsed = new Date(iso);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+  }
+
+  const normalizedTime = normalizeSlotLabel(slotTime);
+  return buildDateTimeForSlot(date, normalizedTime).toISOString();
+};
