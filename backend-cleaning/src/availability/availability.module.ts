@@ -1,5 +1,5 @@
 // src/availability/availability.module.ts
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AvailabilityController } from './availability.controller';
 import { MyAvailabilityController } from './my-availability.controller'; // Importe o controlador específico
 import { AvailabilityService } from './availability.service';
@@ -7,7 +7,7 @@ import { ProvidersModule } from '../providers/providers.module'; // Importa o Pr
 
 @Module({
   imports: [
-    ProvidersModule, // Adiciona ProvidersModule aos imports
+    forwardRef(() => ProvidersModule), // Adiciona ProvidersModule aos imports
   ],
   controllers: [
     MyAvailabilityController, // Coloque o controlador mais específico primeiro
