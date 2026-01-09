@@ -1,0 +1,29 @@
+﻿  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2033:    },
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2034:  });
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2035:  console.log(`Notificação de boas-vindas para ${referredUser.fullName} criada/atualizada.`); // CORRIGIDO: Notificao -> Notificação
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2036:
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2037:  await prisma.notification.upsert({
+> C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2038:    where: { id: 'NOTIF-RETURN-REFERRER' },
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2039:    update: { userId: referrerUser.id, title: 'Volte e economize', message: 'Cupom de retorno disponível', targetUrl: '/(client)/bookings' }, // CORRIGIDO: disponvel -> disponível
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2040:    create: {
+> C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2041:      id: 'NOTIF-RETURN-REFERRER',
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2042:      userId: referrerUser.id,
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2043:      type: 'COUPON_ISSUED',
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2044:      title: 'Volte e economize',
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2045:      message: 'Cupom de retorno disponível', // CORRIGIDO: disponvel -> disponível
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2046:      targetUrl: '/(client)/bookings',
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2047:    },
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2048:  });
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2049:  console.log(`Notificação de retorno para ${referrerUser.fullName} criada/atualizada.`); // CORRIGIDO: Notificao -> Notificação
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2050:
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2051:  // -----------------------------------------------------------------------------
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2052:  // 10) AVALIAÇÕES (REVIEWS) // CORRIGIDO: AVALIAES -> AVALIAÇÕES
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2053:  console.log('Criando/Atualizando avaliações...'); // CORRIGIDO: avaliaes -> avaliações
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2054:
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2055:  await prisma.review.upsert({
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2056:    where: { bookingId: booking2.id },
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2057:    update: {
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2058:      rating: 5,
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2059:      comment: 'Serviço excelente! Provedora muito profissional e atenciosa.', // CORRIGIDO: Servio -> Serviço
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2060:      clientId: referrerUser.client!.id,
+  C:\Users\Paulo\desktop\relax-app\backend-cleaning\prisma\seed\seed.ts:2061:      providerId: providerUser.provider!.id,
