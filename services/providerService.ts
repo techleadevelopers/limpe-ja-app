@@ -331,15 +331,24 @@ export async function getProviderAvailability(providerId: string, date?: any): P
 
 
 
-    const response: AxiosResponse<GetProviderAvailabilityResponse> = await api.get(
-
-      `/providers/${providerId}/availability`, 
-
+    const response: AxiosResponse<GetProviderAvailabilityResponse | ProviderAvailability[]> = await api.get(
+  
+      `/providers/${providerId}/availability`,
+  
       { params: { date: dateParam } }
-
+  
     );
+  
+    const rawData = response.data;
+    if (Array.isArray(rawData)) {
+      return {
+        available: rawData,
+        occupiedTimes: [],
+        requestedDate: dateParam,
+      };
+    }
 
-    return response.data;
+    return rawData;
 
   } catch (error: any) {
 
