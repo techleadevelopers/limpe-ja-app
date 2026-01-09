@@ -220,8 +220,18 @@ export default function BookingSuccessScreen() {
           existingIntent = await fetchPaymentIntent(bookingId);
         } catch (intentError: any) {
           const statusCode = intentError?.status ?? intentError?.response?.status;
+          const intentMessage =
+            intentError?.message ??
+            intentError?.response?.data?.message ??
+            'Não foi possível recuperar o status do pagamento.';
           if (statusCode === 401) {
             throw intentError;
+          }
+          if (statusCode === 404) {
+            setError(intentMessage);
+            setIsLoading(false);
+            setShouldPollIntent(false);
+            return;
           }
         }
         setPaymentIntent(existingIntent);
@@ -354,22 +364,31 @@ export default function BookingSuccessScreen() {
         }
       } catch (err: any) {
         const status = err?.status ?? err?.response?.status;
-        if (status === 401 && !unauthorizedHandledRef.current) {
-          unauthorizedHandledRef.current = true;
-          if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-          }
-          setShouldPollIntent(false);
-          NotificationUIService.showInfo(
-            'Sessão atualizada',
-            'Sua sessão de pagamento foi renovada. Voltamos para a página inicial para garantir sua segurança.',
-          );
-          setTimeout(() => {
-            router.replace('/client/explore' as any);
-          }, 400);
-          return;
-        }
+        if (status === 401 && !unauthorizedHandledRef.current) {
+          unauthorizedHandledRef.current = true;
+          if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+          setShouldPollIntent(false);
+          NotificationUIService.showInfo(
+            'SessALo atualizada',
+            'Sua sessALo de pagamento foi renovada. Voltamos para a pA!gina inicial para garantir sua seguranA�a.',
+          );
+          setTimeout(() => {
+            router.replace('/client/explore' as any);
+          }, 400);
+          return;
+        }
+        if (status === 404) {
+          if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+          setShouldPollIntent(false);
+          setError(err?.message ?? 'Pagamento n�o encontrado.');
+          return;
+        }
         // log removido para performance
       }
     };
