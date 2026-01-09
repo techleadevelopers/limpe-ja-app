@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useIsFocused } from '@react-navigation/native';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AnimatedReanimated, {
   cancelAnimation,
@@ -19,9 +20,8 @@ import AnimatedReanimated, {
 import { CLIENT_ROUTES } from '../../../../constants/routes';
 import { ProviderServiceOffering } from '../../../../types/backend/provider-service';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
-import { PricingType } from '../../../../types/backend/services';
 // Importar os novos formatadores e helpers
-import { formatDistance } from '../../../../utils/formatters';
+import { formatDistance, getNextAvailableDate } from '../../../../utils/formatters';
 import { getFormattedServicePrice, getNumericPriceValue } from '../../../../utils/service-helpers';
 
 const AnimatedCardBackground = AnimatedReanimated.createAnimatedComponent(LinearGradient);
@@ -32,18 +32,32 @@ const AnimatedText = AnimatedReanimated.Text;
 
 interface RecomendacaoCardProps {
   item: ProviderDisplayInfo;
+  isVisible?: boolean;
 }
 
 // Escala "crisp" de 7% + ajuste fino de 2% (sem usar transform para evitar blur)
 const UI_SCALE = 1.07;
 const UI_FINE_TUNE = 0.98; // redução solicitada de 2%
 const S = (n: number) => parseFloat((n * UI_SCALE * UI_FINE_TUNE * 0.95).toFixed(2));
-const ANDROID_SHRINK_SCALE = Platform.OS === 'android' ? 0.9 : 1;
+const CARD_SHRINK_SCALE = 0.9;
+const PLATFORM_CARD_SHRINK_STYLE = Platform.select({
+  android: { transform: [{ scale: CARD_SHRINK_SCALE }] },
+  ios: { transform: [{ scale: CARD_SHRINK_SCALE }] },
+});
+const baseSlotCycle = [
+  { day: 'Seg', time: '09:30' },
+  { day: 'Ter', time: '11:00' },
+  { day: 'Qua', time: '14:30' },
+  { day: 'Qui', time: '16:30' },
+  { day: 'Sex', time: '08:00' },
+];
 
-const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
+const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = true }) => {
   const router = useRouter();
   const { t } = useTranslation();
-  const androidShrinkStyle = Platform.OS === 'android' ? { transform: [{ scale: ANDROID_SHRINK_SCALE }] } : undefined;
+  const isFocused = useIsFocused();
+  const shouldAnimate = isVisible && isFocused;
+  const cardShrinkStyle = PLATFORM_CARD_SHRINK_STYLE;
   const shouldShowReflection = Platform.OS !== 'android';
 
   if (!item || !item.id || !item.fullName) {
@@ -72,15 +86,23 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   const reflectionTranslateX = useSharedValue(-60);
 
   useEffect(() => {
+    if (!shouldAnimate || !shouldShowReflection) {
+      cancelAnimation(reflectionTranslateX);
+      reflectionTranslateX.value = -60;
+      return;
+    }
+
     reflectionTranslateX.value = withRepeat(
       withTiming(38 + 60, {
         duration: 1500,
-        easing: Easing.linear
+        easing: Easing.linear,
       }),
       -1,
       false
     );
-  }, []);
+
+    return () => cancelAnimation(reflectionTranslateX);
+  }, [shouldAnimate, shouldShowReflection]);
 
   const animatedReflectionStyle = useAnimatedStyle(() => {
     return {
@@ -91,6 +113,12 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   const subtleTrembleValue = useSharedValue(0);
 
   useEffect(() => {
+    if (!shouldAnimate) {
+      cancelAnimation(subtleTrembleValue);
+      subtleTrembleValue.value = 0;
+      return;
+    }
+
     const SHAKE_AMOUNT = 0.5;
     const SHAKE_DURATION = 50;
 
@@ -108,7 +136,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     return () => {
       cancelAnimation(subtleTrembleValue);
     };
-  }, []);
+  }, [shouldAnimate]);
 
   const subtleTrembleAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -123,13 +151,18 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   const fadeValue = useSharedValue(0); // 0: Residencial visível, 1: Comercial visível
 
   useEffect(() => {
-    // Inicia com Residencial (fadeValue = 0)
+    if (!shouldAnimate) {
+      cancelAnimation(fadeValue);
+      fadeValue.value = 0;
+      return;
+    }
+
     fadeValue.value = withRepeat(
       withSequence(
         withTiming(0, { duration: 4000 }), // Hold Residencial por 4s (fadeValue fica em 0)
         withTiming(1, { duration: 300, easing: Easing.inOut(Easing.ease) }), // Fade para Comercial em 300ms
         withTiming(1, { duration: 4000 }), // Hold Comercial por 4s
-        withTiming(0, { duration: 300, easing: Easing.inOut(Easing.ease) }) // Fade de volta para Residencial em 300ms
+        withTiming(0, { duration: 300, easing: Easing.inOut(Easing.ease) }) // Fade de volta para Residencial
       ),
       -1,
       false
@@ -138,7 +171,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     return () => {
       cancelAnimation(fadeValue);
     };
-  }, []); // Removido [fadeValue] para evitar loop infinito (não é necessário)
+  }, [shouldAnimate]);
 
   const residencialOpacityStyle = useAnimatedStyle(() => ({
     opacity: 1 - fadeValue.value,
@@ -150,22 +183,16 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
   // NOVO: Implementação do badge animado para próximo horário disponível
   const [index, setIndex] = useState(0);
-  const slots = [
-    { day: 'Ter', time: '09:00' },
-    { day: 'Qua', time: '14:30' },
-    { day: 'Sex', time: '08:00' },
-  ];
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setIndex((prev) => (prev + 1) % slots.length);
-    }, 4000); // troca a cada 4s (sincronizado com ciclo visível + invisível)
-    return () => clearInterval(id);
-  }, []);
 
   // CORRIGIDO: Animação de visibilidade do badge inteiro (invisível 2s -> fade in suave 600ms -> visível 2s com pulse lento -> fade out 600ms)
   const badgeVisibility = useSharedValue(0); // 0: invisível, 1: visível
   useEffect(() => {
+    if (!shouldAnimate) {
+      cancelAnimation(badgeVisibility);
+      badgeVisibility.value = 0;
+      return;
+    }
+
     badgeVisibility.value = withRepeat(
       withSequence(
         withTiming(0, { duration: 2000 }), // Invisível por 2s (sem horário)
@@ -179,7 +206,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     return () => {
       cancelAnimation(badgeVisibility);
     };
-  }, []);
+  }, [shouldAnimate]);
 
   const badgeVisibilityStyle = useAnimatedStyle(() => ({
     opacity: badgeVisibility.value,
@@ -188,6 +215,12 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   // CORRIGIDO: Pulse de luminosidade LENTO só durante o tempo visível (mais sutil, sem afetar transparência do card)
   const pulse = useSharedValue(0);
   useEffect(() => {
+    if (!shouldAnimate) {
+      cancelAnimation(pulse);
+      pulse.value = 0;
+      return;
+    }
+
     // Pulse mais lento: ciclo de 4000ms (2s up + 2s down), amplitude baixa para suavidade
     pulse.value = withRepeat(
       withSequence(
@@ -197,7 +230,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
       -1,
       true
     );
-  }, []);
+  }, [shouldAnimate]);
 
   const animatedPulseStyle = useAnimatedStyle(() => {
     // CORRIGIDO: Amplitude menor para "piscar" sutil (sem transparência excessiva: 0.9-1 em vez de 0.75-1)
@@ -211,6 +244,12 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   // Borda viva: leve pulsar de cor na borda do card (suave, não intrusivo)
   const borderPulse = useSharedValue(0);
   useEffect(() => {
+    if (!shouldAnimate) {
+      cancelAnimation(borderPulse);
+      borderPulse.value = 0;
+      return;
+    }
+
     borderPulse.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.ease) }),
@@ -219,7 +258,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
       -1,
       false
     );
-  }, []);
+  }, [shouldAnimate]);
 
   const animatedBorderStyle = useAnimatedStyle(() => {
     const c = interpolateColor(borderPulse.value, [0, 1], ['#d1d5db53', '#7aa7ff55']);
@@ -230,7 +269,12 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   const [priceBadgeWidth, setPriceBadgeWidth] = useState(0);
   const priceReflectionX = useSharedValue(-50);
   useEffect(() => {
-    // Reinicia o loop quando a largura estiver disponível
+    if (!shouldAnimate || priceBadgeWidth <= 0) {
+      cancelAnimation(priceReflectionX);
+      priceReflectionX.value = -50;
+      return;
+    }
+
     priceReflectionX.value = withRepeat(
       withTiming(priceBadgeWidth + 50, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
       -1,
@@ -239,23 +283,24 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     return () => {
       cancelAnimation(priceReflectionX);
     };
-  }, [priceBadgeWidth]);
+  }, [priceBadgeWidth, shouldAnimate]);
 
   const priceReflectionStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: priceReflectionX.value }],
   }));
 
   // Texto animado baseado no index (muda a cada 4s, sincronizado com o ciclo)
-  const currentSlot = slots[index];
-  const animatedDayLabel = currentSlot.day;
-  const animatedTime = currentSlot.time;
-
   // Fade sutil no texto durante mudança de index (para suavidade extra)
   const textFade = useSharedValue(1);
   useEffect(() => {
-    // Quando index muda, fade rápido no texto para transição suave (aumentado para 400ms para combinar com fade geral)
+    if (!shouldAnimate) {
+      textFade.value = 1;
+      cancelAnimation(textFade);
+      return;
+    }
+
     textFade.value = withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) });
-  }, [index]);
+  }, [index, shouldAnimate]);
 
   const fadeTextStyle = useAnimatedStyle(() => ({
     opacity: textFade.value,
@@ -309,18 +354,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
   // Obtém o valor numérico do preço principal para comparações futuras
   const numericMainPrice = mainServiceForDisplay ? getNumericPriceValue(mainServiceForDisplay) : null;
-
-  const minHourlyPrice = pricedServices.reduce<number | null>((prev, service) => {
-    const hourlyPrice = getNumericPriceValue(service);
-    if (hourlyPrice <= 0) return prev;
-    if (prev === null || hourlyPrice < prev) {
-      return hourlyPrice;
-    }
-    return prev;
-  }, null);
-
-  const shouldShowMinHourlyPrice =
-    minHourlyPrice !== null && numericMainPrice !== null && minHourlyPrice < numericMainPrice;
 
 // Ref para armazenar o número aleatório de avaliações, estável por prestador
   const stableRandomReviewCountRef = useRef<number | null>(null);
@@ -459,18 +492,36 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
   const distanceLabel = distanceValueMeters !== null ? formatDistance(distanceValueMeters, null) : null;
   const showDistancePill = distanceLabel !== null;
 
-  // Helper para formatar próximo horário (agora retorna objeto para stack vertical: dia e horário separados)
-  const formatNextAvailable = (next: { date: string; time: string } | undefined) => {
-    if (!next) return null;
+  type NextAvailabilitySource = ProviderDisplayInfo['nextAvailable'] | ProviderDisplayInfo['nextSlot'];
+
+  type FormattedNextAvailable = {
+    dayLabel: string;
+    time: string;
+    timestamp: number;
+  };
+
+  const formatNextAvailable = (next?: NextAvailabilitySource): FormattedNextAvailable | null => {
+    const nextDate = getNextAvailableDate(next);
+    if (!nextDate) return null;
     const today = new Date();
-    const nextDate = new Date(next.date);
-    const diffDays = Math.floor((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const todayStart = new Date(today);
+    const nextStart = new Date(nextDate);
+    todayStart.setHours(0, 0, 0, 0);
+    nextStart.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((nextStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
     const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     let dayLabel: string;
     if (diffDays === 0) dayLabel = 'Hoje';
     else if (diffDays === 1) dayLabel = 'Amanhã';
-    else dayLabel = days[nextDate.getDay()];
-    return { dayLabel, time: next.time };
+    else dayLabel = days[nextDate.getDay()] || '???';
+
+    const timeLabel = new Intl.DateTimeFormat('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(nextDate);
+
+    return { dayLabel, time: timeLabel, timestamp: nextDate.getTime() };
   };
 
   // Label para próximo horário
@@ -566,13 +617,36 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     const dateIso = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate()).toISOString();
     return { date: dateIso, time };
   };
-  const formattedNextAvailable = formatNextAvailable(
-    item.nextAvailable ?? computeFallbackNextAvailable(),
-  );
+    const formattedNextAvailable = formatNextAvailable(
+      item.nextSlot ?? item.nextAvailable ?? computeFallbackNextAvailable(),
+    );
+
+  const slotSequence = useMemo(() => {
+    if (!formattedNextAvailable) return baseSlotCycle;
+    const primarySlot = { day: formattedNextAvailable.dayLabel, time: formattedNextAvailable.time };
+    const uniqueFallbacks = baseSlotCycle.filter(
+      (slot) => slot.day !== primarySlot.day || slot.time !== primarySlot.time
+    );
+    return [primarySlot, ...uniqueFallbacks];
+  }, [formattedNextAvailable]);
+
+  useEffect(() => {
+    if (!shouldAnimate) {
+      return;
+    }
+    const id = setInterval(() => {
+      setIndex((prev) => (prev + 1) % slotSequence.length);
+    }, 4000); // troca a cada 4s (sincronizado com ciclo visível + invisível)
+    return () => clearInterval(id);
+  }, [shouldAnimate, slotSequence.length]);
+
+  const currentSlot = slotSequence[index % slotSequence.length];
+  const animatedDayLabel = currentSlot?.day ?? 'Seg';
+  const animatedTime = currentSlot?.time ?? '--:--';
 
   return (
     // NOVO: Wrapper com position: "relative" para posicionar a distancia absolutamente
-    <View style={[styles.cardWrapperWithDistance, androidShrinkStyle]}>
+        <View style={[styles.cardWrapperWithDistance, cardShrinkStyle]}>
       {/* Micro-Pill de Localizacao/Distancia + horario (mesmo se distancia faltar) */}
       {(showDistancePill || formattedNextAvailable) && (
         <View style={styles.distancePillSmall}>
@@ -630,14 +704,16 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <AnimatedReanimated.View style={[styles.reflectionOverlay, animatedReflectionStyle]}>
-                <LinearGradient
-                  colors={['transparent', 'rgba(220, 228, 238, 1)', 'transparent']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={StyleSheet.absoluteFillObject}
-                />
-              </AnimatedReanimated.View>
+              {shouldShowReflection && (
+                <AnimatedReanimated.View style={[styles.reflectionOverlay, animatedReflectionStyle]}>
+                  <LinearGradient
+                    colors={['transparent', 'rgba(220, 228, 238, 1)', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                </AnimatedReanimated.View>
+              )}
 
               <Ionicons name="shield-checkmark" size={S(15)} color="#5da2ecff" />
             </AnimatedPlusButtonGradient>
@@ -719,23 +795,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                     );
                   })()}
                 </View>
-                {shouldShowMinHourlyPrice && minHourlyPrice !== null && (
-                  <Text style={styles.hourlyPriceValue} allowFontScaling={false}>
-                    {t('common.or', { defaultValue: 'ou' })} {getFormattedServicePrice({
-                      id: '',
-                      providerId: item.id || '',
-                      serviceId: '',
-                      service: { id: '', name: 'Serviço Horário' } as any,
-                      pricingType: PricingType.HOURLY,
-                      price: minHourlyPrice!,
-                      durationMinutes: 60,
-                      description: null,
-                      pricePerSquareMeter: null,
-                      pricePerRoom: null,
-                    } as ProviderServiceOffering, t)}
-                  </Text>
-                )}
-                
               </View>
             </View>
 
@@ -791,7 +850,7 @@ const styles = StyleSheet.create({
     width: '100%', // Preenche o wrapper
     height: '100%', // Preenche o wrapper
     overflow: 'hidden',
-right: Platform.OS === 'android' ? 5 : 0,
+right: Platform.OS === 'android' ? -4 : -4,
     // Margins removidos daqui e movidos para cardWrapperWithDistance
 
     // Removendo bordas complexas e redundantes para o look clean
@@ -812,7 +871,7 @@ right: Platform.OS === 'android' ? 5 : 0,
   distancePillSmall: {
     position: 'absolute',
     top: 116,
-    right: Platform.OS === 'android' ? 15 : 10,
+    right: Platform.OS === 'android' ? 4 : 4,
     zIndex: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.42)', // Fundo levemente opaco
     flexDirection: 'column', // Mantido o seu layout de coluna
