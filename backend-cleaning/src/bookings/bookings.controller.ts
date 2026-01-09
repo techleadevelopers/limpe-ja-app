@@ -79,6 +79,7 @@ export class BookingsController {
       userId,
       role,
       status,
+      undefined,
       req,
     );
     return bookings.map((b) => new BookingDetailsDto(b));
@@ -246,13 +247,31 @@ export class BookingsController {
   async findMyBookings(
     @Req() req: RequestWithUser,
     @Query('status') status?: BookingStatus,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
   ): Promise<BookingDetailsDto[]> {
     const userId = req.user.userId;
     const userRole = req.user.role;
+    const startDate = start ? new Date(start) : undefined;
+    const endDate = end ? new Date(end) : undefined;
+    const validRange =
+      (startDate && !Number.isNaN(startDate.getTime())) ||
+      (endDate && !Number.isNaN(endDate.getTime()));
+    const dateRange = validRange
+      ? {
+          start: startDate && !Number.isNaN(startDate.getTime())
+            ? startDate
+            : undefined,
+          end: endDate && !Number.isNaN(endDate.getTime())
+            ? endDate
+            : undefined,
+        }
+      : undefined;
     const bookings = await this.bookingsService.findUserBookings(
       userId,
       userRole,
       status,
+      dateRange,
       req,
     );
     return bookings.map((booking) => new BookingDetailsDto(booking));
