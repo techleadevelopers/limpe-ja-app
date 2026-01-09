@@ -1,5 +1,5 @@
 // app/services/providerService.ts
-import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosResponse, InternalAxiosRequestConfig, AxiosHeaders, AxiosError } from 'axios';
 import { api } from './api';
 
 // Importa o serviço de reviews do frontend
@@ -20,6 +20,7 @@ import {
   UpdateProviderServiceData,
   GetProviderAvailabilityResponse,
   ProviderMetrics, // <<-- CORREÇÃO: Importado de ../types/backend/providers
+  ProviderAvailabilitySummary,
   Offer // <<-- CORREÇÃO: Importado de ../types/backend/providers
 } from '../types/backend/providers';
 
@@ -39,10 +40,13 @@ const PROVIDER_BLOCK_DURATION_MS = 20_000;
 const providerBlockCooldownMap = new Map<string, number>();
 
 const createProviderBlockedResponse = (providerId: string, remainingMs: number): AxiosResponse => {
-  const config: AxiosRequestConfig = {
+  // ✅ Criamos o config com o tipo InternalAxiosRequestConfig e headers válidos
+  const config: InternalAxiosRequestConfig = {
     url: `/providers/${providerId}`,
     method: 'get',
+    headers: new AxiosHeaders(), // ✅ Correção para o erro 2345 (headers obrigatórios)
   };
+
   return {
     data: {
       message:
@@ -52,8 +56,8 @@ const createProviderBlockedResponse = (providerId: string, remainingMs: number):
     },
     status: 429,
     statusText: 'Too Many Requests',
-    headers: {},
-    config,
+    headers: {}, // Headers da resposta
+    config,      // ✅ Agora o tipo config bate com o InternalAxiosRequestConfig (erro 2322 resolvido)
     request: {},
   };
 };
@@ -71,11 +75,20 @@ const getProviderBlockRemaining = (providerId: string): number => {
 
 const ensureProviderNotBlocked = (providerId: string) => {
   const remaining = getProviderBlockRemaining(providerId);
+  
   if (remaining > 0) {
+    // 1. Criamos um objeto de configuração que respeita a interface InternalAxiosRequestConfig
+    const config: InternalAxiosRequestConfig = {
+      url: `/providers/${providerId}`,
+      method: 'get',
+      headers: new AxiosHeaders(), // ✅ Isso resolve o erro 2345
+    };
+
+    // 2. Lançamos o erro passando o config completo
     throw new AxiosError(
       `Provider ${providerId} is temporarily blocked.`,
       'ERR_PROVIDER_BLOCKED',
-      { url: `/providers/${providerId}`, method: 'get' },
+      config, // ✅ Agora o argumento possui 'headers'
       undefined,
       createProviderBlockedResponse(providerId, remaining),
     );
@@ -290,18 +303,52 @@ export async function getProviderDetails(providerId: string): Promise<ProviderDi
  * @param date Data opcional no formato string (ex: "YYYY-MM-DD") para filtrar a disponibilidade.
  * @returns Uma Promise que resolve para um objeto contendo 'available' (slots configurados) e 'occupiedTimes' (slots já agendados).
  */
-export async function getProviderAvailability(providerId: string, date?: string): Promise<GetProviderAvailabilityResponse> {
+export async function getProviderAvailability(providerId: string, date?: any): Promise<GetProviderAvailabilityResponse> {
+
   try {
-    const params = date ? { date } : {};
-    const response: AxiosResponse<GetProviderAvailabilityResponse> = await api.get(`/providers/${providerId}/availability`, { params });
-    return response.data;
-  } catch (error: any) {
-    console.error(`Erro ao buscar disponibilidade do provedor ${providerId}:`, error.response?.data || error.message);
-    if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || `Erro ao buscar disponibilidade do provedor ${providerId}.`);
+
+    // 🛡️ BLINDAGEM CONTRA NaN-NaN-NaN
+
+    let dateParam: string;
+
+    
+
+    if (date instanceof Date && !isNaN(date.getTime())) {
+
+      dateParam = date.toISOString().split('T')[0];
+
+    } else if (typeof date === 'string' && date.length >= 10 && !date.includes('NaN')) {
+
+      dateParam = date.split('T')[0];
+
+    } else {
+
+      // Se der qualquer erro na data, envia a data de HOJE para não quebrar o backend
+
+      dateParam = new Date().toISOString().split('T')[0];
+
     }
-    throw new Error(`Erro de rede ou servidor ao buscar disponibilidade do provedor ${providerId}.`);
+
+
+
+    const response: AxiosResponse<GetProviderAvailabilityResponse> = await api.get(
+
+      `/providers/${providerId}/availability`, 
+
+      { params: { date: dateParam } }
+
+    );
+
+    return response.data;
+
+  } catch (error: any) {
+
+    console.error(`Erro ao buscar disponibilidade do provedor ${providerId}:`, error.response?.data || error.message);
+
+    throw error;
+
   }
+
 }
 
 // =========================================================================
@@ -629,6 +676,41 @@ export async function getNearbyProviders(params: {
       throw new Error(error.response.data.message || 'Erro ao buscar provedores proximos.');
     }
     throw new Error(`Erro de rede ou servidor ao buscar provedores proximos.`);
+  }
+}
+
+export async function getProvidersAvailabilitySummary(params: {
+  latitude: number;
+  longitude: number;
+  radius: number;
+}): Promise<ProviderAvailabilitySummary> {
+  try {
+    const response: AxiosResponse<ProviderAvailabilitySummary> = await api.get(
+      '/providers/availability-summary',
+      {
+        params: {
+          latitude: params.latitude,
+          longitude: params.longitude,
+          radius: params.radius,
+        },
+        headers: { 'X-Silent': '1' },
+      },
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error(
+      'Erro ao buscar resumo de disponibilidade:',
+      error.response?.data || error.message,
+    );
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(
+        error.response.data.message ||
+          'Erro ao buscar o resumo de disponibilidade.',
+      );
+    }
+    throw new Error(
+      'Erro de rede ou servidor ao buscar o resumo de disponibilidade.',
+    );
   }
 }
 
