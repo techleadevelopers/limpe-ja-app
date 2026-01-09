@@ -61,7 +61,7 @@ export default function RankingScreen() {
       const names = ['Maria Silva','João Santos','Ana Costa','Carlos Pereira (Você)','Fernanda Lima','Paulo Oliveira','Juliana Gomes','Rafael Souza'];
       const fb: LeaderboardEntry[] = Array.from({ length: 8 }).map((_, i) => ({
         userId: `u${i+1}`,
-        displayName: names[i] || `Usuário ${i+1}`,
+        fullName: names[i] || `Usuário ${i+1}`,
         avatarUrl: avatars[i],
         score: 1200 - i*45,
         rank: i+1,
@@ -103,7 +103,7 @@ export default function RankingScreen() {
         renderItem={({ item, index }) => (
           <RankingCard
             rank={item.rank}
-            name={item.displayName}
+            name={item.fullName}
             score={item.score}
             avatarUrl={item.avatarUrl ?? undefined}
             isCurrentUser={!!item.isCurrentUser}
