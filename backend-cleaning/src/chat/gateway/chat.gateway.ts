@@ -8,6 +8,8 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from '../chat.service';
+import { ChatRateLimitService } from '../chat-rate-limit.service';
+import { detectPolicyViolation } from '../chat-moderation';
 import { SendMessageDto } from '../dto/send-message.dto';
 import {
   UseGuards,
@@ -37,7 +39,10 @@ export class ChatGateway {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(ChatGateway.name);
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly chatRateLimiter: ChatRateLimitService,
+  ) {}
 
   // Opcional: Lidar com a conexão de um cliente
   handleConnection(client: Socket, ...args: any[]) {
@@ -66,6 +71,42 @@ export class ChatGateway {
         event: 'sendMessage',
         message: 'Erro de autenticação: ID do remetente não disponível.',
       });
+      return;
+    }
+
+    const policyReason = detectPolicyViolation(payload.content);
+    if (policyReason) {
+      const messageDetail = `Conteúdo bloqueado: ${policyReason}`;
+      client.emit('messageRejected', {
+        event: 'sendMessage',
+        reason: 'Mensagem bloqueada por política.',
+        detail: messageDetail,
+      });
+      this.logger.warn(
+        `[WebSocket] sendMessage blocked (policy) para ${senderId} chat ${payload.chatId}: ${policyReason}`,
+      );
+      return;
+    }
+
+    const rateLimitResult = await this.chatRateLimiter.consume(
+      payload.chatId,
+      senderId,
+    );
+    if (!rateLimitResult.allowed) {
+      const retrySeconds = Math.max(
+        1,
+        Math.ceil(rateLimitResult.retryAfterMs / 1000),
+      );
+      const windowSeconds = Math.ceil(rateLimitResult.windowMs / 1000);
+      const detail = `Limite de ${rateLimitResult.limit} mensagens por ${windowSeconds}s atingido. Tente novamente em ${retrySeconds}s.`;
+      client.emit('messageRejected', {
+        event: 'sendMessage',
+        reason: 'Mensagem bloqueada por política.',
+        detail,
+      });
+      this.logger.warn(
+        `[WebSocket] sendMessage blocked (rate limit) para ${senderId} chat ${payload.chatId}: ${detail}`,
+      );
       return;
     }
 
