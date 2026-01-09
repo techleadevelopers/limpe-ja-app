@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { bulkSetAvailability, saveProviderSettings, TimeRange } from '../../../services/providerSettingsService';
+import { buildDateTimeForSlot } from '../../../utils/time';
 
 // IMPORTAÇÃO DO COMPONENTE PREMIUM SERVICE CHIP (Assumindo o caminho fornecido)
 import { PremiumServiceChip } from '../../../components/auth/PremiumServiceChip';
@@ -49,6 +50,11 @@ const SERVICE_OPTIONS = [
   { id: 'pos_obra',    label: 'Ps-Obra',    icon: 'hammer-wrench', set: 'mci' },
 ];
 
+
+function parseDateFromKey(dateKey: string) {
+  const [year, month, day] = dateKey.split('-').map((value) => Number(value));
+  return new Date(year, month - 1, day);
+}
 
 interface ServiceDetailsFormData {
   profilePhoto: string | null;
@@ -524,8 +530,19 @@ export default function ServiceDetailsScreen() {
           .filter(k => selectedDays[k]?.morning || selectedDays[k]?.afternoon)
           .map(k => {
             const ranges: TimeRange[] = [];
-            if (selectedDays[k]?.morning) ranges.push({ start: '08:00', end: '12:00' });
-            if (selectedDays[k]?.afternoon) ranges.push({ start: '14:00', end: '18:00' });
+            const baseDate = parseDateFromKey(k);
+            if (selectedDays[k]?.morning) {
+              ranges.push({
+                start: buildDateTimeForSlot(baseDate, '08:00').toISOString(),
+                end: buildDateTimeForSlot(baseDate, '12:00').toISOString(),
+              });
+            }
+            if (selectedDays[k]?.afternoon) {
+              ranges.push({
+                start: buildDateTimeForSlot(baseDate, '14:00').toISOString(),
+                end: buildDateTimeForSlot(baseDate, '18:00').toISOString(),
+              });
+            }
             return { date: k, ranges };
           });
         if (dates.length) {
