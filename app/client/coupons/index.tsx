@@ -73,6 +73,14 @@ const mapApiToUICoupon = (c: MyCouponListItem): CouponItem => {
   };
 };
 
+const getCouponErrorMessage = (error: unknown): string | null => {
+  const code = (error as any)?.response?.data?.code;
+  if (code === 'coupon.already_used') {
+    return 'Este cupom já foi utilizado.';
+  }
+  return null;
+};
+
 const formatBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 function useTheme() {
@@ -150,8 +158,10 @@ export default function ClientCouponsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'AVAILABLE' | 'USED' | 'EXPIRED'>('AVAILABLE');
+  const [couponErrorMessage, setCouponErrorMessage] = useState<string | null>(null);
 
   const loadCoupons = useCallback(async () => {
+    setCouponErrorMessage(null);
     setIsRefreshing(true);
     try {
       const fetched = await getMyCouponsService();
@@ -159,7 +169,12 @@ export default function ClientCouponsScreen() {
       setAllCoupons(mapped);
     } catch (error: any) {
       console.error('Erro ao buscar cupons do cliente:', error?.response?.data || error?.message);
-      toastUserError(error, 'Erro ao buscar cupons');
+      const couponMessage = getCouponErrorMessage(error);
+      if (couponMessage) {
+        setCouponErrorMessage(couponMessage);
+      } else {
+        toastUserError(error, 'Erro ao buscar cupons');
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -171,7 +186,7 @@ export default function ClientCouponsScreen() {
   }, [loadCoupons]);
 
   const handleUseCoupon = (coupon: CouponItem) => {
-    router.push({ pathname: '/client/bookings/schedule-service', params: { couponCode: coupon.code } } as any);
+    router.push({ pathname: '/client/index', params: { couponCode: coupon.code } } as any);
     NotificationUIService.showInfo(`Cupom ${coupon.code} pronto para uso no checkout.`, 'Cupom selecionado');
   };
 
@@ -220,6 +235,18 @@ export default function ClientCouponsScreen() {
 
       {/* Conteúdo principal */}
       <View style={styles.content}>
+        {couponErrorMessage && (
+          <View
+            style={[
+              styles.couponErrorBanner,
+              { borderColor: theme.primary, backgroundColor: theme.cardBackground },
+            ]}
+          >
+            <Text style={[styles.couponErrorText, { color: theme.primary }]}>
+              {couponErrorMessage}
+            </Text>
+          </View>
+        )}
         <View style={[styles.tabsRow, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'AVAILABLE' && [styles.tabPillActive, { borderColor: theme.primary }]]}
@@ -278,13 +305,24 @@ export default function ClientCouponsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { paddingTop: 80, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerTitle: { fontSize: 17, fontWeight: '800' },
-  content: { flex: 1, paddingHorizontal: 16, paddingBottom: 16, marginTop: 10 },
-  tabsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 6, borderRadius: 12, borderWidth: 1, marginBottom: 12 },
+  header: { paddingTop:Platform.OS === 'ios' ? 80 : 40, paddingHorizontal: 16, paddingBottom: Platform.OS === 'ios' ? 12 : 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerTitle: { fontSize: Platform.OS === 'ios' ? 17 : 16.5 , fontWeight: '800' },
+  content: { flex: 1, paddingHorizontal: Platform.OS === 'ios' ? 16 : 16, paddingBottom: 16, marginTop: 10 },
+  tabsRow: { flexDirection: 'row',  alignItems: 'center', justifyContent: 'space-between', padding: 6, borderRadius: 12, borderWidth: 1, marginBottom: 12 },
   tabPill: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
   tabPillActive: { backgroundColor: '#FFFFFF' },
   tabText: { fontWeight: '700' },
+  couponErrorBanner: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  couponErrorText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
 
   couponCard: {
     borderRadius: 12,
