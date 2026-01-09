@@ -90,6 +90,8 @@ export interface PaymentIntent {
   status: PaymentIntentStatus;
   gateway: string;
   externalRef?: string | null;
+  externalOrderId?: string | null;
+  externalChargeId?: string | null;
   qrCodeUrl?: string | null;
   qrCodeText?: string | null;
   expiresAt?: string | null;
