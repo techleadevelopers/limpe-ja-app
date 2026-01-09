@@ -34,7 +34,6 @@ import { getCurrentPosition } from '../../../services/locationService';
 
 import { useAndroidDialog } from '../../../hooks/useAndroidDialog';
 import { useAuth } from '../../../hooks/useAuth';
-import { useOverlayMessage } from '../../../hooks/useOverlayMessage';
 import { getBookingsForUser } from '../../../services/bookingService';
 import {
     getOffers,
@@ -51,6 +50,7 @@ import {
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { Offer } from '../../../types/backend/offers';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
+import { VerificationStatus } from '../../../types/backend/auth';
 import { Service } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
 
@@ -61,7 +61,7 @@ import type { CityStateHint } from '../../../utils/locationFilter';
 import { filterByRadiusOrCity, normalizeLocationText } from '../../../utils/locationFilter';
 
 // Importar o formatAddress e getNumericPriceValue
-import { formatAddress } from '../../../utils/formatters';
+import { formatAddress, getNextAvailableDate } from '../../../utils/formatters';
 import { getNumericPriceValue } from '../../../utils/service-helpers';
 // --- FIM DAS INTERFACES ---
 
@@ -76,6 +76,7 @@ import PrestadorCard from '../../../components/client/explore/home/PrestadorCard
 import RecomendacaoCard from '../../../components/client/explore/home/RecomendacaoCard';
 import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrestadores';
 import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRecomendacoes';
+import { normalizeProviderList } from '../../../components/client/explore/home/providerAvailability';
 import BottomSlideInCard from '../../../components/common/BottomSlideInCard';
 import SmartCouponNudge from '../../../components/coupons/CouponNudge';
 import { CouponPill } from '../../../components/coupons/CouponPill';
@@ -159,6 +160,36 @@ const sortByDistanceStable = (items: ProviderDisplayInfo[]): ProviderDisplayInfo
     .map(({ it }) => it);
 };
 
+const getNextAvailableTimestamp = (provider: ProviderDisplayInfo): number | null => {
+  const nextCandidate = provider.nextSlot ?? provider.nextAvailable;
+  const nextDate = getNextAvailableDate(nextCandidate as any);
+  return nextDate ? nextDate.getTime() : null;
+};
+
+const sortByDistanceThenAvailabilityStable = (items: ProviderDisplayInfo[]): ProviderDisplayInfo[] => {
+  return (items || [])
+    .map((it, idx) => ({
+      it,
+      idx,
+      nextTs: getNextAvailableTimestamp(it),
+      dist: Number.isFinite((it as any)?.distance) ? Number((it as any)?.distance) : Number.POSITIVE_INFINITY,
+    }))
+    .sort((a, b) => {
+      if (a.dist !== b.dist) return a.dist - b.dist;
+      if (Number.isFinite(a.dist) && Number.isFinite(b.dist)) {
+        if (a.nextTs != null && b.nextTs != null) {
+          if (a.nextTs !== b.nextTs) return a.nextTs - b.nextTs;
+        } else if (a.nextTs != null) {
+          return -1;
+        } else if (b.nextTs != null) {
+          return 1;
+        }
+      }
+      return a.idx - b.idx;
+    })
+    .map(({ it }) => it);
+};
+
 
 const COR_CINZA_FUNDO = '#FFFFFF';
 const COR_BORDA_SUAVE = '#c0b5ca92';
@@ -209,17 +240,23 @@ const WELCOME_COUPON_DISMISSED_KEY = '@LimpeJa:WelcomeCouponDismissed';
 const WELCOME_COUPON_REDEEMED_KEY = '@LimpeJa:WelcomeCouponRedeemed';
 const REFERRAL_BANNER_DISMISSED_KEY = '@LimpeJa:ReferralBannerDismissed';
 const PROTOCOL_PREMIUM_SEEN_KEY = '@LimpeJa:ProtocolPremiumSeen_v1';
-
 export default function ExploreClientScreen() {
   const router = useRouter();
   const flatListRef = useRef<FlatList<BannerDataItem>>(null);
   const { t } = useTranslation();
   const { user, isAuthenticated, isLoading } = useAuth();
-  const { showOverlay } = useOverlayMessage();
   const { isLargePhone } = useDevice();
 
   // Variável para compensar o ajuste do NewHeader para visitantes Android
   const isAndroidVisitor = Platform.OS === 'android' && !isAuthenticated;
+  const visitorHowItWorksAdjustment =
+    !isAuthenticated && (Platform.OS === 'android' || Platform.OS === 'ios')
+      ? {
+          marginTop: -15,
+          marginBottom: -2,
+          transform: [{ scale: 0.92 }, { translateX: 16 }],
+        }
+      : undefined;
 
   const navWrap: StyleProp<ViewStyle> = React.useMemo(
     () => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined),
@@ -269,7 +306,7 @@ export default function ExploreClientScreen() {
   const headerAnim = useRef(new Animated.Value(0)).current;
   const categoriesAnim = useRef(new Animated.Value(0)).current;
   // Banner deve aparecer junto ao conteúdo; inicia visível
-  const bannerAnim = useRef(new Animated.Value(1)).current;
+  const bannerAnim = useRef(new Animated.Value(0)).current;
   const recommendationsAnim = useRef(new Animated.Value(0)).current;
   const providersAnim = useRef(new Animated.Value(0)).current;
   const navBarAnim = useRef(new Animated.Value(0)).current;
@@ -436,11 +473,11 @@ export default function ExploreClientScreen() {
         ),
       ]);
 
-      if (nearbyRes.status === 'fulfilled' && isMounted.current) {
-        setNearbyProviders(Array.isArray(nearbyRes.value) ? nearbyRes.value : []);
-      }
-      if (recommendedRes.status === 'fulfilled' && isMounted.current && recommendedRes.value.length) {
-        setRecommendations(recommendedRes.value);
+        if (nearbyRes.status === 'fulfilled' && isMounted.current) {
+          setNearbyProviders(normalizeProviderList(Array.isArray(nearbyRes.value) ? nearbyRes.value : []));
+        }
+        if (recommendedRes.status === 'fulfilled' && isMounted.current && recommendedRes.value.length) {
+          setRecommendations(normalizeProviderList(recommendedRes.value));
       }
       locationFetchDone.current = true;
     } catch {
@@ -488,12 +525,12 @@ export default function ExploreClientScreen() {
       if (label === 'pending review') {
         setPendingReview(null);
       }
-      if (label === 'recommended providers') {
-        setRecommendations(FALLBACK_RECOMMENDATIONS);
-      }
-      if (label === 'nearby providers') {
-        setNearbyProviders(FALLBACK_RECOMMENDATIONS);
-      }
+        if (label === 'recommended providers') {
+          setRecommendations(normalizeProviderList(FALLBACK_RECOMMENDATIONS));
+        }
+        if (label === 'nearby providers') {
+          setNearbyProviders(normalizeProviderList(FALLBACK_RECOMMENDATIONS));
+        }
       // log removido para performance
       collectedErrors.push(fallbackMessage);
     }
@@ -608,7 +645,7 @@ export default function ExploreClientScreen() {
         return FALLBACK_RECOMMENDATIONS;
       }
     },
-    data => setRecommendations(data),
+    data => setRecommendations(normalizeProviderList(data)),
     'Erro ao carregar recomendacoes'
   );
   tasks.push(recommendedTask);
@@ -811,40 +848,6 @@ export default function ExploreClientScreen() {
     }, [userProfile, isAuthenticated])
   );
 
-  // Overlay premium de boas-vindas para visitantes (sempre que for visitante)
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-
-      const maybeShowVisitorOverlay = async () => {
-        if (isLoading || isAuthenticated) {
-          return;
-        }
-        if (cancelled) return;
-
-        showOverlay({
-          title: 'Explore o LimpeJá com liberdade',
-          subtitle:
-            'Você pode conhecer profissionais e serviços antes de criar sua conta. O cadastro só é necessário na hora de agendar.',
-          variant: 'info',
-          placement: 'center',
-          tone: 'soft',
-          durationMs: 600000,
-          imageSource: require('../../../assets/images/provider.png'),
-          imageSize: 106,
-          primaryActionLabel: 'OK, entendi',
-          onPrimaryAction: showProductsAlert,
-        });
-      };
-
-      maybeShowVisitorOverlay();
-
-      return () => {
-        cancelled = true;
-      };
-    }, [isAuthenticated, isLoading, showOverlay, showProductsAlert])
-  );
-
   const handleProviderPress = useCallback(
     (provider: ProviderDisplayInfo) => {
       router.push({
@@ -890,10 +893,14 @@ export default function ExploreClientScreen() {
   });
   const nearbyWithinRadius = filterByRadiusOrCity(nearbyWithComputedDistance, radiusMeters, locationHintRef.current);
   const sortedNearbyProviders = sortByDistanceStable(nearbyWithinRadius);
+  const activeNearbyProviders = sortedNearbyProviders.filter(
+    (provider) =>
+      provider?.verificationStatus === VerificationStatus.APPROVED,
+  );
 
   const safeRecommendations = (() => {
     const distanceById = new Map<string, number | null | undefined>(
-      sortedNearbyProviders.map((p) => [p.id, (p as any)?.distance]),
+      activeNearbyProviders.map((p) => [p.id, (p as any)?.distance]),
     );
     const withDistance = (item: ProviderDisplayInfo): ProviderDisplayInfo => {
       if (item == null || typeof item !== 'object') return item;
@@ -923,12 +930,17 @@ export default function ExploreClientScreen() {
             typeof (item as any).fullName === 'string' &&
             (item as any).fullName.trim() !== '',
         )
+        .filter(
+          (item) =>
+            (item as ProviderDisplayInfo)?.verificationStatus ===
+            VerificationStatus.APPROVED,
+        )
       : [];
     const hydratedRecs = valid.map(withDistance);
     // Nao filtramos recomendacoes por raio/cidade para nao cortar prestadores aprovados; nearby ja respeita raio.
     const filteredRecs = hydratedRecs;
-    const mergedPool = [...filteredRecs, ...sortedNearbyProviders];
-    const mergedSorted = sortByDistanceStable(mergedPool);
+    const mergedPool = [...filteredRecs, ...activeNearbyProviders];
+    const mergedSorted = sortByDistanceThenAvailabilityStable(mergedPool);
     const deduped: ProviderDisplayInfo[] = [];
     const seen = new Set<string>();
     mergedSorted.forEach(it => {
@@ -1065,14 +1077,57 @@ export default function ExploreClientScreen() {
           ListHeaderComponent={(
             <>
               {/* NewHeader ÚNICO */}
-              {/* Aplica o ajuste de margem inferior para visitantes Android */}
-              <View style={[styles.androidHeaderLift, isAndroidVisitor && { marginBottom: 20,   }]}>
-                <NewHeader
-                  userName={userNameDisplay}
-                  userAddress={addressToDisplay}
-                  isVisitor={!isAuthenticated}
-                />
-              </View>
+              <Animated.View
+                style={{
+                  opacity: headerAnim,
+                  transform: [
+                    {
+                      translateY:
+                        Platform.OS === 'android'
+                          ? 0
+                          : headerAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [-12, 0],
+                            }),
+                    },
+                  ],
+                }}>
+                {/* Aplica o ajuste de margem inferior para visitantes Android */}
+                <View style={[styles.androidHeaderLift, isAndroidVisitor && { marginBottom: 20 }]}>
+                  <NewHeader
+                    userName={userNameDisplay}
+                    userAddress={addressToDisplay}
+                    isVisitor={!isAuthenticated}
+                  />
+                </View>
+              </Animated.View>
+              {isAuthenticated && (
+                <>
+                  {/* Carrossel de Banners ÚNICO */}
+                  <Animated.View
+                    style={[
+                      styles.carouselContainer,
+                      {
+                        opacity: bannerAnim,
+                        transform: [{ translateY: 0 }],
+                      },
+                    ]}>
+                    <FlatList<BannerDataItem>
+                      ref={flatListRef}
+                      data={bannerData}
+                      renderItem={renderBannerItem}
+                      keyExtractor={(item) => item.id}
+                      horizontal
+                      pagingEnabled
+                      showsHorizontalScrollIndicator={false}
+                      snapToInterval={screenWidth}
+                      decelerationRate="fast"
+                      contentContainerStyle={{ paddingRight: 20 }}
+                      nestedScrollEnabled={true} // Melhora scroll aninhado no Android
+                    />
+                  </Animated.View>
+                </>
+              )}
               {/*QA_PANEL_ENABLED && (
                 <TouchableOpacity
                   style={styles.devPanelBadge}
@@ -1090,16 +1145,10 @@ export default function ExploreClientScreen() {
                 Platform.OS !== 'android' && renderCategoriesSection()
               ) : (
                 // Usuário VISITANTE: Exibe COMO FUNCIONA
-                // Aplique o ajuste para Android Visitor aqui
                 <View
                   style={[
                     styles.howItWorksTutorialContainer,
-                    Platform.OS === 'android' && !isAuthenticated && {
-                      marginTop: -15,
-                      marginBottom: -2,
-                      transform: [{ scale: 0.92 }, { translateX: 16 }],
-                      
-                    },
+                    visitorHowItWorksAdjustment,
                     { width: '101%', left: -26, },
                   ]}>
                   <Text style={styles.howItWorksTitle} allowFontScaling={false}>
@@ -1222,43 +1271,41 @@ export default function ExploreClientScreen() {
 
                 {isAuthenticated && Platform.OS === 'android' && renderCategoriesSection()}
 
-                {/* Carrossel de Banners ÚNICO */}
-                <Animated.View
-                  style={[
-                    styles.carouselContainer,
-                    {
-                      marginTop: isAuthenticated ? 0 : 28,
-                      opacity: bannerAnim,
-                      transform: [
-                        {
-                          translateY:
-                            Platform.OS === 'android'
-                              ? 0
-                              : bannerAnim.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: [-12, 0],
-                                }),
-                        },
-                      ],
-                    },
-                  ]}>
-                  <FlatList<BannerDataItem>
-                    ref={flatListRef}
-                    data={bannerData}
-                    renderItem={renderBannerItem}
-                    keyExtractor={(item) => item.id}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    snapToInterval={screenWidth}
-                    decelerationRate="fast"
-                    contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }}
-                    nestedScrollEnabled={true} // Melhora scroll aninhado no Android
-                  />
-                </Animated.View>
-
-                {/* REMOVER OS DOIS BLOCOS DE ACESSO RÁPIDO DO FINAL DO contentWrapper */}
-                {/* Os blocos de "Acesso rápido" para visitante e logado foram movidos para a lógica condicional acima e removidos daqui. */}
+                {!isAuthenticated && (
+                  <Animated.View
+                    style={[
+                      styles.carouselContainer,
+                      {
+                        marginTop: 28,
+                        opacity: bannerAnim,
+                        transform: [
+                          {
+                            translateY:
+                              Platform.OS === 'android'
+                                ? 0
+                                : bannerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-12, 0],
+                                  }),
+                          },
+                        ],
+                      },
+                    ]}>
+                    <FlatList<BannerDataItem>
+                      ref={flatListRef}
+                      data={bannerData}
+                      renderItem={renderBannerItem}
+                      keyExtractor={(item) => item.id}
+                      horizontal
+                      pagingEnabled
+                      showsHorizontalScrollIndicator={false}
+                      snapToInterval={screenWidth}
+                      decelerationRate="fast"
+                      contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }}
+                      nestedScrollEnabled={true} // Melhora scroll aninhado no Android
+                    />
+                  </Animated.View>
+                )}
 
                 {/* Spacer para scroll extra (compensa absolutos) */}
                 <View style={{ height: 10 }} />
@@ -1609,10 +1656,11 @@ const styles = StyleSheet.create({
     right: 200,
   },
   carouselContainer: {
-    marginTop: -10,
-    marginBottom: 35,
-    bottom: Platform.OS === 'android' ? 12 : 0,
+    marginTop: 8,
+    marginBottom: 18,
     alignItems: 'center',
+    paddingHorizontal: 10,
+    width: '100%',
   },
   navBarContainer: {
   position: 'absolute',
