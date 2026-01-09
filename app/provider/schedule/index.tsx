@@ -31,8 +31,9 @@ import { ResilientErrorBoundary } from '../../../components/common/ResilientErro
 import { PROVIDER_ROUTES } from '../../../constants/routes';
 import { useProviderSchedule } from '../../../hooks/useProviderSchedule';
 import { showOverlay } from '../../../hooks/useOverlayMessage';
-import { ProviderAppointment } from '../../../services/providerScheduleService';
+import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { formatDate } from '../../../utils/helpers';
+import { isSameDayInBrazil, startOfDayBrazil } from '../../../utils/time';
 
 // ====== Design tokens (mesmos da UI padronizada - Premium iOS) ======
 const Colors = {
@@ -145,6 +146,37 @@ const calendarTheme: Partial<Theme> = {
       paddingBottom: 8,
     },
   },
+};
+
+const getIsoDateKey = (iso?: string): string | null => {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().split('T')[0];
+};
+
+const formatTimeLabel = (iso: string | undefined) => {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+};
+
+const formatDateLabel = (iso: string | undefined) => {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+};
+
+const getAddressSummary = (address?: BookingDetails['address']) => {
+  if (!address) return undefined;
+  return `${address.street}, ${address.number}`;
+};
+
+type ProviderAppointment = BookingDetails & {
+  scheduledTimeDate: Date;
+  dateKey: string;
 };
 
 // Hook para verificar se o movimento reduzido está ativado
@@ -302,7 +334,6 @@ const AnimatedAppointmentItem: React.FC<{
 );
 };
 
-// ====== Screen ======
 type ScheduleState = ReturnType<typeof useProviderSchedule>;
 
 const ScheduleSuspenseFallback = () => (
@@ -312,11 +343,22 @@ const ScheduleSuspenseFallback = () => (
   </View>
 );
 
-function ScheduleView({ scheduleState }: { scheduleState: ScheduleState }) {
+type ScheduleViewProps = {
+  scheduleState: ScheduleState;
+  selectedDate: string;
+  setSelectedDate: (value: string) => void;
+  selectedDateKey: string;
+  selectedDateObj: Date;
+};
+
+function ScheduleView({
+  scheduleState,
+  selectedDate,
+  setSelectedDate,
+  selectedDateKey,
+  selectedDateObj,
+}: ScheduleViewProps) {
   const router = useRouter();
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T')[0]);
   const {
     appointments,
     loading,
@@ -325,11 +367,32 @@ function ScheduleView({ scheduleState }: { scheduleState: ScheduleState }) {
     refresh,
     retry,
   } = scheduleState;
-  const [appointmentSnapshot, setAppointmentSnapshot] = useState<ProviderAppointment[]>(appointments);
+
+  const normalizedAppointments = useMemo(() => {
+    return appointments
+      .map((item) => {
+        const fallbackDate = item.scheduledDate ? new Date(item.scheduledDate) : new Date();
+        const parsedTime = item.scheduledTime
+          ? new Date(item.scheduledTime)
+          : item.scheduledStart
+            ? new Date(item.scheduledStart)
+            : fallbackDate;
+        const scheduledTimeDate = Number.isNaN(parsedTime.getTime()) ? fallbackDate : parsedTime;
+        const dateKey = getIsoDateKey(scheduledTimeDate.toISOString()) ?? item.scheduledDate ?? '';
+        return {
+          ...item,
+          scheduledTimeDate,
+          dateKey,
+        };
+      })
+      .filter((item): item is ProviderAppointment => Boolean(item.dateKey));
+  }, [appointments]);
+
+  const [appointmentSnapshot, setAppointmentSnapshot] = useState<ProviderAppointment[]>([]);
 
   useEffect(() => {
-    setAppointmentSnapshot(appointments);
-  }, [appointments]);
+    setAppointmentSnapshot(normalizedAppointments);
+  }, [normalizedAppointments]);
 
   const isReducedMotionEnabled = useReducedMotion(); // Usar o hook de movimento reduzido
 
@@ -428,26 +491,41 @@ function ScheduleView({ scheduleState }: { scheduleState: ScheduleState }) {
 
   const appointmentsForSelectedDate = useMemo(() => {
     return appointmentSnapshot
-      .filter(app => app.date === selectedDate)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [appointmentSnapshot, selectedDate]);
+      .filter((app) => app.dateKey === selectedDateKey)
+      .sort((a, b) => a.scheduledTimeDate.getTime() - b.scheduledTimeDate.getTime());
+  }, [appointmentSnapshot, selectedDateKey]);
 
   const markedDates = useMemo(() => {
     const marks: Record<string, any> = {};
-    appointmentSnapshot.forEach(app => {
-      const hasConfirmed = appointmentSnapshot.some(a => a.date === app.date && a.status === 'Confirmado');
-      const hasPending = appointmentSnapshot.some(a => a.date === app.date && a.status === 'PendenteCliente');
-      const hasUpcoming = appointmentSnapshot.some(a => a.date === app.date && a.status === 'ARealizar');
+    const grouping: Record<string, ProviderAppointment[]> = {};
+    appointmentSnapshot.forEach((app) => {
+      if (!app.dateKey) return;
+      grouping[app.dateKey] = grouping[app.dateKey] || [];
+      grouping[app.dateKey].push(app);
+    });
+
+    Object.entries(grouping).forEach(([dateKey, apps]) => {
+      const hasConfirmed = apps.some((a) => a.status === 'Confirmado');
+      const hasPending = apps.some((a) => a.status === 'PendenteCliente');
+      const hasUpcoming = apps.some((a) => a.status === 'ARealizar');
 
       let dotColor = Colors.primary;
       if (hasPending) dotColor = '#FF6F00';
       else if (hasConfirmed || hasUpcoming) dotColor = '#2E7D32';
 
-      marks[app.date] = { marked: true, dotColor };
+      marks[dateKey] = { marked: true, dotColor };
+      if (isSameDayInBrazil(apps[0].scheduledTimeDate, selectedDateObj)) {
+        marks[dateKey] = {
+          ...marks[dateKey],
+          selected: true,
+          selectedColor: Colors.primary,
+          selectedTextColor: '#FFFFFF',
+        };
+      }
     });
 
-    const currentMark = marks[selectedDate] || {};
-    marks[selectedDate] = {
+    const currentMark = marks[selectedDateKey] || {};
+    marks[selectedDateKey] = {
       ...currentMark,
       selected: true,
       selectedColor: Colors.primary,
@@ -456,7 +534,7 @@ function ScheduleView({ scheduleState }: { scheduleState: ScheduleState }) {
       dotColor: currentMark.dotColor || Colors.primary,
     };
     return marks;
-  }, [appointmentSnapshot, selectedDate]);
+  }, [appointmentSnapshot, selectedDateKey]);
 
   const onDayPress = (day: DateData) => {
     const todayStr = new Date().toISOString().split('T')[0];
@@ -869,11 +947,43 @@ function ScheduleView({ scheduleState }: { scheduleState: ScheduleState }) {
 
 // ====== Styles (Premium iOS Clean e Confortável) ======
 export default function MyScheduleScreen() {
-  const scheduleState = useProviderSchedule();
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const [selectedDate, setSelectedDate] = useState(tomorrow.toISOString().split('T')[0]);
+
+  const selectedDateObj = useMemo(() => {
+    const parsed = new Date(selectedDate);
+    if (Number.isNaN(parsed.getTime())) {
+      return startOfDayBrazil(new Date());
+    }
+    return startOfDayBrazil(parsed);
+  }, [selectedDate]);
+
+  const selectedDateKey = useMemo(() => {
+    const candidate = getIsoDateKey(selectedDateObj.toISOString());
+    return candidate ?? selectedDate;
+  }, [selectedDateObj, selectedDate]);
+
+  const scheduleRange = useMemo(() => {
+    const start = selectedDateObj;
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+    return {
+      start: start.toISOString(),
+      end: end.toISOString(),
+    };
+  }, [selectedDateObj]);
+
+  const scheduleState = useProviderSchedule(scheduleRange);
   return (
     <ResilientErrorBoundary onRetry={scheduleState.retry}>
       <Suspense fallback={<ScheduleSuspenseFallback />}>
-        <ScheduleView scheduleState={scheduleState} />
+        <ScheduleView
+          scheduleState={scheduleState}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          selectedDateKey={selectedDateKey}
+          selectedDateObj={selectedDateObj}
+        />
       </Suspense>
     </ResilientErrorBoundary>
   );
