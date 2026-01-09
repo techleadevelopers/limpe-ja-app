@@ -113,6 +113,18 @@ describe('Insurance quote integration', () => {
     mockedQuoteBooking.mockReset();
   });
 
+  it('renders the no-protection option and all plans', async () => {
+    mockedQuoteBooking.mockResolvedValueOnce(buildQuoteResponse());
+
+    const { getByTestId } = renderWithProviders(<InsuranceQuoteHarness />);
+
+    await waitFor(() => expect(mockedQuoteBooking).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(getByTestId('insurance-option-none')).toBeTruthy());
+    expect(getByTestId('insurance-option-ESSENCIAL')).toBeTruthy();
+    expect(getByTestId('insurance-option-PREMIUM')).toBeTruthy();
+    expect(getByTestId('insurance-option-TOTAL')).toBeTruthy();
+  });
+
   it('requests quote with insurancePlanId and updates total when Premium selected', async () => {
     mockedQuoteBooking
       .mockResolvedValueOnce(buildQuoteResponse())
@@ -128,7 +140,7 @@ describe('Insurance quote integration', () => {
 
     await waitFor(() => expect(mockedQuoteBooking).toHaveBeenCalledTimes(1));
     expect(mockedQuoteBooking).toHaveBeenCalledWith(
-      expect.objectContaining({ insurancePlanId: undefined }),
+      expect.objectContaining({ insurancePlanId: null }),
     );
     await waitFor(() =>
       expect(getByTestId('quote-total').props.children).toBe(formatBRL(10000 / 100)),
