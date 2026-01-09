@@ -1,10 +1,12 @@
-import { Process, Processor } from '@nestjs/bull';
+import { OnQueueFailed, Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
 import { Logger } from '@nestjs/common';
+import * as Sentry from '@sentry/node';
 import { PayoutsService } from '../../payouts/payouts.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LedgerEntryType } from '@prisma/client';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { queueJobProcessingDuration } from '../../metrics/prometheus';
 
 interface PayoutJobData {
   payoutId: string;
@@ -13,17 +15,58 @@ interface PayoutJobData {
 @Processor('payouts')
 export class PayoutWorker {
   private readonly logger = new Logger(PayoutWorker.name);
+  private isShuttingDown = false;
 
   constructor(
     private readonly payoutsService: PayoutsService,
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
-  ) {}
+  ) {
+    process.once('SIGTERM', () => this.handleShutdown('SIGTERM'));
+    process.once('SIGINT', () => this.handleShutdown('SIGINT'));
+  }
+
+  private handleShutdown(signal: string) {
+    if (this.isShuttingDown) return;
+    this.isShuttingDown = true;
+    this.logger.warn(
+      `PayoutWorker: recebido ${signal}, concluindo job atual antes de sair.`,
+    );
+  }
 
   @Process('process-payout')
   async handleProcess(job: Job<PayoutJobData>) {
+    if (this.isShuttingDown) {
+      throw new Error('Worker shutting down');
+    }
     this.logger.debug(`handleProcess: processing payout ${job.data.payoutId}`);
-    await this.payoutsService.processPayout(job.data.payoutId);
+    const endTimer = queueJobProcessingDuration.startTimer({
+      queue: 'payouts',
+      job: job.name,
+    });
+    try {
+      await this.payoutsService.processPayout(job.data.payoutId);
+    } finally {
+      endTimer();
+    }
+  }
+
+  @OnQueueFailed()
+  async onFailed(job: Job<PayoutJobData>, error: Error) {
+    if (job.attemptsMade >= (job.opts.attempts ?? 3)) {
+      Sentry.captureException(error, {
+        level: 'error',
+        extra: {
+          queue: 'payouts',
+          jobId: job.id,
+          attempts: job.attemptsMade,
+        },
+      });
+      this.logger.error(
+        `[DLQ] process-payout job ${job.id} falhou após ${job.attemptsMade} tentativas: ${error.message}`,
+      );
+      await job.remove();
+    }
   }
 }
 
