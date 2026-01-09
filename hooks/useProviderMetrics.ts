@@ -9,9 +9,9 @@ export type ProviderMetrics = {
   badges?: string[];
 };
 
-const PROVIDER_METRICS_TTL_MS = 60 * 1000;
-const PROVIDER_METRICS_COOLDOWN_MS = 20 * 1000;
-const PROVIDER_METRICS_CONCURRENCY = 2;
+const PROVIDER_METRICS_TTL_MS = 15 * 60 * 1000; // 15 minutes cache to avoid spamming metrics
+const PROVIDER_METRICS_COOLDOWN_MS = 45 * 1000; // cooldown between 429 retries
+const PROVIDER_METRICS_CONCURRENCY = 1; // serialize metrics fetches to stay under throttler
 
 const FALLBACK_METRICS: ProviderMetrics = {};
 
