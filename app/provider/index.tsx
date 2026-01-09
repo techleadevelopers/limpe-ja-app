@@ -191,6 +191,7 @@ const headerStyles = StyleSheet.create({
       android: { elevation: 0 },
     }),
     marginBottom: Platform.OS === 'android' ? 10 : Spacing.lg,
+    marginTop: Platform.OS === 'android' ? 16 : 0,
   },
   greetingContainer: {
     flex: 1,
@@ -677,10 +678,14 @@ const RequestItem: React.FC<{
   const chatTouchAnimation = useAnimatedTouch();
   const clientId: string | undefined = item.clientId;
   const clientName: string = item.clientFullName || 'Cliente';
-  // CORREÇÃO: Usar item.scheduledDate e item.scheduledTime
-  const combinedDateTimeString = `${item.scheduledDate}T${item.scheduledTime}:00`;
-  const scheduledDate = new Date(combinedDateTimeString).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
-  const scheduledTime = new Date(combinedDateTimeString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const scheduledTimeDate = item.scheduledTime
+    ? new Date(item.scheduledTime)
+    : item.scheduledDate
+      ? new Date(`${item.scheduledDate}T00:00:00`)
+      : new Date();
+  const safeScheduledTimeDate = Number.isNaN(scheduledTimeDate.getTime()) ? new Date() : scheduledTimeDate;
+  const scheduledDate = safeScheduledTimeDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+  const scheduledTime = safeScheduledTimeDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return (
     <Animated.View style={[
       styles.requestItem,
@@ -825,10 +830,14 @@ const ConfirmedServiceItem: React.FC<{
   isReducedMotionEnabled: boolean;
 }> = ({ item, onPress, entryAnim, isReducedMotionEnabled }) => {
   const touchAnimation = useAnimatedTouch();
-  // CORREÇÃO: Usar item.scheduledDate e item.scheduledTime
-  const combinedDateTimeString = `${item.scheduledDate}T${item.scheduledTime}:00`;
-  const scheduledDate = new Date(combinedDateTimeString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-  const scheduledTime = new Date(combinedDateTimeString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const scheduledTimeDate = item.scheduledTime
+    ? new Date(item.scheduledTime)
+    : item.scheduledDate
+      ? new Date(`${item.scheduledDate}T00:00:00`)
+      : new Date();
+  const safeScheduledTimeDate = Number.isNaN(scheduledTimeDate.getTime()) ? new Date() : scheduledTimeDate;
+  const scheduledDate = safeScheduledTimeDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  const scheduledTime = safeScheduledTimeDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return (
     <Animated.View style={{
       opacity: entryAnim,
@@ -950,7 +959,14 @@ export default function ProviderDashboardScreen() {
       // Buscar listas reais como no provider/index.tsx
       const pendingBookings = await getBookingsForUser(BookingStatus.PENDING);
       const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
-      const toTs = (b: BookingDetails) => new Date(`${b.scheduledDate}T${b.scheduledTime}:00`).getTime();
+      const toTs = (b: BookingDetails) => {
+        const parsed = b.scheduledTime
+          ? new Date(b.scheduledTime)
+          : b.scheduledDate
+            ? new Date(`${b.scheduledDate}T00:00:00`)
+            : new Date();
+        return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+      };
       setPendingRequests([...pendingBookings].sort((a, b) => toTs(a) - toTs(b)));
       setUpcomingServices([...confirmedBookings].sort((a, b) => toTs(a) - toTs(b)));
       // Animate sections in stagger (respeitando reduced motion)
