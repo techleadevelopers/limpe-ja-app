@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     fontWeight: '700', // Bold para ênfase premium
     color: '#4A5568', // Preto mais claro premium (cinza escuro suave)
     textAlign: 'center',
-    top: 18,
+    top: Platform.OS === 'android' ? 8 : 0,
     letterSpacing: 0.8, // Espaçamento refinado para feel premium
     marginTop: 2, // Pequeno espaçamento abaixo do subtítulo
   },
