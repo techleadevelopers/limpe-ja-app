@@ -141,7 +141,7 @@ export class CreateBookingDto {
   })
   @IsOptional()
   @IsIn(INSURANCE_PLAN_IDS)
-  insurancePlanId?: InsurancePlanId;
+  insurancePlanId?: InsurancePlanId | null;
 
   @ApiPropertyOptional({
     description: 'Quote ID retornado por /bookings/quote',
@@ -152,12 +152,12 @@ export class CreateBookingDto {
   quoteId?: string;
 
   @ApiPropertyOptional({
-    description: 'Hash determinístico da cotação utilizada',
+    description: 'Hash determinístico do ID da cotação utilizada (quoteId)',
     example: 'fc5e038d2f14b01b...',
   })
   @IsOptional()
   @IsString()
-  quoteHash?: string;
+  quoteIdHash?: string;
 
   @ApiPropertyOptional({
     description: 'Validade da cotação (ISO string)',
