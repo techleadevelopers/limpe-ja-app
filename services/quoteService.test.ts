@@ -26,6 +26,7 @@ describe('quoteService', () => {
         state: 'SP',
         cep: '01234567',
       },
+      insurancePlanId: null,
     };
     const mockResponse: BookingQuoteResponse = {
       finalPrice: 120,
