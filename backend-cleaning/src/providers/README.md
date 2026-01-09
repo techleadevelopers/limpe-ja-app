@@ -29,9 +29,9 @@
 
 ## Fluxos do `ProvidersService` (`providers.service.ts`)
 
-1. **Recomendações e geocoding** – `findTopRatedOrExperiencedProviders` e `findAllProviders` aceitam coordenadas, calculam distância e nextAvailable usando `availability`, e enriquecem com `nextAvailable`, `badges`, `rating`, `acceptanceRate` (aproveitando `ProviderWithIncludes` com reviews/bookings). Campos sensíveis passam por sanitização (bio/displayName) e `DocumentationProcessingService` fornece `avatarUrl`.
+1. **Recomendações e geocoding** – `findTopRatedOrExperiencedProviders` e `findAllProviders` aceitam coordenadas, calculam distância e nextAvailable usando `availability`, e enriquecem com `nextAvailable`, `badges`, `rating`, `acceptanceRate` (aproveitando `ProviderWithIncludes` com reviews/bookings). Campos sensíveis passam por sanitização (bio/fullName) e `DocumentationProcessingService` fornece `avatarUrl`.
 2. **Busca** – `search` avalia `ProviderSearchDto` (`searchTerm`, `serviceId`, `location`, `minRating`, `sortBy`, `radius`, `page`, `pageSize`) e combina `RankingService` (ranking score) com consultas geoespaciais e `CacheService` para acelerar. Resultados são mapeados para `ProviderDetailsDto` com `ProviderServiceOfferingDto`.
-3. **Perfil do provedor logado** – `findByUserId`, `updateByUserId`, `updateAvatar` usam `Prisma` para encontrar provider pelo `userId`, persistem mudanças (displayName, bio, radiusKm, cityIds), fazem geocoding (quando endereço manipulado) e invalidam caches se necessário; `updateAvatar` faz upload via `DocumentProcessingService.uploadProviderAvatar` e retorna URL.
+3. **Perfil do provedor logado** – `findByUserId`, `updateByUserId`, `updateAvatar` usam `Prisma` para encontrar provider pelo `userId`, persistem mudanças (fullName, bio, radiusKm, cityIds), fazem geocoding (quando endereço manipulado) e invalidam caches se necessário; `updateAvatar` faz upload via `DocumentProcessingService.uploadProviderAvatar` e retorna URL.
 4. **Admin/metrics/offers** – `updateById` (admin) reutiliza a mesma validação; `getProviderPerformanceMetrics` agrega contadores (acceptanceRate, responseTime, bookings, reviews) e `getProviderOffers` retorna `PrismaOffer[]` para o DTO.
 5. **Settings (radius)** – `saveMySettings`/`getMySettings` utilizam `SettingsService` para armazenar individualmente cada provider (chave `settings:provider:radius_km:{providerId}`) com limites 1..200 km.
 6. **Remoção** – `remove` apaga o provider (usa Prisma) e atualiza logs; utilizado por admins.
@@ -40,7 +40,7 @@
 
 - **`ProviderDetailsDto`** – combina dados de `Provider`, `providerServices`, `reviewsReceived`, `bookings`, `availability`, `DocumentProcessing` (avatar) e `ProviderMetricsDto`.
 - **`ProviderSearchDto`** – encapsula filtros geoespaciais e de ranking, usado por `search`.
-- **`UpdateProviderProfileDto`** – aceita `displayName`, `bio`, `avatar`, `baseCity`, `radiusKm`, `cityIds`.
+- **`UpdateProviderProfileDto`** – aceita `fullName`, `bio`, `avatar`, `baseCity`, `radiusKm`, `cityIds`.
 - **`ProviderMetricsDto`** – expõe métricas (rating, acceptance rate, response time, completed jobs).
 - **`ProviderSettingsDto`** – apenas `serviceRadiusKm`.
 - **`ProviderWithIncludes`** – Prisma payload com `user`, `address`, `providerServices`, `reviewsReceived`, `bookings`, `availability`.
