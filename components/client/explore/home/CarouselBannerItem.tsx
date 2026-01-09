@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   default: Dimensions.get('window').width - 40,
 }),
 left: Platform.OS === 'android' ? 10 : 0,
-    height: Platform.OS === 'android' ? 90 : 97,
+    height: Platform.OS === 'android' ? 88 : 97,
     borderRadius: 14,
     marginTop: Platform.OS === 'android' ? 3 : 12,
     marginRight: Platform.OS === 'android' ? 36 : 12,
