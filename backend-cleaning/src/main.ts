@@ -113,10 +113,7 @@ async function bootstrap() {
   //        WEBHOOK PIX - RAW BODY (SEM SEGURANÇA)
   // =======================================================
   app.use((req: any, res, next) => {
-    if (
-      req.originalUrl.includes('/payments/webhook/pix') ||
-      req.originalUrl.includes('/payouts/webhook/gateway')
-    ) {
+    if (req.originalUrl.includes('/payments/webhook/pix')) {
       req.setEncoding('utf8');
       let data = '';
 
@@ -310,7 +307,7 @@ async function bootstrap() {
   //                    LOGGING MODE
   // =======================================================
   if (isProd) {
-    app.useLogger(['error', 'warn', 'log']);
+    app.useLogger(['error', 'warn']);
   } else {
     app.useLogger(['error', 'warn', 'log', 'debug', 'verbose']);
   }
