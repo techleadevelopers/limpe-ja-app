@@ -3,7 +3,10 @@ import {
   Controller,
   Headers,
   HttpCode,
+  HttpException,
   HttpStatus,
+  InternalServerErrorException,
+  Logger,
   Post,
   Req,
   Res,
@@ -26,6 +29,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 @Controller('payments/webhook')
 @UseGuards(ThrottlerGuard, PspWebhookGuard)
 export class PaymentsWebhooksController {
+  private readonly logger = new Logger(PaymentsWebhooksController.name);
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Header('Content-Type', 'application/json')
@@ -52,8 +56,23 @@ export class PaymentsWebhooksController {
       parsed = Object.fromEntries(new URLSearchParams(rawBody ?? ''));
     }
 
-    const result = await this.paymentsService.handlePixWebhook(rawBody, parsed);
-    return res.status(200).json(result);
+    try {
+      const result = await this.paymentsService.handlePixWebhook(rawBody, parsed);
+      return res.status(200).json(result);
+    } catch (error) {
+      this.logger.error(
+        '[PaymentsWebhooksController] PIX webhook failed',
+        error?.stack ?? String(error),
+        PaymentsWebhooksController.name,
+      );
+      this.logger.debug('Pix webhook raw body', rawBody);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Falha ao processar webhook PIX.',
+      );
+    }
   }
 
   @HttpCode(HttpStatus.OK)
