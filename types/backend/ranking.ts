@@ -5,7 +5,7 @@ export type RankingBadgeType = 'TOP_NEIGHBORHOOD' | 'STREAK_10' | 'SLA_90';
 
 export interface LeaderboardEntry {
   userId: string;
-  displayName: string;
+  fullName: string;
   handle?: string;                 // ex.: @maria_souza
   avatarUrl?: string | null;
   score: number;                   // pontos
