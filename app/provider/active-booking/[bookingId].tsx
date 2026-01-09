@@ -37,20 +37,6 @@ const MUTED = '#6B7280';
 const SUCCESS = '#16A34A';
 const WARNING = '#F59E0B';
 
-function parseDateTime(dateIso: string, timeHHmm: string): Date {
-  // dateIso may be date-only or full ISO. We normalize using date part + time.
-  try {
-    const datePart = new Date(dateIso);
-    if (Number.isNaN(datePart.getTime())) return new Date(NaN);
-    const [hh, mm] = (timeHHmm || '00:00').split(':').map((n) => parseInt(n, 10));
-    const dt = new Date(datePart);
-    dt.setHours(hh || 0, mm || 0, 0, 0);
-    return dt;
-  } catch {
-    return new Date(NaN);
-  }
-}
-
 function minutesBetween(a: Date, b: Date): number {
   return Math.round((a.getTime() - b.getTime()) / 60000);
 }
@@ -145,17 +131,30 @@ export default function ActiveBookingDetails() {
       const d = new Date(booking.scheduledStart);
       if (!Number.isNaN(d.getTime())) return d;
     }
-    return parseDateTime(booking.scheduledDate, booking.scheduledTime);
+    if (booking.scheduledTime) {
+      const d = new Date(booking.scheduledTime);
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+    if (booking.scheduledDate) {
+      const d = new Date(`${booking.scheduledDate}T00:00:00`);
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+    return null;
   }, [booking]);
 
   const scheduledEnd = useMemo(() => {
     if (!booking) return null;
-    const start = booking.startedAt
-      ? new Date(booking.startedAt)
-      : booking.scheduledStart
-        ? new Date(booking.scheduledStart)
-        : parseDateTime(booking.scheduledDate, booking.scheduledTime);
-    if (Number.isNaN(start.getTime())) return null;
+    const start =
+      booking.startedAt
+        ? new Date(booking.startedAt)
+        : booking.scheduledStart
+          ? new Date(booking.scheduledStart)
+          : booking.scheduledTime
+            ? new Date(booking.scheduledTime)
+            : booking.scheduledDate
+              ? new Date(`${booking.scheduledDate}T00:00:00`)
+              : null;
+    if (!start || Number.isNaN(start.getTime())) return null;
     const durMin =
       booking.durationMinutes ??
       booking.serviceDurationMinutes ??
