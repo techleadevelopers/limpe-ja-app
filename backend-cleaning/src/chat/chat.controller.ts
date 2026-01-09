@@ -15,6 +15,7 @@ import {
 import { ChatService, ConversationItem } from './chat.service'; // Importar ConversationItem (ainda necessário para a Promise, mas não para o ApiResponse.type)
 import { SendMessageDto } from './dto/send-message.dto';
 import { GetMessagesDto } from './dto/get-messages.dto';
+import { ChatRateLimitService } from './chat-rate-limit.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   ApiBearerAuth,
@@ -30,13 +31,17 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ConversationItemDto } from './dto/conversation-item.dto'; // <-- IMPORTAR O NOVO DTO AQUI
+import { detectPolicyViolation } from './chat-moderation';
 
 @ApiTags('chat')
 @Controller('chat')
 @UseGuards(JwtAuthGuard) // Protege todas as rotas do controlador
 @ApiBearerAuth()
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly chatRateLimiter: ChatRateLimitService,
+  ) {}
 
   @Get('find-or-create/provider/:providerId/client/:clientId')
   @ApiOperation({
@@ -115,6 +120,25 @@ export class ChatController {
     @Body() sendMessageDto: SendMessageDto,
   ): Promise<Message> {
     const senderId = req.user['userId'];
+
+    const policyReason = detectPolicyViolation(sendMessageDto.content);
+    if (policyReason) {
+      throw new BadRequestException(
+        `Mensagem bloqueada por política: ${policyReason}`,
+      );
+    }
+
+    const rateLimitResult = await this.chatRateLimiter.consume(chatId, senderId);
+    if (!rateLimitResult.allowed) {
+      const windowSeconds = Math.ceil(rateLimitResult.windowMs / 1000);
+      const retrySeconds = Math.max(
+        1,
+        Math.ceil(rateLimitResult.retryAfterMs / 1000),
+      );
+      throw new BadRequestException(
+        `Mensagem bloqueada por política: limite de ${rateLimitResult.limit} mensagens por ${windowSeconds}s atingido. Tente novamente em ${retrySeconds}s.`,
+      );
+    }
 
     try {
       return await this.chatService.createMessage(
