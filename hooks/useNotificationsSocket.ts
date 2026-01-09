@@ -1,4 +1,4 @@
-import { io } from 'socket.io-client';
+﻿import { io } from 'socket.io-client';
 import { useCallback, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { ackNotification, getNotificationStream } from 'services/notificationService';
@@ -52,8 +52,8 @@ export function useNotificationsSocket(authToken?: string | null) {
       }
       processedKeysRef.current.add(dedupeId);
 
-      const title = event.title ?? 'NotificaA�ALo';
-      const message = event.message ?? 'VocAa recebeu uma nova notificaA�ALo.';
+      const title = event.title ?? 'NotificaA§ALo';
+      const message = event.message ?? 'VocAa recebeu uma nova notificaA§ALo.';
       const deepLink =
         (event.payload?.deepLink as string | undefined) ??
         event.targetUrl ??
@@ -147,7 +147,13 @@ export function useNotificationsSocket(authToken?: string | null) {
     });
 
     socket.on('mission-progress', () => {
-      NotificationUIService.showInfo('Seu progresso nas missões foi atualizado.', 'Missões');
+      NotificationUIService.showAppEvent({
+        title: 'Missões',
+        message: 'Seu progresso nas missões foi atualizado.',
+        dedupeKey: 'mission-progress',
+        overlay: false,
+        position: 'top',
+      });
     });
 
     fetchPendingEvents();
