@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppColors } from '../../constants/appStyles';
 import { formatBRL } from '../../utils/formatters';
 import { BookingInsuranceSnapshot } from '../../types/backend/bookings';
+import { Platform } from 'react-native';
 
 interface InsuranceSummaryProps {
   insurance: BookingInsuranceSnapshot;
@@ -37,7 +38,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginTop: 12,
+    marginTop: -2,
+    marginBottom: 17,
     paddingVertical: 6,
   },
   icon: {
@@ -48,7 +50,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 12 : 14,
     fontWeight: '700',
     color: AppColors.textBody,
   },
