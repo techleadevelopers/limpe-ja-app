@@ -88,7 +88,7 @@ CREATE TABLE "Booking" (
     "providerId" TEXT NOT NULL,
     "providerServiceId" TEXT NOT NULL,
     "scheduledDate" TIMESTAMP(3) NOT NULL,
-    "scheduledTime" TEXT NOT NULL,
+    "scheduledTime" TIMESTAMP(3) NOT NULL,
     "status" "BookingStatus" NOT NULL DEFAULT 'PENDING',
     "totalPrice" DOUBLE PRECISION NOT NULL,
     "notes" TEXT,
