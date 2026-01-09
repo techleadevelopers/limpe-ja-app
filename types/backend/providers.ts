@@ -23,6 +23,11 @@ export interface ProviderMetrics {
   totalBookings: number; // <<-- CORREÇÃO: Adicionado 'totalBookings' aqui para resolver o erro
 }
 
+export interface ProviderAvailabilitySummary {
+  availableProvidersCount: number;
+  busy: boolean;
+}
+
 // CORREÇÃO: Definir e exportar TransactionType
 export enum TransactionType {
   PAYMENT = 'PAYMENT', // Corresponde ao Pagamento de Serviço (ou EARNING)
@@ -224,6 +229,7 @@ export interface UpdateAvailabilityData {
 export interface GetProviderAvailabilityResponse { // MOVIDO PARA CÁ
   available: ProviderAvailability[]; // Slots de tempo configurados pelo provedor
   occupiedTimes: string[];         // Horários já agendados/ocupados
+  requestedDate?: string;          // Data usada para filtrar (YYYY-MM-DD)
 }
 
 /**
