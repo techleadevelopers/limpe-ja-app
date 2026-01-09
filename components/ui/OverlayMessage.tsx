@@ -33,14 +33,17 @@ export interface OverlayMessageProps {
     onPrimaryAction?: () => void;
 }
 
+const ERROR_BG = '#FFFFFF';
+const ERROR_BORDER = '#D8E5FF';
+const ERROR_TEXT = AppColors.primaryDark || '#1D4ED8';
 const VARIANT_COLORS: Record<Variant, { bg: string; fg: string; icon: keyof typeof Ionicons.glyphMap }> = {
     success: { bg: AppColors.primaryLight, fg: AppColors.white, icon: 'checkmark-circle' },
     info: { bg: '#f1f2f1', fg: '#0b0b0b', icon: 'information-circle-outline' },
     warning: { bg: '#f59e0b', fg: '#111827', icon: 'warning' },
     error: { 
-        bg: AppColors.errorRed,       // O seu #FFF5F5 (Fundo Pastel Clean)
-        fg: AppColors.danger,         // O seu #D32F2F (Texto legível)
-        icon: 'alert-circle-outline'  // Ícone de alerta suave
+        bg: ERROR_BG,
+        fg: ERROR_TEXT,
+        icon: 'alert-circle-outline'
     },
 };
 
@@ -150,12 +153,7 @@ export const OverlayMessage: React.FC<OverlayMessageProps> = ({
                             styles.card,
                             isSuccess && styles.successCard,
                             isSoft && variant === 'info' && styles.softInfoCard,
-                            isError && { 
-                                borderColor: AppColors.border, 
-                                borderWidth: 1,
-                                shadowRadius: 14, // Conforto UX
-                                shadowOpacity: 0.1,
-                            },
+                            isError && styles.errorCard,
                             { backgroundColor: palette.bg },
                         ]}
                         pointerEvents="auto"
@@ -256,6 +254,16 @@ const styles = StyleSheet.create({
         elevation: 0,
         overflow: 'hidden',
         position: 'relative',
+    },
+    errorCard: {
+        borderColor: ERROR_BORDER,
+        borderWidth: 1,
+        backgroundColor: ERROR_BG,
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
     },
     successCard: {
         borderRadius: 32,
