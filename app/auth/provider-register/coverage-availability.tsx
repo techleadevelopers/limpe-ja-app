@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 
 import { AppColors } from '../../../constants/appStyles';
 import { saveProviderSettings, bulkSetAvailability, TimeRange } from '../../../services/providerSettingsService';
+import { buildDateTimeForSlot } from '../../../utils/time';
 import { AUTH_ROUTES } from '../../_shared/routes';
 
 const MIN_KM = 1;
@@ -22,6 +23,11 @@ function addDays(date: Date, days: number) {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
+}
+
+function parseDateFromKey(dateKey: string) {
+  const [year, month, day] = dateKey.split('-').map((value) => Number(value));
+  return new Date(year, month - 1, day);
 }
 
 export default function CoverageAvailabilityStep() {
@@ -60,8 +66,19 @@ export default function CoverageAvailabilityStep() {
         .filter(k => selected[k]?.morning || selected[k]?.afternoon)
         .map(k => {
           const ranges: TimeRange[] = [];
-          if (selected[k]?.morning) ranges.push({ start: '08:00', end: '12:00' });
-          if (selected[k]?.afternoon) ranges.push({ start: '14:00', end: '18:00' });
+          const baseDate = parseDateFromKey(k);
+          if (selected[k]?.morning) {
+            ranges.push({
+              start: buildDateTimeForSlot(baseDate, '08:00').toISOString(),
+              end: buildDateTimeForSlot(baseDate, '12:00').toISOString(),
+            });
+          }
+          if (selected[k]?.afternoon) {
+            ranges.push({
+              start: buildDateTimeForSlot(baseDate, '14:00').toISOString(),
+              end: buildDateTimeForSlot(baseDate, '18:00').toISOString(),
+            });
+          }
           return { date: k, ranges };
         });
       if (dates.length > 0) {
