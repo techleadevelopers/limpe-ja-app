@@ -10,12 +10,42 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 // Para simplificar, vamos definir tipos mais específicos aqui para o que o Prisma REALMENTE retorna.
 
 // Definindo tipos mais precisos para as relações, baseados nos 'select's do Prisma
+type BookingRelationForReviewPayload = {
+  scheduledDate: Date | string;
+  scheduledTime: Date | string;
+};
+
 class BookingRelationForReview {
   @ApiProperty()
-  scheduledDate: Date;
+  scheduledDate: string;
   @ApiProperty()
   scheduledTime: string;
   // Se BookingEntity for mais complexo, você terá que ajustar o prisma.include ou este DTO
+
+  constructor(data: BookingRelationForReviewPayload) {
+    this.scheduledDate = BookingRelationForReview.normalizeDate(data.scheduledDate);
+    this.scheduledTime = BookingRelationForReview.normalizeTime(data.scheduledTime);
+  }
+
+  private static normalizeDate(value: Date | string): string {
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0];
+    }
+    if (typeof value === 'string') {
+      return value.includes('T') ? value.split('T')[0] : value;
+    }
+    return new Date(String(value)).toISOString().split('T')[0];
+  }
+
+  private static normalizeTime(value: Date | string): string {
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    return new Date(String(value)).toISOString();
+  }
 }
 
 class ClientRelationForReview {
@@ -109,5 +139,11 @@ export class ReviewEntity implements PrismaReview {
       this.createdAt = new Date(this.createdAt);
     if (typeof this.updatedAt === 'string')
       this.updatedAt = new Date(this.updatedAt);
+
+    if (partial.booking) {
+      this.booking = new BookingRelationForReview(
+        partial.booking as BookingRelationForReviewPayload,
+      );
+    }
   }
 }
