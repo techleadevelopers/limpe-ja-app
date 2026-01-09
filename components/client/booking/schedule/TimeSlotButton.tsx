@@ -67,8 +67,8 @@ export default function TimeSlotButton({
       ]}
     >
       <TouchableOpacity
-        onPress={() => isAvailable && onPress(time)}
-        disabled={!isAvailable}
+        onPress={() => onPress(time)}
+        disabled={false}
         style={[
           styles.buttonBase,
           // ✅ Botão ocupa a célula inteira (sem marginHorizontal aqui)
@@ -119,6 +119,7 @@ const styles = StyleSheet.create({
 
     overflow: 'hidden',
     backgroundColor: AppColors.backgroundLight,
+    opacity: 1,
   },
 
   textRow: {
