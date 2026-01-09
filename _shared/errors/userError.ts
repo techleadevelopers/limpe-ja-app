@@ -45,14 +45,20 @@ const toFieldErrorMap = (data: unknown): FieldErrorMap | undefined => {
   return undefined;
 };
 
+type ErrorWithOptionalNetwork = {
+  code?: string;
+  message?: string;
+  response?: { data?: { message?: string } };
+};
+
 const hasNetworkSignal = (error: unknown): boolean => {
   if (typeof error === 'object' && error !== null) {
-    const err = error as Record<string, unknown>;
+    const err = error as ErrorWithOptionalNetwork;
     const code = String(err.code ?? '').toLowerCase();
     if (NETWORK_PATTERNS.test(code)) return true;
     const msg = String(err.message ?? '').toLowerCase();
     if (NETWORK_PATTERNS.test(msg)) return true;
-    const dataMessage = String((err.response as Record<string, unknown>)?.data?.message ?? '');
+    const dataMessage = String(err.response?.data?.message ?? '');
     return NETWORK_PATTERNS.test(dataMessage);
   }
   return false;
