@@ -49,6 +49,7 @@ import { ProviderMetrics } from './providers.service';
 import { OfferDetailsDto } from '../offers/dto/offer-details.dto'; // Verifique o caminho relativo!
 
 import { ProviderMetricsDto } from './dto/provider-metrics.dto';
+import { ProviderAvailabilitySummaryDto } from './dto/provider-availability-summary.dto';
 import { SettingsService } from '../settings/settings.service';
 import { ProviderSettingsDto } from './dto/provider-settings.dto';
 import { ProviderPromotionsService } from './provider-promotions.service';
@@ -221,6 +222,62 @@ export class ProvidersController {
     );
     // NOVO: Mapeamento inclui novos campos opcionais (ex.: nextAvailable, acceptanceRate)
     return providers.map((provider) => new ProviderViewDto(provider));
+  }
+
+  @Get('availability-summary')
+  @ApiOperation({
+    summary: 'Obter resumo da disponibilidade local de provedores aprovados',
+  })
+  @ApiQuery({
+    name: 'latitude',
+    required: true,
+    type: Number,
+    description: 'Latitude da região para calcular disponibilidade',
+  })
+  @ApiQuery({
+    name: 'longitude',
+    required: true,
+    type: Number,
+    description: 'Longitude da região para calcular disponibilidade',
+  })
+  @ApiQuery({
+    name: 'radius',
+    required: true,
+    type: Number,
+    description: 'Raio de busca em quilômetros',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Resumo com contagem de provedores e sinal de alta demanda',
+    type: ProviderAvailabilitySummaryDto,
+  })
+  async getAvailabilitySummary(
+    @Query('latitude') latitude?: number,
+    @Query('longitude') longitude?: number,
+    @Query('radius') radius?: number,
+  ): Promise<ProviderAvailabilitySummaryDto> {
+    const safeLat = Number(latitude);
+    const safeLon = Number(longitude);
+    const safeRadius = Number(radius);
+    if (
+      !Number.isFinite(safeLat) ||
+      !Number.isFinite(safeLon) ||
+      !Number.isFinite(safeRadius)
+    ) {
+      throw new BadRequestException(
+        'Latitude, longitude e radius são obrigatórios.',
+      );
+    }
+    const summary =
+      await this.providersService.getProvidersAvailabilitySummary(
+        safeLat,
+        safeLon,
+        safeRadius,
+      );
+    const dto = new ProviderAvailabilitySummaryDto();
+    dto.availableProvidersCount = summary.availableProvidersCount;
+    dto.busy = summary.busy;
+    return dto;
   }
 
   @Get()
