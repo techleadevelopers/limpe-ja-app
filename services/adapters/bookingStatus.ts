@@ -3,31 +3,29 @@
 
 export type FEStatus =
   | 'PENDING'
+  | 'PENDING_PAYMENT'
+  | 'PENDING_PROVIDER_CONFIRMATION'
+  | 'PENDING_DISPUTE'
   | 'CONFIRMED'
-  | 'IN_PROGRESS'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'RESCHEDULED'
-  | 'REJECTED'
-  | 'NO_SHOW'
-  | 'PENDING_PROVIDER_CONFIRMATION';
-
-export type BEStatus =
-  | 'PENDING'
-  | 'CONFIRMED'
-  | 'IN_PROGRESS'
-  | 'COMPLETED'
+  | 'ON_THE_WAY'
+  | 'ARRIVED'
+  | 'STARTED'
+  | 'FINISHED'
+  | 'EXPIRED'
   | 'CANCELED'
   | 'RESCHEDULED'
   | 'REJECTED'
-  | 'NO_SHOW'
-  | 'PENDING_PROVIDER_CONFIRMATION';
+  | 'NO_SHOW';
 
-export const toFE = (be: BEStatus): FEStatus =>
-  (be === 'CANCELED' ? 'CANCELLED' : be) as FEStatus;
+export type BEStatus = FEStatus;
 
-export const toBE = (fe: FEStatus): BEStatus =>
-  (fe === 'CANCELLED' ? 'CANCELED' : fe) as BEStatus;
+export const toFE = (be: BEStatus): FEStatus => {
+  return be;
+};
+
+export const toBE = (fe: FEStatus): BEStatus => {
+  return fe;
+};
 
 // Helpers to map arrays/objects non-destructively
 export function mapBookingStatusIn<T extends { status: any }>(obj: T): T {
@@ -43,4 +41,3 @@ export function mapBookingStatusIn<T extends { status: any }>(obj: T): T {
 export function mapBookingStatusArray<T extends { status: any }>(arr: T[]): T[] {
   return Array.isArray(arr) ? arr.map(mapBookingStatusIn) : arr;
 }
-
