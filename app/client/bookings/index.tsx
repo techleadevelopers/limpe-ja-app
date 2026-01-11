@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatAddressCompact } from '../../../utils/address';
 import { formatDateTime, formatPriceBRL, parseDateTimeParts, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
+import { isBefore, startOfDay } from 'date-fns';
 
 import { alertUserError } from '../../../_shared/errors/uiFeedback';
 import { AppColors } from '../../../constants/appStyles';
@@ -85,14 +86,20 @@ const getTranslatedStatus = (status: BookingStatus): string => {
       return 'Confirmado';
     case BookingStatus.PENDING:
       return 'Pendente';
+    case BookingStatus.PENDING_PAYMENT:
+      return 'Aguardando pagamento';
     case BookingStatus.PENDING_PROVIDER_CONFIRMATION:
       return 'Aguardando confirmação';
-    case BookingStatus.IN_PROGRESS:
-      return 'Em andamento';
-    case BookingStatus.COMPLETED:
-      return 'Concluído';
-    case BookingStatus.CANCELLED:
-      return 'Cancelado';
+    case BookingStatus.PENDING_DISPUTE:
+      return 'Em disputa';
+    case BookingStatus.STARTED:
+        return 'Em andamento';
+    case BookingStatus.FINISHED:
+        return 'Concluído';
+    case BookingStatus.CANCELED:
+        return 'Cancelado';
+    case BookingStatus.EXPIRED:
+      return 'Expirado';
     case BookingStatus.REJECTED:
       return 'Rejeitado';
     case BookingStatus.RESCHEDULED:
@@ -116,6 +123,18 @@ const gradients = {
 } as const;
 
 const PAYMENT_NOTIFICATION_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+const isConfirmedBookingTodayOrLater = (booking: BookingDetails): boolean => {
+  if (booking.status !== BookingStatus.CONFIRMED) {
+    return false;
+  }
+  const scheduledDateTime = parseDateTimeParts(booking.scheduledDate, booking.scheduledTime);
+  if (!scheduledDateTime) {
+    return false;
+  }
+  const todayStart = startOfDay(new Date());
+  return !isBefore(scheduledDateTime, todayStart);
+};
 
 const renderProviderAvatar = (avatarUrl?: string | null, size: number = 60) => {
   const [imageError, setImageError] = useState(false);
@@ -148,7 +167,11 @@ const renderProviderAvatar = (avatarUrl?: string | null, size: number = 60) => {
   );
 };
 
-const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = ({ item, index }) => {
+const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number; showConfirmedBadge?: boolean }> = ({
+  item,
+  index,
+  showConfirmedBadge = false,
+}) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(18)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
@@ -195,14 +218,15 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
       case BookingStatus.CONFIRMED:
         return { text: UI.success, gradient: gradients.confirmed, icon: 'checkmark-circle-outline' as const, badgeIcon: 'checkmark-circle' as const };
       case BookingStatus.PENDING:
+      case BookingStatus.PENDING_PAYMENT:
         return { text: UI.warning, gradient: gradients.pending, icon: 'time-outline' as const, badgeIcon: 'time' as const };
       case BookingStatus.PENDING_PROVIDER_CONFIRMATION:
         return { text: UI.warning, gradient: gradients.pending, icon: 'hourglass-outline' as const, badgeIcon: 'hourglass' as const };
-      case BookingStatus.IN_PROGRESS:
+      case BookingStatus.STARTED:
         return { text: UI.accent, gradient: gradients.inProgress, icon: 'sync-circle-outline' as const, badgeIcon: 'sync' as const };
-      case BookingStatus.COMPLETED:
+      case BookingStatus.FINISHED:
         return { text: UI.textSecondary, gradient: gradients.completed, icon: 'flag-outline' as const, badgeIcon: 'flag' as const };
-      case BookingStatus.CANCELLED:
+      case BookingStatus.CANCELED:
         return { text: UI.danger, gradient: gradients.cancelled, icon: 'close-circle-outline' as const, badgeIcon: 'close-circle' as const };
       case BookingStatus.REJECTED:
         return { text: UI.textSecondary, gradient: gradients.other, icon: 'alert-circle-outline' as const, badgeIcon: 'alert-circle' as const };
@@ -216,6 +240,8 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
   };
 
   const statusInfo = getStatusStyle(item.status);
+  const shouldRenderConfirmedBadge =
+    showConfirmedBadge && item.status === BookingStatus.CONFIRMED;
 
   const formattedAddress = item.address
     ? sanitizeText(
@@ -243,6 +269,12 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
     >
       <BlurView intensity={Platform.OS === 'ios' ? 18 : 36} tint="light" style={StyleSheet.absoluteFillObject} />
       <LinearGradient colors={['#FFFFFF', '#F6FBFF'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+
+      {shouldRenderConfirmedBadge && (
+        <View style={styles.confirmationBadge}>
+          <Text style={styles.confirmationBadgeText}>Confirmado</Text>
+        </View>
+      )}
 
       {item.id ? (
         <Link href={`/client/bookings/${item.id}`} asChild>
@@ -278,7 +310,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
                 </View>
               )}
 
-              {item.status === BookingStatus.COMPLETED && !(item.isReviewed || item.reviewId) && (
+              {item.status === BookingStatus.FINISHED && !(item.isReviewed || item.reviewId) && (
                 <View style={styles.reviewBadge}>
                   <Ionicons name="star-outline" size={13} color={UI.accent} style={[styles.metaIcon, styles.iconAdjust]} />
                   <Text style={styles.reviewBadgeText}>Avaliar</Text>
@@ -414,17 +446,22 @@ export default function MyBookingsScreen() {
           };
 
           if (currentFilter === 'requests') {
-            const pendingProvider = await getAndNormalizeWithAvatar(BookingStatus.PENDING_PROVIDER_CONFIRMATION);
+            const pendingPayment = await getAndNormalizeWithAvatar(BookingStatus.PENDING_PAYMENT);
             const pendingClient = await getAndNormalizeWithAvatar(BookingStatus.PENDING);
-            rawBookings = [...pendingProvider, ...pendingClient];
-          } else if (currentFilter === 'upcoming') {
             const confirmed = await getAndNormalizeWithAvatar(BookingStatus.CONFIRMED);
-            const inProgress = await getAndNormalizeWithAvatar(BookingStatus.IN_PROGRESS);
-            rawBookings = [...confirmed, ...inProgress];
+            const activeConfirmed = confirmed.filter(isConfirmedBookingTodayOrLater);
+            rawBookings = [...pendingPayment, ...pendingClient, ...activeConfirmed];
+          } else if (currentFilter === 'upcoming') {
+            rawBookings = await getAndNormalizeWithAvatar(BookingStatus.STARTED);
           } else if (currentFilter === 'completed') {
-            rawBookings = await getAndNormalizeWithAvatar(BookingStatus.COMPLETED);
+            const [finished, canceled, rejected] = await Promise.all([
+              getAndNormalizeWithAvatar(BookingStatus.FINISHED),
+              getAndNormalizeWithAvatar(BookingStatus.CANCELED),
+              getAndNormalizeWithAvatar(BookingStatus.REJECTED),
+            ]);
+            rawBookings = [...finished, ...canceled, ...rejected];
           } else if (currentFilter === 'cancelled') {
-            const canceled = await getAndNormalizeWithAvatar(BookingStatus.CANCELLED);
+            const canceled = await getAndNormalizeWithAvatar(BookingStatus.CANCELED);
             const rejected = await getAndNormalizeWithAvatar(BookingStatus.REJECTED);
             rawBookings = [...canceled, ...rejected];
           }
@@ -745,7 +782,9 @@ export default function MyBookingsScreen() {
       ) : bookings.length > 0 ? (
         <Animated.FlatList
           data={bookings}
-          renderItem={({ item, index }) => <AnimatedBookingItem item={item} index={index} />}
+          renderItem={({ item, index }) => (
+            <AnimatedBookingItem item={item} index={index} showConfirmedBadge={activeFilter === 'requests'} />
+          )}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.listContentContainer, { paddingBottom: 140 }]}
           showsVerticalScrollIndicator={false}
@@ -943,6 +982,26 @@ const styles = StyleSheet.create({
   },
   statusBadgeIcon: { marginRight: 6, transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
   statusText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, fontFamily: 'Montserrat-SemiBold' },
+  confirmationBadge: {
+    position: 'absolute',
+    top: 52,
+    right: 16,
+    backgroundColor: 'rgba(16,185,129,0.12)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmationBadgeText: {
+    color: '#10B981',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    fontFamily: 'Montserrat-SemiBold',
+  },
 
   // Estilo ajustado para o botão + (fundo azul premium, ícone branco, alinhado com o preço no canto inferior direito)
   addButton: {
