@@ -32,14 +32,18 @@ export enum PricingType {
 export enum BookingStatus {
     PENDING = "PENDING",
     CONFIRMED = "CONFIRMED",
-    COMPLETED = "COMPLETED",
+    ON_THE_WAY = "ON_THE_WAY",
+    ARRIVED = "ARRIVED",
+    STARTED = "STARTED",
+    FINISHED = "FINISHED",
     CANCELED = "CANCELED",
     PENDING_DISPUTE = "PENDING_DISPUTE",
     RESCHEDULED = "RESCHEDULED",
-    IN_PROGRESS = "IN_PROGRESS",
     PENDING_PROVIDER_CONFIRMATION = "PENDING_PROVIDER_CONFIRMATION",
     REJECTED = "REJECTED",
     NO_SHOW = "NO_SHOW",
+    PENDING_PAYMENT = "PENDING_PAYMENT",
+    EXPIRED = "EXPIRED",
 }
 
 export enum TransactionType {
@@ -155,7 +159,7 @@ export enum PanicStatus {
 export type Provider = {
     id: string;
     name?: string;
-    fullName?: string;
+    fullName: string;
     email: string;
     phone?: string | null;
     userPhone?: string | null;
@@ -188,6 +192,7 @@ export type Client = {
     id: string;
     userId: string;
     name: string;
+    fullName?: string;
     email: string;
     avatarUrl?: string | null;
     role?: 'ADMIN' | 'CLIENT' | 'PROVIDER';
@@ -248,7 +253,8 @@ export type RevenueTrendPoint = {
 export type AuthUser = {
     id: string;
     email: string;
-    name: string;
+    fullName: string;
+    name?: string;
     role: 'ADMIN' | 'CLIENT' | 'PROVIDER';
 };
 
@@ -309,6 +315,11 @@ export type Booking = {
     provider?: Provider;
     service?: Service;
     providerService?: ProviderService;
+    acceptedAt?: string | null;
+    scheduledStart?: string | null;
+    startedAt?: string | null;
+    clientFullName?: string | null;
+    providerFullName?: string | null;
     createdAt: string;
     updatedAt: string;
 };
@@ -321,6 +332,7 @@ export type Transaction = {
     type: TransactionType;
     status: string;
     description?: string | null;
+    fullName: string;
     createdAt: string;
     bookingId?: string | null;
     gatewayTransactionId?: string | null;
