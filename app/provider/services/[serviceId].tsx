@@ -50,11 +50,11 @@ export default function ProviderServiceDetailsScreen() {
         return { text: '#FF6F00', bg: '#FFF3E0', icon: 'clock-outline' as MaterialCommunityIconName, label: 'Pendente' };
       case BookingStatus.CONFIRMED:
         return { text: '#2E7D32', bg: '#E8F5E9', icon: 'check-circle-outline' as MaterialCommunityIconName, label: 'Confirmado' };
-      case BookingStatus.IN_PROGRESS:
+      case BookingStatus.STARTED:
         return { text: '#007AFF', bg: '#E3F2FD', icon: 'sync-circle-outline' as MaterialCommunityIconName, label: 'Em andamento' };
-      case BookingStatus.COMPLETED:
+      case BookingStatus.FINISHED:
         return { text: '#546E7A', bg: '#ECEFF1', icon: 'check-all' as MaterialCommunityIconName, label: 'Concluído' };
-      case BookingStatus.CANCELLED:
+      case BookingStatus.CANCELED:
         return { text: '#D32F2F', bg: '#FFEBEE', icon: 'close-circle-outline' as MaterialCommunityIconName, label: 'Cancelado' };
       case BookingStatus.REJECTED:
         return { text: '#757575', bg: '#F5F5F5', icon: 'minus-circle-outline' as MaterialCommunityIconName, label: 'Recusado' };
