@@ -558,6 +558,7 @@ model Booking {
   scheduledStart   DateTime?
   durationMinutes  Int?
   scheduledEnd     DateTime?        // ✅ NOVO: derivado (scheduledStart + durationMinutes)
+  acceptedAt       DateTime?
   status           BookingStatus    @default(PENDING_PAYMENT)
   expiresAt        DateTime?
 
@@ -620,6 +621,7 @@ model Booking {
   @@index([status, scheduledDate])
   @@index([status, expiresAt])
   @@index([providerId, scheduledStart, scheduledEnd]) // ✅ NOVO: overlap fast
+  @@index([providerId, acceptedAt])
 }
 
 model BookingInsurance {
