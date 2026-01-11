@@ -22,6 +22,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { alertUserError, setSafeError } from '../../../_shared/errors/uiFeedback';
 import { cancelBooking, getBookingDetails } from '../../../services/bookingService';
 import { getProviderDetails } from '../../../services/providerService';
+import { getOrCreateConversationForBooking } from '../../../services/chatService';
+import { CLIENT_ROUTES } from '@/app/_shared/routes';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
@@ -63,12 +65,12 @@ function getStatusVisual(status: BookingStatus): StatusVisual {
     case BookingStatus.PENDING:
     case BookingStatus.PENDING_PROVIDER_CONFIRMATION:
       return { label: 'Pendente', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', icon: 'time' };
-    case BookingStatus.IN_PROGRESS:
-      return { label: 'Em andamento', color: UI.accent, bg: 'rgba(37,99,235,0.10)', icon: 'sync' };
-    case BookingStatus.COMPLETED:
-      return { label: 'Concluído', color: '#4B5563', bg: '#E5E7EB', icon: 'flag' };
-    case BookingStatus.CANCELLED:
-      return { label: 'Cancelado', color: UI.danger, bg: 'rgba(239,68,68,0.10)', icon: 'close-circle' };
+    case BookingStatus.STARTED:
+        return { label: 'Em andamento', color: UI.accent, bg: 'rgba(37,99,235,0.10)', icon: 'sync' };
+    case BookingStatus.FINISHED:
+        return { label: 'Concluído', color: '#4B5563', bg: '#E5E7EB', icon: 'flag' };
+    case BookingStatus.CANCELED:
+        return { label: 'Cancelado', color: UI.danger, bg: 'rgba(239,68,68,0.10)', icon: 'close-circle' };
     case BookingStatus.RESCHEDULED:
       return { label: 'Reagendado', color: '#7C3AED', bg: 'rgba(124,58,237,0.10)', icon: 'sync' };
     case BookingStatus.NO_SHOW:
@@ -84,16 +86,16 @@ const getStatusMessage = (status: BookingStatus): string | null => {
   switch (status) {
     case BookingStatus.CONFIRMED:
       return 'Profissional confirmado. Acompanhe pelo chat.';
-    case BookingStatus.IN_PROGRESS:
-      return 'Profissional a caminho ou em serviço.';
-    case BookingStatus.COMPLETED:
-      return 'Serviço concluído — avalie agora.';
+    case BookingStatus.STARTED:
+        return 'Profissional a caminho ou em serviço.';
+    case BookingStatus.FINISHED:
+        return 'Serviço concluído — avalie agora.';
     default:
       return null;
   }
 };
 
-const isCompletedStatus = (s: BookingStatus) => s === BookingStatus.COMPLETED;
+const isCompletedStatus = (s: BookingStatus) => s === BookingStatus.FINISHED;
 
 // =============================================================================
 // Header (igual Meus Agendamentos)
@@ -450,7 +452,7 @@ export default function BookingDetailsScreen() {
         console.log('Erro fetch provider:', err);
       }
 
-      const completed = normalized.status === BookingStatus.COMPLETED;
+      const completed = normalized.status === BookingStatus.FINISHED;
       const alreadyReviewed = !!(normalized.isReviewed || normalized.reviewId);
       if (completed && !alreadyReviewed) setShowReviewSheet(true);
     } catch (err: any) {
@@ -470,8 +472,8 @@ export default function BookingDetailsScreen() {
     if (!status) return;
     const relevant = [
       BookingStatus.CONFIRMED,
-      BookingStatus.IN_PROGRESS,
-      BookingStatus.COMPLETED,
+      BookingStatus.STARTED,
+      BookingStatus.FINISHED,
     ];
     if (lastStatusRef.current !== status && relevant.includes(status)) {
       if (Platform.OS === 'ios') {
@@ -503,7 +505,7 @@ export default function BookingDetailsScreen() {
               try {
                 setIsLoading(true);
                 await cancelBooking(booking.id);
-                setBooking((prev) => (prev ? { ...prev, status: BookingStatus.CANCELLED } : prev));
+                setBooking((prev) => (prev ? { ...prev, status: BookingStatus.CANCELED } : prev));
               } catch (err: any) {
                 alertUserError(err, 'Erro ao cancelar o agendamento');
               } finally {
@@ -515,17 +517,23 @@ export default function BookingDetailsScreen() {
     );
   };
 
-  const handleContact = () => {
+  const handleContact = useCallback(async () => {
     if (!booking) return;
-    router.push({
-      pathname: '/client/messages',
-      params: {
-        providerId: booking.providerId,
-        bookingId: booking.id,
-        recipientName: sanitizeText(booking.providerFullName),
-      },
-    } as any);
-  };
+    try {
+      const conversation = await getOrCreateConversationForBooking(booking.id);
+      router.push({
+        pathname: CLIENT_ROUTES.CHAT(conversation.chatId),
+        params: {
+          recipientId: conversation.providerUserId,
+          recipientName: sanitizeText(conversation.providerFullName),
+          recipientAvatarUrl: conversation.providerAvatarUrl,
+          bookingId: booking.id,
+        },
+      } as any);
+    } catch (error) {
+      alertUserError(error, 'Não foi possível iniciar o chat com o prestador');
+    }
+  }, [booking, router]);
 
   const handleReview = () => {
     if (!booking) return;
