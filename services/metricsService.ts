@@ -109,9 +109,9 @@ export const metricsService = {
             return d.getTime() > Date.now();
         };
         const total = allBookings.length;
-        const completed = allBookings.filter(b => b.status === BookingStatus.COMPLETED).length;
-        const canceled = allBookings.filter(b => b.status === BookingStatus.CANCELLED).length;
-        const upcoming = allBookings.filter(b => isFuture(b) && ![BookingStatus.CANCELLED, BookingStatus.COMPLETED, BookingStatus.REJECTED].includes(b.status)).length;
+        const completed = allBookings.filter(b => b.status === BookingStatus.FINISHED).length;
+        const canceled = allBookings.filter(b => b.status === BookingStatus.CANCELED).length;
+        const upcoming = allBookings.filter(b => isFuture(b) && ![BookingStatus.CANCELED, BookingStatus.FINISHED, BookingStatus.REJECTED].includes(b.status)).length;
 
         const trendMap: Record<string, number> = {};
         for (const b of allBookings) {
@@ -157,6 +157,5 @@ export const metricsService = {
 
         return result;
     },};
-
 
 
