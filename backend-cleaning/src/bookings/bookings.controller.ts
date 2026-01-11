@@ -39,8 +39,9 @@ import {
 import { Request } from 'express';
 import { ReportDisputeDto } from './dto/report-dispute.dto';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
+import { ManualStartRequestDto } from './dto/manual-start-request.dto';
 import { I18nService } from '../common/i18n/i18n.service';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 type RequestWithUser = Request & {
   user: {
@@ -233,6 +234,7 @@ export class BookingsController {
   }
 
   @Get('me')
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -369,6 +371,37 @@ export class BookingsController {
     );
     return new BookingDetailsDto(
       this.bookingsService.withAllowedActions(updatedBooking, userRole, userId),
+    );
+  }
+
+  @Post(':id/accept')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Aceitar um agendamento confirmado (somente prestador)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Agendamento aceito com sucesso.',
+    type: BookingDetailsDto,
+  })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido.' })
+  @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
+  async acceptBooking(
+    @Req() req: RequestWithUser,
+    @Param('id') id: string,
+  ): Promise<BookingDetailsDto> {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+    const booking = await this.bookingsService.acceptBooking(
+      id,
+      userId,
+      req,
+    );
+    return new BookingDetailsDto(
+      this.bookingsService.withAllowedActions(booking, userRole, userId),
     );
   }
 
@@ -660,6 +693,29 @@ export class BookingsController {
         UserRole.PROVIDER,
         userId,
       ),
+    );
+  }
+
+  @Post(':id/start/manual')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Solicitar início manual para um agendamento já confirmado' })
+  @ApiResponse({
+    status: 200,
+    description: 'Solicitação registrada para o time administrativo.',
+    type: MessageResponseDto,
+  })
+  async requestManualStart(
+    @Req() req: RequestWithUser,
+    @Param('id') id: string,
+    @Body() manualStartRequestDto?: ManualStartRequestDto,
+  ): Promise<MessageResponseDto> {
+    const userId = req.user.userId;
+    return this.bookingsService.requestManualStart(
+      id,
+      userId,
+      manualStartRequestDto?.reason?.trim(),
     );
   }
 
