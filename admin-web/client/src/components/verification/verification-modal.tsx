@@ -127,7 +127,7 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
 
   if (!provider) return null;
 
-  const displayName = provider.fullName || provider.name || "Sem nome";
+  const resolvedName = provider.fullName || provider.name || "Sem nome";
 
   const handleApprove = () => {
     approveMutation.mutate(provider.id);
@@ -196,11 +196,11 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
             <div className="flex items-center p-4 bg-gray-50 rounded-xl">
               <img
                 src={`https://images.unsplash.com/photo-150720939${Math.floor(Math.random() * 10)}?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100`}
-                alt={`${displayName} profile`}
+                alt={`${resolvedName} profile`}
                 className="w-16 h-16 rounded-full object-cover"
               />
               <div className="ml-4 flex-1">
-                <h3 className="text-lg font-semibold text-gray-900">{displayName}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{resolvedName}</h3>
                 <p className="text-gray-600">{provider.email}</p>
                 <div className="flex items-center mt-2 space-x-4">
                   <span className="text-sm text-gray-600 flex items-center">
@@ -252,7 +252,7 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
                     {provider.ocrResult ? (
                       <div className="text-xs text-blue-800 space-y-1">
                         <p>
-                          <strong>Nome:</strong> {provider.ocrResult.fullName || displayName}
+                          <strong>Nome:</strong> {provider.ocrResult.fullName || resolvedName}
                         </p>
                         <p>
                           <strong>Número do Documento:</strong> {provider.ocrResult.documentNumber || "N/A"}
