@@ -31,6 +31,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ConversationItemDto } from './dto/conversation-item.dto'; // <-- IMPORTAR O NOVO DTO AQUI
+import { ConversationRequestDto } from './dto/conversation-request.dto';
+import { ConversationResponseDto } from './dto/conversation-response.dto';
 import { detectPolicyViolation } from './chat-moderation';
 
 @ApiTags('chat')
@@ -94,6 +96,31 @@ export class ChatController {
 
     // O ChatService já contém a lógica de permissão baseada no status do agendamento.
     return this.chatService.findOrCreateChat(clientId, providerId);
+  }
+
+  @Post('conversations/get-or-create')
+  @ApiOperation({
+    summary: 'Encontra ou cria uma conversa baseada em um agendamento confirmado',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Conversa encontrada ou criada.',
+    type: ConversationResponseDto,
+  })
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.CLIENT, UserRole.PROVIDER, UserRole.ADMIN)
+  async getOrCreateConversation(
+    @Req() req: Request,
+    @Body() body: ConversationRequestDto,
+  ): Promise<ConversationResponseDto> {
+    const userId = req.user['userId'];
+    const userRole = req.user['role'] as UserRole;
+    const payload = await this.chatService.getOrCreateConversationForBooking(
+      body.bookingId,
+      userId,
+      userRole,
+    );
+    return new ConversationResponseDto(payload);
   }
 
   @Post(':chatId/messages')
