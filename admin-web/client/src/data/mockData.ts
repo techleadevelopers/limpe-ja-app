@@ -13,6 +13,7 @@ export interface Provider {
   id: string;
   userId: string;
   name: string;
+  fullName: string;
   email: string;
   phone: string | null;
   verificationStatus: "PENDING_DOCUMENTS_UPLOAD" | "PENDING_MANUAL_REVIEW" | "APPROVED" | "REJECTED" | "BLOCKED" | null;
@@ -105,6 +106,7 @@ export const mockProviders: Provider[] = [
     id: "provider1",
     userId: "user1",
     name: "Ana Costa",
+    fullName: "Ana Costa",
     email: "ana.costa@example.com",
     phone: "+55 11 99999-9999",
     verificationStatus: "PENDING_MANUAL_REVIEW",
@@ -139,6 +141,7 @@ export const mockProviders: Provider[] = [
     id: "provider2",
     userId: "user2",
     name: "Carlos Lima",
+    fullName: "Carlos Lima",
     email: "carlos.lima@example.com",
     phone: "+55 11 88888-8888",
     verificationStatus: "PENDING_DOCUMENTS_UPLOAD",
@@ -163,6 +166,7 @@ export const mockProviders: Provider[] = [
     id: "provider3",
     userId: "user3",
     name: "Marina Oliveira",
+    fullName: "Marina Oliveira",
     email: "marina.oliveira@example.com",
     phone: "+55 11 77777-7777",
     verificationStatus: "APPROVED",
