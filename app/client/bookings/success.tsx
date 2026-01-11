@@ -15,6 +15,7 @@ import SecurityInfoSection from '../../../components/client/booking/success/Secu
 import SuccessHeader from '../../../components/client/booking/success/SuccessHeader';
 import SuccessLoadingError from '../../../components/client/booking/success/SuccessLoadingError';
 import { useAuth } from '../../../hooks/useAuth';
+import { CLIENT_ROUTES } from '@/app/_shared/routes';
 
 import { getBookingDetails } from '../../../services/bookingService';
 import { getOffers } from '../../../services/clientService';
@@ -22,9 +23,11 @@ import { getMyLoyaltyBalance, LoyaltyBalance } from '../../../services/loyaltySe
 import NotificationUIService from '../../../services/notificationUIService';
 import { createPixCharge, fetchPaymentIntent } from '../../../services/paymentService';
 import { getProviderDetails } from '../../../services/providerService';
+import { getOrCreateConversationForBooking } from '../../../services/chatService';
 
 import { AppColors } from '../../../constants/appStyles';
 import { formatAddressLine1, formatAddressLine2 } from '../../../utils/address';
+import { sanitizeText } from '../../../utils/formatters';
 
 import { textFix } from '../../../_shared/ui/parity';
 import { BookingDetails } from '../../../types/backend/bookings';
@@ -364,31 +367,56 @@ export default function BookingSuccessScreen() {
         }
       } catch (err: any) {
         const status = err?.status ?? err?.response?.status;
-        if (status === 401 && !unauthorizedHandledRef.current) {
-          unauthorizedHandledRef.current = true;
-          if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-          }
-          setShouldPollIntent(false);
-          NotificationUIService.showInfo(
-            'SessALo atualizada',
-            'Sua sessALo de pagamento foi renovada. Voltamos para a pA!gina inicial para garantir sua seguranA§a.',
-          );
-          setTimeout(() => {
-            router.replace('/client/explore' as any);
-          }, 400);
-          return;
-        }
-        if (status === 404) {
-          if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-          }
-          setShouldPollIntent(false);
-          setError(err?.message ?? 'Pagamento não encontrado.');
-          return;
-        }
+        if (status === 401 && !unauthorizedHandledRef.current) {
+
+          unauthorizedHandledRef.current = true;
+
+          if (pollRef.current) {
+
+            clearInterval(pollRef.current);
+
+            pollRef.current = null;
+
+          }
+
+          setShouldPollIntent(false);
+
+          NotificationUIService.showInfo(
+
+            'SessALo atualizada',
+
+            'Sua sessALo de pagamento foi renovada. Voltamos para a pA!gina inicial para garantir sua seguranAï¿½a.',
+
+          );
+
+          setTimeout(() => {
+
+            router.replace('/client/explore' as any);
+
+          }, 400);
+
+          return;
+
+        }
+
+        if (status === 404) {
+
+          if (pollRef.current) {
+
+            clearInterval(pollRef.current);
+
+            pollRef.current = null;
+
+          }
+
+          setShouldPollIntent(false);
+
+          setError(err?.message ?? 'Pagamento nï¿½o encontrado.');
+
+          return;
+
+        }
+
         // log removido para performance
       }
     };
@@ -430,17 +458,25 @@ export default function BookingSuccessScreen() {
     // Silencioso por enquanto
   }, []);
 
-  const handleContactProvider = useCallback(() => {
+  const handleContactProvider = useCallback(async () => {
     if (!booking) {
       return;
     }
-    router.push({
-      pathname: `/client/messages/${booking.providerId}`,
-      params: {
-        recipientName: provider?.fullName || booking.providerFullName || 'Prestador',
-      },
-    } as any);
-  }, [booking, provider, router]);
+    try {
+      const conversation = await getOrCreateConversationForBooking(booking.id);
+      router.push({
+        pathname: CLIENT_ROUTES.CHAT(conversation.chatId),
+        params: {
+          recipientId: conversation.providerUserId,
+          recipientName: sanitizeText(conversation.providerFullName),
+          recipientAvatarUrl: conversation.providerAvatarUrl,
+          bookingId: booking.id,
+        },
+      } as any);
+    } catch (error) {
+      alertUserError(error, 'NÃ£o foi possÃ­vel iniciar o chat com o prestador');
+    }
+  }, [booking, router]);
 
   const handleRegeneratePix = useCallback(async () => {
     if (!booking || paymentMethod !== 'PIX' || !user?.id || isRegeneratingPix) {
