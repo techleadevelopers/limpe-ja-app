@@ -49,7 +49,7 @@ function getStatusBadge(status: string) {
   }
 }
 
-const getDisplayName = (provider?: Provider | null) =>
+const getProviderFullName = (provider?: Provider | null) =>
   provider?.fullName || provider?.name || "Sem nome";
 
 export default function Providers() {
@@ -80,7 +80,7 @@ export default function Providers() {
       queryClient.invalidateQueries({ queryKey: ['/verification/pending-queue'] });
       toast({
         title: "Status do Provedor Atualizado",
-        description: `${getDisplayName(updatedProvider)} agora está ${updatedProvider.verificationStatus.replace(/_/g, ' ').toLowerCase()}.`,
+        description: `${getProviderFullName(updatedProvider)} agora está ${updatedProvider.verificationStatus.replace(/_/g, ' ').toLowerCase()}.`,
       });
       // O modal é fechado pelo próprio VerificationModal após a ação
       // setIsModalOpen(false);
@@ -250,12 +250,12 @@ export default function Providers() {
                         <div className="flex items-center">
                           {/* Imagem de perfil mockada, idealmente viria do provider.avatarUrl */}
                           <img 
-                            src={provider.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${getDisplayName(provider)}`}
-                            alt={`${getDisplayName(provider)} profile`}
+                          src={provider.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${getProviderFullName(provider)}`}
+                          alt={`${getProviderFullName(provider)} profile`}
                             className="w-12 h-12 rounded-full object-cover"
                           />
                           <div className="ml-3">
-                            <h3 className="font-semibold text-gray-900">{getDisplayName(provider)}</h3>
+                            <h3 className="font-semibold text-gray-900">{getProviderFullName(provider)}</h3>
                             <p className="text-sm text-gray-500">{provider.email}</p>
                           </div>
                         </div>
