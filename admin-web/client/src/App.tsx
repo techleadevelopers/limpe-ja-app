@@ -19,6 +19,8 @@ import DisputeManagement from "@/pages/disputes/dispute-management";
 import PaymentManagement from "@/pages/payments/payment-management";
 import SafetyAlerts from "@/pages/safety/safety-alerts";
 import LoginPage from "@/pages/login";
+import BookingOversight from "@/pages/bookings/booking-oversight";
+import LiveTracking from "@/pages/live-tracking";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Skeleton } from "./components/ui/skeleton";
 import { AnimatePresence, motion } from "framer-motion";
@@ -122,6 +124,16 @@ function AppRouter() {
           <Route path="/provider-map">
             <PrivateRoute>
               <ProviderMap />
+            </PrivateRoute>
+          </Route>
+          <Route path="/booking-oversight">
+            <PrivateRoute>
+              <BookingOversight />
+            </PrivateRoute>
+          </Route>
+          <Route path="/live-tracking">
+            <PrivateRoute>
+              <LiveTracking />
             </PrivateRoute>
           </Route>
           <Route path="/settings">
