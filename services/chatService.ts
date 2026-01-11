@@ -5,6 +5,7 @@ const console = createLocalConsole();
 
 // Importa as tipagens necessárias do seu diretório de tipos de backend
 import {
+  BookingConversationDetails,
   ChatDetails,
   GetMessagesQuery,
   Message,
@@ -65,7 +66,28 @@ export async function getChatMessages(chatId: string, query?: GetMessagesQuery):
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar mensagens do chat:', error.response?.data || error.message);
-    throw new Error(error.response?.data?.message || 'Não foi possível carregar as mensagens do chat.');
+    throw new Error(error.response?.data?.message || 'N�o foi poss�vel carregar as mensagens do chat.');
+  }
+}
+
+export async function getOrCreateConversationForBooking(
+  bookingId: string,
+): Promise<BookingConversationDetails> {
+  try {
+    const response = await api.post<BookingConversationDetails>(
+      '/chat/conversations/get-or-create',
+      { bookingId },
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error(
+      'Erro ao iniciar conversação com base no agendamento:',
+      error.response?.data || error.message,
+    );
+    throw new Error(
+      error.response?.data?.message ||
+        'Não foi possível iniciar o chat com o prestador.',
+    );
   }
 }
 
