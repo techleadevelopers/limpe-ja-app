@@ -22,11 +22,17 @@ import Colors from '../../../constants/Colors';
 import { PROVIDER_ROUTES } from '../../../constants/routes';
 import NotificationUIService from '../../../services/notificationUIService';
 import { formatDate } from '../../../utils/helpers';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 
 // --- Importações de SERVIÇOS e TIPAGENS REAIS do BACKEND ---
 import { getBookingsForUser, updateBookingStatus } from '../../../services/bookingService';
-import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
+import { BookingDetails, BookingStatus, UpdateBookingStatusDto } from '../../../types/backend/bookings';
 // -------------------------------------------------------------
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 // ===== Ícones 3D injetados (sem alterar layout) =====
 const Icons3D = {
@@ -43,6 +49,16 @@ function useTheme() {
   const theme = (Colors as any)[scheme] || (Colors as any).light;
   return theme as typeof Colors.light;
 }
+
+const SERVICE_TIMEZONE = 'America/Sao_Paulo';
+
+const getScheduledTimestamp = (booking: BookingDetails) => {
+  const date = booking.scheduledDate;
+  if (!date) return 0;
+  const timePortion = booking.scheduledTime?.trim() ?? '00:00:00';
+  const candidate = dayjs.utc(`${date}T${timePortion}`).tz(SERVICE_TIMEZONE);
+  return candidate.isValid() ? candidate.valueOf() : 0;
+};
 
 // Novo card “completo” — com Aceitar/Rejeitar embutidos e badge movido para fora (absolute no topo)
 const BookingCardWithActions: React.FC<{
@@ -79,13 +95,13 @@ const BookingCardWithActions: React.FC<{
         return { text: '#F57C00', background: 'rgba(255, 152, 0, 0.1)', icon: 'clock-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Pendente' };
       case BookingStatus.CONFIRMED:
         return { text: '#2E7D32', background: 'rgba(46, 125, 50, 0.1)', icon: 'check-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Confirmado' };
-      case BookingStatus.COMPLETED:
+      case BookingStatus.FINISHED:
         return { text: '#546E7A', background: '#ECEFF1', icon: 'check-all' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Concluído' };
       case BookingStatus.CANCELLED:
         return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Cancelado' };
       case BookingStatus.REJECTED:
         return { text: '#757575', background: '#F5F5F5', icon: 'minus-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Recusado' };
-      case BookingStatus.IN_PROGRESS:
+      case BookingStatus.STARTED:
         return { text: '#007AFF', background: '#E3F2FD', icon: 'sync-circle-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Em andamento' };
       default:
         return { text: '#546E7A', background: '#ECEFF1', icon: 'information-outline' as keyof typeof MaterialCommunityIcons.glyphMap, display: 'Desconhecido' };
@@ -98,7 +114,8 @@ const BookingCardWithActions: React.FC<{
     try {
       setIsUpdating(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await updateBookingStatus(item.id, { status } as any);
+      const payload: UpdateBookingStatusDto = { status };
+      await updateBookingStatus(item.id, payload);
       onUpdate?.();
     } catch {
       NotificationUIService.showError('Falha ao atualizar o serviço.', 'Erro');
@@ -248,9 +265,12 @@ export default function ProviderServicesScreen() {
   const headerAnim = useRef(new Animated.Value(0)).current;
   const filterAnim = useRef(new Animated.Value(0)).current;
   const contentAnim = useRef(new Animated.Value(0)).current;
+  const loadServicesInFlightRef = useRef(false);
 
   // Mover a declaração de loadServices para antes do useEffect que a chama
   const loadServices = useCallback(async (currentFilter: typeof filter, refreshing: boolean = false) => {
+    if (loadServicesInFlightRef.current) return;
+    loadServicesInFlightRef.current = true;
     if (!refreshing) setIsLoading(true);
     Animated.timing(contentAnim, {
       toValue: 0,
@@ -259,15 +279,6 @@ export default function ProviderServicesScreen() {
     }).start(async () => {
       try {
         let data: BookingDetails[] = [];
-        const getScheduledTimestamp = (booking: BookingDetails) => {
-          const candidate = booking.scheduledTime
-            ? new Date(booking.scheduledTime)
-            : booking.scheduledDate
-              ? new Date(`${booking.scheduledDate}T00:00:00`)
-              : new Date();
-          const time = candidate.getTime();
-          return Number.isNaN(time) ? 0 : time;
-        };
 
         switch (currentFilter) {
           case 'requests':
@@ -275,17 +286,19 @@ export default function ProviderServicesScreen() {
             break;
           case 'upcoming': {
             const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
-            const now = new Date();
+            const now = dayjs().tz(SERVICE_TIMEZONE).valueOf();
             data = confirmedBookings
-              .filter((s) => getScheduledTimestamp(s) >= now.getTime())
+              .filter((s) => getScheduledTimestamp(s) >= now)
               .sort((a, b) => getScheduledTimestamp(a) - getScheduledTimestamp(b));
             break;
           }
           case 'completed':
-            const completed = await getBookingsForUser(BookingStatus.COMPLETED);
+            const completed = await getBookingsForUser(BookingStatus.FINISHED);
             const cancelled = await getBookingsForUser(BookingStatus.CANCELLED);
             const rejected = await getBookingsForUser(BookingStatus.REJECTED);
-            data = [...completed, ...cancelled, ...rejected].sort((a, b) => getScheduledTimestamp(b) - getScheduledTimestamp(a));
+            data = [...completed, ...cancelled, ...rejected].sort(
+              (a, b) => getScheduledTimestamp(b) - getScheduledTimestamp(a)
+            );
             break;
           default:
             data = [];
@@ -299,6 +312,7 @@ export default function ProviderServicesScreen() {
         toastUserError(err, 'Erro ao carregar serviços');
         setToastMessage({ message: "Erro ao carregar serviços.", type: "error" });
       } finally {
+        loadServicesInFlightRef.current = false;
         setIsLoading(false);
         setIsRefreshing(false);
         Animated.timing(contentAnim, {
