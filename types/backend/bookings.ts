@@ -4,6 +4,7 @@
 import { ProviderDisplayInfo } from './providers';
 import { Service } from './services';
 import { CreateAddressDto } from './auth';
+import { PaymentIntentStatus } from './payments';
 
 /**
  * @enum BookingStatus
@@ -12,15 +13,19 @@ import { CreateAddressDto } from './auth';
  */
 export enum BookingStatus {
   PENDING = 'PENDING',
+  PENDING_PAYMENT = 'PENDING_PAYMENT',
+  PENDING_PROVIDER_CONFIRMATION = 'PENDING_PROVIDER_CONFIRMATION',
   CONFIRMED = 'CONFIRMED',
-  COMPLETED = 'COMPLETED',
+  ON_THE_WAY = 'ON_THE_WAY',
+  ARRIVED = 'ARRIVED',
+  STARTED = 'STARTED',
+  FINISHED = 'FINISHED',
+  EXPIRED = 'EXPIRED',
   CANCELLED = 'CANCELLED',
   PENDING_DISPUTE = 'PENDING_DISPUTE',
   RESCHEDULED = 'RESCHEDULED',
-  IN_PROGRESS = 'IN_PROGRESS',
   REJECTED = 'REJECTED',
   NO_SHOW = 'NO_SHOW',
-  PENDING_PROVIDER_CONFIRMATION = 'PENDING_PROVIDER_CONFIRMATION', // Adicionado
 }
 
 export type BookingAction =
@@ -90,6 +95,8 @@ export interface BookingDetails {
   scheduledEndTime?: string;
   scheduledStart?: string;
   startedAt?: string | null;
+  actualStartTime?: string | null;
+  acceptedAt?: string | Date | null;
   completedAt?: string | null;
   durationMinutes?: number | null;
 
@@ -97,6 +104,7 @@ export interface BookingDetails {
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
+  paymentStatus?: string | PaymentIntentStatus | null;
 
   allowedActions?: BookingAction[];
 
