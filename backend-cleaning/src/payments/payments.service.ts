@@ -1169,7 +1169,10 @@ export class PaymentsService {
       throw new ForbiddenException('Você não pode pagar por este booking.');
     if (booking.providerId !== providerId)
       throw new BadRequestException('Booking não pertence a este provider.');
-    if (booking.status !== BookingStatus.PENDING) {
+    if (
+      booking.status !== BookingStatus.PENDING &&
+      booking.status !== BookingStatus.PENDING_PAYMENT
+    ) {
       throw new BadRequestException(
         'Booking não está pendente para pagamento.',
       );
