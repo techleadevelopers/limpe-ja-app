@@ -1,16 +1,41 @@
 import axios, { AxiosError, AxiosRequestConfig, Method } from "axios";
 
 import {
-    Activity, AuthResponse, DashboardMetrics, Provider, VerificationStatus,
+    Activity, AuthResponse, AuthUser,
+    Availability, Booking,
+    BookingStatus,
+    ClaimStatus,
+    Client,
+    Coupon,
+    CouponStatus,
+    DashboardMetrics,
+    DataRequest, DetailedRatingBreakdown,
+    Dispute, DisputeMessage,
+    DisputeStatus,
+    FAQItem,
+    GuaranteeClaim,
+    Incident,
+    IncidentStatus,
+    Mission, MissionStatus,
+    Offer,
+    PanicAlert,
+    PricingRule,
+    Provider,
+    ProviderService,
+    QueueInfo, QueueJob,
+    Referral,
+    ReferralStatus,
     RevenueTrendPoint,
-    Client, Address, Service, ProviderService, Availability, Booking,
-    Transaction, WithdrawalRequest, Dispute, DisputeMessage, Subscription,
-    Coupon, GuaranteeClaim, PricingRule, PanicAlert, Incident, UserConsent,
-    DataRequest, DetailedRatingBreakdown, SmartSuggestion, QueueInfo, QueueJob,
-    BookingStatus, TransactionType, DisputeStatus, ClaimStatus, CouponType, CouponTarget, CouponStatus,
-    SubscriptionStatus, SubscriptionFrequency, IncidentType, IncidentStatus, PricingType,
-    Review, Offer, Referral, FAQItem, Mission, MissionStatus, MissionTargetAudience,
-    ReferralStatus
+    Review,
+    Service,
+    SmartSuggestion,
+    Subscription,
+    SubscriptionStatus,
+    Transaction,
+    TransactionType,
+    UserConsent,
+    VerificationStatus,
+    WithdrawalRequest
 } from "./types";
 
 // --- Admin Settings (SLAs) ---
@@ -21,6 +46,7 @@ export type SlaAuditEvent = { id: string; at: string; actorUserId: string; befor
 export type GeneralSettings = { commissionRatePercent: number };
 export type GeneralAuditEvent = { id: string; at: string; actorUserId: string; before: GeneralSettings; after: GeneralSettings };
 export type PricingAuditEvent = { id: string; at: string; actorUserId: string; action: 'create'|'update'|'delete'; ruleBefore?: any; ruleAfter?: any };
+type ExtendedBookingStatus = BookingStatus | "STARTED" | "FINISHED";
 
 type UnauthorizedHandler = (context: { originalRequest: AdminAxiosRequestConfig }) => Promise<void> | void;
 
@@ -29,18 +55,31 @@ interface AdminAxiosRequestConfig extends AxiosRequestConfig {
     __tries?: number;
 }
 
+const RAILWAY_API_BASE_URL = "https://limpeja-backend-production-edfa.up.railway.app";
+
 const resolveBaseUrl = (): string => {
     const maybeWindow = (globalThis as any)?.window as any;
     const injectedUrl = maybeWindow?.__APP_CONFIG__?.backendApiUrl
         || maybeWindow?.__CONFIG__?.backendApiUrl
         || maybeWindow?.__RUNTIME_CONFIG__?.backendApiUrl;
 
-    const envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_ADMIN_API_BASE_URL || injectedUrl;
-    return (envUrl?.trim()?.replace(/\/$/, "")) || "https://limpeja-backend-production-edfa.up.railway.app";
+    const envUrl = (
+        import.meta.env.VITE_APP_API_URL ||
+        import.meta.env.VITE_API_BASE_URL ||
+        import.meta.env.VITE_ADMIN_API_BASE_URL ||
+        injectedUrl
+    )?.trim()?.replace(/\/$/, "");
+    if (envUrl && envUrl !== RAILWAY_API_BASE_URL) {
+        console.warn(`[API] Ignoring overridden base URL "${envUrl}" and enforcing ${RAILWAY_API_BASE_URL}.`);
+    }
+    if (envUrl?.includes("localhost")) {
+        console.warn(`[API] Detected localhost override ("${envUrl}") but routing will stay on Railway (${RAILWAY_API_BASE_URL}).`);
+    }
+    return RAILWAY_API_BASE_URL;
 };
 
 const API_BASE_URL = resolveBaseUrl();
-const DEFAULT_TIMEOUT_MS = import.meta.env.DEV ? 30000 : 12000;
+const DEFAULT_TIMEOUT_MS = 30000;
 
 let onUnauthorizedCallback: UnauthorizedHandler | null = null;
 export const setUnauthorizedHandler = (callback?: UnauthorizedHandler) => {
@@ -57,7 +96,13 @@ const apiClient = axios.create({
 });
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-const shouldRetry = (error: AxiosError) => !error.response || error.response.status >= 500;
+const shouldRetry = (error: AxiosError) => {
+    const status = error.response?.status;
+    if (status === 401 || status === 429) {
+        return false;
+    }
+    return !status || status >= 500;
+};
 const IDEMP_PATHS = [
     "/auth/login",
     "/bookings",
@@ -79,6 +124,68 @@ const randomId = () => {
         // ignore
     }
     return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const normalizeString = (value?: string | null): string => {
+    return value?.trim() ?? "";
+};
+
+const deriveFullName = (...values: Array<string | undefined | null>): string => {
+    for (const value of values) {
+        const normalized = normalizeString(value);
+        if (normalized) {
+            return normalized;
+        }
+    }
+    return "";
+};
+
+const mapProviderPayload = (payload: any): Provider => {
+    const candidateFullName = deriveFullName(
+        payload?.fullName,
+        payload?.full_name,
+        payload?.name
+    );
+    return {
+        ...payload,
+        fullName: candidateFullName || payload?.name || "",
+    };
+};
+
+const mapAuthUserPayload = (payload: any): AuthUser => {
+    return {
+        id: payload?.id ?? "",
+        email: payload?.email ?? "",
+        role: payload?.role ?? "ADMIN",
+        fullName: deriveFullName(
+            payload?.fullName,
+            payload?.full_name,
+            payload?.name,
+            payload?.email
+        ),
+        name: payload?.name,
+    };
+};
+
+const mapTransactionPayload = (payload: any): Transaction => {
+    return {
+        ...payload,
+        fullName: deriveFullName(
+            payload?.fullName,
+            payload?.full_name,
+            payload?.providerFullName,
+            payload?.userFullName,
+            payload?.counterparty?.fullName,
+            payload?.counterparty?.full_name
+        ),
+    };
+};
+
+const mapWithdrawalRequestPayload = (payload: any): WithdrawalRequest => {
+    return {
+        ...payload,
+        provider: payload?.provider ? mapProviderPayload(payload.provider) : undefined,
+    };
 };
 
 apiClient.interceptors.request.use(config => {
@@ -107,7 +214,7 @@ const shouldDedupe = (key: string) => {
     const now = Date.now();
     const last = errorBucket.get(key) ?? 0;
     errorBucket.set(key, now);
-    return now - last < 30000;
+    return now - last < 5000;
 };
 
 const buildUnifiedError = (error: AxiosError) => {
@@ -190,11 +297,14 @@ export const fetchApi = async <T>(path: string, options: RequestInit = {}): Prom
 };
 // --- FunÃ§Ãµes de AutenticaÃ§Ã£o ---
 export const login = async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
-    const response = await fetchApi<AuthResponse>('/auth/login', {
+    const response = await fetchApi<any>('/auth/login', {
         method: 'POST',
         body: JSON.stringify(credentials),
     });
-    return response;
+    return {
+        ...response,
+        user: mapAuthUserPayload(response?.user ?? {}),
+    };
 };
 
 export const logout = async (): Promise<void> => {
@@ -214,11 +324,13 @@ export const fetchRevenueTrend = async (months?: number): Promise<RevenueTrendPo
 
 // --- FunÃ§Ãµes de Provedores ---
 export const fetchProviders = async (): Promise<Provider[]> => {
-    return fetchApi('/providers');
+    const response = await fetchApi<any[]>('/providers');
+    return (response ?? []).map(mapProviderPayload);
 };
 
 export const fetchProviderById = async (id: string): Promise<Provider> => {
-    return fetchApi(`/providers/${id}`);
+    const response = await fetchApi<any>(`/providers/${id}`);
+    return mapProviderPayload(response);
 };
 
 /**
@@ -230,17 +342,19 @@ export const updateProviderStatus = async (
     status: VerificationStatus,
     rejectionReason?: string
 ): Promise<Provider> => {
-    return fetchApi(`/verification/${id}/status`, {
+    const response = await fetchApi<any>(`/verification/${id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status: status, rejectionReason }),
     });
+    return mapProviderPayload(response);
 };
 
 export const updateProviderProfile = async (id: string, data: Partial<Provider>): Promise<Provider> => {
-    return fetchApi(`/providers/${id}`, {
+    const response = await fetchApi<any>(`/providers/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
     });
+    return mapProviderPayload(response);
 };
 
 // Excluir provedor (conta do prestador)
@@ -252,7 +366,8 @@ export const deleteProvider = async (id: string): Promise<void> => {
 
 // --- FunÃ§Ãµes de Fila de VerificaÃ§Ã£o ---
 export const fetchVerificationQueue = async (): Promise<Provider[]> => {
-    return fetchApi('/verification/pending-queue');
+    const response = await fetchApi<any[]>('/verification/pending-queue');
+    return (response ?? []).map(mapProviderPayload);
 };
 
 // --- FunÃ§Ãµes de Atividades Recentes ---
@@ -300,10 +415,20 @@ const mapUserProfileToClient = (user: any): Client => {
     const client = user?.clientDetails ?? user?.client ?? {};
     const addr = client?.address ?? null;
     const bookingsCount = client?._count?.bookings ?? client?.bookings?.length ?? user?.completedBookingsCount ?? 0;
+    const formattedFullName = (deriveFullName(
+        client?.fullName,
+        client?.full_name,
+        client?.name,
+        user?.fullName,
+        user?.full_name,
+        user?.name,
+        user?.email
+    ) || user?.email) ?? "";
     return {
         id: client?.id ?? user?.id ?? "",
         userId: client?.userId ?? user?.id ?? "",
-        name: client?.fullName ?? user?.fullName ?? user?.email ?? "",
+        name: formattedFullName,
+        fullName: formattedFullName,
         email: user?.email ?? "",
         role: user?.role,
         avatarUrl: client?.avatarUrl ?? user?.avatarUrl ?? null,
@@ -418,7 +543,7 @@ export const fetchBookingDetails = async (id: string): Promise<Booking> => {
     return fetchApi(`/bookings/${id}`);
 };
 
-export const updateBookingStatus = async (id: string, status: BookingStatus, notes?: string): Promise<Booking> => {
+export const updateBookingStatus = async (id: string, status: ExtendedBookingStatus, notes?: string): Promise<Booking> => {
     return fetchApi(`/bookings/${id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status, notes }),
@@ -542,33 +667,38 @@ export const fetchAllTransactions = async (type?: TransactionType, status?: stri
     if (type) queryParams.append('type', type);
     if (status) queryParams.append('status', status);
     const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return fetchApi(`/payments/transactions${query}`);
+    const response = await fetchApi<any[]>(`/payments/transactions${query}`);
+    return (response ?? []).map(mapTransactionPayload);
 };
 
 export const initiateRefund = async (transactionId: string, amount?: number): Promise<Transaction> => {
-    return fetchApi(`/payments/${transactionId}/refund`, {
+    const response = await fetchApi<any>(`/payments/${transactionId}/refund`, {
         method: 'POST',
         body: JSON.stringify({ amount }),
     });
+    return mapTransactionPayload(response);
 };
 
 // --- FunÃ§Ãµes de Saques de Provedores ---
 export const fetchWithdrawalRequests = async (status?: 'PENDING' | 'APPROVED' | 'REJECTED'): Promise<WithdrawalRequest[]> => {
     const query = status ? `?status=${status}` : '';
-    return fetchApi(`/payments/withdrawals${query}`);
+    const response = await fetchApi<any>(`/payments/withdrawals${query}`);
+    return (response ?? []).map(mapWithdrawalRequestPayload);
 };
 
 export const approveWithdrawal = async (id: string): Promise<WithdrawalRequest> => {
-    return fetchApi(`/payments/withdrawals/${id}/approve`, {
+    const response = await fetchApi<any>(`/payments/withdrawals/${id}/approve`, {
         method: 'PATCH',
     });
+    return mapWithdrawalRequestPayload(response);
 };
 
 export const rejectWithdrawal = async (id: string, reason?: string): Promise<WithdrawalRequest> => {
-    return fetchApi(`/payments/withdrawals/${id}/reject`, {
+    const response = await fetchApi<any>(`/payments/withdrawals/${id}/reject`, {
         method: 'PATCH',
         body: JSON.stringify({ reason }),
     });
+    return mapWithdrawalRequestPayload(response);
 };
 
 // --- FunÃ§Ãµes de Chat (Monitoramento) ---
