@@ -518,10 +518,10 @@ export default function ExploreClientScreen() {
     tasks.push(
       runAndTrack<BookingDetails[]>(
         'pending review',
-        () => getBookingsForUser(BookingStatus.COMPLETED),
+        () => getBookingsForUser(BookingStatus.FINISHED),
         async (bookings) => {
           const candidates = bookings.filter(
-            (b) => !b.isReviewed && !b.reviewId && b.status === BookingStatus.COMPLETED,
+            (b) => !b.isReviewed && !b.reviewId && b.status === BookingStatus.FINISHED,
           );
 
           for (const b of candidates) {
