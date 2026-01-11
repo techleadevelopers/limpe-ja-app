@@ -46,7 +46,7 @@ function getStatusText(status: string) {
   }
 }
 
-const getDisplayName = (provider?: Provider | null) =>
+const getProviderFullName = (provider?: Provider | null) =>
   provider?.fullName || provider?.name || "Sem nome";
 
 export default function VerificationQueueWidget() {
@@ -108,11 +108,11 @@ export default function VerificationQueueWidget() {
                   <div className="flex items-center">
                     <img 
                       src={`https://images.unsplash.com/photo-150720939${Math.floor(Math.random() * 10)}?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100`}
-                      alt={`${getDisplayName(provider)} profile`}
+                      alt={`${getProviderFullName(provider)} profile`}
                       className="w-10 h-10 rounded-full object-cover"
                     />
                     <div className="ml-3 flex-1">
-                      <p className="text-sm font-medium text-gray-900">{getDisplayName(provider)}</p>
+                      <p className="text-sm font-medium text-gray-900">{getProviderFullName(provider)}</p>
                       <p className="text-xs text-gray-500">{getStatusText(provider.verificationStatus || "")}</p>
                     </div>
                     <div className="text-right">
