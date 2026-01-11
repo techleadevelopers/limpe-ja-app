@@ -7,12 +7,14 @@ import { ChatGateway } from './gateway/chat.gateway';
 import { AuthModule } from '../auth/auth.module'; // Importe AuthModule
 import { CacheModule } from '../cache/cache.module';
 import { ChatRateLimitService } from './chat-rate-limit.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     PrismaModule,
     AuthModule, // <--- Certifique-se de que AuthModule está importado aqui
     CacheModule,
+    NotificationsModule,
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway, ChatRateLimitService],
