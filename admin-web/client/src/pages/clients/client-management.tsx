@@ -96,7 +96,7 @@ const ClientDetailsModal = ({ isOpen, onClose, clientId }: ClientDetailsModalPro
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Detalhes do Cliente: {client?.name}</DialogTitle>
+          <DialogTitle>Detalhes do Cliente: {client?.fullName || client?.name}</DialogTitle>
         </DialogHeader>
         {isLoading ? (
           <div className="text-center py-8">Carregando detalhes do cliente...</div>
@@ -261,7 +261,8 @@ export default function ClientManagement() {
                     <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                       <Users className="text-blue-600" size={20} />
                     </div>
-                  </CardContent>
+                  </div>
+                </CardContent>
                 </Card>
               </motion.div>
 
