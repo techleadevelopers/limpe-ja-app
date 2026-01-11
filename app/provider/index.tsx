@@ -147,7 +147,7 @@ const DashboardHeader: React.FC<{
       <View style={headerStyles.greetingContainer}>
         <Text style={headerStyles.greetingText}>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
         <Text style={headerStyles.currentDateText}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
-      </View>
+      </ScrollView>
       <TouchableOpacity
         onPress={() => {
           onProfilePress();
@@ -528,7 +528,11 @@ const ShortcutsGrid: React.FC<{
       }
     ]}>
       <Text style={[quickActionStyles.sectionTitle, { display: 'flex' }]}>Atalhos do Dia</Text>
-      <View style={[quickActionStyles.grid, { display: 'flex' }]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={quickActionStyles.scrollRow}
+      >
         <Item icon="calendar-outline" label="Minha Agenda" anim={a1} onPress={onManageAvailability} />
         <Item icon="file-tray-outline" label="Solicitações" anim={a2} onPress={onOpenRequests} />
         <Item icon="calendar-outline" label="Próximos" anim={a3} onPress={onOpenUpcoming} />
