@@ -14,6 +14,8 @@ import {
   Handshake,
   DollarSign,
   LifeBuoy,
+  CalendarClock,
+  Radar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -70,7 +72,14 @@ export default function Sidebar() {
   ];
 
   const ops: NavItem[] = [
+    {
+      path: "/booking-oversight",
+      icon: CalendarClock,
+      label: "Gestão de Agendamentos",
+      isActive: location === "/booking-oversight",
+    },
     { path: "/dispute-management", icon: Handshake, label: "Gestão de Disputas", badge: pendingDisputesData?.count || 0, isActive: location === "/dispute-management" },
+    { path: "/live-tracking", icon: Radar, label: "Live Tracking", isActive: location === "/live-tracking" },
     { path: "/payment-management", icon: DollarSign, label: "Gestão de Pagamentos", isActive: location === "/payment-management" },
     { path: "/safety-alerts", icon: LifeBuoy, label: "Alertas de Segurança", badge: pendingSafetyAlertsData?.count || 0, isActive: location === "/safety-alerts" },
   ];
@@ -191,4 +200,3 @@ export default function Sidebar() {
     </div>
   );
 }
-
