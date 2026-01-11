@@ -8,16 +8,19 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  Booking,
   Message,
-  Prisma,
   Chat,
   BookingStatus,
   PolicyEnforcement,
   PolicySource,
+  UserRole,
+  Prisma,
 } from '@prisma/client';
 import { Message as MessageEntity } from './entities/message.entity';
 import { ChatDetailsDto } from './dto/chat-details.dto';
 import { ContactLeakPolicyService } from '../common/services/contact-leak-policy.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface ConversationItem {
   id: string;
@@ -29,6 +32,31 @@ export interface ConversationItem {
   unreadCount: number;
 }
 
+export interface ConversationForBookingPayload {
+  chatId: string;
+  bookingId: string;
+  providerId: string;
+  providerUserId: string;
+  providerFullName: string;
+  providerAvatarUrl?: string | null;
+  clientUserId: string;
+}
+
+const CHAT_ACTIVE_STATUSES: BookingStatus[] = [
+  BookingStatus.CONFIRMED,
+  BookingStatus.ON_THE_WAY,
+  BookingStatus.ARRIVED,
+  BookingStatus.STARTED,
+];
+
+const CHAT_FINAL_STATUSES: BookingStatus[] = [
+  BookingStatus.FINISHED,
+  BookingStatus.CANCELED,
+  BookingStatus.EXPIRED,
+  BookingStatus.REJECTED,
+  BookingStatus.NO_SHOW,
+];
+
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
@@ -36,7 +64,40 @@ export class ChatService {
   constructor(
     private prisma: PrismaService,
     private contactLeakPolicyService: ContactLeakPolicyService,
+    private notificationsService: NotificationsService,
   ) {}
+
+  private async findBookingForChat(
+    clientProfileId: string,
+    providerProfileId: string,
+  ): Promise<{
+    activeBooking: Booking | null;
+    finalizedBooking: Booking | null;
+  }> {
+    const activeBooking = await this.prisma.booking.findFirst({
+      where: {
+        clientId: clientProfileId,
+        providerId: providerProfileId,
+        status: { in: CHAT_ACTIVE_STATUSES },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (activeBooking) {
+      return { activeBooking, finalizedBooking: null };
+    }
+
+    const finalizedBooking = await this.prisma.booking.findFirst({
+      where: {
+        clientId: clientProfileId,
+        providerId: providerProfileId,
+        status: { in: CHAT_FINAL_STATUSES },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    return { activeBooking: null, finalizedBooking };
+  }
 
   async findOrCreateChat(
     clientId: string,
@@ -78,6 +139,73 @@ export class ChatService {
     }
 
     return new ChatDetailsDto(chat.id);
+  }
+
+  async getOrCreateConversationForBooking(
+    bookingId: string,
+    requesterUserId: string,
+    requesterRole: UserRole,
+  ): Promise<ConversationForBookingPayload> {
+    this.logger.log(
+      `[ChatService] getOrCreateConversationForBooking: bookingId=${bookingId} requester=${requesterUserId}`,
+    );
+
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        client: { select: { userId: true } },
+        provider: { include: { user: true } },
+      },
+    });
+
+    if (!booking) {
+      this.logger.warn(
+        `[ChatService] getOrCreateConversationForBooking: booking ${bookingId} not found.`,
+      );
+      throw new NotFoundException('Agendamento não encontrado.');
+    }
+
+    const clientUserId = booking.client?.userId;
+    const providerUserId = booking.provider?.userId;
+
+    if (!clientUserId || !providerUserId) {
+      throw new BadRequestException('Dados do cliente ou provedor incompletos.');
+    }
+
+    const isClient =
+      requesterRole === UserRole.CLIENT && requesterUserId === clientUserId;
+    const isProvider =
+      requesterRole === UserRole.PROVIDER && requesterUserId === providerUserId;
+
+    if (!isClient && !isProvider && requesterRole !== UserRole.ADMIN) {
+      this.logger.warn(
+        `[ChatService] getOrCreateConversationForBooking: requester ${requesterUserId} with role ${requesterRole} not allowed for booking ${bookingId}.`,
+      );
+      throw new ForbiddenException('Você não pode acessar este chat.');
+    }
+
+    if (!CHAT_ACTIVE_STATUSES.includes(booking.status)) {
+      const reason =
+        CHAT_FINAL_STATUSES.includes(booking.status)
+          ? 'O chat está encerrado porque o agendamento foi concluído, cancelado ou expirado.'
+          : 'O chat só está disponível para agendamentos confirmados ou em andamento.';
+      this.logger.warn(
+        `[ChatService] getOrCreateConversationForBooking: booking ${bookingId} status ${booking.status} not eligible.`,
+      );
+      throw new ForbiddenException(reason);
+    }
+
+    const chatDetails = await this.findOrCreateChat(clientUserId, providerUserId);
+
+    return {
+      chatId: chatDetails.chatId,
+      bookingId,
+      providerId: booking.providerId,
+      providerUserId,
+      providerFullName: booking.provider?.fullName ?? 'Prestador',
+      providerAvatarUrl: booking.provider?.user?.avatarUrl ?? null,
+      clientUserId,
+    };
   }
 
   async createMessage(
@@ -158,12 +286,12 @@ export class ChatService {
       where: { userId: clientUserId },
       select: { id: true },
     });
-    const providerProfile = await this.prisma.provider.findUnique({
+    const providerProfileForBooking = await this.prisma.provider.findUnique({
       where: { userId: providerUserId },
       select: { id: true },
     });
 
-    if (!clientProfile || !providerProfile) {
+    if (!clientProfile || !providerProfileForBooking) {
       this.logger.error(
         `[ChatService] createMessage: Não foi possível encontrar perfis de cliente ou provedor para os IDs de usuário fornecidos.`,
       );
@@ -173,44 +301,29 @@ export class ChatService {
     }
 
     const bookingClientId = clientProfile.id; // ID do perfil do cliente
-    const bookingProviderId = providerProfile.id; // ID do perfil do provedor
+    const bookingProviderId = providerProfileForBooking.id; // ID do perfil do provedor
 
     // Lógica de permissão de chat baseada no status do agendamento
-    const activeBooking = await this.prisma.booking.findFirst({
-      where: {
-        clientId: bookingClientId, // Usar o ID do perfil do cliente
-        providerId: bookingProviderId, // Usar o ID do perfil do provedor
-        status: BookingStatus.CONFIRMED,
-      },
-    });
+    const { activeBooking, finalizedBooking } = await this.findBookingForChat(
+      bookingClientId,
+      bookingProviderId,
+    );
 
     if (!activeBooking) {
-      const completedOrCanceledBooking = await this.prisma.booking.findFirst({
-        where: {
-          clientId: bookingClientId,
-          providerId: bookingProviderId,
-          OR: [
-            { status: BookingStatus.FINISHED },
-            { status: BookingStatus.CANCELED },
-          ],
-        },
-      });
-
-      if (completedOrCanceledBooking) {
+      if (finalizedBooking) {
         this.logger.warn(
-          `[ChatService] createMessage: Chat bloqueado para clientId=${bookingClientId}, providerId=${bookingProviderId} devido a agendamento ${completedOrCanceledBooking.status}.`,
+          `[ChatService] createMessage: Chat bloqueado para clientId=${bookingClientId}, providerId=${bookingProviderId} devido a agendamento ${finalizedBooking.status}.`,
         );
         throw new ForbiddenException(
           'Não é possível enviar mensagens. O agendamento associado foi concluído ou cancelado.',
         );
-      } else {
-        this.logger.warn(
-          `[ChatService] createMessage: Chat bloqueado para clientId=${bookingClientId}, providerId=${bookingProviderId} pois não há agendamento CONFIRMED.`,
-        );
-        throw new ForbiddenException(
-          'Você só pode iniciar um chat após ter um agendamento confirmado.',
-        );
       }
+      this.logger.warn(
+        `[ChatService] createMessage: Chat bloqueado para clientId=${bookingClientId}, providerId=${bookingProviderId} pois não há agendamento CONFIRMED ou ativo.`,
+      );
+      throw new ForbiddenException(
+        'Você só pode iniciar um chat após ter um agendamento confirmado ou em andamento.',
+      );
     }
 
     const policyResult = await this.contactLeakPolicyService.evaluatePolicy({
@@ -244,6 +357,62 @@ export class ChatService {
         isRead: false,
       },
     });
+    const senderUser = await this.prisma.user.findUnique({
+      where: { id: senderId },
+      select: {
+        id: true,
+        fullName: true,
+        avatarUrl: true,
+      },
+    });
+    const providerProfile = await this.prisma.provider.findUnique({
+      where: { id: activeBooking.providerId },
+      select: {
+        fullName: true,
+        avatarUrl: true,
+        userId: true,
+      },
+    });
+    const receiverIsProvider = receiverId === providerUserId;
+    const notificationPayload = {
+      type: 'CHAT_MESSAGE',
+      chatId,
+      bookingId: activeBooking.id,
+      senderId,
+      senderFullName: senderUser?.fullName,
+      senderAvatarUrl: senderUser?.avatarUrl,
+      bookingProviderId: activeBooking.providerId,
+      bookingClientId: activeBooking.clientId,
+      providerUserId: providerProfile?.userId,
+      providerFullName: providerProfile?.fullName,
+      providerAvatarUrl: providerProfile?.avatarUrl,
+    };
+    const notificationMessage =
+      senderUser?.fullName
+        ? `${senderUser.fullName} enviou uma mensagem no chat.`
+        : 'Você recebeu uma nova mensagem.';
+    const targetUrl = receiverIsProvider
+      ? `/provider/messages/${chatId}`
+      : `/client/messages/${chatId}`;
+    this.notificationsService
+      .createNotification({
+        userId: receiverId,
+        type: 'CHAT_MESSAGE',
+        title: 'Nova mensagem',
+        message: notificationMessage,
+        payload: notificationPayload,
+        category: 'chat',
+        relatedId: activeBooking.id,
+        targetUrl,
+      })
+      .catch((err) =>
+        this.logger.error(
+          `[ChatService] Falha ao criar notificação de chat para ${receiverId}: ${
+            err instanceof Error ? err.message : err
+          }`,
+          err instanceof Error ? err.stack : undefined,
+        ),
+      );
     this.logger.log(
       `[ChatService] createMessage: Mensagem criada com sucesso (ID: ${message.id}) para chatId ${chatId}.`,
     );
@@ -308,12 +477,12 @@ export class ChatService {
       where: { userId: clientUserId },
       select: { id: true },
     });
-    const providerProfile = await this.prisma.provider.findUnique({
+    const providerProfileForBooking = await this.prisma.provider.findUnique({
       where: { userId: providerUserId },
       select: { id: true },
     });
 
-    if (!clientProfile || !providerProfile) {
+    if (!clientProfile || !providerProfileForBooking) {
       this.logger.error(
         `[ChatService] getMessagesByChatId: Não foi possível encontrar perfis de cliente ou provedor para os IDs de usuário fornecidos.`,
       );
@@ -323,43 +492,28 @@ export class ChatService {
     }
 
     const bookingClientId = clientProfile.id; // ID do perfil do cliente
-    const bookingProviderId = providerProfile.id; // ID do perfil do provedor
+    const bookingProviderId = providerProfileForBooking.id; // ID do perfil do provedor
 
-    const activeBooking = await this.prisma.booking.findFirst({
-      where: {
-        clientId: bookingClientId, // Usar o ID do perfil do cliente
-        providerId: bookingProviderId, // Usar o ID do perfil do provedor
-        status: BookingStatus.CONFIRMED,
-      },
-    });
+    const { activeBooking, finalizedBooking } = await this.findBookingForChat(
+      bookingClientId,
+      bookingProviderId,
+    );
 
     if (!activeBooking) {
-      const completedOrCanceledBooking = await this.prisma.booking.findFirst({
-        where: {
-          clientId: bookingClientId,
-          providerId: bookingProviderId,
-          OR: [
-            { status: BookingStatus.FINISHED },
-            { status: BookingStatus.CANCELED },
-          ],
-        },
-      });
-
-      if (completedOrCanceledBooking) {
+      if (finalizedBooking) {
         this.logger.warn(
-          `[ChatService] getMessagesByChatId: Acesso ao chat bloqueado para clientId=${bookingClientId}, providerId=${bookingProviderId} devido a agendamento ${completedOrCanceledBooking.status}.`,
+          `[ChatService] getMessagesByChatId: Acesso ao chat bloqueado para clientId=${bookingClientId}, providerId=${bookingProviderId} devido a agendamento ${finalizedBooking.status}.`,
         );
         throw new ForbiddenException(
           'Não é possível acessar esta conversa. O agendamento associado foi concluído ou cancelado.',
         );
-      } else {
-        this.logger.warn(
-          `[ChatService] getMessagesByChatId: Acesso ao chat bloqueado para clientId=${bookingClientId}, providerId=${bookingProviderId} pois não há agendamento CONFIRMED.`,
-        );
-        throw new ForbiddenException(
-          'Você só pode acessar este chat após ter um agendamento confirmado.',
-        );
       }
+      this.logger.warn(
+        `[ChatService] getMessagesByChatId: Acesso ao chat bloqueado para clientId=${bookingClientId}, providerId=${bookingProviderId} pois não há agendamento CONFIRMED ou ativo.`,
+      );
+      throw new ForbiddenException(
+        'Você só pode acessar este chat após ter um agendamento confirmado ou em andamento.',
+      );
     }
 
     const messages = await this.prisma.message.findMany({
