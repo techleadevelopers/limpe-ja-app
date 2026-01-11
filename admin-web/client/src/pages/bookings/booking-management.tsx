@@ -21,11 +21,11 @@ const getStatusBadgeClass = (status: BookingStatus) => {
   switch (status) {
     case BookingStatus.PENDING: return "bg-yellow-100 text-yellow-700";
     case BookingStatus.CONFIRMED: return "bg-blue-100 text-blue-700";
-    case BookingStatus.COMPLETED: return "bg-green-100 text-green-700";
+    case BookingStatus.FINISHED: return "bg-green-100 text-green-700";
     case BookingStatus.CANCELED: return "bg-red-100 text-red-700";
     case BookingStatus.PENDING_DISPUTE: return "bg-orange-100 text-orange-700";
     case BookingStatus.RESCHEDULED: return "bg-purple-100 text-purple-700";
-    case BookingStatus.IN_PROGRESS: return "bg-indigo-100 text-indigo-700";
+    case BookingStatus.STARTED: return "bg-indigo-100 text-indigo-700";
     case BookingStatus.PENDING_PROVIDER_CONFIRMATION: return "bg-gray-100 text-gray-700";
     case BookingStatus.REJECTED: return "bg-red-200 text-red-800";
     case BookingStatus.NO_SHOW: return "bg-red-300 text-red-900";
@@ -100,11 +100,11 @@ const BookingDetailsModal = ({ isOpen, onClose, bookingId }: BookingDetailsModal
               </div>
               <div>
                 <p className="text-sm text-gray-500">Cliente</p>
-                <p className="font-medium">{booking.client?.name || 'N/A'} (ID: {booking.clientId.substring(0, 8)}...)</p>
+                <p className="font-medium">{booking.client?.fullName || booking.client?.name || 'N/A'} (ID: {booking.clientId.substring(0, 8)}...)</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Provedor</p>
-                <p className="font-medium">{booking.provider?.name || 'N/A'} (ID: {booking.providerId.substring(0, 8)}...)</p>
+                <p className="font-medium">{booking.provider?.fullName || booking.provider?.name || 'N/A'} (ID: {booking.providerId.substring(0, 8)}...)</p>
               </div>
               <div className="col-span-2">
                 <p className="text-sm text-gray-500">Serviço</p>
@@ -225,8 +225,8 @@ export default function BookingManagement() {
 
   const filteredBookings = bookings?.filter(booking => {
     const matchesSearch = booking.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          booking.client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          booking.provider?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (booking.client?.fullName ?? booking.client?.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (booking.provider?.fullName ?? booking.provider?.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
                           booking.service?.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || booking.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -235,8 +235,8 @@ export default function BookingManagement() {
   // Calculate key metrics
   const totalBookings = bookings?.length || 0;
   const pendingBookings = bookings?.filter(b => b.status === BookingStatus.PENDING || b.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION).length || 0;
-  const confirmedBookings = bookings?.filter(b => b.status === BookingStatus.CONFIRMED || b.status === BookingStatus.IN_PROGRESS).length || 0;
-  const completedBookings = bookings?.filter(b => b.status === BookingStatus.COMPLETED).length || 0;
+  const confirmedBookings = bookings?.filter(b => b.status === BookingStatus.CONFIRMED || b.status === BookingStatus.STARTED).length || 0;
+  const completedBookings = bookings?.filter(b => b.status === BookingStatus.FINISHED).length || 0;
   const canceledBookings = bookings?.filter(b => b.status === BookingStatus.CANCELED || b.status === BookingStatus.REJECTED || b.status === BookingStatus.NO_SHOW).length || 0;
 
 
@@ -424,8 +424,8 @@ export default function BookingManagement() {
                               </div>
                               
                               <div className="flex items-center gap-4 text-sm text-gray-600">
-                                <span>Cliente: {booking.client?.name || `ID: ${booking.clientId.substring(0, 8)}...`}</span>
-                                <span>Provedor: {booking.provider?.name || `ID: ${booking.providerId.substring(0, 8)}...`}</span>
+                                <span>Cliente: {booking.client?.fullName || booking.client?.name || `ID: ${booking.clientId.substring(0, 8)}...`}</span>
+                                <span>Provedor: {booking.provider?.fullName || booking.provider?.name || `ID: ${booking.providerId.substring(0, 8)}...`}</span>
                                 <span>Serviço: {booking.service?.name || `ID: ${booking.providerServiceId.substring(0, 8)}...`}</span>
                               </div>
                               
