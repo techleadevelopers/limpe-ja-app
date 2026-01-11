@@ -677,6 +677,14 @@ export class BookingDetailsDto {
   scheduledEndTime?: string | null;
 
   @ApiPropertyOptional({
+    description: 'Horário em que o prestador aceitou o agendamento (se já aceito).',
+    example: '2025-07-01T11:00:00.000Z',
+  })
+  @IsOptional()
+  @IsISO8601()
+  acceptedAt?: string | null;
+
+  @ApiPropertyOptional({
     description: 'Status do pagamento (enum PaymentIntentStatus)',
     example: PaymentIntentStatus.PAID,
   })
@@ -714,6 +722,7 @@ export class BookingDetailsDto {
     completedLat?: Decimal | number | null;
     completedLng?: Decimal | number | null;
     completedAccuracyM?: Decimal | number | null;
+    acceptedAt?: Date | string | null;
     status: BookingStatus;
     totalPrice: Decimal | number;
     notes?: string | null;
@@ -922,5 +931,6 @@ export class BookingDetailsDto {
     } else {
       this.scheduledEndTime = null;
     }
+    this.acceptedAt = toOptionalIsoString(data.acceptedAt);
   }
 }
