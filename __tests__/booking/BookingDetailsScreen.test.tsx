@@ -94,7 +94,7 @@ beforeEach(() => {
   mockGetBookingDetails.mockResolvedValue(baseBooking);
   mockGetProviderDetails.mockResolvedValue(providerData);
   mockUseBookingStatusMeta.mockReturnValue({ statusMap: {} });
-  mockCancelBooking.mockResolvedValue({ ...baseBooking, status: BookingStatus.CANCELLED });
+  mockCancelBooking.mockResolvedValue({ ...baseBooking, status: BookingStatus.CANCELED });
 });
 
 describe('BookingDetailsScreen status resilience', () => {
