@@ -10,6 +10,17 @@ export interface ChatDetails {
   // Se o backend retornar mais informações aqui (ex: participantes, último agendamento), adicione-as.
 }
 
+export interface BookingConversationDetails {
+  chatId: string;
+  bookingId: string;
+  providerId: string;
+  providerUserId: string;
+  providerFullName: string;
+  providerAvatarUrl?: string | null;
+  clientUserId: string;
+}
+
+
 /**
  * @interface Message
  * Representa uma mensagem individual em um chat.
