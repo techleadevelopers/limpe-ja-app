@@ -105,9 +105,9 @@ export default function ChatScreen() {
 
         if (bookingId) {
           const bookingDetails = await getBookingDetails(bookingId);
-          if (bookingDetails.status === BookingStatus.COMPLETED) {
+          if (bookingDetails.status === BookingStatus.FINISHED) {
             setChatBlockedMessage('Este chat foi encerrado, pois o serviĂ§o foi concluĂ­do.');
-          } else if (bookingDetails.status === BookingStatus.CANCELLED) {
+          } else if (bookingDetails.status === BookingStatus.CANCELED) {
             setChatBlockedMessage('Este chat foi encerrado, pois o agendamento foi cancelado.');
           } else if (bookingDetails.status === BookingStatus.PENDING) {
             // đź‘‡ Aqui entra a mensagem mais humana
