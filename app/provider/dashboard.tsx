@@ -2,22 +2,22 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics'; // CORREÇÃO: Import separado e correto para Haptics
 import { Stack, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    AccessibilityInfo,
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Easing,
-    GestureResponderEvent,
-    Image,
-    Platform,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  AccessibilityInfo,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Easing,
+  GestureResponderEvent,
+  Image,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { PROVIDER_ROUTES } from '../../constants/routes'; // Importar PROVIDER_ROUTES
 import { useAuth } from '../../hooks/useAuth';
@@ -26,19 +26,36 @@ import { toastUserError } from '../../_shared/errors/uiFeedback';
 import ProviderNavBar from '../../components/provider/navigation/ProviderNavBar';
 import { subscribeToProviderNotifications } from '../../services/notificationBus';
 import NotificationUIService from '../../services/notificationUIService'; // Added
+import * as Notifications from 'expo-notifications';
 // Importações dos serviços
-import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
+import { acceptBooking, getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/dashboardService';
 // Importações das tipagens centralizadas
 import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
+import { PaymentIntentStatus } from '../../types/backend/payments';
 // CORREÇÃO: Usar a interface ProviderDashboard do arquivo de provedores,
 // que é mais completa e usada na lógica do componente.
 // import { ProviderDashboard } from '../../types/backend/dashboard';
 import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
 import { ProviderDashboard } from '../../types/backend/providers'; // Usar a interface correta
 // CORREÇÃO: Adicionar import para SafeAreaInsets (para alinhamento do header no iOS)
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    priority: Notifications.AndroidNotificationPriority.HIGH,
+  }),
+});
 // Hook para animação de toque (reutilizável, refinado com haptics)
 const useAnimatedTouch = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -93,6 +110,24 @@ const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
 const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
 const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
 const PRIMARY_LIGHT = '#EBF5FF';
+const DISPLAY_TIMEZONE = 'America/Sao_Paulo';
+
+const TIMELINE_CHANNEL_ID = 'provider-service-timeline';
+const TIMELINE_VIBRATION = [0, 250, 250, 250];
+
+async function ensureTimelineNotificationChannel() {
+  if (Platform.OS !== 'android') {
+    return;
+  }
+  await Notifications.setNotificationChannelAsync(TIMELINE_CHANNEL_ID, {
+    name: 'Alertas de serviços',
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: 'default',
+    vibrationPattern: TIMELINE_VIBRATION,
+    enableLights: true,
+    enableVibrate: true,
+  });
+}
 
 // Spacing e Radii tokens (consistentes e clean) - CORREÇÃO: Adicionado 'md' ao Radii
 const Spacing = {
@@ -109,6 +144,28 @@ const Radii = {
   sm: 10,
 };
 const QA_PANEL_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_ENABLE_QA_PANEL === 'true';
+const getScheduledStartTimestamp = (booking: BookingDetails): number => {
+  const candidates = [
+    booking.scheduledStart,
+    booking.scheduledTime,
+    booking.scheduledDate ? `${booking.scheduledDate}T00:00:00` : undefined,
+  ];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const parsed = new Date(candidate);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.getTime();
+    }
+  }
+  return Number.NaN;
+};
+
+const formatBrazilTime = (timestamp: number): string => {
+  if (!timestamp || Number.isNaN(timestamp)) {
+    return '';
+  }
+  return dayjs(timestamp).tz('America/Sao_Paulo').format('HH:mm');
+};
 
 // Easing suave para animações iOS
 const easeOut = (value: any) => Easing.out(Easing.ease)(value);
@@ -812,7 +869,7 @@ const RequestItem: React.FC<{
             ) : (
               <>
                 <Ionicons name="checkmark" size={16} color={WHITE} accessibilityHidden={true} />
-                <Text style={styles.actionButtonTextWhite}>Aceitar</Text>
+                <Text style={styles.actionButtonTextWhite}>Aceitar Serviço</Text>
               </>
             )}
           </Animated.View>
@@ -879,14 +936,18 @@ const ConfirmedServiceItem: React.FC<{
 export default function ProviderDashboardScreen() {
   const router = useRouter();
   const { user, isLoading: authLoading, logout } = useAuth(); // Corrigido: usando logout em vez de signOut
+  const providerUserId = user?.id;
   const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
   const [pendingRequests, setPendingRequests] = useState<BookingDetails[]>([]);
   const [upcomingServices, setUpcomingServices] = useState<BookingDetails[]>([]);
+  const [fabBooking, setFabBooking] = useState<BookingDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [updatingIds, setUpdatingIds] = useState<Record<string, boolean>>({});
   const [hasNewUpdates, setHasNewUpdates] = useState(false);
+  const hasFetchedDashboardRef = useRef(false);
+  const lastFetchedUserIdRef = useRef<string | undefined>(undefined);
   // Animated Values (otimizados para reduced motion)
   const financialSummaryAnim = useRef(new Animated.Value(0)).current;
   const quickActionsAnim = useRef(new Animated.Value(0)).current;
@@ -901,6 +962,8 @@ export default function ProviderDashboardScreen() {
   const isReducedMotionEnabled = useReducedMotion(); // Global reduced motion
   const newUpdatesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastServiceToastRef = useRef<number>(0);
+  const scheduledNotificationIdsRef = useRef<string[]>([]);
+  const lastScheduledBookingIdRef = useRef<string | null>(null);
   const NEW_UPDATE_DURATION_MS = 10 * 60 * 1000;
   const TOAST_DEBOUNCE_MS = 30 * 1000;
   const markNewUpdates = useCallback(() => {
@@ -920,6 +983,17 @@ export default function ProviderDashboardScreen() {
     }
     setHasNewUpdates(false);
   }, []);
+  const clearScheduledTimelineNotifications = useCallback(async () => {
+    if (!scheduledNotificationIdsRef.current.length) {
+      return;
+    }
+    await Promise.all(
+      scheduledNotificationIdsRef.current.map((identifier) =>
+        Notifications.cancelScheduledNotificationAsync(identifier)
+      )
+    );
+    scheduledNotificationIdsRef.current = [];
+  }, []);
   const showNewServiceToast = useCallback(() => {
     const now = Date.now();
     if (now - lastServiceToastRef.current >= TOAST_DEBOUNCE_MS) {
@@ -927,6 +1001,88 @@ export default function ProviderDashboardScreen() {
       lastServiceToastRef.current = now;
     }
   }, []);
+  type TimelineNotificationTemplateKey = 'oneHour' | 'thirtyMinutes' | 'start';
+  type TimelineNotificationTemplate = {
+    title: string;
+    body: string;
+    data?: Record<string, unknown>;
+  };
+  const scheduleBookingNotifications = useCallback(
+    async (booking: BookingDetails) => {
+      const baseStart =
+        booking.scheduledStart ??
+        booking.scheduledTime ??
+        (booking.scheduledDate ? `${booking.scheduledDate}T00:00:00` : undefined);
+      if (!baseStart) {
+        return;
+      }
+      const startMoment = dayjs.utc(baseStart).tz(DISPLAY_TIMEZONE);
+      if (!startMoment.isValid()) {
+        return;
+      }
+      try {
+        await ensureTimelineNotificationChannel();
+        await clearScheduledTimelineNotifications();
+        const providerName = user?.fullName?.split(' ')[0] ?? 'Prestador';
+        const clientName = booking.clientFullName ?? 'Cliente';
+        const neighborhood =
+          booking.address?.neighborhood ??
+          booking.address?.city ??
+          booking.address?.state ??
+          'destino';
+        const templates: Record<TimelineNotificationTemplateKey, TimelineNotificationTemplate> = {
+          oneHour: {
+            title: 'Lembrete de serviço',
+            body: `Olá ${providerName}, seu atendimento com ${clientName} começa em 1 hora. Já está se preparando?`,
+          },
+          thirtyMinutes: {
+            title: 'Hora de sair',
+            body: `Hora de sair! O trânsito para ${neighborhood} está normal. Clique aqui para abrir o mapa.`,
+            data: { deepLink: '/provider/map', bookingId: booking.id, neighborhood },
+          },
+          start: {
+            title: 'Horário do serviço',
+            body: 'Horário do serviço! Você chegou? Não esqueça de registrar o Check-in e bater as fotos de segurança.',
+          },
+        };
+        const specs: Array<{ key: TimelineNotificationTemplateKey; minutesBefore: number }> = [
+          { key: 'oneHour', minutesBefore: 60 },
+          { key: 'thirtyMinutes', minutesBefore: 30 },
+          { key: 'start', minutesBefore: 0 },
+        ];
+        const now = dayjs();
+
+        for (const spec of specs) {
+          const triggerMoment = startMoment.subtract(spec.minutesBefore, 'minute');
+          if (triggerMoment.isBefore(now)) {
+            continue;
+          }
+          const template = templates[spec.key];
+          const content: Notifications.NotificationContentInput = {
+            title: template.title,
+            body: template.body,
+            data: template.data,
+            sound: 'default',
+            priority: Notifications.AndroidNotificationPriority.HIGH,
+            vibrate: TIMELINE_VIBRATION,
+          };
+          const trigger: Notifications.DateTriggerInput = {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: triggerMoment.toDate(),
+            channelId: TIMELINE_CHANNEL_ID,
+          };
+          const identifier = await Notifications.scheduleNotificationAsync({
+            content,
+            trigger,
+          });
+          scheduledNotificationIdsRef.current.push(identifier);
+        }
+      } catch (error) {
+        console.warn('[DashboardScreen] Falha ao agendar notificações premium', error);
+      }
+    },
+    [clearScheduledTimelineNotifications, user?.fullName]
+  );
   const fetchData = useCallback(async () => {
       if (__DEV__) {
         console.log("[DashboardScreen] fetchData: Iniciando busca de dados.");
@@ -957,8 +1113,14 @@ export default function ProviderDashboardScreen() {
       }
       setDashboardData(dashboard);
       // Buscar listas reais como no provider/index.tsx
-      const pendingBookings = await getBookingsForUser(BookingStatus.PENDING);
-      const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
+      const now = Date.now();
+      const lookbackStart = new Date(now - 2 * 60 * 60 * 1000).toISOString();
+      const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED, {
+        start: lookbackStart,
+      });
+      const startedBookings = await getBookingsForUser(BookingStatus.STARTED, {
+        start: lookbackStart,
+      });
       const toTs = (b: BookingDetails) => {
         const parsed = b.scheduledTime
           ? new Date(b.scheduledTime)
@@ -967,8 +1129,21 @@ export default function ProviderDashboardScreen() {
             : new Date();
         return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
       };
-      setPendingRequests([...pendingBookings].sort((a, b) => toTs(a) - toTs(b)));
-      setUpcomingServices([...confirmedBookings].sort((a, b) => toTs(a) - toTs(b)));
+      const awaitingAcceptance = confirmedBookings.filter(
+        (booking) => !booking.acceptedAt,
+      );
+      const combinedBookings = [...confirmedBookings, ...startedBookings];
+      const paidAccepted = combinedBookings.filter(
+        (booking) =>
+          booking.acceptedAt &&
+          booking.paymentStatus === PaymentIntentStatus.PAID,
+      );
+      const activeBooking = startedBookings[0] ?? null;
+      const sortedPaidAccepted = [...paidAccepted].sort((a, b) => toTs(a) - toTs(b));
+      const candidateBooking = activeBooking ?? sortedPaidAccepted[0] ?? null;
+      setFabBooking(candidateBooking);
+      setPendingRequests([...awaitingAcceptance].sort((a, b) => toTs(a) - toTs(b)));
+      setUpcomingServices([...paidAccepted].sort((a, b) => toTs(a) - toTs(b)));
       // Animate sections in stagger (respeitando reduced motion)
       const animationDuration = isReducedMotionEnabled ? 0 : 300;
       const staggerDelay = isReducedMotionEnabled ? 0 : 100;
@@ -1002,8 +1177,15 @@ export default function ProviderDashboardScreen() {
     if (__DEV__) {
       console.log("[DashboardScreen] useEffect: authLoading:", authLoading, "user.id:", user?.id);
     }
+    if (providerUserId !== lastFetchedUserIdRef.current) {
+      hasFetchedDashboardRef.current = false;
+      lastFetchedUserIdRef.current = providerUserId;
+    }
     if (!authLoading && user?.id) {
-      fetchData();
+      if (!hasFetchedDashboardRef.current) {
+        fetchData();
+        hasFetchedDashboardRef.current = true;
+      }
     } else if (!authLoading && !user?.id) {
       if (isMounted.current) {
         setIsLoading(false);
@@ -1038,6 +1220,41 @@ export default function ProviderDashboardScreen() {
       }
     };
   }, []);
+  useEffect(() => {
+    if (!fabBooking) {
+      clearScheduledTimelineNotifications();
+      lastScheduledBookingIdRef.current = null;
+      return;
+    }
+    if (fabBooking.id === lastScheduledBookingIdRef.current) {
+      return;
+    }
+    lastScheduledBookingIdRef.current = fabBooking.id;
+    scheduleBookingNotifications(fabBooking);
+  }, [fabBooking, scheduleBookingNotifications, clearScheduledTimelineNotifications]);
+  useEffect(() => {
+    let isMountedToken = true;
+    (async () => {
+      try {
+        const permissions = await Notifications.getPermissionsAsync();
+        if (permissions.status !== 'granted') {
+          const requested = await Notifications.requestPermissionsAsync();
+          if (requested.status !== 'granted') {
+            return;
+          }
+        }
+        const tokenData = await Notifications.getExpoPushTokenAsync();
+        if (isMountedToken && tokenData.data) {
+          console.log('[DashboardScreen] Expo push token renovado', tokenData.data);
+        }
+      } catch (error) {
+        console.warn('[DashboardScreen] falha ao obter token de push', error);
+      }
+    })();
+    return () => {
+      isMountedToken = false;
+    };
+  }, [user?.id]);
   // ===== Header data normalization (avatar + name) injected from provider/index.tsx logic =====
   const sanitizeUrl = (v: any) => (typeof v === 'string' && v.trim().length > 0 ? v.trim() : undefined);
   const headerAvatarUrl =
@@ -1118,16 +1335,16 @@ export default function ProviderDashboardScreen() {
               setUpdatingIds(prev => ({ ...prev, [bookingId]: true }));
             }
             try {
-              await updateBookingStatus(bookingId, { status: BookingStatus.CONFIRMED });
+              await acceptBooking(bookingId);
               if (isMounted.current) {
-                NotificationUIService.showSuccess('Agendamento aceito com sucesso!', 'Sucesso');
+                NotificationUIService.showSuccess('Serviço aceito com sucesso!', 'Sucesso');
                 if (__DEV__) {
                   console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
                 }
                 fetchData();
               }
-              } catch (error: any) {
-                console.error('[DashboardScreen] Erro ao aceitar agendamento:', error.response?.data || error.message, error);
+            } catch (error: any) {
+              console.error('[DashboardScreen] Erro ao aceitar agendamento:', error.response?.data || error.message, error);
                 if (isMounted.current) {
                   toastUserError(error, 'Erro ao aceitar o agendamento');
                 }
@@ -1348,7 +1565,7 @@ export default function ProviderDashboardScreen() {
               />
             ))
           ) : (
-            renderEmptyState("Nenhuma nova solicitação de agendamento.", "checkmark-done-circle-outline")
+            renderEmptyState("Sem novas solicitações aguardando aceite.", "checkmark-done-circle-outline")
           )}
         </Animated.View>
         <EditHoursSection animation={quickActionsAnim} onQuickWithdraw={goWithdraw} isReducedMotionEnabled={isReducedMotionEnabled} />
@@ -1396,7 +1613,7 @@ export default function ProviderDashboardScreen() {
               />
             ))
           ) : (
-            renderEmptyState("Nenhum serviço confirmado agendado.", "calendar-clear-outline")
+            renderEmptyState("Nenhum serviço pago e aceito agendado.", "calendar-clear-outline")
           )}
         </Animated.View>
         <Animated.View style={[
