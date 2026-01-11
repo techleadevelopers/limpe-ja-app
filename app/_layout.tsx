@@ -102,17 +102,20 @@ function FloatingActiveServicePill({
         candidate = actionCandidate;
       }
       if (!candidate) {
+        const actionableStatuses = [
+          BookingStatus.CONFIRMED,
+          BookingStatus.ON_THE_WAY,
+          BookingStatus.ARRIVED,
+          BookingStatus.STARTED,
+        ];
         const fallback = list.filter((b) => {
           const meta = statusMap[b.status];
           if (meta) return meta.requiresAction;
-          return (
-            b.status === BookingStatus.IN_PROGRESS ||
-            b.status === BookingStatus.CONFIRMED
-          );
+          return actionableStatuses.includes(b.status);
         });
-        const nextInProgress = fallback.find((b) => b.status === BookingStatus.IN_PROGRESS);
-        if (nextInProgress) {
-          candidate = nextInProgress;
+        const nextStarted = fallback.find((b) => b.status === BookingStatus.STARTED);
+        if (nextStarted) {
+          candidate = nextStarted;
         }
         if (!candidate) {
           const confirmed = fallback.filter((b) => b.status === BookingStatus.CONFIRMED);
@@ -170,8 +173,8 @@ function FloatingActiveServicePill({
 
   if (!enabled || !booking || hidden) return null;
 
-  const isInProgress = booking.status === BookingStatus.IN_PROGRESS;
-  const cta = isInProgress ? 'Finalizar' : 'Iniciar';
+  const isStarted = booking.status === BookingStatus.STARTED;
+  const cta = isStarted ? 'Finalizar' : 'Iniciar';
   const rotate = tremble.interpolate({ inputRange: [-1, 1], outputRange: ['-0.5deg', '0.5deg'] });
 
   return (
@@ -275,28 +278,108 @@ function RootLayoutContent() {
     // one-time local notifications channel (Android). Harmless on iOS.
     useEffect(() => { if (setupNotificationsOnce) { setupNotificationsOnce(); } }, []);
     // Deep-link handler for notification taps (local or push)
+    const navigateFromChatNotification = useCallback(
+        (payload: Record<string, any> | undefined) => {
+            if (!payload) return false;
+            const normalize = (value: unknown): Record<string, unknown> | undefined => {
+                if (!value) return undefined;
+                if (typeof value === 'string') {
+                    try {
+                        return JSON.parse(value);
+                    } catch {
+                        return undefined;
+                    }
+                }
+                if (typeof value === 'object') return value as Record<string, unknown>;
+                return undefined;
+            };
+            const chatPayload = normalize(payload.payload);
+            const type =
+                payload.type ??
+                chatPayload?.type ??
+                payload?.appEvent?.type ??
+                payload?.notificationType;
+            const chatId =
+                chatPayload?.chatId ??
+                payload.chatId ??
+                chatPayload?.chat_id ??
+                payload.chat_id;
+            if (type !== 'CHAT_MESSAGE' || !chatId) return false;
+            const recipientId =
+                chatPayload?.senderId ??
+                chatPayload?.sender_id ??
+                payload.senderId ??
+                payload.sender_id;
+            const recipientName =
+                chatPayload?.senderFullName ??
+                chatPayload?.sender_name ??
+                chatPayload?.providerFullName ??
+                chatPayload?.clientFullName ??
+                '';
+            const recipientAvatarUrl =
+                chatPayload?.senderAvatarUrl ??
+                chatPayload?.sender_avatar_url ??
+                chatPayload?.providerAvatarUrl ??
+                chatPayload?.clientAvatarUrl;
+            const bookingId =
+                chatPayload?.bookingId ??
+                chatPayload?.booking_id ??
+                payload.bookingId ??
+                payload.booking_id;
+
+            const destination =
+                user?.role === UserRole.PROVIDER
+                    ? PROVIDER_ROUTES.PROVIDER_CHAT(chatId)
+                    : CLIENT_ROUTES.CHAT(chatId);
+
+            (router as any)?.push?.({
+                pathname: destination,
+                params: {
+                    chatId,
+                    recipientId,
+                    recipientName: recipientName || undefined,
+                    recipientAvatarUrl,
+                    bookingId,
+                },
+            } as any);
+            return true;
+        },
+        [router, user?.role],
+    );
+
     useEffect(() => {
         let sub: any;
         (async () => {
             try {
-                const Notifications = (await import('expo-notifications')).default || (await import('expo-notifications'));
-                sub = (Notifications as any).addNotificationResponseReceivedListener?.((response: any) => {
-                    try {
-                        const payload = response?.notification?.request?.content?.data ?? {};
-                        const url = (
-                            payload?.appEvent?.targetUrl ??
-                            payload?.url ??
-                            payload?.deeplink
-                        ) as string | undefined;
-                        if (url && typeof url === 'string') {
-                            (router as any)?.push?.(url);
-                        }
-                    } catch {}
-                });
+                const Notifications =
+                    (await import('expo-notifications')).default ||
+                    (await import('expo-notifications'));
+                sub = (Notifications as any).addNotificationResponseReceivedListener?.(
+                    (response: any) => {
+                        try {
+                            const payload = response?.notification?.request?.content?.data ?? {};
+                            if (navigateFromChatNotification(payload)) {
+                                return;
+                            }
+                            const url = (
+                                payload?.appEvent?.targetUrl ??
+                                payload?.url ??
+                                payload?.deeplink
+                            ) as string | undefined;
+                            if (url && typeof url === 'string') {
+                                (router as any)?.push?.(url);
+                            }
+                        } catch {}
+                    },
+                );
             } catch {}
         })();
-        return () => { try { sub?.remove?.(); } catch {} };
-    }, [router]);
+        return () => {
+            try {
+                sub?.remove?.();
+            } catch {}
+        };
+    }, [router, navigateFromChatNotification]);
 
     useEffect(() => {
         const prepareApp = async () => {
