@@ -18,6 +18,16 @@ jest.mock('hooks/useAuth', () => ({
 }));
 
 const baseInsurance = { planId: 'ESSENCIAL', proofRequired: false };
+const baseAddress = {
+  cep: '01001000',
+  street: 'Rua Teste',
+  number: '100',
+  neighborhood: 'Centro',
+  city: 'São Paulo',
+  state: 'SP',
+  latitude: -23.55,
+  longitude: -46.63,
+};
 const mockBooking = {
   id: 'booking-1',
   serviceName: 'Limpeza Premium',
@@ -30,22 +40,24 @@ const mockBooking = {
   allowedActions: ['START_SERVICE'],
   insurance: baseInsurance,
   proofs: [],
+  address: baseAddress,
 };
 
 const startedBooking = {
   ...mockBooking,
-  status: BookingStatus.IN_PROGRESS,
+    status: BookingStatus.STARTED,
   allowedActions: ['COMPLETE_SERVICE'],
 };
 
 const completedBooking = {
   ...mockBooking,
-  status: BookingStatus.COMPLETED,
+    status: BookingStatus.FINISHED,
   allowedActions: [],
 };
 
 const mockStart = jest.fn();
 const mockComplete = jest.fn();
+const mockManualStartRequest = jest.fn();
 const expoRouter = require('expo-router');
 const bookingService = require('../../../../services/bookingService');
 const mockGetBookingDetails = jest.spyOn(bookingService, 'getBookingDetails');
@@ -61,7 +73,22 @@ jest.mock('hooks/useProviderBookings', () => ({
   useProviderBookings: () => ({
     start: mockStart,
     complete: mockComplete,
+    manualStartRequest: mockManualStartRequest,
   }),
+}));
+
+jest.mock('expo-location', () => ({
+  requestForegroundPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ status: 'granted' }),
+  ),
+  getCurrentPositionAsync: jest.fn(() =>
+    Promise.resolve({
+      coords: { latitude: -23.55, longitude: -46.63, accuracy: 5 },
+      timestamp: Date.now(),
+    }),
+  ),
+  Accuracy: { BestForNavigation: 0 },
+  PermissionStatus: { GRANTED: 'granted' },
 }));
 
 jest.mock('hooks/useBookingStatusMeta', () => ({
@@ -126,6 +153,7 @@ beforeEach(() => {
   mockGetBookingDetails.mockResolvedValue(mockBooking);
   mockStart.mockResolvedValue(startedBooking);
   mockComplete.mockResolvedValue(completedBooking);
+  mockManualStartRequest.mockResolvedValue({ message: 'Solicitação registrada' });
   (expoRouter.useLocalSearchParams as jest.Mock).mockReturnValue({ bookingId: 'booking-1' });
 });
 
@@ -141,7 +169,12 @@ describe('Active booking actions', () => {
     expect(startButton.props.accessibilityState?.disabled).toBe(false);
 
     fireEvent.press(startButton);
-    await waitFor(() => expect(mockStart).toHaveBeenCalledWith('booking-1'));
+    await waitFor(() =>
+      expect(mockStart).toHaveBeenCalledWith(
+        'booking-1',
+        expect.objectContaining({ lat: -23.55, lng: -46.63 }),
+      ),
+    );
     await waitFor(() => expect(screen.getByText('Servico em andamento')).toBeTruthy());
 
     await waitFor(() => expect(screen.getByLabelText('Concluir Servico')).toBeTruthy());
@@ -190,7 +223,7 @@ describe('Active booking actions', () => {
       ...mockBooking,
       insurance: proofRequiredInsurance,
       proofs: [checkinProof, checkoutProof],
-      status: BookingStatus.IN_PROGRESS,
+      status: BookingStatus.STARTED,
       allowedActions: ['COMPLETE_SERVICE'],
     };
 
