@@ -1,9 +1,28 @@
 import axios, { AxiosResponse, AxiosError } from 'axios';
 import { api } from './api';
 import { mapBookingStatusArray, mapBookingStatusIn, toBE } from './adapters/bookingStatus';
+import { MessageResponseDto } from '../types/backend/auth';
 
 // IMPORTAR DTOs E TIPAGENS DO ARQUIVO CENTRALIZADO
 import { BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto } from '../types/backend/bookings'; // Certifique-se de que CreateBookingDto e BookingDetails estão atualizados
+
+export interface BookingLocationPayload {
+    lat: number;
+    lng: number;
+    accuracyM?: number;
+    capturedAt?: string;
+}
+
+export interface BookingQueryOptions {
+  status?: BookingStatus;
+  timeframe?: { start?: string; end?: string };
+  retry?: number;
+}
+
+const BACKOFF_BASE_MS = 600;
+const MAX_RETRY_ATTEMPTS = 3;
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * @function createBooking
@@ -47,24 +66,36 @@ export const createBooking = async (data: CreateBookingDto): Promise<BookingDeta
 export async function getBookingsForUser(
   status?: BookingStatus,
   timeframe?: { start?: string; end?: string },
+  options?: BookingQueryOptions,
 ): Promise<BookingDetails[]> {
-    try {
-        const statusForApi = status === (BookingStatus as any).CANCELLED ? 'CANCELED' : (status as any);
-        const params: Record<string, string> = {};
-        if (status) params.status = statusForApi;
-        if (timeframe?.start) params.start = timeframe.start;
-        if (timeframe?.end) params.end = timeframe.end;
-        const response: AxiosResponse<BookingDetails[]> = await api.get<BookingDetails[]>('/bookings/me', { params });
-        return mapBookingStatusArray(response.data);
-    } catch (error: any) {
-        if (__DEV__) {
-            console.warn('Erro ao buscar agendamentos do usuário (dev only):', error.response?.data || error.message);
-        }
-        if (axios.isAxiosError(error) && error.response) {
-            throw new Error(error.response.data.message || 'Erro ao buscar agendamentos.');
-        }
-        throw new Error('Erro de rede ou servidor ao buscar agendamentos.');
+  try {
+    const statusForApi = status === (BookingStatus as any).CANCELLED ? 'CANCELED' : (status as any);
+    const params: Record<string, string> = {};
+    if (status) params.status = statusForApi;
+    if (timeframe?.start) params.start = timeframe.start;
+    if (timeframe?.end) params.end = timeframe.end;
+    const response: AxiosResponse<BookingDetails[]> = await api.get<BookingDetails[]>('/bookings/me', { params });
+    return mapBookingStatusArray(response.data);
+  } catch (error: any) {
+    const retryCount = options?.retry ?? 0;
+    const isThrottled =
+      axios.isAxiosError(error) && error.response?.status === 429;
+    if (isThrottled && retryCount < MAX_RETRY_ATTEMPTS) {
+      const backoff = BACKOFF_BASE_MS * Math.pow(2, retryCount);
+      if (__DEV__) {
+        console.warn(`[bookingService] Retrying bookings fetch after ${backoff}ms due to 429 (attempt ${retryCount + 1})`);
+      }
+      await wait(backoff);
+      return getBookingsForUser(status, timeframe, { ...options, retry: retryCount + 1 });
     }
+    if (__DEV__) {
+      console.warn('Erro ao buscar agendamentos do usuário (dev only):', error.response?.data || error.message);
+    }
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Erro ao buscar agendamentos.');
+    }
+    throw new Error('Erro de rede ou servidor ao buscar agendamentos.');
+  }
 }
 
 /**
@@ -113,9 +144,14 @@ export async function updateBookingStatus(bookingId: string, data: UpdateBooking
     }
 }
 
-export async function startBooking(bookingId: string): Promise<BookingDetails> {
+export async function startBooking(
+    bookingId: string,
+    location?: BookingLocationPayload,
+): Promise<BookingDetails> {
     try {
-        const response: AxiosResponse<BookingDetails> = await api.post<BookingDetails>(`/bookings/${bookingId}/start`);
+        const response: AxiosResponse<BookingDetails> = location
+            ? await api.post<BookingDetails>(`/bookings/${bookingId}/start`, location)
+            : await api.post<BookingDetails>(`/bookings/${bookingId}/start`);
         return mapBookingStatusIn(response.data);
     } catch (error: any) {
         if (__DEV__) {
@@ -140,6 +176,25 @@ export async function completeBooking(bookingId: string): Promise<BookingDetails
             throw new Error(error.response.data.message || `Erro ao concluir agendamento ${bookingId}.`);
         }
         throw new Error(`Erro de rede ou servidor ao concluir agendamento ${bookingId}.`);
+    }
+}
+
+export async function requestManualStart(
+    bookingId: string,
+    reason?: string,
+): Promise<MessageResponseDto> {
+    try {
+        const payload = reason ? { reason } : undefined;
+        const response: AxiosResponse<MessageResponseDto> = await api.post<MessageResponseDto>(`/bookings/${bookingId}/start/manual`, payload);
+        return response.data;
+    } catch (error: any) {
+        if (__DEV__) {
+            console.warn(`Erro ao solicitar início manual do agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
+        }
+        if (axios.isAxiosError(error) && error.response) {
+            throw new Error(error.response.data.message || `Erro ao solicitar início manual do agendamento ${bookingId}.`);
+        }
+        throw new Error(`Erro de rede ou servidor ao solicitar início manual do agendamento ${bookingId}.`);
     }
 }
 
