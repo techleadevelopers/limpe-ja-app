@@ -17,7 +17,11 @@
     "types": ["node", "vite/client"],
     "paths": {
       "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
+      "@shared/*": ["./shared/*"],
+      "@react-leaflet/core": ["./client/src/lib/react-leaflet-core-patched.ts"],
+      "@react-leaflet/core/lib/*": ["./node_modules/@react-leaflet/core/lib/*"],
+      "@react-leaflet/core/lib/index": ["./node_modules/@react-leaflet/core/lib/index"],
+      "@react-leaflet/core/lib/index.js": ["./node_modules/@react-leaflet/core/lib/index.js"]
     }
   }
 }
