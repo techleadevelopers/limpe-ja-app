@@ -6,6 +6,8 @@ import {
   startBooking,
   completeBooking,
   cancelBooking,
+  requestManualStart,
+  BookingLocationPayload,
 } from '../services/bookingService';
 import { BookingDetails, BookingStatus } from '../types/backend/bookings';
 import { PaymentIntentStatus } from '../types/backend/payments';
@@ -95,7 +97,7 @@ export function useProviderBookings(options?: UseProviderBookingsOptions) {
   }, []);
 
   const ensurePaidIfNeeded = (booking: BookingDetails, nextStatus: BookingStatus) => {
-    if (nextStatus === BookingStatus.COMPLETED) {
+    if (nextStatus === BookingStatus.FINISHED) {
       const payStatus = booking.paymentIntent?.status as PaymentIntentStatus | undefined;
       if (payStatus !== PaymentIntentStatus.PAID) {
         throw new Error('Pagamento nao confirmado. Conclusao bloqueada ate o PIX ser pago.');
@@ -127,14 +129,14 @@ export function useProviderBookings(options?: UseProviderBookingsOptions) {
   );
 
   const start = useCallback(
-    async (bookingId: string) => {
+    async (bookingId: string, location?: BookingLocationPayload) => {
       ensureTermsAccepted();
       const booking = await getBooking(bookingId);
       assertOwner(booking);
       if (booking.status !== BookingStatus.CONFIRMED && booking.status !== BookingStatus.PENDING) {
         throw new Error('Somente agendamentos confirmados podem ser iniciados.');
       }
-      const updated = await startBooking(bookingId);
+      const updated = await startBooking(bookingId, location);
       safeUpdateLocal(updated);
       return updated;
     },
@@ -146,15 +148,25 @@ export function useProviderBookings(options?: UseProviderBookingsOptions) {
       ensureTermsAccepted();
       const booking = await getBooking(bookingId);
       assertOwner(booking);
-      if (booking.status !== BookingStatus.IN_PROGRESS) {
+      if (booking.status !== BookingStatus.STARTED) {
         throw new Error('Somente agendamentos em andamento podem ser concluidos.');
       }
-      ensurePaidIfNeeded(booking, BookingStatus.COMPLETED);
+      ensurePaidIfNeeded(booking, BookingStatus.FINISHED);
       const updated = await completeBooking(bookingId);
       safeUpdateLocal(updated);
       return updated;
     },
     [assertOwner, getBooking, safeUpdateLocal],
+  );
+
+  const manualStartRequest = useCallback(
+    async (bookingId: string, reason?: string) => {
+      ensureTermsAccepted();
+      const booking = await getBooking(bookingId);
+      assertOwner(booking);
+      return requestManualStart(bookingId, reason);
+    },
+    [assertOwner, ensureTermsAccepted, getBooking],
   );
 
   const cancel = useCallback(
@@ -191,6 +203,7 @@ export function useProviderBookings(options?: UseProviderBookingsOptions) {
     start,
     complete,
     cancel,
+    manualStartRequest,
     updateStatus,
   };
 }
