@@ -37,6 +37,7 @@ export class BookingEntity implements PrismaBooking {
   completedAccuracyM: number | null;
   startedByUserId: string | null;
   completedByUserId: string | null;
+  acceptedAt: Date | null;
 
   // ✅ CORREÇÃO: ADICIONADO os novos campos de fluxo (onTheWayAt, arrivedAt)
   onTheWayAt: Date | null;
@@ -169,6 +170,9 @@ export class BookingEntity implements PrismaBooking {
       partial.completedByUserId === undefined
         ? null
         : (partial.completedByUserId as any);
+    this.acceptedAt = partial.acceptedAt
+      ? new Date(partial.acceptedAt as any)
+      : null;
 
     this.startedLat =
       partial.startedLat !== undefined ? partial.startedLat : null;
