@@ -1,15 +1,25 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getBookingDetails } from '../../../services/bookingService';
-import { BookingDetails } from '../../../types/backend/bookings';
+import { getMyProviderEarnings } from '../../../services/earningService';
+import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
+import { ProviderTransaction, TransactionType } from '../../../types/backend/providers';
+import { formatPriceBRL } from '../../../utils/formatters';
+import { scheduleLocalNotification } from '../../../services/localNotificationService';
+
+const PRIMARY = '#2563EB';
 
 export default function ProviderSuccessScreen() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const router = useRouter();
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [payoutSummary, setPayoutSummary] = useState<ProviderTransaction | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const notificationSentRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -20,14 +30,47 @@ export default function ProviderSuccessScreen() {
       .finally(() => setLoading(false));
   }, [bookingId]);
 
+  useEffect(() => {
+    if (!booking?.id) return;
+    setSummaryLoading(true);
+    setSummaryError(null);
+    getMyProviderEarnings()
+      .then((earnings) => {
+        const transactions = earnings.recentTransactions ?? [];
+        const match =
+          transactions.find(
+            (tx) => tx.bookingId === booking.id && tx.type === TransactionType.PAYMENT,
+          ) ?? transactions.find((tx) => tx.bookingId === booking.id);
+        setPayoutSummary(match ?? null);
+      })
+      .catch((error) => {
+        console.error('Erro ao buscar ganhos do provedor', error);
+        setSummaryError('Resumo de ganho indisponível no momento.');
+      })
+      .finally(() => setSummaryLoading(false));
+  }, [booking?.id]);
+
+  useEffect(() => {
+    if (!booking || booking.status !== BookingStatus.FINISHED) return;
+    if (notificationSentRef.current === booking.id) return;
+    scheduleLocalNotification({
+      title: 'Pagamento processado para o serviço concluído!',
+      body: 'O repasse referente a esse atendimento já está disponível.',
+    }).catch(() => {});
+    notificationSentRef.current = booking.id;
+  }, [booking]);
+
   const paymentLabel = booking?.paymentStatus === 'PAID' ? 'A receber' : 'Processando';
-  const formattedAmount =
-    booking?.totalPrice != null ? `R$ ${Number(booking.totalPrice).toFixed(2)}` : '—';
+  const formattedAmount = booking ? formatPriceBRL(booking.totalPrice ?? 0) : '—';
+  const payoutAmount = payoutSummary?.amount ?? booking?.totalPrice ?? 0;
+  const payoutNote = summaryError
+    ? summaryError
+    : payoutSummary?.description ?? `Status: ${booking?.status ?? 'Atualizado'}`;
 
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563EB" />
+      <ActivityIndicator size="large" color={PRIMARY} />
         <Text style={styles.statusText}>Carregando o resumo do seu atendimento...</Text>
       </View>
     );
@@ -36,14 +79,21 @@ export default function ProviderSuccessScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <Ionicons name="rocket-outline" size={64} color="#2563EB" style={styles.icon} />
-      <Text style={styles.title}>Serviço concluído!</Text>
+      <Ionicons name="rocket-outline" size={64} color={PRIMARY} style={styles.icon} />
+      <Text style={styles.title}>Parabéns!</Text>
       <Text style={styles.subtitle}>
-        Obrigado por cuidar do Joaquim. Agora é hora de descansar ou planejar o próximo atendimento.
+        Você concluiu seu serviço de {booking?.serviceName ?? 'este atendimento'} com segurança e eficiência.
       </Text>
       <View style={styles.infoCard}>
         <Text style={styles.infoLabel}>Serviço</Text>
         <Text style={styles.infoValue}>{booking?.serviceName ?? 'Serviço confirmado'}</Text>
+        <Text style={styles.infoLabel}>Resumo do ganho</Text>
+        {summaryLoading ? (
+          <ActivityIndicator size="small" color={PRIMARY} style={{ marginBottom: 4 }} />
+        ) : (
+          <Text style={styles.infoValue}>{formatPriceBRL(payoutAmount)}</Text>
+        )}
+        <Text style={styles.infoMeta}>{payoutNote}</Text>
         <Text style={styles.infoLabel}>Pagamento</Text>
         <Text style={styles.infoValue}>
           {paymentLabel} · {formattedAmount}
@@ -93,22 +143,28 @@ const styles = StyleSheet.create({
   infoCard: {
     width: '100%',
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 18,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     marginBottom: 24,
   },
   infoLabel: {
-    color: '#71717A',
     fontSize: 12,
+    color: '#71717A',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    marginBottom: 4,
   },
   infoValue: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+    marginBottom: 12,
+  },
+  infoMeta: {
+    fontSize: 13,
+    color: '#4B5563',
     marginBottom: 12,
   },
   primaryButton: {
