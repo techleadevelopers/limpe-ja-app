@@ -14,6 +14,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -23,6 +24,10 @@ import { alertUserError, setSafeError } from '../../../_shared/errors/uiFeedback
 import { cancelBooking, getBookingDetails } from '../../../services/bookingService';
 import { getProviderDetails } from '../../../services/providerService';
 import { getOrCreateConversationForBooking } from '../../../services/chatService';
+import NotificationUIService from '../../../services/notificationUIService';
+import { scheduleLocalNotification } from '../../../services/localNotificationService';
+import { submitFeedback } from '../../../services/reviewService';
+import { subscribeToBookingEvents } from '../../../services/bookingEventBus';
 import { CLIENT_ROUTES } from '@/app/_shared/routes';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
@@ -31,9 +36,12 @@ import { normalizeBooking } from '../../../utils/normalize';
 import { useDevice } from '@/utils/responsive';
 import { AppColors } from '../../../constants/appStyles';
 import { fix } from '../../../utils/platformFix';
+import { safeFormatDate } from '../../../utils/formatters';
+import { useAuth } from '../../../hooks/useAuth';
 
 import InsuranceSummary from '../../../components/booking/InsuranceSummary';
 import ProviderServicesInline from '../../../components/booking/ProviderServicesInline';
+import FeedbackModal from '../../../components/booking/FeedbackModal';
 import TutorialOverlay from '../../../components/ui/TutorialOverlay';
 import { useBookingStatusMeta } from '../../../hooks/useBookingStatusMeta';
 import { useProviderServices } from '../../../hooks/useProviderServices';
@@ -69,7 +77,7 @@ function getStatusVisual(status: BookingStatus): StatusVisual {
         return { label: 'Em andamento', color: UI.accent, bg: 'rgba(37,99,235,0.10)', icon: 'sync' };
     case BookingStatus.FINISHED:
         return { label: 'Concluído', color: '#4B5563', bg: '#E5E7EB', icon: 'flag' };
-    case BookingStatus.CANCELED:
+    case BookingStatus.CANCELLED:
         return { label: 'Cancelado', color: UI.danger, bg: 'rgba(239,68,68,0.10)', icon: 'close-circle' };
     case BookingStatus.RESCHEDULED:
       return { label: 'Reagendado', color: '#7C3AED', bg: 'rgba(124,58,237,0.10)', icon: 'sync' };
@@ -162,12 +170,6 @@ function ProviderCard({ booking, provider }: { booking: BookingDetails; provider
           </Text>
         </View>
       </View>
-      {statusMessage && (
-        <View style={[styles.statusBanner, { backgroundColor: status.bg, borderColor: status.color }]}>
-          <Ionicons name="information-circle-outline" size={16} color={status.color} style={styles.iconAdjust} />
-          <Text style={[styles.statusBannerText, { color: status.color }]}>{statusMessage}</Text>
-        </View>
-      )}
     </>
   );
 }
@@ -342,76 +344,6 @@ function ActionsCard({
 }
 
 // =============================================================================
-// ReviewSheet (modal de avaliação)
-// =============================================================================
-
-function ReviewSheet({
-  visible,
-  onClose,
-  booking,
-  router,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  booking: BookingDetails;
-  router: any;
-}) {
-  useEffect(() => {
-    if (visible && Platform.OS === 'ios') {
-      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-    }
-  }, [visible]);
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.reviewOverlay}>
-        <View style={styles.reviewSheet}>
-          <Text style={styles.reviewTitle}>Como foi sua limpeza?</Text>
-          <Text style={styles.reviewSubtitle}>
-            Avalie sua experiência para mantermos o padrão premium do LimpeJá.
-          </Text>
-
-          <View style={styles.reviewButtonsRow}>
-            <TouchableOpacity
-              style={styles.reviewPrimaryBtn}
-              onPress={() => {
-                if (Platform.OS === 'ios') {
-                  try { Haptics.selectionAsync(); } catch {}
-                }
-                onClose();
-                router.push({
-                  pathname: `/common/feedback/${booking.id}`,
-                  params: {
-                    type: 'service',
-                    serviceName: sanitizeText(booking.serviceName),
-                    providerName: sanitizeText(booking.providerFullName),
-                    providerId: booking.providerId,
-                  },
-                } as any);
-              }}
-            >
-              <Text style={styles.reviewPrimaryText}>Avaliar agora</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.reviewSecondaryBtn}
-              onPress={() => {
-                if (Platform.OS === 'ios') {
-                  try { Haptics.selectionAsync(); } catch {}
-                }
-                onClose();
-              }}
-            >
-              <Text style={styles.reviewSecondaryText}>Depois</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-// =============================================================================
 // TELA PRINCIPAL
 // =============================================================================
 
@@ -425,8 +357,14 @@ export default function BookingDetailsScreen() {
   const [provider, setProvider] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showReviewSheet, setShowReviewSheet] = useState(false);
   const lastStatusRef = useRef<BookingStatus | null>(null);
+  const { user } = useAuth();
+  const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackPromptedBooking, setFeedbackPromptedBooking] = useState<string | null>(null);
+  const notificationSentBookingRef = useRef<string | null>(null);
 
   const { services: providerServices } = useProviderServices(booking?.providerId);
   const bookingActionsTutorial = useTutorial('booking_details_actions');
@@ -452,10 +390,7 @@ export default function BookingDetailsScreen() {
         console.log('Erro fetch provider:', err);
       }
 
-      const completed = normalized.status === BookingStatus.FINISHED;
-      const alreadyReviewed = !!(normalized.isReviewed || normalized.reviewId);
-      if (completed && !alreadyReviewed) setShowReviewSheet(true);
-    } catch (err: any) {
+      } catch (err: any) {
       console.error('Erro ao carregar agendamento:', err);
       setSafeError(setError, err);
     } finally {
@@ -466,6 +401,16 @@ export default function BookingDetailsScreen() {
   useEffect(() => {
     loadBooking();
   }, [loadBooking]);
+
+  useEffect(() => {
+    if (!bookingId) return;
+    const unsubscribe = subscribeToBookingEvents((event) => {
+      if (event.bookingId === bookingId) {
+        loadBooking();
+      }
+    });
+    return unsubscribe;
+  }, [bookingId, loadBooking]);
 
   useEffect(() => {
     const status = booking?.status;
@@ -481,7 +426,35 @@ export default function BookingDetailsScreen() {
       }
     }
     lastStatusRef.current = status;
-  }, [booking?.status]);
+    }, [booking?.status]);
+
+  useEffect(() => {
+    if (!booking) return;
+    if (booking.status !== BookingStatus.FINISHED) {
+      return;
+    }
+    if (notificationSentBookingRef.current !== booking.id) {
+      scheduleLocalNotification({
+        title: 'Serviço finalizado!',
+        body: 'Conte-nos como foi.',
+      }).catch(() => {});
+      notificationSentBookingRef.current = booking.id;
+    }
+    const alreadyReviewed = Boolean(booking.isReviewed || booking.reviewId);
+    if (!alreadyReviewed && feedbackPromptedBooking !== booking.id) {
+      setFeedbackModalVisible(true);
+      setFeedbackPromptedBooking(booking.id);
+    }
+  }, [booking, feedbackPromptedBooking]);
+
+  useEffect(() => {
+    setFeedbackModalVisible(false);
+    setFeedbackPromptedBooking(null);
+    notificationSentBookingRef.current = null;
+    setFeedbackRating(5);
+    setFeedbackComment('');
+  }, [booking?.id]);
+
 
   // Tutorial contextual: explica rapidamente as ações da tela
   useEffect(() => {
@@ -505,7 +478,7 @@ export default function BookingDetailsScreen() {
               try {
                 setIsLoading(true);
                 await cancelBooking(booking.id);
-                setBooking((prev) => (prev ? { ...prev, status: BookingStatus.CANCELED } : prev));
+                setBooking((prev) => (prev ? { ...prev, status: BookingStatus.CANCELLED } : prev));
               } catch (err: any) {
                 alertUserError(err, 'Erro ao cancelar o agendamento');
               } finally {
@@ -552,6 +525,45 @@ export default function BookingDetailsScreen() {
     if (!booking) return;
     router.push(`/client/explore/${booking.providerId}`);
   };
+
+  const handleFeedbackClose = useCallback(() => {
+    setFeedbackModalVisible(false);
+  }, []);
+
+  const handleFeedbackSubmit = useCallback(async () => {
+    if (!booking || !user?.id) return;
+    setFeedbackSubmitting(true);
+    try {
+      await submitFeedback({
+        targetId: booking.id,
+        type: 'service',
+        rating: feedbackRating,
+        comment: feedbackComment?.trim() || '',
+        userId: user.id,
+        providerId: booking.providerId,
+        providerName: booking.providerFullName,
+        serviceName: booking.serviceName,
+        bookingId: booking.id,
+      });
+      NotificationUIService.showSuccess('Obrigado pelo seu feedback!', 'Avaliação enviada');
+      setBooking((prev) =>
+        prev
+          ? {
+              ...prev,
+              isReviewed: true,
+              reviewId: prev.reviewId ?? prev.id,
+              reviewRating: feedbackRating,
+              reviewComment: feedbackComment,
+            }
+          : prev,
+      );
+      setFeedbackModalVisible(false);
+    } catch (error) {
+      NotificationUIService.showError(error, 'Não foi possível enviar sua avaliação');
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  }, [booking, feedbackComment, feedbackRating, user?.id]);
 
   const handleCopyAddress = () => {
     if (!booking) return;
@@ -625,11 +637,16 @@ export default function BookingDetailsScreen() {
         </View>
       </ScrollView>
 
-      <ReviewSheet
-        visible={showReviewSheet}
-        onClose={() => setShowReviewSheet(false)}
+      <FeedbackModal
+        visible={feedbackModalVisible}
         booking={booking}
-        router={router}
+        rating={feedbackRating}
+        comment={feedbackComment}
+        onRatingChange={setFeedbackRating}
+        onCommentChange={setFeedbackComment}
+        onSubmit={handleFeedbackSubmit}
+        onClose={handleFeedbackClose}
+        isSubmitting={feedbackSubmitting}
       />
 
       <TutorialOverlay
@@ -853,58 +870,6 @@ const styles = StyleSheet.create({
     color: UI.accent,
   },
 
-  // ReviewSheet
-  reviewOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.35)',
-    justifyContent: 'flex-end',
-  },
-  reviewSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    padding: 16,
-  },
-  reviewTitle: {
-    fontSize: fix.font(18),
-    fontWeight: '700',
-    color: UI.textPrimary,
-    marginBottom: 6,
-  },
-  reviewSubtitle: {
-    fontSize: 14,
-    color: UI.textSecondary,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  reviewButtonsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  reviewPrimaryBtn: {
-    flex: 1,
-    backgroundColor: UI.accent,
-    borderRadius: 10,
-    paddingVertical: Platform.OS === 'android' ? 14 : 12,
-    alignItems: 'center',
-  },
-  reviewPrimaryText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  reviewSecondaryBtn: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    paddingVertical: Platform.OS === 'android' ? 14 : 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  reviewSecondaryText: {
-    color: UI.textPrimary,
-    fontWeight: '700',
-  },
   iconAdjust: { transform: [{ translateY: Platform.OS === 'android' ? 1 : 0 }] },
 });
 
