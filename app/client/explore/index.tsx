@@ -90,6 +90,7 @@ const FALLBACK_CATEGORIES: Service[] = [
   { id: 'upholstery', name: 'Estofados', icon: 'estofados.png' } as Service,
   { id: 'office-clean', name: 'Escritório', icon: 'escritorio.png' } as Service,
 ];
+const PROTOCOL_PREMIUM_SEEN_KEY = 'protocol_premium_seen';
 const QA_PANEL_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_ENABLE_QA_PANEL === 'true';
 const toNum = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const computeDistanceMeters = (
@@ -182,6 +183,7 @@ const COR_CINZA_FUNDO = '#FFFFFF';
 const COR_BORDA_SUAVE = '#c0b5ca92';
 
 const { width: screenWidth } = Dimensions.get('window');
+const BANNER_WIDTH = Math.max(0, screenWidth - 24);
 
 type BannerDataItem = {
   id: string;
@@ -223,11 +225,10 @@ const bannerData: BannerDataItem[] = [
   },
 ];
 
-const PROTOCOL_PREMIUM_SEEN_KEY = '@LimpeJa:ProtocolPremiumSeen_v1';
 export default function ExploreClientScreen() {
   const router = useRouter();
-  const flatListRef = useRef<FlatList<BannerDataItem>>(null);
   const { t } = useTranslation();
+  const primaryBanner = bannerData[0];
   const { user, isAuthenticated, isLoading } = useAuth();
   const { isLargePhone } = useDevice();
 
@@ -238,7 +239,6 @@ export default function ExploreClientScreen() {
       ? {
           marginTop: -15,
           marginBottom: -2,
-          transform: [{ scale: 0.92 }, { translateX: 16 }],
         }
       : undefined;
 
@@ -345,9 +345,7 @@ export default function ExploreClientScreen() {
         },
       ]}>
       <View style={styles.categoryTitleWrapper}>
-        <Text style={styles.categorySectionTitle} allowFontScaling={false}>
-          Acesso rápido
-        </Text>
+       
         <TouchableOpacity
           onPress={() => router.push('/client/explore/todas-categorias' as any)}
           style={styles.viewAllButton}
@@ -849,12 +847,6 @@ export default function ExploreClientScreen() {
   // garantindo que a seção de prestadores exiba o mesmo universo de providers já deduplicado.
   const prestadoresData = safeRecommendations;
 
-  const renderBannerItem = useCallback(({ item }: { item: BannerDataItem }) => {
-    return (
-      <CarouselBannerItem title={item.title} discount={item.discount} description={item.description} buttonText={item.buttonText} badgeText={item.badgeText} onPress={item.onPress} />
-    );
-  }, []);
-
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     fetchData();
@@ -928,32 +920,17 @@ export default function ExploreClientScreen() {
                   />
                 </View>
               </Animated.View>
-              {isAuthenticated && (
-                <>
-                  {/* Carrossel de Banners ÚNICO */}
-                  <Animated.View
-                    style={[
-                      styles.carouselContainer,
-                      {
-                        opacity: bannerAnim,
-                        transform: [{ translateY: 0 }],
-                      },
-                    ]}>
-                    <FlatList<BannerDataItem>
-                      ref={flatListRef}
-                      data={bannerData}
-                      renderItem={renderBannerItem}
-                      keyExtractor={(item) => item.id}
-                      horizontal
-                      pagingEnabled
-                      showsHorizontalScrollIndicator={false}
-                      snapToInterval={screenWidth}
-                      decelerationRate="fast"
-                      contentContainerStyle={{ paddingRight: 20 }}
-                      nestedScrollEnabled={true} // Melhora scroll aninhado no Android
-                    />
-                  </Animated.View>
-                </>
+              {primaryBanner && (
+                <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim }]}>
+                  <CarouselBannerItem
+                    title={primaryBanner.title}
+                    discount={primaryBanner.discount}
+                    description={primaryBanner.description}
+                    buttonText={primaryBanner.buttonText}
+                    badgeText={primaryBanner.badgeText}
+                    onPress={primaryBanner.onPress}
+                  />
+                </Animated.View>
               )}
               {/*QA_PANEL_ENABLED && (
                 <TouchableOpacity
@@ -1044,20 +1021,21 @@ export default function ExploreClientScreen() {
                       },
                     ],
                   }}>
-                  <SecaoRecomendacoes
-                    titulo={t('search.recommended_providers')}
-                    onVerTudoPress={() => router.push('/client/explore/todos-recomendacoes' as any)}
-                    data={safeRecommendations}
-                    renderItem={({ item, index }) => {
-                      if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
+                <SecaoRecomendacoes
+                  titulo={t('search.recommended_providers')}
+                  onVerTudoPress={() => router.push('/client/explore/todos-recomendacoes' as any)}
+                  data={safeRecommendations}
+                  renderItem={({ item, index }) => {
+                    if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
                         // log removido para performance
                         return null;
                       }
-                      return <RecomendacaoCard key={item.id} item={item} />;
-                    }}
-                    horizontal={true}
-                    noDataText={t('search.no_results')}
-                  />
+                    return <RecomendacaoCard key={item.id} item={item} />;
+                  }}
+                  horizontal={true}
+                  titleColor="rgba(95, 118, 141, 0.7)"
+                  noDataText={t('search.no_results')}
+                />
                 </Animated.View>
 
                 {/* Profissionais por Perto ÚNICOS */}
@@ -1097,42 +1075,6 @@ export default function ExploreClientScreen() {
                 </Animated.View>
 
                 {isAuthenticated && Platform.OS === 'android' && renderCategoriesSection()}
-
-                {!isAuthenticated && (
-                  <Animated.View
-                    style={[
-                      styles.carouselContainer,
-                      {
-                        marginTop: 28,
-                        opacity: bannerAnim,
-                        transform: [
-                          {
-                            translateY:
-                              Platform.OS === 'android'
-                                ? 0
-                                : bannerAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [-12, 0],
-                                  }),
-                          },
-                        ],
-                      },
-                    ]}>
-                    <FlatList<BannerDataItem>
-                      ref={flatListRef}
-                      data={bannerData}
-                      renderItem={renderBannerItem}
-                      keyExtractor={(item) => item.id}
-                      horizontal
-                      pagingEnabled
-                      showsHorizontalScrollIndicator={false}
-                      snapToInterval={screenWidth}
-                      decelerationRate="fast"
-                      contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }}
-                      nestedScrollEnabled={true} // Melhora scroll aninhado no Android
-                    />
-                  </Animated.View>
-                )}
 
                 {/* Spacer para scroll extra (compensa absolutos) */}
                 <View style={{ height: 10 }} />
@@ -1406,18 +1348,17 @@ const styles = StyleSheet.create({
     fontSize: 16.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '600',
-    // PREMIUM: Estilo de título alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
     marginBottom: 10,
-    right: 200,
+    marginLeft: 16,
   },
   carouselContainer: {
     marginTop: 8,
     marginBottom: 18,
     alignItems: 'center',
-    paddingHorizontal: 10,
-    width: '100%',
+    width: BANNER_WIDTH,
+    alignSelf: 'center',
   },
   navBarContainer: {
   position: 'absolute',
@@ -1647,6 +1588,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     color: AppColors.textBody,
+    fontFamily: 'Montserrat-Regular', // ✅ AGORA O ANDROID VAI ACHAR
   },
   reviewNudge: {
     marginHorizontal: 12,
