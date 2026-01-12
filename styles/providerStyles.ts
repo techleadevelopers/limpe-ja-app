@@ -2,7 +2,8 @@ import { Dimensions, Platform, StyleSheet } from 'react-native';
 import { AppColors, AppShadows, SCREEN_WIDTH } from '../constants/appStyles'; // Importe AppColors e AppShadows
 
 // Definir FONT_FAMILY aqui para que seja acessível em todo o arquivo de estilos
-const FONT_FAMILY = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
+const FONT_FAMILY = Platform.select({ ios: 'Montserrat-Regular', 
+  android: 'Montserrat-Regular', default: 'System' });
 
 const PROVIDER_NAME_FONT_FAMILY = Platform.select({
   ios: 'System',
