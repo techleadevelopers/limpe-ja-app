@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: Platform.OS === 'android' ? 13 : -180,
     left: 3,
-    top: Platform.OS === 'android' ? 7 : 0,
+    marginTop: Platform.OS === 'android' ? 12 : 0,
     marginHorizontal: Platform.OS === 'android' ? 10 : 12,
     paddingHorizontal: Platform.OS === 'android' ? 7 : 9,
     borderBottomEndRadius: 40,
@@ -318,6 +318,7 @@ const styles = StyleSheet.create({
 
   greetingText: {
     fontSize: Platform.OS === 'android' ? 12 : 15,
+    fontFamily: 'Roboto', // 👈 OBRIGATÓRIO AQUI!
     marginLeft: Platform.OS === 'android' ? 2 : 5,
     color: '#8d9fafff',
     fontWeight: Platform.select({ ios: '300', android: '300' }),
