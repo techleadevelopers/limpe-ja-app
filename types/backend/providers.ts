@@ -11,7 +11,7 @@ import { ProviderServiceOffering } from './provider-service';
 import { ReviewEntity } from './reviews'; // <-- Importação adicionada/ajustada
 
 // CORREÇÃO: Re-exportar ProviderServiceOffering para que outros módulos possam importá-lo daqui
-export { ProviderServiceOffering };
+export type { ProviderServiceOffering };
 
 /**
  * NOVO: Tipagem para as métricas de performance do provedor.
@@ -47,6 +47,18 @@ export type ProviderAvailability = {
   endTime: string;
   isAvailable: boolean; // ADICIONADO: Propriedade 'isAvailable'
 };
+
+/**
+ * @interface DayAvailability
+ * Representa o estado de um dia na grade de seleção do provedor.
+ */
+export interface DayAvailability {
+  dayOfWeek: number;
+  isEnabled: boolean;
+  selectedSlots: string[];
+  originalSlots?: string[];
+  id?: string;
+}
 
 /**
  * @interface ProviderDisplayInfo
@@ -99,6 +111,7 @@ export interface ProviderDisplayInfo {
   minPrice?: number; // NOVO: Preço mínimo pré-calculado de um serviço oferecido pelo provedor
   // NOVOS CAMPOS PARA SINAIS PREMIUM (opcionais, sem quebrar compatibilidade, conforme relatório)
   nextAvailable?: { date: string; time: string }; // Ex.: { date: '2025-09-29', time: '09:00' } — para chip de horário
+  nextSlot?: { date: string; time: string } | null;
 }
 
 /**
@@ -157,6 +170,7 @@ export type ProviderWithCalculatedRating = {
   minPrice?: number; // NOVO: Preço mínimo pré-calculado de um serviço oferecido pelo provedor
   // NOVOS CAMPOS PARA SINAIS PREMIUM (opcionais)
   nextAvailable?: { date: string; time: string }; // NOVO: Para chip de horário
+  nextSlot?: { date: string; time: string } | null;
 };
 
 /**
@@ -220,6 +234,24 @@ export interface UpdateAvailabilityData {
   startTime: string;
   endTime: string;
   isAvailable: boolean; // ADICIONADO: Propriedade 'isAvailable'
+}
+
+/**
+ * @interface AvailabilitySlot
+ * Representa um bloco de disponibilidade enviado pela UI.
+ */
+export interface AvailabilitySlot {
+  startTime: string;
+  endTime: string;
+}
+
+/**
+ * @interface AvailabilityUpdatePayload
+ * Payload usado pelo frontend para sincronizar disponibilidade diária.
+ */
+export interface AvailabilityUpdatePayload {
+  date: string;
+  slots: AvailabilitySlot[];
 }
 
 /**
