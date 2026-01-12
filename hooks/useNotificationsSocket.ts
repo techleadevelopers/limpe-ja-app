@@ -6,6 +6,8 @@ import NotificationUIService from '../services/notificationUIService';
 import { resolveSocketUrl } from '../utils/socket';
 import { dedupeAppEvents } from '../utils/notificationStreamUtils';
 import type { AppEvent } from '../types/backend/events';
+import { emitBookingEvent } from '../services/bookingEventBus';
+import { scheduleLocalNotification } from '../services/localNotificationService';
 
 export function useNotificationsSocket(authToken?: string | null) {
   const isPlayingRef = useRef(false);
@@ -52,6 +54,19 @@ export function useNotificationsSocket(authToken?: string | null) {
       }
       processedKeysRef.current.add(dedupeId);
 
+      const bookingId =
+        (event.payload?.bookingId as string | undefined) ??
+        (event.payload?.booking_id as string | undefined) ??
+        (event.payload?.booking?.id as string | undefined);
+      if (bookingId) {
+        emitBookingEvent({
+          bookingId: String(bookingId),
+          status: (event.payload?.status as string | undefined) ?? undefined,
+          source: 'notification',
+          payload: event.payload ?? null,
+        });
+      }
+
       const title = event.title ?? 'NotificaA§ALo';
       const message = event.message ?? 'VocAa recebeu uma nova notificaA§ALo.';
       const deepLink =
@@ -84,26 +99,15 @@ export function useNotificationsSocket(authToken?: string | null) {
         kind.includes('agendamento') ||
         kind.includes('booking');
       if (isService) {
-        try {
-          const Notifications =
-            (await import('expo-notifications')).default || (await import('expo-notifications'));
-          await (Notifications as any)?.scheduleNotificationAsync?.({
-            content: {
-              title,
-              body: message,
-              sound: 'default',
-              data: event.payload ?? event,
-            },
-            trigger: null,
-          });
-        } catch (err) {
-          console.warn('[notifications socket] failed to play sound notification:', err);
-        }
-
+        await scheduleLocalNotification({
+          title,
+          body: message,
+          data: event.payload ?? null,
+        });
         playAlertSound();
       }
     },
-    [],
+    [emitBookingEvent, scheduleLocalNotification],
   );
 
   const fetchPendingEvents = useCallback(async () => {
