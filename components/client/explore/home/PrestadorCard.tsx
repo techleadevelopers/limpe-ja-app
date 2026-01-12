@@ -19,10 +19,6 @@ interface PrestadorCardProps {
     onPress: (prestadorId: string) => void;
 }
 
-const PRESTADOR_CARD_SCALE = 0.91;
-const PRESTADOR_CARD_SHRINK_STYLE = {
-    transform: [{ scale: PRESTADOR_CARD_SCALE }],
-};
 
 const getNextSlotLabel = (
     slot?: ProviderDisplayInfo['nextAvailable'] | ProviderDisplayInfo['nextSlot'],
@@ -54,7 +50,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
     const { t } = useTranslation();
-    const rootShrinkStyle = PRESTADOR_CARD_SHRINK_STYLE;
+    
     const providerMetrics = useProviderMetrics(item.id);
 
     // Animação de entrada (fade e slide)
@@ -161,7 +157,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     return (
         <AnimatedReanimated.View entering={enteringKF} style={styles.layoutWrapper}>
             {/* Layout wrapper keeps entering separate from the transform animations. */}
-            <Animated.View style={[styles.animatedCardContainer, rootShrinkStyle, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
+            <Animated.View style={[styles.animatedCardContainer,  { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             <TouchableOpacity
                 style={styles.cardContainer}
                 onPress={() => {
