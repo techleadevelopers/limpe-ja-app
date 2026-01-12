@@ -24,6 +24,26 @@ const MAX_RETRY_ATTEMPTS = 3;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const tryReturnLatestMatchingStatus = async (
+  bookingId: string,
+  target: BookingStatus,
+): Promise<BookingDetails | null> => {
+  try {
+    const latest = await getBookingDetails(bookingId);
+    if (latest.status === target) {
+      return latest;
+    }
+  } catch (error: any) {
+    if (__DEV__) {
+      console.warn(
+        `[bookingService] Falha ao reconsultar status do agendamento ${bookingId}:`,
+        error?.response?.data || error?.message,
+      );
+    }
+  }
+  return null;
+};
+
 /**
  * @function createBooking
  * Cria um novo agendamento.
@@ -137,11 +157,15 @@ export async function updateBookingStatus(bookingId: string, data: UpdateBooking
         if (__DEV__) {
             console.warn(`Erro ao atualizar status do agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
         }
-        if (axios.isAxiosError(error) && error.response) {
-            throw new Error(error.response.data.message || `Erro ao atualizar status do agendamento ${bookingId}.`);
-        }
-        throw new Error(`Erro de rede ou servidor ao atualizar status do agendamento ${bookingId}.`);
+    if (axios.isAxiosError(error) && error.response) {
+      const latest = await tryReturnLatestMatchingStatus(bookingId, data.status);
+      if (latest) {
+        return latest;
+      }
+      throw new Error(error.response.data.message || `Erro ao atualizar status do agendamento ${bookingId}.`);
     }
+    throw new Error(`Erro de rede ou servidor ao atualizar status do agendamento ${bookingId}.`);
+  }
 }
 
 export async function startBooking(
@@ -158,10 +182,61 @@ export async function startBooking(
             console.warn(`Erro ao iniciar agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
         }
         if (axios.isAxiosError(error) && error.response) {
+            const latestStarted = await tryReturnLatestMatchingStatus(bookingId, BookingStatus.STARTED);
+            if (latestStarted) {
+                return latestStarted;
+            }
+            const latestArrived = await tryReturnLatestMatchingStatus(bookingId, BookingStatus.ARRIVED);
+            if (latestArrived) {
+                return latestArrived;
+            }
             throw new Error(error.response.data.message || `Erro ao iniciar agendamento ${bookingId}.`);
         }
-        throw new Error(`Erro de rede ou servidor ao iniciar agendamento ${bookingId}.`);
+    throw new Error(`Erro de rede ou servidor ao iniciar agendamento ${bookingId}.`);
+  }
+}
+
+export async function markBookingOnTheWay(
+    bookingId: string,
+): Promise<BookingDetails> {
+    try {
+        const response: AxiosResponse<BookingDetails> = await api.post<BookingDetails>(`/bookings/${bookingId}/on-the-way`);
+        return mapBookingStatusIn(response.data);
+    } catch (error: any) {
+        if (__DEV__) {
+            console.warn(`Erro ao marcar agendamento ${bookingId} como a caminho (dev only):`, error.response?.data || error.message);
+        }
+    if (axios.isAxiosError(error) && error.response) {
+      const latest = await tryReturnLatestMatchingStatus(bookingId, BookingStatus.ON_THE_WAY);
+      if (latest) {
+        return latest;
+      }
+      throw new Error(error.response.data.message || `Erro ao marcar agendamento ${bookingId} como a caminho.`);
     }
+    throw new Error(`Erro de rede ou servidor ao marcar agendamento ${bookingId} como a caminho.`);
+  }
+}
+
+export async function markBookingArrived(
+    bookingId: string,
+    location?: BookingLocationPayload,
+): Promise<BookingDetails> {
+    try {
+        const response: AxiosResponse<BookingDetails> = await api.post<BookingDetails>(`/bookings/${bookingId}/arrived`, location);
+        return mapBookingStatusIn(response.data);
+    } catch (error: any) {
+        if (__DEV__) {
+            console.warn(`Erro ao registrar chegada do agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
+        }
+    if (axios.isAxiosError(error) && error.response) {
+      const latest = await tryReturnLatestMatchingStatus(bookingId, BookingStatus.ARRIVED);
+      if (latest) {
+        return latest;
+      }
+      throw new Error(error.response.data.message || `Erro ao registrar chegada do agendamento ${bookingId}.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao registrar chegada do agendamento ${bookingId}.`);
+  }
 }
 
 export async function completeBooking(bookingId: string): Promise<BookingDetails> {
@@ -172,11 +247,15 @@ export async function completeBooking(bookingId: string): Promise<BookingDetails
         if (__DEV__) {
             console.warn(`Erro ao concluir agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
         }
-        if (axios.isAxiosError(error) && error.response) {
-            throw new Error(error.response.data.message || `Erro ao concluir agendamento ${bookingId}.`);
-        }
-        throw new Error(`Erro de rede ou servidor ao concluir agendamento ${bookingId}.`);
+    if (axios.isAxiosError(error) && error.response) {
+      const latest = await tryReturnLatestMatchingStatus(bookingId, BookingStatus.FINISHED);
+      if (latest) {
+        return latest;
+      }
+      throw new Error(error.response.data.message || `Erro ao concluir agendamento ${bookingId}.`);
     }
+    throw new Error(`Erro de rede ou servidor ao concluir agendamento ${bookingId}.`);
+  }
 }
 
 export async function requestManualStart(
