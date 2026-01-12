@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, StyleProp, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BookingSummaryCard from '../../../components/client/booking/success/BookingSummaryCard';
@@ -14,8 +14,10 @@ import { ReturnCouponCard } from '../../../components/client/booking/success/Ret
 import SecurityInfoSection from '../../../components/client/booking/success/SecurityInfoSection';
 import SuccessHeader from '../../../components/client/booking/success/SuccessHeader';
 import SuccessLoadingError from '../../../components/client/booking/success/SuccessLoadingError';
+import NavBar from '../../../components/client/explore/home/NavBar';
 import { useAuth } from '../../../hooks/useAuth';
 import { CLIENT_ROUTES } from '@/app/_shared/routes';
+import { useDevice } from '@/utils/responsive';
 
 import { getBookingDetails } from '../../../services/bookingService';
 import { getOffers } from '../../../services/clientService';
@@ -94,6 +96,7 @@ export default function BookingSuccessScreen() {
 
   const router = useRouter();
   const { user } = useAuth();
+  const { isLargePhone } = useDevice();
 
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [provider, setProvider] = useState<ProviderDisplayInfo | null>(null);
@@ -119,6 +122,7 @@ export default function BookingSuccessScreen() {
 
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const contentTranslateY = useRef(new Animated.Value(24)).current;
+  const navBarAnim = useRef(new Animated.Value(0)).current;
 
   const bookingId = bookingIdParam;
   const routeTotalPrice = Number(extractFirst(params.totalPrice) ?? '');
@@ -147,6 +151,10 @@ export default function BookingSuccessScreen() {
 
   const providerRating = provider?.averageRating ?? undefined;
   const styles = useMemo(() => createStyles(insets.top), [insets.top]);
+  const navWrap: StyleProp<ViewStyle> = useMemo(
+    () => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined),
+    [isLargePhone],
+  );
 
   const triggerContentAnimation = useCallback(() => {
     Animated.parallel([
@@ -160,8 +168,15 @@ export default function BookingSuccessScreen() {
         duration: 420,
         useNativeDriver: true,
       }),
+      Animated.timing(navBarAnim, {
+        toValue: 1,
+        duration: 420,
+        delay: 120,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
     ]).start();
-  }, [contentOpacity, contentTranslateY]);
+  }, [contentOpacity, contentTranslateY, navBarAnim]);
 
   const loadData = useCallback(async () => {
     if (!bookingId) {
@@ -649,6 +664,18 @@ export default function BookingSuccessScreen() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+      <Animated.View
+        style={[
+          styles.navBarContainer,
+          navWrap,
+          {
+            transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }],
+          },
+        ]}
+        pointerEvents="box-none"
+      >
+        <NavBar />
+      </Animated.View>
     </View>
   );
 }
@@ -670,7 +697,14 @@ const createStyles = (insetsTop: number) =>
       justifyContent: 'flex-start',
       paddingHorizontal: 20,
       paddingTop: Platform.OS === 'android' ? 24 : 10, // Android extra spacing
-      paddingBottom: 50,
+      paddingBottom: Platform.OS === 'android' ? 160 : 190,
+    },
+    navBarContainer: {
+      position: 'absolute',
+      bottom: Platform.OS === 'android' ? 2 : -30,
+      left: 0,
+      right: 0,
+      zIndex: 200,
     },
     paymentStatusContainer: {
       width: '100%',
