@@ -418,8 +418,7 @@ export default function EditProviderServicesScreen() {
       setIsReloadingCatalog(false);
     }
   };
-
-  // ===== Handlers =====
+// ===== Handlers =====
   const handleSaveServices = useCallback(() => {
     showOverlay({ title: 'Serviços salvos com sucesso', variant: 'success' });
     if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -455,104 +454,103 @@ export default function EditProviderServicesScreen() {
     if (!selectedBaseServiceId) {
       const errorMessage = 'Selecione um tipo de serviço.';
       setFormError(errorMessage);
-      AccessibilityInfo.announceForAccessibility?.(errorMessage);
       return;
     }
 
     if (!servicePriceRaw) {
       const errorMessage = 'Informe o preço por hora.';
       setFormError(errorMessage);
-      AccessibilityInfo.announceForAccessibility?.(errorMessage);
       return;
     }
 
     const finalPrice = parseFloat(servicePriceRaw);
     if (Number.isNaN(finalPrice) || finalPrice <= 0) {
-      const errorMessage = 'Preço inválido. Deve ser um número maior que zero.';
-      setFormError(errorMessage);
-      AccessibilityInfo.announceForAccessibility?.(errorMessage);
+      setFormError('Preço inválido. Deve ser maior que zero.');
       return;
     }
 
     const requestedDuration = parseDurationToMinutes(serviceDuration);
     const durationMinutes = Math.max(requestedDuration ?? MIN_DURATION_MINUTES, MIN_DURATION_MINUTES);
 
-    const updateData: UpdateProviderServiceData = {
-      description: serviceDesc.trim(),
-      pricePerHour: finalPrice,
-      durationMinutes,
-    };
-    const createData: CreateProviderServiceData = {
-      serviceId: selectedBaseServiceId as string,
-      pricePerHour: finalPrice,
-      durationMinutes,
-      description: serviceDesc.trim(),
-    };
-
     setIsLoading(true);
     try {
+      // --- LOGICA ANTI-CONFLITO (409) ---
+      // Se não estou editando explicitamente, mas escolhi um serviço que já ofereço:
+      const existingInList = services.find(s => s.serviceId === selectedBaseServiceId);
+      const effectiveEditingId = isEditing?.id || existingInList?.id;
+
       let resultService: ProviderServiceType;
-      if (isEditing) {
-        resultService = await updateProviderServiceOffering(user.providerDetails.id, isEditing.id, updateData);
+
+      if (effectiveEditingId) {
+        // Se existe ID, faz UPDATE (Substitui o preço/descrição no banco)
+        const updateData: UpdateProviderServiceData = {
+          description: serviceDesc.trim(),
+          pricePerHour: finalPrice,
+          durationMinutes,
+        };
+        resultService = await updateProviderServiceOffering(user.providerDetails.id, effectiveEditingId, updateData);
+        
         setServices(prev =>
           prev
-            .map(service =>
-              service.id === isEditing.id
-                ? {
-                    id: resultService.id,
-                    name: resultService.service.name,
-                    serviceId: resultService.service.id,
-                    description: resultService.description || '',
-                    pricePerHour:
-                      typeof resultService.pricePerHour === 'number' && Number.isFinite(resultService.pricePerHour)
-                        ? parseFloat(resultService.pricePerHour.toString())
-                        : finalPrice,
-                    durationMinutes:
-                      typeof resultService.durationMinutes === 'number' ? resultService.durationMinutes : durationMinutes,
-                    needsReview: Boolean(resultService.needsReview),
-                  }
-                : service
-            )
+            .map(s => (s.id === effectiveEditingId ? {
+              id: resultService.id,
+              name: resultService.service?.name || 'Serviço', // Proteção contra undefined
+              serviceId: resultService.service?.id || selectedBaseServiceId,
+              description: resultService.description || '',
+              pricePerHour: Number(resultService.pricePerHour) || finalPrice,
+              durationMinutes: Number(resultService.durationMinutes) || durationMinutes,
+              needsReview: Boolean(resultService.needsReview),
+            } : s))
             .sort((a, b) => a.name.localeCompare(b.name))
         );
-        showOverlay({ title: 'Serviço atualizado com sucesso!', variant: 'success' });
-        if (Platform.OS === 'ios') await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        showOverlay({ title: 'Serviço atualizado!', variant: 'success' });
       } else {
+        // Se realmente é novo, faz POST (Add)
+        const createData: CreateProviderServiceData = {
+          serviceId: selectedBaseServiceId,
+          pricePerHour: finalPrice,
+          durationMinutes,
+          description: serviceDesc.trim(),
+        };
         resultService = await addProviderServiceOffering(user.providerDetails.id, createData);
+        
         const newService: ServiceOffering = {
           id: resultService.id,
-          name: resultService.service.name,
-          serviceId: resultService.service.id,
+          name: resultService.service?.name || 'Novo Serviço', // Proteção contra undefined
+          serviceId: resultService.service?.id || selectedBaseServiceId,
           description: resultService.description || '',
-          pricePerHour:
-            typeof resultService.pricePerHour === 'number' && Number.isFinite(resultService.pricePerHour)
-              ? parseFloat(resultService.pricePerHour.toString())
-              : finalPrice,
-          durationMinutes:
-            typeof resultService.durationMinutes === 'number' ? resultService.durationMinutes : durationMinutes,
+          pricePerHour: Number(resultService.pricePerHour) || finalPrice,
+          durationMinutes: Number(resultService.durationMinutes) || durationMinutes,
           needsReview: Boolean(resultService.needsReview),
         };
         setServices(prev => [...prev, newService].sort((a, b) => a.name.localeCompare(b.name)));
-        showOverlay({ title: 'Serviço adicionado', subtitle: 'Publicado no seu catálogo', variant: 'success' });
-        if (Platform.OS === 'ios') await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        showOverlay({ title: 'Serviço adicionado!', variant: 'success' });
       }
+
+      if (Platform.OS === 'ios') await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       resetForm();
     } catch (error: any) {
-      console.error('[EditProviderServicesScreen] Erro ao adicionar/atualizar serviço:', error);
-      showOverlay({ title: 'Falha ao salvar', subtitle: error?.message || 'Tente novamente', variant: 'error' });
+      console.error('[EditProviderServicesScreen] Erro:', error);
+      const msg = error?.message?.includes('409') || error?.message?.includes('Conflict')
+        ? 'Você já oferece este serviço. Tente editá-lo na lista abaixo.'
+        : error?.message || 'Tente novamente';
+      showOverlay({ title: 'Falha ao salvar', subtitle: msg, variant: 'error' });
     } finally {
       setIsLoading(false);
     }
-  }, [user, selectedBaseServiceId, servicePriceRaw, serviceDuration, serviceDesc, isEditing, resetForm]);
+  }, [user, selectedBaseServiceId, servicePriceRaw, serviceDuration, serviceDesc, isEditing, services, resetForm]);
 
   const startEdit = useCallback((service: ServiceOffering) => {
     setIsEditing(service);
     setSelectedBaseServiceId(service.serviceId);
     setServiceDesc(String(service.description || ''));
 
-    const formattedPrice = safeToFixed(service.pricePerHour, 2);
+    const formattedPrice = service.pricePerHour.toString();
     setServicePriceRaw(formattedPrice);
-    setServicePriceDisplay(formattedPrice ? normalizeCurrencyInput(String(Math.round(parseFloat(formattedPrice) * 100))).display : '');
+    
+    // Normaliza o display para o formato de moeda
+    const { display } = normalizeCurrencyInput((service.pricePerHour * 100).toFixed(0));
+    setServicePriceDisplay(display);
 
     setServiceDuration(service.durationMinutes ? `${service.durationMinutes} minutos` : '');
     setFormError(null);
@@ -560,30 +558,32 @@ export default function EditProviderServicesScreen() {
 
   const deleteService = useCallback(
     async (serviceId: string) => {
-      if (!user?.providerDetails?.id) {
-        Alert.alert('Erro', 'ID do provedor não encontrado. Faça login novamente.');
-        return;
-      }
-      setIsLoading(true);
-      try {
-        await deleteProviderServiceOffering(user.providerDetails.id, serviceId);
-        setServices(prev => prev.filter(s => s.id !== serviceId));
-        Alert.alert('Sucesso', 'O serviço foi removido da sua lista.');
-        resetForm();
-      } catch (error: any) {
-        console.error('[EditProviderServicesScreen] Erro ao deletar serviço:', error);
-        const rawMessage = String(error?.message || '').toLowerCase();
-        const isForeignKeyError =
-          rawMessage.includes('foreign') ||
-          rawMessage.includes('constraint') ||
-          rawMessage.includes('booking');
-        const friendlyMessage = isForeignKeyError
-          ? 'Este serviço está vinculado a agendamentos. Cancele ou conclua esses agendamentos antes de remover.'
-          : 'Não foi possível deletar o serviço. Tente novamente ou fale com o suporte.';
-        Alert.alert('Erro ao excluir', friendlyMessage);
-      } finally {
-        setIsLoading(false);
-      }
+      if (!user?.providerDetails?.id) return;
+      
+      Alert.alert('Remover Serviço', 'Deseja excluir este serviço do seu catálogo?', [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+             await deleteProviderServiceOffering(user.providerDetails!.id, serviceId);
+              setServices(prev => prev.filter(s => s.id !== serviceId));
+              showOverlay({ title: 'Removido', variant: 'success' });
+              resetForm();
+            } catch (error: any) {
+              const rawMessage = String(error?.message || '').toLowerCase();
+              const friendlyMessage = (rawMessage.includes('foreign') || rawMessage.includes('booking'))
+                ? 'Este serviço possui agendamentos ativos e não pode ser removido.'
+                : 'Erro ao deletar serviço.';
+              Alert.alert('Erro', friendlyMessage);
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]);
     },
     [user, resetForm]
   );
