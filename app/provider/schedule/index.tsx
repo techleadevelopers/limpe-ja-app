@@ -5,7 +5,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import 'dayjs/locale/pt-br';
 import { useRouter } from 'expo-router';
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,7 +14,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  LogBox
+  LogBox,
+  Alert
 } from 'react-native';
 import ProviderNavBar from '../../../components/provider/navigation/ProviderNavBar';
 import { ResilientErrorBoundary } from '../../../components/common/ResilientErrorBoundary';
@@ -115,6 +116,12 @@ function ScheduleView({ scheduleState, selectedDate, setSelectedDate, selectedDa
     });
   }, [selectedDateKey]);
 
+  const handleRefresh = useCallback(() => {
+    if (!refreshing) {
+      refresh();
+    }
+  }, [refreshing, refresh]);
+
   const renderTimelineItem = ({ item }: { item: any }) => (
     <View style={[styles.timelineRow, item.isNowLine && styles.timelineNowRow]}>
       <View style={styles.hourColumn}>
@@ -182,7 +189,7 @@ function ScheduleView({ scheduleState, selectedDate, setSelectedDate, selectedDa
         keyExtractor={r => `${r.hour}`}
         renderItem={renderTimelineItem}
         contentContainerStyle={styles.timelineList}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />}
       />
       <ProviderNavBar />
     </View>
@@ -193,13 +200,15 @@ const MyScheduleScreen = () => {
   const [selectedDate, setSelectedDate] = useState(() => dayjs().tz(TIMEZONE).format('YYYY-MM-DD'));
   const [debouncedDate, setDebouncedDate] = useState(selectedDate);
 
+  // Debounce para evitar múltiplas chamadas enquanto navega no calendário
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedDate(selectedDate);
-    }, 800); 
+    }, 400); // Reduzido para 400ms para melhor fluidez sem loop
     return () => clearTimeout(handler);
   }, [selectedDate]);
 
+  // CORREÇÃO CRÍTICA: Memoizar o objeto dateBounds para evitar loops infinitos no hook
   const dateBounds = useMemo(() => ({
     start: dayjs(debouncedDate).tz(TIMEZONE).startOf('day').toISOString(),
     end: dayjs(debouncedDate).tz(TIMEZONE).endOf('day').toISOString()
@@ -207,9 +216,15 @@ const MyScheduleScreen = () => {
 
   const scheduleState = useProviderSchedule(dateBounds);
 
-  // RESOLUÇÃO DOS ERROS DE TIPAGEM (AS ANY)
+  // Tratamento de Erros e Throttling
   const apiError = scheduleState.error as any;
-  const isThrottled = apiError?.statusCode === 429 || apiError?.status === 429 || apiError === '429';
+  const isThrottled = apiError?.statusCode === 429 || apiError?.status === 429;
+
+  useEffect(() => {
+    if (isThrottled) {
+      Alert.alert("Aviso", "Muitas requisições. Aguarde um momento para atualizar a agenda.");
+    }
+  }, [isThrottled]);
 
   return (
     <ResilientErrorBoundary onRetry={isThrottled ? undefined : scheduleState.retry}>
