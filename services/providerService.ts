@@ -19,9 +19,9 @@ import {
   UpdateProviderProfileData,
   UpdateProviderServiceData,
   GetProviderAvailabilityResponse,
-  ProviderMetrics, // <<-- CORREÇÃO: Importado de ../types/backend/providers
+  ProviderMetrics,
   ProviderAvailabilitySummary,
-  Offer // <<-- CORREÇÃO: Importado de ../types/backend/providers
+  Offer,
 } from '../types/backend/providers';
 
 // <<<< CORREÇÃO: Importar ProviderServiceOffering APENAS do seu arquivo de origem >>>>
@@ -559,17 +559,31 @@ export async function deleteProviderAvailability(providerId: string, availabilit
 }
 
 /**
- * @function getProviderServicesOffered
- * Obtém a lista de serviços que um provedor oferece (GET /providers/:providerId/services).
- * @param providerId O ID do provedor.
- * @returns Uma Promise que resolve para um array de ProviderServiceOffering.
- */
-export async function getProviderServicesOffered(providerId: string): Promise<ProviderServiceOffering[]> {
+* @function getProviderServicesOffered
+* Obtém a lista de serviços que um provedor oferece (GET /providers/:providerId/services).
+* @param providerId O ID do provedor.
+* @param options Permite ajustar filtros para evitar excluir serviços especiais.
+* @returns Uma Promise que resolve para um array de ProviderServiceOffering.
+*/
+type GetProviderServicesOptions = {
+  includeNeedsReview?: boolean;
+  includeZeroPrice?: boolean;
+};
+
+export async function getProviderServicesOffered(
+  providerId: string,
+  options?: GetProviderServicesOptions,
+): Promise<ProviderServiceOffering[]> {
   try {
     const response: AxiosResponse<ProviderServiceOffering[]> = await api.get(`/providers/${providerId}/services`);
-    return response.data.filter(
-      (service) => service.pricePerHour > 0 && !service.needsReview,
-    );
+    let data = response.data;
+    if (!options?.includeNeedsReview) {
+      data = data.filter((service) => !service.needsReview);
+    }
+    if (!options?.includeZeroPrice) {
+      data = data.filter((service) => service.pricePerHour > 0);
+    }
+    return data;
   } catch (error: any) {
     console.error(`Erro ao buscar serviços oferecidos pelo provedor ${providerId}:`, error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
