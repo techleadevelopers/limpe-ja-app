@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   sectionTitle: {
-  fontSize: Platform.OS === 'android' ? 14 : 15.5,
+  fontSize: Platform.OS === 'android' ? 15 : 15.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '600',
     color: 'rgba(95, 118, 141, 0.7)',
