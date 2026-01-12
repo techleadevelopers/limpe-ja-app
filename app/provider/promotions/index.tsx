@@ -1,7 +1,9 @@
-﻿import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
     AccessibilityInfo,
     ActivityIndicator,
@@ -16,6 +18,7 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Platform 
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { getUserMessage } from '../../../_shared/errors/uiFeedback';
@@ -53,6 +56,36 @@ const getDateAfterDays = (days: number): Date => {
 const isPromotionExpired = (promotion: ProviderPromotionDto) =>
   new Date(promotion.validUntil).getTime() < Date.now();
 
+type PromotionStatusIcon = 'close-circle' | 'checkmark-circle' | 'pause-circle';
+
+const getStatusMeta = (promotion: ProviderPromotionDto) => {
+  const expired = isPromotionExpired(promotion);
+  if (expired) {
+    return {
+      label: 'EXPIRADA',
+      color: '#EF4444',
+      background: 'rgba(239,68,68,0.12)',
+      icon: 'close-circle' as PromotionStatusIcon,
+    };
+  }
+
+  if (promotion.isActive) {
+    return {
+      label: 'ATIVA',
+      color: '#10B981',
+      background: 'rgba(16,185,129,0.15)',
+      icon: 'checkmark-circle' as PromotionStatusIcon,
+    };
+  }
+
+  return {
+    label: 'PAUSADA',
+    color: '#F59E0B',
+    background: 'rgba(245,158,11,0.15)',
+    icon: 'pause-circle' as PromotionStatusIcon,
+  };
+};
+
 const PromotionsScreen = () => {
   const [promotions, setPromotions] = useState<ProviderPromotionDto[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,6 +103,8 @@ const PromotionsScreen = () => {
   const [highlightUpdate, setHighlightUpdate] = useState(false);
   const router = useRouter();
   const lastActivePromotionRef = useRef<string | null>(null);
+
+  
 
 const resolveErrorMessage = useCallback(
   (error: unknown, action: 'list' | 'create' | 'toggle') => {
@@ -211,6 +246,12 @@ const resolveErrorMessage = useCallback(
     }
   };
 
+  const handleSavePress = () => {
+    if (isCreating || !selectedPercent || isVerificationPending) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void handleCreatePromotion();
+  };
+
   const handleTogglePromotion = async (promotion: ProviderPromotionDto) => {
     if (togglingId || isVerificationPending) return;
     setTogglingId(promotion.id);
@@ -245,52 +286,52 @@ const resolveErrorMessage = useCallback(
   const renderHistoryCard = (promotion: ProviderPromotionDto) => {
     const expired = isPromotionExpired(promotion);
     const isLoadingToggle = togglingId === promotion.id;
-    const statusLabel = expired
-      ? 'EXPIRADA'
-      : promotion.isActive
-        ? 'ATIVA'
-        : 'DESATIVADA';
+    const statusMeta = getStatusMeta(promotion);
 
     return (
       <View key={promotion.id} style={styles.historyCard}>
-        <View style={styles.historyCardHeader}>
-          <Text style={styles.historyPercent}>{promotion.percentOff}% OFF</Text>
-          <View
-            style={[
-              styles.statusBadge,
-              promotion.isActive && !expired ? styles.badgeActive : expired ? styles.badgeExpired : styles.badgeDisabled,
-            ]}
-          >
-            <Text style={styles.statusBadgeText}>{statusLabel}</Text>
-          </View>
-        </View>
-        <Text numberOfLines={2} style={styles.historyTitle}>
-          {promotion.title || 'Promoção'}
-        </Text>
-        <Text style={styles.historyDate}>Válida até {formatFullDate(promotion.validUntil)}</Text>
-        {!expired && (
-          <View style={styles.historyToggleRow}>
-            <Text style={styles.historyToggleLabel}>
-              {promotion.isActive ? 'Promoção visível' : 'Ative para destacar'}
-            </Text>
-            <View style={styles.toggleControl}>
-              <Switch
-                trackColor={{ false: '#dcdcdc', true: Colors.light.primary }}
-                thumbColor="#fff"
-                onValueChange={() => handleTogglePromotion(promotion)}
-                value={promotion.isActive}
-                disabled={isVerificationPending || isLoadingToggle}
+        <View style={[styles.statusIndicator, { backgroundColor: statusMeta.color }]} />
+        <View style={styles.historyMainInfo}>
+          <View style={styles.historyCardHeader}>
+            <Text style={styles.historyPercent}>-{promotion.percentOff}% OFF</Text>
+            <View style={[styles.pillBadge, { backgroundColor: statusMeta.background }]}>
+              <Ionicons
+                name={statusMeta.icon}
+                size={14}
+                color={statusMeta.color}
+                style={styles.pillIcon}
               />
-              {isLoadingToggle && (
-                <ActivityIndicator
-                  size="small"
-                  color={Colors.light.primary}
-                  style={styles.toggleLoader}
-                />
-              )}
+              <Text style={[styles.pillText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
             </View>
           </View>
-        )}
+          <Text numberOfLines={2} style={styles.historyTitle}>
+            {promotion.title || 'Promoção'}
+          </Text>
+          <Text style={styles.historyDate}>Válida até {formatFullDate(promotion.validUntil)}</Text>
+          {!expired && (
+            <View style={styles.historyToggleRow}>
+              <Text style={styles.historyToggleLabel}>
+                {promotion.isActive ? 'Promoção visível' : 'Ative para destacar'}
+              </Text>
+              <View style={styles.toggleControl}>
+                <Switch
+                  trackColor={{ false: '#dcdcdc', true: Colors.light.primary }}
+                  thumbColor="#fff"
+                  onValueChange={() => handleTogglePromotion(promotion)}
+                  value={promotion.isActive}
+                  disabled={isVerificationPending || isLoadingToggle}
+                />
+                {isLoadingToggle && (
+                  <ActivityIndicator
+                    size="small"
+                    color={Colors.light.primary}
+                    style={styles.toggleLoader}
+                  />
+                )}
+              </View>
+            </View>
+          )}
+        </View>
       </View>
     );
   };
@@ -359,48 +400,57 @@ const resolveErrorMessage = useCallback(
           <View style={styles.section}>
             <View style={styles.activeSection}>
               {activePromotion ? (
-                <View style={[styles.activeCard, highlightUpdate && styles.activeCardHighlight]}>
-              <Text
-                style={[
-                  styles.activePromotionLabel,
-                  highlightUpdate && styles.activePromotionLabelHighlight,
-                ]}
-              >
-                Promoções ativas
-              </Text>
-              {highlightUpdate && (
-                <Text style={styles.activePromotionLabelUpdate}>Atualizado agora</Text>
-              )}
-                <Text style={styles.activeDiscount}>-{activePromotion.percentOff}%</Text>
+                <LinearGradient
+                  colors={[Colors.light.primary, Colors.light.primaryLight]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[
+                    styles.activeCard,
+                    highlightUpdate && styles.activeCardHighlight,
+                  ]}
+                >
+                  <View style={styles.discountCircle} />
+                  <View style={styles.activeInfoRow}>
+                    <Text style={styles.activeInfoText}>Promoção ativa</Text>
+                    {highlightUpdate && (
+                      <Text style={styles.activeInfoText}>Atualizado agora</Text>
+                    )}
+                  </View>
+                  <Text style={styles.activePercentage}>-{activePromotion.percentOff}%</Text>
                   <Text style={styles.activeValid}>
                     Válida até {formatFullDate(activePromotion.validUntil)}
                   </Text>
-                  <Text style={styles.activeTitle}>{activePromotion.title || 'Promoção ativa'}</Text>
+                  <Text style={styles.activeTitle}>
+                    {activePromotion.title || 'Promoção ativa'}
+                  </Text>
                   <View style={styles.activeActions}>
                     <TouchableOpacity
                       style={[
-                        styles.secondaryButton,
-                        (togglingId === activePromotion.id || isVerificationPending) && styles.secondaryButtonDisabled,
+                        styles.activeActionButton,
+                        (togglingId === activePromotion.id || isVerificationPending) &&
+                          styles.activeActionButtonDisabled,
                       ]}
                       onPress={() => handleTogglePromotion(activePromotion)}
                       disabled={togglingId === activePromotion.id || isVerificationPending}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                       {togglingId === activePromotion.id ? (
-                        <ActivityIndicator color={Colors.light.text} size="small" />
+                        <ActivityIndicator color="#fff" size="small" />
                       ) : (
-                        <Text style={styles.secondaryButtonText}>Desativar</Text>
+                        <Text style={styles.activeActionButtonText}>Desativar</Text>
                       )}
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={styles.primaryOutlineButton}
-                      onPress={() => Alert.alert('Editar promoção', 'Edição disponível em breve.')}
+                      style={styles.activeOutlineButton}
+                      onPress={() =>
+                        Alert.alert('Editar promoção', 'Edição disponível em breve.')
+                      }
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <Text style={styles.primaryOutlineButtonText}>Editar</Text>
+                      <Text style={styles.activeOutlineButtonText}>Editar</Text>
                     </TouchableOpacity>
                   </View>
-                </View>
+                </LinearGradient>
               ) : (
                 <View style={styles.emptyActiveCard}>
                   <Text style={styles.emptyActiveTitle}>Nenhuma promoção ativa</Text>
@@ -439,103 +489,107 @@ const resolveErrorMessage = useCallback(
 
       <Modal visible={modalVisible} animationType="slide" transparent>
         <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
-          <Pressable style={styles.modalContent} onPress={() => {}}>
-            <Text style={styles.modalTitle}>Criar promoção</Text>
-            <Text style={styles.modalLabel}>Título (opcional)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ex: Promoção de boas-vindas"
-              value={title}
-              onChangeText={setTitle}
-            />
-
-            <Text style={styles.modalLabel}>Desconto</Text>
-            <View style={styles.optionRow}>
-              {PERCENT_OPTIONS.map((percent) => (
-                <TouchableOpacity
-                  key={percent}
-                  style={[
-                    styles.optionButton,
-                    selectedPercent === percent && styles.optionButtonActive,
-                  ]}
-                  onPress={() => setSelectedPercent(percent)}
-                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                >
-                  <Text
-                    style={[
-                      styles.optionButtonText,
-                      selectedPercent === percent && styles.optionButtonTextActive,
-                    ]}
-                  >
-                    {percent}%
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          <Pressable style={styles.modalSheet} onPress={() => {}}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Criar promoção</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={styles.modalCloseText}>Fechar</Text>
+              </TouchableOpacity>
             </View>
-
-            <Text style={styles.modalLabel}>Duração</Text>
-            <View style={styles.optionRow}>
-              {DURATION_OPTIONS.map((days) => (
-                <TouchableOpacity
-                  key={days}
-                  style={[
-                    styles.optionButton,
-                    selectedDuration === days && styles.optionButtonActive,
-                  ]}
-                  onPress={() => setSelectedDuration(days)}
-                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                >
-                  <Text
-                    style={[
-                      styles.optionButtonText,
-                      selectedDuration === days && styles.optionButtonTextActive,
-                    ]}
-                  >
-                    {days} dias
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.validUntilText}>
-              Válido até {validUntilDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-            </Text>
-
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Ativar agora</Text>
-              <Switch
-                trackColor={{ false: '#dcdcdc', true: Colors.light.primary }}
-                thumbColor="#fff"
-                value={activateNow}
-                onValueChange={setActivateNow}
+            <ScrollView
+              style={styles.modalBody}
+              contentContainerStyle={styles.modalBodyContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={styles.modalLabel}>Título (opcional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: Promoção de boas-vindas"
+                value={title}
+                onChangeText={setTitle}
+                placeholderTextColor="#999"
               />
-            </View>
 
-            {modalError && <Text style={styles.modalError}>{modalError}</Text>}
+              <Text style={styles.modalLabel}>Desconto</Text>
+              <View style={styles.chipRow}>
+                {PERCENT_OPTIONS.map((percent) => (
+                  <TouchableOpacity
+                    key={`percent-${percent}`}
+                    style={[
+                      styles.chip,
+                      selectedPercent === percent ? styles.chipActive : styles.chipInactive,
+                    ]}
+                    onPress={() => setSelectedPercent(percent)}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selectedPercent === percent ? styles.chipTextActive : styles.chipTextInactive,
+                      ]}
+                    >
+                      {percent}%
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setModalVisible(false)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.saveButton,
-                  (isCreating || !selectedPercent) && styles.saveButtonDisabled,
-                ]}
-                onPress={handleCreatePromotion}
-                disabled={isCreating || !selectedPercent}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                {isCreating ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.saveButtonText}>Salvar promoção</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+              <Text style={styles.modalLabel}>Duração</Text>
+              <View style={styles.chipRow}>
+                {DURATION_OPTIONS.map((days) => (
+                  <TouchableOpacity
+                    key={`duration-${days}`}
+                    style={[
+                      styles.chip,
+                      selectedDuration === days ? styles.chipActive : styles.chipInactive,
+                    ]}
+                    onPress={() => setSelectedDuration(days)}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selectedDuration === days ? styles.chipTextActive : styles.chipTextInactive,
+                      ]}
+                    >
+                      {days} dias
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.validUntilText}>
+                Válido até {validUntilDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+              </Text>
+
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Ativar agora</Text>
+                <Switch
+                  trackColor={{ false: '#dcdcdc', true: Colors.light.primary }}
+                  thumbColor="#fff"
+                  value={activateNow}
+                  onValueChange={setActivateNow}
+                />
+              </View>
+
+              {modalError && <Text style={styles.modalError}>{modalError}</Text>}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[
+                styles.saveButton,
+                (isCreating || !selectedPercent) && styles.saveButtonDisabled,
+              ]}
+              onPress={handleSavePress}
+              disabled={isCreating || !selectedPercent}
+            >
+              {isCreating ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.saveButtonText}>Salvar promoção</Text>
+              )}
+            </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
@@ -558,35 +612,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 34,
     paddingBottom: 12,
-    borderBottomColor: '#eee',
     borderBottomWidth: 1,
-  backgroundColor: '#fff',
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#fff',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: Platform.OS === 'ios' ? 40 : 32,
+    height: Platform.OS === 'ios' ? 40 : 32,
+    top: Platform.OS === 'ios' ? 0 : 2,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    top: 10,
   },
   headerTextContainer: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 18,
-    top: 10,
-    right: 19,
-    textAlign: 'center', 
+    fontSize: Platform.OS === 'ios' ? 18 : 17,
+    right: Platform.OS === 'ios' ? 0 : 16,
+    top: Platform.OS === 'ios' ? 0 : 2,
     fontWeight: '700',
     color: Colors.light.text,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 6,
-    lineHeight: 20,
+    textAlign: 'center',
   },
   verificationBanner: {
     marginHorizontal: 20,
@@ -598,14 +646,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   verificationBannerTitle: {
-    fontSize: 15,
+    fontSize: Platform.OS === 'ios' ? 15 : 14,
     fontWeight: '700',
     color: '#b35a00',
   },
   verificationBannerText: {
-    fontSize: 13,
+    fontSize: Platform.OS === 'ios' ? 13 : 12,
     color: '#8a5b00',
     marginTop: 4,
+  },
+  errorBox: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#ffe5e5',
+  },
+  errorText: {
+    color: '#a00',
+    fontSize: 14,
   },
   section: {
     paddingHorizontal: 20,
@@ -615,86 +674,90 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   activeCard: {
-    backgroundColor: '#f7f9fc',
-    borderRadius: 18,
+    borderRadius: 24,
     padding: 24,
-    borderWidth: 1,
-    borderColor: '#edf1f7',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 0,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
   },
   activeCardHighlight: {
-    borderColor: Colors.light.primary,
-    shadowColor: Colors.light.primary,
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.35,
   },
-  activePromotionLabel: {
+  discountCircle: {
+    position: 'absolute',
+    right: -20,
+    top: -20,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  activeInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  activeInfoText: {
     fontSize: 12,
-    letterSpacing: 0.4,
     textTransform: 'uppercase',
-    color: '#556',
-    marginBottom: 4,
-  },
-  activePromotionLabelHighlight: {
-    color: Colors.light.primary,
-  },
-  activePromotionLabelUpdate: {
-    fontSize: 12,
-    color: Colors.light.primary,
+    letterSpacing: 1,
+    color: 'rgba(255,255,255,0.85)',
     fontWeight: '600',
-    marginBottom: 4,
   },
-  activeDiscount: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: Colors.light.primary,
+  activePercentage: {
+    fontSize: 52,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: -1,
+    marginTop: 8,
   },
   activeValid: {
     fontSize: 14,
-    color: '#556',
+    color: 'rgba(255,255,255,0.9)',
     marginTop: 6,
   },
   activeTitle: {
     fontSize: 18,
     fontWeight: '600',
+    color: '#fff',
     marginTop: 10,
-    color: '#222',
   },
   activeActions: {
     flexDirection: 'row',
     marginTop: 18,
-    justifyContent: 'space-between',
   },
-  secondaryButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: '#fff',
+  activeActionButton: {
+    flex: 1,
+    marginRight: 8,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderWidth: 1,
-    borderColor: Colors.light.primary,
-    minWidth: 130,
+    borderColor: 'rgba(255,255,255,0.35)',
     alignItems: 'center',
   },
-  secondaryButtonDisabled: {
-    opacity: 0.6,
+  activeActionButtonDisabled: {
+    opacity: 0.7,
   },
-  secondaryButtonText: {
-    color: Colors.light.primary,
+  activeActionButtonText: {
+    color: '#fff',
     fontWeight: '700',
   },
-  primaryOutlineButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+  activeOutlineButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#333',
-    minWidth: 130,
+    borderColor: 'rgba(255,255,255,0.6)',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  primaryOutlineButtonText: {
-    color: '#333',
+  activeOutlineButtonText: {
+    color: '#fff',
     fontWeight: '700',
   },
   emptyActiveCard: {
@@ -703,28 +766,28 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: '#edeff3',
-    alignItems: 'flex-start',
     shadowColor: '#000',
     shadowOpacity: 0.03,
     shadowRadius: 8,
-    elevation: 0,
+    elevation: 2,
   },
   emptyActiveTitle: {
-    fontSize: 20,
+    fontSize: Platform.OS === 'ios' ? 20 : 18,
     fontWeight: '700',
     color: '#333',
   },
   emptyActiveSubtitle: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'ios' ? 14 : 13,
     color: '#555',
     marginTop: 6,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   primaryButton: {
-    backgroundColor: Colors.light.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
+    backgroundColor: '#2563EB',
     borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    alignItems: 'center',
   },
   primaryButtonDisabled: {
     opacity: 0.6,
@@ -732,6 +795,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#fff',
     fontWeight: '700',
+    fontSize:  Platform.OS === 'ios' ? 16 : 16,
   },
   historySection: {
     backgroundColor: '#fff',
@@ -745,17 +809,33 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   historySubtitle: {
-    fontSize: 13,
+    fontSize:  Platform.OS === 'ios' ? 13 : 14,
     color: '#666',
     marginTop: 2,
   },
   historyCard: {
-    backgroundColor: '#fafafa',
-    borderRadius: 16,
-    padding: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
     marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  statusIndicator: {
+    width: 4,
+    height: '60%',
+    borderRadius: 2,
+    marginRight: 12,
+    marginTop: 8,
+  },
+  historyMainInfo: {
+    flex: 1,
   },
   historyCardHeader: {
     flexDirection: 'row',
@@ -767,34 +847,30 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.light.primary,
   },
-  statusBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 12,
+  pillBadge: {
+    paddingHorizontal: 10,
     paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  badgeActive: {
-    backgroundColor: `${Colors.light.primary}15`,
+  pillIcon: {
+    marginRight: 6,
   },
-  badgeExpired: {
-    backgroundColor: '#fbe2e2',
-  },
-  badgeDisabled: {
-    backgroundColor: '#e6e6e6',
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#555',
+  pillText: {
+    fontSize: 10,
+    fontWeight: '800',
   },
   historyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#1F2937',
     marginTop: 8,
   },
   historyDate: {
     fontSize: 13,
-    color: '#666',
+    color: '#64748B',
     marginTop: 4,
   },
   historyToggleRow: {
@@ -805,7 +881,7 @@ const styles = StyleSheet.create({
   },
   historyToggleLabel: {
     fontSize: 13,
-    color: '#4a4a4a',
+    color: '#475569',
   },
   toggleControl: {
     flexDirection: 'row',
@@ -816,18 +892,8 @@ const styles = StyleSheet.create({
   },
   skeletonCard: {
     height: 140,
-    backgroundColor: '#f3f5f8',
-  },
-  errorBox: {
-    marginHorizontal: 20,
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: '#ffe5e5',
-  },
-  errorText: {
-    color: '#a00',
-    fontSize: 14,
+    backgroundColor: '#F3F5F8',
+    borderRadius: 20,
   },
   emptyState: {
     paddingVertical: 32,
@@ -839,7 +905,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   emptyStateSubtitle: {
-    fontSize: 14,
+    fontSize:  Platform.OS === 'ios' ? 14 : 15,
     color: '#666',
     marginTop: 6,
     textAlign: 'center',
@@ -849,62 +915,87 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
+  modalSheet: {
+    width: '100%',
+    height: '70%',
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    maxHeight: '90%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 120,
+    position: 'relative',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: Colors.light.text,
-    marginBottom: 12,
+  },
+  modalCloseText: {
+    color: Colors.light.primary,
+    fontWeight: '700',
+  },
+  modalBody: {
+    flex: 1,
+  },
+  modalBodyContent: {
+    paddingBottom: 120,
   },
   modalLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#444',
+    color: '#475569',
     marginTop: 12,
-    marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 10,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
+    marginTop: 6,
   },
-  optionRow: {
+  chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginTop: 6,
   },
-  optionButton: {
+  chip: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 9,
+    borderColor: '#E2E8F0',
+    borderRadius: 999,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    marginRight: 10,
     marginBottom: 10,
-    marginRight: 8,
   },
-  optionButtonActive: {
+  chipActive: {
+    backgroundColor: Colors.light.primary,
     borderColor: Colors.light.primary,
-    backgroundColor: `${Colors.light.primary}1a`,
   },
-  optionButtonText: {
-    fontSize: 14,
-    color: '#333',
+  chipInactive: {
+    backgroundColor: '#F1F5F9',
   },
-  optionButtonTextActive: {
-    color: Colors.light.primary,
+  chipText: {
+    fontSize: 13,
     fontWeight: '700',
+  },
+  chipTextActive: {
+    color: '#fff',
+  },
+  chipTextInactive: {
+    color: '#475569',
   },
   validUntilText: {
     fontSize: 13,
-    color: '#888',
+    color: '#64748B',
     marginTop: 4,
   },
   switchRow: {
@@ -916,44 +1007,38 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 14,
     fontWeight: '500',
+    color: '#0F172A',
   },
   modalError: {
     marginTop: 10,
-    color: '#a00',
+    color: Colors.light.error,
     fontSize: 13,
   },
-  modalActions: {
-    marginTop: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cancelButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#d0d0d0',
-  },
-  cancelButtonText: {
-    color: '#333',
-    fontWeight: '600',
-  },
   saveButton: {
+    position: 'absolute',
+    bottom: 24,
+    left: 24,
+    right: 24,
     backgroundColor: Colors.light.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 16,
+    height: 56,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
   },
   saveButtonDisabled: {
     opacity: 0.6,
   },
   saveButtonText: {
     color: '#fff',
+    fontWeight: '700',
     fontSize: 16,
-    fontWeight: '600',
   },
 });
 
 export default PromotionsScreen;
+
