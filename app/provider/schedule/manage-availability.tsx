@@ -178,7 +178,14 @@ const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: 
   return slots;
 };
 
-const ALL_POSSIBLE_SLOTS = generateTimeSlots(8, 19, 60);
+export const ALL_POSSIBLE_SLOTS = (() => {
+  const slots: string[] = [];
+  for (let h = 4; h <= 19; h++) {
+    const hh = h < 10 ? `0${h}` : `${h}`;
+    slots.push(`${hh}:00`);
+  }
+  return slots;
+})();
 
 const calendarDateStringToLocalDate = (value: string | null | undefined): Date | null => {
   if (!value) return null;
@@ -778,33 +785,15 @@ export default function ManageAvailabilityScreen() {
   // Outros handlers (mantidos como useCallback, mas movidos para cima)
   const convertSlotsToBlocks = useCallback((slots: string[]) => {
     if (slots.length === 0) return [];
-
     const sortedSlots = [...slots].sort();
     const blocks: { startTime: string; endTime: string }[] = [];
-    let currentBlockStart = sortedSlots[0];
-    let currentBlockEnd = sortedSlots[0];
-
-    for (let i = 1; i < sortedSlots.length; i++) {
-      const nextSlot = sortedSlots[i];
-      const previousMinutes = slotToMinutes(currentBlockEnd);
-      const nextMinutes = slotToMinutes(nextSlot);
-
-      if (nextMinutes === previousMinutes + SLOT_STEP_MINUTES) {
-        currentBlockEnd = nextSlot;
-      } else {
-        blocks.push({
-          startTime: currentBlockStart,
-          endTime: minutesToSlot(previousMinutes + SLOT_STEP_MINUTES),
-        });
-        currentBlockStart = nextSlot;
-        currentBlockEnd = nextSlot;
-      }
-    }
-
-    const finalMinutes = slotToMinutes(currentBlockEnd);
-    blocks.push({
-      startTime: currentBlockStart,
-      endTime: minutesToSlot(finalMinutes + SLOT_STEP_MINUTES),
+    sortedSlots.forEach(slot => {
+      const [hour] = slot.split(':').map(Number);
+      const nextHour = hour + 1;
+      blocks.push({
+        startTime: `${hour.toString().padStart(2, '0')}:00`,
+        endTime: `${nextHour.toString().padStart(2, '0')}:00`,
+      });
     });
     return blocks;
   }, []);
@@ -1180,12 +1169,10 @@ export default function ManageAvailabilityScreen() {
           refreshDays.add(day.dayOfWeek);
           touchedDates.add(availabilityDate);
           newBlocks.forEach(block => {
-            const startTimeIso = buildDateTimeForSlot(baseDateForDay, block.startTime).toISOString();
-            const endTimeIso = buildDateTimeForSlot(baseDateForDay, block.endTime).toISOString();
             allAvailabilityUpdates.push({
               dayOfWeek: day.dayOfWeek,
-              startTime: startTimeIso,
-              endTime: endTimeIso,
+              startTime: block.startTime,
+              endTime: block.endTime,
               isAvailable: true,
             });
           });
