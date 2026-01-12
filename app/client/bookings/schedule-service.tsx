@@ -1142,11 +1142,20 @@ const slotStepMinutes = useMemo(() => {
     selectedInsurancePlan?.name ??
     t('schedule_service.insurance_default_label', { defaultValue: 'Sem proteção' });
   const selectedInsuranceId = insurancePlanId ?? 'NONE';
-  const fallbackTotalCents = Math.round(Math.max(fallbackFinalPrice, 0) * 100);
-  const quoteTotalCents = quote?.totalCents ?? fallbackTotalCents;
-  const finalCalculatedPrice = quoteTotalCents > 0 ? quoteTotalCents / 100 : Math.max(fallbackFinalPrice, 0);
-  const displayedInsuranceFeeCents =
-    selectedInsurancePlan?.finalPriceCents ?? (quote?.insuranceFeeCents ?? 0);
+  const insuranceFeeFromQuote =
+    quote?.selectedInsurance?.finalPriceCents ?? quote?.insuranceFeeCents ?? 0;
+  const insuranceFeeCents =
+    selectedInsurancePlan?.finalPriceCents ?? insuranceFeeFromQuote;
+  const fallbackServiceCents = Math.round(Math.max(fallbackFinalPrice, 0) * 100);
+  const fallbackTotalCents = fallbackServiceCents + insuranceFeeCents;
+  const quotedTotalCents =
+    typeof quote?.totalCents === 'number' ? quote.totalCents : null;
+  const totalCents =
+    quotedTotalCents !== null && quotedTotalCents > 0
+      ? quotedTotalCents
+      : fallbackTotalCents;
+  const finalCalculatedPrice = Math.max(totalCents, 0) / 100;
+  const displayedInsuranceFeeCents = insuranceFeeCents;
   const reviewInsuranceSnapshot = useMemo<BookingInsuranceSnapshot | null>(() => {
     if (!selectedInsurancePlan) {
       return null;
