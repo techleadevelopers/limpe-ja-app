@@ -17,7 +17,7 @@ export default function ProviderTabLayout() {
       }}
     >
       <Tabs.Screen
-        name="dashboard"
+        name="index"
         options={{
           title: 'Painel',
           tabBarIcon: ({ color, size }) => (
