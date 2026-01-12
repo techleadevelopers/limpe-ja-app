@@ -243,8 +243,16 @@ export default function ProviderProfileScreen() {
     );
   }
 
+  const normalizeAvatar = (value?: string | null) => {
+    if (typeof value !== 'string') return undefined;
+    const cleaned = value.trim();
+    return cleaned.length > 0 ? cleaned : undefined;
+  };
+
   const userName = user.fullName || 'Profissional';
-  const userAvatarUrl = user.avatarUrl;
+  const userAvatarUrl =
+    normalizeAvatar(user.providerDetails?.avatarUrl) ||
+    normalizeAvatar(user.avatarUrl);
 
   return (
     <View style={styles.container}>
