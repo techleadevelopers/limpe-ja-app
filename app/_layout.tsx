@@ -156,6 +156,12 @@ function FloatingActiveServicePill({
     ).start();
   }, [reflectionX]);
 
+  React.useEffect(() => {
+    if (booking) {
+      setHidden(false);
+    }
+  }, [booking?.id]);
+
   const onPressIn = () => {
     Animated.parallel([
       Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }),
