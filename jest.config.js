@@ -31,7 +31,7 @@ module.exports = {
   },
   modulePaths: ['<rootDir>', '<rootDir>/node_modules'],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|@react-navigation|expo-router|@expo|expo|react-native-reanimated|react-native-gesture-handler|react-native-calendars|react-native-swipe-gestures|@sentry|@react-native-async-storage/async-storage|socket.io-client|react-native-toast-message)/)',
+    'node_modules/(?!(react-native|@react-native|@react-navigation|expo-router|@expo|expo|expo-modules-core|react-native-reanimated|react-native-gesture-handler|react-native-calendars|react-native-swipe-gestures|@sentry|@react-native-async-storage/async-storage|socket.io-client|react-native-toast-message)/)',
   ],
   transform: {
     '^.+\\.(ts|tsx)$': 'babel-jest',
