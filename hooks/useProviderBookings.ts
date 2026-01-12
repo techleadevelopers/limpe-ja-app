@@ -7,6 +7,8 @@ import {
   completeBooking,
   cancelBooking,
   requestManualStart,
+  markBookingOnTheWay,
+  markBookingArrived,
   BookingLocationPayload,
 } from '../services/bookingService';
 import { BookingDetails, BookingStatus } from '../types/backend/bookings';
@@ -27,14 +29,6 @@ export function useProviderBookings(options?: UseProviderBookingsOptions) {
   const [error, setError] = useState<string | null>(null);
 
   const providerId = (user as any)?.providerDetails?.id || (user as any)?.providerDetails?.providerId;
-  const ensureTermsAccepted = useCallback(() => {
-    const accepted =
-      (user as any)?.termsAcceptedAt ||
-      (user as any)?.providerDetails?.termsAcceptedAt;
-    if (!accepted) {
-      throw new Error('Aceite os termos antes de executar a acao.');
-    }
-  }, [user]);
 
   const loadBookings = useCallback(
     async (status?: FilterStatus) => {
@@ -107,11 +101,32 @@ export function useProviderBookings(options?: UseProviderBookingsOptions) {
 
   const updateStatus = useCallback(
     async (bookingId: string, status: BookingStatus) => {
-      ensureTermsAccepted();
-      const booking = await getBooking(bookingId);
+    const booking = await getBooking(bookingId);
       assertOwner(booking);
       ensurePaidIfNeeded(booking, status);
       const updated = await updateBookingStatus(bookingId, { status });
+      safeUpdateLocal(updated);
+      return updated;
+    },
+    [assertOwner, getBooking, safeUpdateLocal],
+  );
+
+  const onTheWay = useCallback(
+    async (bookingId: string) => {
+      const booking = await getBooking(bookingId);
+      assertOwner(booking);
+      const updated = await markBookingOnTheWay(bookingId);
+      safeUpdateLocal(updated);
+      return updated;
+    },
+    [assertOwner, getBooking, safeUpdateLocal],
+  );
+
+  const arrive = useCallback(
+    async (bookingId: string, location?: BookingLocationPayload) => {
+      const booking = await getBooking(bookingId);
+      assertOwner(booking);
+      const updated = await markBookingArrived(bookingId, location);
       safeUpdateLocal(updated);
       return updated;
     },
@@ -130,11 +145,14 @@ export function useProviderBookings(options?: UseProviderBookingsOptions) {
 
   const start = useCallback(
     async (bookingId: string, location?: BookingLocationPayload) => {
-      ensureTermsAccepted();
       const booking = await getBooking(bookingId);
       assertOwner(booking);
-      if (booking.status !== BookingStatus.CONFIRMED && booking.status !== BookingStatus.PENDING) {
-        throw new Error('Somente agendamentos confirmados podem ser iniciados.');
+      if (
+        booking.status !== BookingStatus.CONFIRMED &&
+        booking.status !== BookingStatus.PENDING &&
+        booking.status !== BookingStatus.ARRIVED
+      ) {
+        throw new Error('Somente agendamentos confirmados, pendentes ou com chegada registrada podem ser iniciados.');
       }
       const updated = await startBooking(bookingId, location);
       safeUpdateLocal(updated);
@@ -145,7 +163,6 @@ export function useProviderBookings(options?: UseProviderBookingsOptions) {
 
   const complete = useCallback(
     async (bookingId: string) => {
-      ensureTermsAccepted();
       const booking = await getBooking(bookingId);
       assertOwner(booking);
       if (booking.status !== BookingStatus.STARTED) {
@@ -161,17 +178,15 @@ export function useProviderBookings(options?: UseProviderBookingsOptions) {
 
   const manualStartRequest = useCallback(
     async (bookingId: string, reason?: string) => {
-      ensureTermsAccepted();
       const booking = await getBooking(bookingId);
       assertOwner(booking);
       return requestManualStart(bookingId, reason);
     },
-    [assertOwner, ensureTermsAccepted, getBooking],
+    [assertOwner, getBooking],
   );
 
   const cancel = useCallback(
     async (bookingId: string) => {
-      ensureTermsAccepted();
       const booking = await getBooking(bookingId);
       assertOwner(booking);
       const updated = await cancelBooking(bookingId);
@@ -200,6 +215,8 @@ export function useProviderBookings(options?: UseProviderBookingsOptions) {
     loadBookings,
     accept,
     refuse,
+    onTheWay,
+    arrive,
     start,
     complete,
     cancel,
