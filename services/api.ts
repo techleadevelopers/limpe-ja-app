@@ -10,6 +10,8 @@ import { appQueryClient } from '../components/provider/query-client-provider';
 import { AuthErrorCode } from '../types/backend/auth-error-code';
 import { AuthEventType, emitAuthEvent } from './authEvents';
 
+type AuthErrorResponse = { code?: AuthErrorCode };
+
 // --- Callback disparado em 401 ---
 type UnauthorizedHandler = (context: { originalRequest: AxiosRequestConfig; error?: AxiosError }) => Promise<void>;
 let onUnauthorizedCallback: UnauthorizedHandler | null = null;
@@ -130,7 +132,7 @@ export const cleanupAxios = axios.create({ baseURL: API_BASE_URL, timeout: 5000 
 let revocationPromise: Promise<void> | null = null;
 let revocationUnauthorizedCallbackCalled = false;
 
-const attemptRevokedCleanup = async (token?: string) => {
+const attemptRevokedCleanup = async (token?: string, showToast = true) => {
   if (revocationPromise) {
     await revocationPromise;
     return;
@@ -161,13 +163,18 @@ const attemptRevokedCleanup = async (token?: string) => {
     } catch {
       // ignore
     }
-    Toast.show({
-      type: 'error',
-      text1: i18n.t('common.error'),
-      text2: i18n.t('common.session_revoked', {
-        defaultValue: 'Sua sessão foi encerrada por segurança.',
-      }),
-    });
+    if (showToast) {
+      Toast.show({
+        type: 'info',
+        text1: i18n.t('common.session_revoked_title', {
+          defaultValue: 'Sessão Encerrada',
+        }),
+        text2: i18n.t('common.session_revoked_message', {
+          defaultValue: 'Sua sessão expirou. Por favor, entre novamente para continuar navegando com segurança.',
+        }),
+        visibilityTime: 4000,
+      });
+    }
     emitAuthEvent(AuthEventType.SESSION_REVOKED, undefined);
   })();
 
@@ -214,7 +221,8 @@ const handleAuthError = async (
 
   const requestUrl = String(config.url ?? '');
   const isRefreshRequest = requestUrl.includes('/auth/refresh');
-  const errorCode = axiosError.response?.data?.code as AuthErrorCode | undefined;
+  const errorBody = axiosError.response?.data as AuthErrorResponse | undefined;
+  const errorCode = errorBody?.code;
   const configWithMeta =
     config as AxiosRequestConfig & { _refreshAttempted?: boolean };
 
@@ -234,7 +242,7 @@ const handleAuthError = async (
     } catch (refreshError) {
       Sentry.captureException(refreshError, { tags: { scope: 'auth' } });
         const storedToken = await AsyncStorage.getItem('auth_token');
-        await attemptRevokedCleanup(storedToken ?? undefined);
+        await attemptRevokedCleanup(storedToken ?? undefined, Boolean(storedToken));
         await notifyUnauthorizedCallback(config, axiosError);
         return { handled: true };
       }
@@ -245,7 +253,7 @@ const handleAuthError = async (
       (isRefreshRequest && errorCode === AuthErrorCode.TOKEN_EXPIRED)
     ) {
       const token = await AsyncStorage.getItem('auth_token');
-      await attemptRevokedCleanup(token ?? undefined);
+      await attemptRevokedCleanup(token ?? undefined, Boolean(token));
       await notifyUnauthorizedCallback(config, axiosError);
       return { handled: true };
     }
