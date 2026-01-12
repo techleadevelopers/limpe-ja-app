@@ -167,15 +167,17 @@ const NavBar: React.FC = () => {
               />
 
               <Text
-                style={[
-                  styles.navText,
-                  {
-                    color: isSelected ? CURRENT_COLOR : INACTIVE_COLOR,
-                    fontWeight: isSelected ? '700' : '500',
-                    opacity: isSelected ? 1 : 0.75,
-                  },
-                ]}
-              >
+  allowFontScaling={false} // 🛡️ Trava contra o sistema da Xiaomi
+  style={[
+    styles.navText,
+    {
+      fontFamily: 'Roboto', // 👈 OBRIGATÓRIO AQUI!
+      color: isSelected ? CURRENT_COLOR : INACTIVE_COLOR,
+      fontWeight: isSelected ? '700' : '500',
+      opacity: isSelected ? 1 : 0.75,
+    },
+  ]}
+>
                 {item.name}
               </Text>
             </Animated.View>
@@ -222,6 +224,8 @@ const styles = StyleSheet.create({
   navText: {
     fontSize: 10,
     letterSpacing: 0.1,
+    fontFamily: 'Montserrat-Regular',
+    
   },
 
   activePill: {
