@@ -31,13 +31,6 @@ export const ALL_POSSIBLE_SLOTS = (() => {
   return slots;
 })();
 
-const applyPresetSlots = (preset: PresetKey): string[] => {
-  if (preset === 'morning') return generateTimeSlots(8, 12, 30);
-  if (preset === 'afternoon') return generateTimeSlots(13, 17, 30);
-  if (preset === 'evening') return generateTimeSlots(18, 21, 30);
-  return generateTimeSlots(8, 18, 30);
-};
-
 const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: number = 30): string[] => {
   const slots: string[] = [];
   for (let h = startHour; h <= endHour; h++) {
@@ -51,16 +44,26 @@ const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: 
   return slots;
 };
 
+const applyPresetSlots = (preset: PresetKey): string[] => {
+  if (preset === 'morning') return generateTimeSlots(8, 12, 30);
+  if (preset === 'afternoon') return generateTimeSlots(13, 17, 30);
+  if (preset === 'evening') return generateTimeSlots(18, 21, 30);
+  return generateTimeSlots(8, 18, 30);
+};
+
 const convertSlotsToBlocks = (slots: string[]) => {
   if (slots.length === 0) return [];
   const sortedSlots = [...slots].sort();
   const blocks: { startTime: string; endTime: string }[] = [];
+  
   let currentBlockStart = sortedSlots[0];
   let currentBlockEnd = sortedSlots[0];
+
   for (let i = 0; i < sortedSlots.length; i++) {
     const currentSlot = sortedSlots[i];
     const [currentHour, currentMinute] = currentSlot.split(':').map(Number);
     const currentTotalMinutes = currentHour * 60 + currentMinute;
+
     if (i === sortedSlots.length - 1) {
       const [endHour, endMinute] = currentBlockEnd.split(':').map(Number);
       const finalEndTotalMinutes = endHour * 60 + endMinute + 30;
@@ -74,8 +77,9 @@ const convertSlotsToBlocks = (slots: string[]) => {
       const nextSlot = sortedSlots[i + 1];
       const [nextHour, nextMinute] = nextSlot.split(':').map(Number);
       const nextTotalMinutes = nextHour * 60 + nextMinute;
+
       if (nextTotalMinutes === currentTotalMinutes + 30) {
-        currentBlockEnd = currentSlot;
+        currentBlockEnd = nextSlot;
       } else {
         const [endHour, endMinute] = currentBlockEnd.split(':').map(Number);
         const finalEndTotalMinutes = endHour * 60 + endMinute + 30;
@@ -107,9 +111,7 @@ export function useProviderAvailability(options?: UseProviderAvailabilityOptions
   const [weeklyAvailability, setWeeklyAvailability] = useState<DayAvailability[]>([]);
 
   const ensureTermsAccepted = useCallback(() => {
-    const accepted =
-      (user as any)?.termsAcceptedAt ||
-      (user as any)?.providerDetails?.termsAcceptedAt;
+    const accepted = (user as any)?.termsAcceptedAt || (user as any)?.providerDetails?.termsAcceptedAt;
     if (!accepted) {
       throw new Error('Aceite os termos para gerenciar disponibilidade.');
     }
@@ -146,7 +148,7 @@ export function useProviderAvailability(options?: UseProviderAvailabilityOptions
             ...initialWeekly[dayIndex],
             isEnabled: true,
             selectedSlots: currentSlots,
-            originalSlots: currentSlots,
+            originalSlots: [...currentSlots],
             id: avail.id,
           };
         }
@@ -175,7 +177,7 @@ export function useProviderAvailability(options?: UseProviderAvailabilityOptions
       prev.map(d => {
         if (d.dayOfWeek !== dayOfWeek) return d;
         const enabled = (d.originalSlots || []).length > 0;
-        return { ...d, isEnabled: enabled, selectedSlots: d.originalSlots || [] };
+        return { ...d, isEnabled: enabled, selectedSlots: [...(d.originalSlots || [])] };
       }),
     );
   }, []);
@@ -245,25 +247,29 @@ export function useProviderAvailability(options?: UseProviderAvailabilityOptions
 
         for (const day of weeklyAvailability) {
           const targetDate = getDateForDayOfWeek(day.dayOfWeek);
+          // Ignora dias passados
           if (startOfDayBrazil(targetDate).getTime() < todayStart.getTime()) continue;
+          
           const validSlots = day.selectedSlots.filter(slot => !isPastSlotForDate(targetDate, slot));
           const newBlocks = convertSlotsToBlocks(validSlots);
+
           if (day.isEnabled && newBlocks.length > 0) {
             newBlocks.forEach(block => {
               allAvailabilityUpdates.push({
                 dayOfWeek: day.dayOfWeek,
-                startTime: block.startTime,
-                endTime: block.endTime,
+                startTime: block.startTime || "08:00", // Fallback de segurança
+                endTime: block.endTime || "09:00",     // Fallback de segurança
                 isAvailable: true,
                 id: day.id,
               });
             });
           } else {
+            // Se o dia estiver desabilitado mas possuir um ID, precisamos "limpar" no backend
             if (day.id) {
               allAvailabilityUpdates.push({
                 dayOfWeek: day.dayOfWeek,
-                startTime: '',
-                endTime: '',
+                startTime: "00:00", // Valores dummy para deleção/desativação
+                endTime: "00:00",
                 isAvailable: false,
                 id: day.id,
               });
@@ -271,11 +277,14 @@ export function useProviderAvailability(options?: UseProviderAvailabilityOptions
           }
         }
 
+        // Overrides para datas específicas (Bloqueios ou Datas customizadas)
         for (const override of specificDateOverrides) {
           if (override.type === 'blocked') {
             allAvailabilityUpdates.push({
               date: override.date,
               isAvailable: false,
+              startTime: "00:00",
+              endTime: "23:59"
             } as any);
           } else if (override.type === 'custom' && override.selectedSlots) {
             const customBlocks = convertSlotsToBlocks(override.selectedSlots);
@@ -290,12 +299,14 @@ export function useProviderAvailability(options?: UseProviderAvailabilityOptions
           }
         }
 
-        await updateMyProviderAvailability(allAvailabilityUpdates);
+        if (allAvailabilityUpdates.length > 0) {
+            await updateMyProviderAvailability(allAvailabilityUpdates);
+        }
       } finally {
         setIsSavingAvailability(false);
       }
     },
-    [weeklyAvailability],
+    [weeklyAvailability, ensureTermsAccepted],
   );
 
   const state = useMemo(
