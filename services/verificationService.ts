@@ -11,10 +11,8 @@ import {
 import { api } from './api';
 import { createLocalConsole } from './logging';
 const console = createLocalConsole();
-import UploadService from './uploadService';
+import UploadService, { FilePurpose } from './uploadService';
 import { UploadResponseDto } from '../types/backend/upload';
-import * as FileSystem from 'expo-file-system';
-
 class VerificationService {
     private readonly BASE_URL = '/verification';
 
@@ -60,6 +58,15 @@ class VerificationService {
         } catch (error: any) {
             console.error('Erro ao fazer upload da selfie para verificação:', error.message);
             throw new Error(error.message || 'Erro de rede ou servidor ao fazer upload da selfie para verificação.');
+        }
+    }
+
+    async uploadImageToCloud(imageUri: string, purpose: FilePurpose): Promise<UploadResponseDto> {
+        try {
+            return await UploadService.uploadImageToCloud(imageUri, purpose);
+        } catch (error: any) {
+            console.error('Erro ao fazer upload da imagem de verificação:', error.message);
+            throw new Error(error.message || 'Erro ao fazer upload da imagem de verificação.');
         }
     }
 
