@@ -515,6 +515,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
     else if (diffDays === 1) dayLabel = 'Amanhã';
     else dayLabel = days[nextDate.getDay()] || '???';
 
+    dayLabel = days[nextDate.getDay()] || 'Dia';
     const timeLabel = new Intl.DateTimeFormat('pt-BR', {
       hour: '2-digit',
       minute: '2-digit',
