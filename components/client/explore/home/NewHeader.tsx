@@ -156,15 +156,15 @@ const NewHeader: React.FC<NewHeaderProps> = ({
               styles.fixedCircle,
               {
                 marginRight: 4,
-                width: Platform.OS === 'android' ? 30 : undefined,
-                height: Platform.OS === 'android' ? 30 : undefined,
+                width: Platform.OS === 'android' ? 30 : 38,
+                height: Platform.OS === 'android' ? 30 : 38,
               },
             ]}
             activeOpacity={0.9}
           >
             <Ionicons
               name="add"
-              size={Platform.OS === 'android' ? 18 : 21}
+              size={Platform.OS === 'android' ? 18 : 15}
               color="#4c8fd1ff"
             />
           </TouchableOpacity>
@@ -190,8 +190,8 @@ const NewHeader: React.FC<NewHeaderProps> = ({
             <Image
               source={require('../../../../assets/images/category2.png')}
               style={{
-                width: Platform.OS === 'android' ? 20 : 24,
-                height: Platform.OS === 'android' ? 20 : 24,
+                width: Platform.OS === 'android' ? 20 : 20,
+                height: Platform.OS === 'android' ? 20 : 20,
                 marginLeft: Platform.OS === 'android' ? 21 : 15,
                 marginTop: Platform.OS === 'android' ? 4 : 6,
               }}
@@ -212,8 +212,8 @@ const NewHeader: React.FC<NewHeaderProps> = ({
             <Image
               source={require('../../../../assets/images/notifi2.png')}
               style={{
-                width: Platform.OS === 'android' ? 36 : 43,
-                height: Platform.OS === 'android' ? 36 : 43,
+                width: Platform.OS === 'android' ? 36 : 36,
+                height: Platform.OS === 'android' ? 36 : 36,
                 marginTop: Platform.OS === 'android' ? 4 : 6,
               }}
               resizeMode="contain"
@@ -242,16 +242,17 @@ const getGreeting = () => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: Platform.OS === 'android' ? 13 : -180,
+    paddingVertical: Platform.OS === 'android' ? 10 : -180,
     left: 3,
-    marginTop: Platform.OS === 'android' ? 12 : 0,
+    top: Platform.OS === 'android' ? 2 : 0,
+    marginTop: Platform.OS === 'android' ? 18 : 0,
     marginHorizontal: Platform.OS === 'android' ? 10 : 12,
     paddingHorizontal: Platform.OS === 'android' ? 7 : 9,
     borderBottomEndRadius: 40,
     borderBottomStartRadius: 40,
     borderTopEndRadius: 40,
     borderTopStartRadius: 40,
-    marginBottom: Platform.OS === 'android' ? 0 : -8,
+    marginBottom: Platform.OS === 'android' ? 0 : -2,
 
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -259,8 +260,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   iconBare: {
-    width: 40,
-    height: 40,
+    width: Platform.OS === 'android' ? 40 : 50,
+    height: Platform.OS === 'android' ? 40 : 50,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
   },
 
   greetingText: {
-    fontSize: Platform.OS === 'android' ? 12 : 15,
+    fontSize: Platform.OS === 'android' ? 12 : 12,
     fontFamily: 'Roboto', // 👈 OBRIGATÓRIO AQUI!
     marginLeft: Platform.OS === 'android' ? 2 : 5,
     color: '#8d9fafff',
@@ -325,7 +326,7 @@ const styles = StyleSheet.create({
   },
 
   userNameText: {
-    fontSize: Platform.OS === 'android' ? 17 : 19.5,
+    fontSize: Platform.OS === 'android' ? 17 : 18.5,
     marginLeft: Platform.OS === 'android' ? 2 : 5,
     fontFamily: Platform.select({
       ios: 'Roboto',
