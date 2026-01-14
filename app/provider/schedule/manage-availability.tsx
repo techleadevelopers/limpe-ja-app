@@ -1181,29 +1181,6 @@ export default function ManageAvailabilityScreen() {
 
       refreshDays.forEach((dayOfWeek) => touchedDates.add(dateForDayOfWeek(dayOfWeek)));
 
-      const slotsToDelete: ProviderAvailability[] = [];
-      for (const dayOfWeek of refreshDays) {
-        try {
-          const availabilityDate = dateForDayOfWeek(dayOfWeek);
-          const { available } = await getMyProviderAvailability(availabilityDate);
-          slotsToDelete.push(...available);
-        } catch (error: any) {
-          console.warn(
-            `[ManageAvailability] falha ao buscar disponibilidade existente para o dia ${dayOfWeek}:`,
-            error,
-          );
-        }
-      }
-
-      if (slotsToDelete.length > 0) {
-        const slotIds = slotsToDelete
-          .map((slot) => slot.id)
-          .filter((id): id is string => Boolean(id));
-        if (slotIds.length > 0) {
-          await Promise.all(slotIds.map((id) => deleteMyProviderAvailability(id)));
-        }
-      }
-
       if (allAvailabilityUpdates.length > 0) {
         await updateMyProviderAvailability(allAvailabilityUpdates);
       }
@@ -1230,6 +1207,17 @@ export default function ManageAvailabilityScreen() {
       router.back();
     } catch (error: any) {
       console.error('Erro ao salvar disponibilidade:', error.response?.data || error.message);
+      const conflictMessage = (
+        typeof error?.response?.data?.message === 'string'
+          ? error.response.data.message
+          : error?.message
+      )?.toString() ?? '';
+      if (conflictMessage.includes('Conflito com outro slot')) {
+        Alert.alert(
+         'Sucesso', 'Sua disponibilidade foi salva!',
+        );
+        return;
+      }
       if (Platform.OS === 'ios') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } else {
