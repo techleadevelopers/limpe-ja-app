@@ -1083,12 +1083,13 @@ if (isAuthenticated && user?.id) {
                 {!hasReviews && (
                   <Ionicons
                     name="chevron-down"
-                    size={20}
+                    size={18}
                     color={AppColors.textBody}
                     style={[
                       localStyles.expandIcon,
                       {
                         transform: [{ rotate: isReviewsExpanded ? '180deg' : '0deg' }],
+                        top: 15,
                       },
                     ]}
                   />
