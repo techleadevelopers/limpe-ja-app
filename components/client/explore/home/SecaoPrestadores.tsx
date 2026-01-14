@@ -76,9 +76,7 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
             onPressIn={onPressInViewAll}
             onPressOut={onPressOutViewAll}
           >
-            <Animated.View style={{ transform: [{ translateX: arrowAnim }] }}>
-              <Ionicons name="add" size={16} color="#398beeff" />
-            </Animated.View>
+           
           </TouchableOpacity>
         ) : null}
       </View>
