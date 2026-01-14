@@ -338,9 +338,9 @@ const resolveErrorMessage = useCallback(
 
   const renderSkeleton = () => (
     <View style={styles.section}>
-      <View style={[styles.activeCard, styles.skeletonCard]} />
+      <View style={styles.skeletonActiveCard} />
       {Array.from({ length: 2 }).map((_, index) => (
-        <View key={`skeleton-${index}`} style={[styles.historyCard, styles.skeletonCard]} />
+        <View key={`skeleton-${index}`} style={styles.skeletonHistoryCard} />
       ))}
     </View>
   );
@@ -894,6 +894,18 @@ const styles = StyleSheet.create({
     height: 140,
     backgroundColor: '#F3F5F8',
     borderRadius: 20,
+  },
+  skeletonActiveCard: {
+    height: 140,
+    borderRadius: 20,
+    backgroundColor: '#F3F5F8',
+    marginBottom: 16,
+  },
+  skeletonHistoryCard: {
+    height: 120,
+    borderRadius: 20,
+    backgroundColor: '#F3F5F8',
+    marginBottom: 16,
   },
   emptyState: {
     paddingVertical: 32,
