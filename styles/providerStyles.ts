@@ -28,11 +28,11 @@ export const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 14,
     color: AppColors.textAuxiliary, // Usando AppColors
   },
   errorText: {
-    fontSize: 17,
+    fontSize: Platform.OS === 'android' ? 17 : 15,
     color: AppColors.errorRed, // Usando AppColors
     textAlign: 'center',
     marginBottom: 25,
@@ -47,7 +47,7 @@ export const styles = StyleSheet.create({
   },
   errorBackButtonText: {
     color: AppColors.white, // Usando AppColors
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 14,
     marginLeft: 8,
     fontWeight: '600',
   },
@@ -65,10 +65,13 @@ export const styles = StyleSheet.create({
     height: Platform.OS === 'android' ? 310 : 380,
     overflow: 'hidden',
     marginTop: 0,
-    marginBottom: 0,
+   
+    marginBottom:  Platform.OS === 'android' ? 0 : 0,
+    
     alignSelf: 'center',
   },
   providerImage: {
+  
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
@@ -114,7 +117,7 @@ export const styles = StyleSheet.create({
   },
   headerTitle: {
     color: AppColors.textBody, // Usando AppColors
-    fontSize: 22,
+    fontSize: Platform.OS === 'android' ? 22 : 20,
     fontWeight: '600',
   },
   // --- FIM DOS NOVOS ESTILOS PARA O CABEÇALHO ---
@@ -138,7 +141,7 @@ compactNewProviderBadge: {
 },
 compactNewProviderBadgeText: {
     color: '#ffffff', // Texto branco
-    fontSize: 12,
+    fontSize:  Platform.OS === 'android' ? 12 : 10,
     fontWeight: '800', // Bem destacado
     letterSpacing: 0.5,
 },
@@ -162,7 +165,7 @@ compactRatingBadge: {
 },
 compactRatingText: {
     color: '#307ff5ff',
-    fontSize: 15,
+    fontSize: Platform.OS === 'android' ? 15 : 13,
     fontWeight: '800',
     marginLeft: 0,
     top: 1,
@@ -179,28 +182,38 @@ newProviderNoReviewsContainer: {
     borderColor: '#e0e7ff', // Borda sutilmente azulada
     marginTop: 15,
     marginHorizontal: 20,
+    
 },
 newProviderBadgeContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#e0e7ff',
+    width: 40,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
+    
+    
+},
+newProviderBadgeIcon: {
+    width: 48,
+    height: 48,
+    
 },
 newProviderNoReviewsTitle: {
-    fontSize: 17,
+    fontSize: Platform.OS === 'android' ? 17 : 15,
     fontWeight: '800',
     color: AppColors.textBody,
     marginTop: 8,
 },
 newProviderNoReviewsSubtitle: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 12,
     color: AppColors.mediumGray,
     marginTop: 4,
     textAlign: 'center',
     paddingHorizontal: 20,
+},
+newProviderArrow: {
+    marginTop: 10,
 },
   // Informações do provedor (Paddings mantidos)
   providerInfoWhiteCard: {
@@ -213,12 +226,12 @@ newProviderNoReviewsSubtitle: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Platform.OS === 'android' ? 1 : 5,
+    marginBottom: Platform.OS === 'android' ? -1 : 5,
     marginTop: 10,
     left: 10,
   },
   providerNameWhiteCard: {
-    fontSize: Platform.OS === 'android' ? 20.5 : 23,
+    fontSize: Platform.OS === 'android' ? 20.5 : 21,
     fontWeight: '700',
     color: Platform.OS === 'android' ? '#5a5a5aff' : AppColors.textBody, // Usando AppColors
     flexShrink: 1,
@@ -233,12 +246,12 @@ newProviderNoReviewsSubtitle: {
     
   },
   locationTextWhiteCard: {
-    fontSize: Platform.OS === 'android' ? 15 : 16.5,
+    fontSize: Platform.OS === 'android' ? 15 : 15.5,
     color: AppColors.textAuxiliary, // Usando AppColors
     marginLeft: Platform.OS === 'android' ? 2 : 5,
   },
   priceTextWhiteCard: {
-    fontSize: 21,
+    fontSize: Platform.OS === 'android' ? 21 : 20,
     fontWeight: '700',
     color: AppColors.primaryInteractive, // Usando AppColors
     marginBottom: -2,
@@ -252,7 +265,7 @@ newProviderNoReviewsSubtitle: {
     left: 0,
   },
   robustReviewsText: {
-    fontSize: 9,
+    fontSize: Platform.OS === 'android' ? 9 : 8,
     color: AppColors.mediumGray, // Usando AppColors
     marginLeft: 4,
     top: 15,
@@ -321,7 +334,7 @@ priceDropLogo: {
 
 priceDropText: {
   color: '#fff',
-  fontSize: 13,
+  fontSize: Platform.OS === 'android' ? 13 : 12,
   fontWeight: '700',
   textAlign: 'center',
   textShadowColor: 'rgba(0,0,0,0.25)',
@@ -331,7 +344,7 @@ priceDropText: {
 
   
   infoChipText: {
-    fontSize: 11,
+    fontSize: Platform.OS === 'android' ? 11 : 10,
     color: AppColors.textAuxiliary, // Usando AppColors
     marginLeft: 6,
     fontWeight: '500',
@@ -343,7 +356,7 @@ priceDropText: {
     
   },
   sectionTitle: {
-      fontSize: Platform.OS === 'android' ? 18 : 20,
+      fontSize: Platform.OS === 'android' ? 18 : 18,
       left: 4,
       paddingHorizontal: 6,
       fontWeight: '700',
@@ -353,8 +366,8 @@ priceDropText: {
      marginTop: Platform.OS === 'android' ? 24 : 25,
   },
   descriptionText: {
-    fontSize: Platform.OS === 'android' ? 13 : 15,
-    lineHeight: Platform.OS === 'android' ? 17 : 18,
+    fontSize: Platform.OS === 'android' ? 13 : 14,
+    lineHeight: Platform.OS === 'android' ? 17 : 17,
     color: AppColors.textAuxiliary, // Usando AppColors
     textAlign: 'left',
     marginTop: Platform.OS === 'android' ? 2 : 0,
@@ -376,7 +389,7 @@ priceDropText: {
     color: AppColors.primaryInteractive,
   },
   noReviewsText: {
-    fontSize: Platform.OS === 'android' ? 13 : 14,
+    fontSize: Platform.OS === 'android' ? 13 : 13,
     color: AppColors.mediumGray, // Usando AppColors
     fontStyle: 'italic',
     textAlign: 'center',
@@ -400,13 +413,13 @@ priceDropText: {
     
   },
   noDetailsText: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     color: AppColors.mediumGray, // Usando AppColors
     fontStyle: 'italic',
     marginVertical: 10,
   },
   availabilityText: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     lineHeight: 21,
     color: AppColors.textAuxiliary, // Usando AppColors
   },
@@ -432,7 +445,7 @@ priceDropText: {
     
   },
   actionButtonText: {
-    fontSize: 10,
+    fontSize: Platform.OS === 'android' ? 10 : 9,
     color: AppColors.textAuxiliary, // Usando AppColors
     marginTop: 5,
     fontWeight: '600',
@@ -482,7 +495,7 @@ priceDropText: {
     flex: 1,
   },
   reviewerName: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: '600',
     color: AppColors.textBody, // Usando AppColors
   },
@@ -493,11 +506,11 @@ priceDropText: {
     marginTop: 4,
   },
   reviewDate: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 12 : 11,
     color: AppColors.mediumGray, // Usando AppColors
   },
   reviewComment: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     lineHeight: 22,
     color: AppColors.textAuxiliary, // Usando AppColors
     fontFamily: 'Montserrat-Regular', // ADICIONADO: Fonte para o comentário
@@ -517,7 +530,7 @@ priceDropText: {
   },
   addReviewButtonText: {
     color: AppColors.primaryInteractive, // Usando AppColors
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: '600',
     marginLeft: 8,
   },
@@ -532,18 +545,18 @@ priceDropText: {
     
   },
   serviceName: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: '600',
     color: AppColors.textBody, // Usando AppColors
     marginBottom: 4,
   },
   serviceDescription: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     color: AppColors.textAuxiliary, // Usando AppColors
     marginBottom: 6,
   },
   servicePriceTag: {
-    fontSize: 10,
+    fontSize: Platform.OS === 'android' ? 10 : 9,
     fontWeight: '700',
     color: AppColors.primaryInteractive, // Usando AppColors
     alignSelf: 'flex-end',
@@ -575,7 +588,7 @@ priceDropText: {
   },
   bookServiceButtonText: {
     color: AppColors.white, // Usando AppColors
-    fontSize: 18,
+    fontSize: Platform.OS === 'android' ? 18 : 17,
     fontWeight: '700',
   },
   noServicesMessage: {
@@ -592,7 +605,7 @@ priceDropText: {
   },
   noServicesMessageText: {
     color: AppColors.textBody, // Usando AppColors
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     textAlign: 'center',
   },
 
@@ -624,13 +637,13 @@ priceDropText: {
   },
 
   priceWrapper: {
-    marginTop: Platform.OS === 'android' ? 6 : 18,
+    marginTop: Platform.OS === 'android' ? 6 : 15,
     marginBottom: 0,
     alignItems: 'flex-start',
   },
 
   priceValue: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'android' ? 24 : 22,
     fontWeight: '800',
     color: AppColors.primaryInteractive,
   },
@@ -645,7 +658,7 @@ priceDropText: {
 
   priceSubLabel: {
     marginTop: 2,
-    fontSize: Platform.OS === 'android' ? 13 : 14,
+    fontSize: Platform.OS === 'android' ? 13 : 13,
     left: 5,
     fontWeight: '300',
     color: AppColors.textAuxiliary,
@@ -653,15 +666,15 @@ priceDropText: {
 
   priceUnit: {
     marginTop: 4,
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 12 : 11,
     fontWeight: '600',
     color: AppColors.textAuxiliary,
   },
 
 locationDistanceText: {
   color: '#7C8590',
-  fontSize: 14,
-  fontWeight: '500',
+  fontSize: Platform.OS === 'android' ? 13 : 13,
+  fontWeight: '800',
 },
 
 
@@ -685,7 +698,7 @@ priceBackground: {
 },
 
   photoSectionTitle: {
-    fontSize: 15,
+    fontSize: Platform.OS === 'android' ? 15 : 14,
     fontWeight: '700',
     color: AppColors.textBody, // Usando AppColors
   },
@@ -698,7 +711,7 @@ priceBackground: {
     paddingVertical: 5,
   },
   photoSectionRatingText: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 12 : 11,
     fontWeight: '600',
     color: AppColors.textAuxiliary, // Usando AppColors
     marginLeft: 5,
@@ -732,13 +745,13 @@ priceBackground: {
     borderColor: AppColors.borderNeutral, // Usando AppColors
   },
   offerTitle: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: 'bold',
     color: AppColors.textBody, // Usando AppColors
     marginBottom: 5,
   },
   offerDescription: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     color: AppColors.textAuxiliary, // Usando AppColors
     marginBottom: 10,
   },
@@ -748,7 +761,7 @@ priceBackground: {
     alignItems: 'center',
   },
   offerDiscount: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: 'bold',
     color: AppColors.errorRed, // Usando AppColors
   },
@@ -762,7 +775,7 @@ priceBackground: {
   },
   copyCouponButtonText: {
     color: AppColors.white, // Usando AppColors
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     fontWeight: '600',
     marginLeft: 5,
   },
@@ -800,7 +813,7 @@ priceBackground: {
   },
   recReviewsTxt: {
     marginLeft: 5,
-    fontSize: 19, // Aumentado de 12 para 16
+    fontSize: Platform.OS === 'android' ? 19 : 17, // Aumentado de 12 para 16
     color: AppColors.mediumGray, // Usando AppColors
   },
 
@@ -826,7 +839,7 @@ priceBackground: {
   },
   moreBadgeTxt: {
     color: AppColors.white, // Usando AppColors
-    fontSize: 10,
+    fontSize: Platform.OS === 'android' ? 10 : 9,
     fontWeight: '700',
     fontFamily: FONT_FAMILY, // Agora FONT_FAMILY está definido
   },
@@ -866,7 +879,7 @@ priceBackground: {
     bottom: Platform.OS === 'android' ? -3 : 9,
   },
   averageRatingText: {
-    fontSize: 15,
+    fontSize: Platform.OS === 'android' ? 15 : 14,
     
     
     fontWeight: '700',
@@ -874,7 +887,7 @@ priceBackground: {
     marginRight: 8,
   },
   totalReviewsText: {
-    fontSize: 13,
+    fontSize: Platform.OS === 'android' ? 13 : 13,
     color: AppColors.mediumGray, // Usando AppColors
     
   },
@@ -892,7 +905,7 @@ priceBackground: {
   },
   viewAllReviewsButtonText: {
     color: AppColors.primaryInteractive, // Usando AppColors
-    fontSize: 6,
+    fontSize: Platform.OS === 'android' ? 6 : 5,
     fontWeight: '600',
     marginRight: 8,
   },
