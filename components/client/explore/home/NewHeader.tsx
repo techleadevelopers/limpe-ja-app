@@ -321,6 +321,7 @@ const styles = StyleSheet.create({
     fontSize: Platform.OS === 'android' ? 12 : 12,
     fontFamily: 'Roboto', // 👈 OBRIGATÓRIO AQUI!
     marginLeft: Platform.OS === 'android' ? 2 : 5,
+    marginBottom: Platform.OS === 'android' ? -2 : -1,
     color: '#8d9fafff',
     fontWeight: Platform.select({ ios: '300', android: '300' }),
   },
