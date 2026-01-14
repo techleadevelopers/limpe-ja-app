@@ -62,6 +62,8 @@ function RecommendationsSection({ reviews }: { reviews?: ProviderReview[] }) {
   const displayed = (reviews ?? []).slice(0, 5);
   const remainingCount = Math.max((reviews?.length ?? 0) - displayed.length, 0);
 
+  const { t } = useTranslation();
+
   const renderAvatarContent = (review: ProviderReview) => {
     const avatarUrl = review.client?.user?.avatarUrl;
     if (!avatarUrl) {
@@ -95,25 +97,7 @@ function RecommendationsSection({ reviews }: { reviews?: ProviderReview[] }) {
             </View>
           )}
         </>
-      ) : (
-        <>
-          {[0, 1, 2, 3].map((i) => (
-            <LinearGradient
-              key={i}
-              colors={['#eef2f7', '#dce3ed']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                recommendationStyles.placeholderDot,
-                { marginLeft: i === 0 ? 0 : -8, opacity: 0.8 - i * 0.1 },
-              ]}
-            />
-          ))}
-          <View style={[recommendationStyles.moreBadge, recommendationStyles.placeholderBadge]}>
-            <Text style={recommendationStyles.moreBadgeTxt}>Novo</Text>
-          </View>
-        </>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -169,6 +153,29 @@ const recommendationStyles = StyleSheet.create({
     backgroundColor: '#0f172a',
   },
 });
+
+interface ProviderDisplayInfoWithStatus extends ProviderDisplayInfo {
+  status?: string;
+}
+
+function dedupeReviews(reviews?: ProviderReview[]) {
+  if (!reviews?.length) {
+    return [];
+  }
+  const seen = new Set<string>();
+  return reviews.filter((review) => {
+    const uniqueKey =
+      review.id ??
+      `${review.clientId ?? 'client'}:${review.rating ?? '0'}:${review.comment?.trim().toLowerCase() ?? ''}:${
+        review.createdAt ?? ''
+      }`;
+    if (seen.has(uniqueKey)) {
+      return false;
+    }
+    seen.add(uniqueKey);
+    return true;
+  });
+}
 
 const SecurityBanner: React.FC<{ onPress: () => void }> = ({ onPress }) => (
   <View style={securityBannerStyles.container}>
@@ -282,7 +289,7 @@ export default function ProviderDetailsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
-  const [provider, setProvider] = useState<ProviderDisplayInfo | null | undefined>(undefined);
+  const [provider, setProvider] = useState<ProviderDisplayInfoWithStatus | null | undefined>(undefined);
   const [providerOffers, setProviderOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -359,53 +366,17 @@ export default function ProviderDetailsScreen() {
 
         
 
-        // Provider details - CORRECAO TS: Type guard para 'rejected'
-        let finalProviderData: ProviderDisplayInfo | null = null;
-        if (providerResult.status === 'fulfilled' && providerResult.value) {
-          const distance = Number.isFinite(paramDistance)
-            ? paramDistance
-            : providerResult.value?.distance ?? null;
-          finalProviderData = { ...providerResult.value, distance };
+        // Provider details - CORRECAO TS: Type guard para 'rejected'
+        let finalProviderData: ProviderDisplayInfoWithStatus | null = null;
+        if (providerResult.status === 'fulfilled' && providerResult.value) {
+          const distance = Number.isFinite(paramDistance)
+            ? paramDistance
+            : providerResult.value?.distance ?? null;
+          finalProviderData = { ...providerResult.value, distance };
 
-          // --- INÍCIO DA LÓGICA DE MOCK PARA NOVOS PRESTADORES ---
-          // Se o prestador não tem avaliações reais, injeta mocks para parecer confiável
-          const hasRealReviews = providerResult.value?.reviewCount && providerResult.value.reviewCount > 0;
-
-          if (!hasRealReviews) {
-            // MOCK REVIEWS: Use reviews padrão e genéricas para prestadores novos/sem avaliação
-            const mockReviews: ProviderReview[] = [
-              {
-                id: 'mock-review-1',
-                bookingId: 'mock-booking-1',
-                clientId: 'mock-client-1',
-                providerId: providerResult.value.id,
-                rating: 5,
-                comment: 'Serviço excepcional! Pontual e deixou o ambiente impecável. Recomendo!',
-                createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-              {
-                id: 'mock-review-2',
-                bookingId: 'mock-booking-2',
-                clientId: 'mock-client-2',
-                providerId: providerResult.value.id,
-                rating: 5, // Mantido 5 para garantir alta confiança inicial
-                comment: 'Profissional muito simpático(a) e trabalho de alta qualidade. Nota 10.',
-                createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-            ];
-
-            finalProviderData.reviews = mockReviews;
-            finalProviderData.reviewCount = mockReviews.length;
-            // Define a avaliação média mockada como 5.0
-            finalProviderData.averageRating = 5; 
-          } else {
-            // Usa dados reais da API
-            finalProviderData.reviews = providerResult.value?.reviews || [];
-          }
-          // --- FIM DA LÓGICA DE MOCK ---
-        } else {
+          const rawReviews = providerResult.value.reviews ?? [];
+          finalProviderData.reviews = dedupeReviews(rawReviews);
+        } else {
           // CORREÇÃO TS: Só acessa reason se for 'rejected'
           if (__DEV__) {
             if (providerResult.status === 'rejected') {
@@ -582,6 +553,12 @@ if (isAuthenticated && user?.id) {
     setDescriptionExpanded(false);
   }, [provider?.bio]);
 
+  useEffect(() => {
+    if (!isLoading && (error || !provider)) {
+      router.replace('/client/explore' as any);
+    }
+  }, [error, provider, isLoading, router]);
+
   const requireAuthOrRedirect = useCallback(
     (actionName?: string) => {
       if (isAuthenticated) {
@@ -630,16 +607,16 @@ if (isAuthenticated && user?.id) {
       return;
     }
     if (provider && user && activeBookingId) {
-      router.push({
-        pathname: `/client/messages/${activeBookingId}`,
-        params: {
-          recipientName: provider.fullName,
-          recipientId: provider.id,
-          recipientAvatarUrl: provider.avatarUrl,
-          bookingId: activeBookingId,
-        },
-      });
-    } else {
+        router.push({
+          pathname: '/client/messages/[bookingId]',
+          params: {
+            bookingId: activeBookingId,
+            recipientName: provider.fullName,
+            recipientId: provider.id,
+            recipientAvatarUrl: provider.avatarUrl,
+          },
+        } as any);
+      } else {
       // Mensagem AMIGÁVEL e só se o usuário clicar (não automática) - USE TOAST, NÃO ALERT
       NotificationUIService.showInfo(
         t('provider_details.chat_unavailable_message_friendly', {
@@ -683,11 +660,20 @@ if (isAuthenticated && user?.id) {
   const handleViewAllReviews = () => {
     if (provider) {
       router.push({
-        pathname: `/common/feedback/${provider.id}`,
-        params: { targetType: 'provider' },
-      });
+        pathname: '/common/feedback/[targetId]',
+        params: { targetId: provider.id, targetType: 'provider' },
+      } as any);
     }
   };
+
+  const displayReviews = useMemo(() => dedupeReviews(provider?.reviews), [provider?.reviews]);
+  const hasReviews = displayReviews.length > 0;
+  const [isReviewsExpanded, setReviewsExpanded] = useState(hasReviews);
+  useEffect(() => {
+    if (hasReviews) {
+      setReviewsExpanded(true);
+    }
+  }, [hasReviews]);
 
   const distanceLabel = useMemo(() => {
     if (typeof provider?.distance === 'number' && Number.isFinite(provider.distance) && provider.distance >= 0) {
@@ -697,15 +683,14 @@ if (isAuthenticated && user?.id) {
   }, [provider?.distance]);
 
   useEffect(() => {
-    if (provider?.providerServices) {
-      console.log('[ProviderDetails] price payload', provider.providerServices.map((svc) => ({
-        id: svc.id,
-        pricePerHour: svc.pricePerHour,
-        needsReview: svc.needsReview,
-        pricingType: svc.pricingType,
-        price: svc.price,
-      })));
-    }
+      if (provider?.providerServices) {
+        console.log('[ProviderDetails] price payload', provider.providerServices.map((svc) => ({
+          id: svc.id,
+          pricePerHour: svc.pricePerHour,
+          needsReview: svc.needsReview,
+          price: svc.price,
+        })));
+      }
   }, [provider?.providerServices]);
 
   if (isLoading) {
@@ -718,66 +703,7 @@ if (isAuthenticated && user?.id) {
   }
 
   if (error || !provider) {
-    return (
-      <View style={[styles.centeredFeedback, { backgroundColor: AppColors.white }]}>
-        <Stack.Screen options={{ title: t('common.error'), headerShown: false }} />
-
-        <Ionicons
-          name="alert-circle-outline"
-          size={60}
-          color={AppColors.primaryInteractive}
-          style={{ marginBottom: 12 }}
-        />
-
-        <Text
-          style={[
-            styles.errorText,
-            { fontSize: 16, fontWeight: '600', marginBottom: 8 },
-          ]}
-        >
-          ❌ Ops! Não foi possível carregar as informações.
-        </Text>
-
-        <Text
-          style={[
-            styles.errorText,
-            {
-              fontSize: 14,
-              color: AppColors.mediumGray,
-              marginBottom: 20,
-              textAlign: 'center',
-              paddingHorizontal: 32,
-            },
-          ]}
-        >
-          Pode ser um problema temporário. Tente novamente ou volte para explorar.
-        </Text>
-
-        <View
-          style={{ flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginBottom: 10 }}
-        >
-          <TouchableOpacity
-            style={[styles.errorBackButton, { backgroundColor: AppColors.primaryInteractive }]}
-            onPress={() => {
-              setTempProviderId(undefined);
-              setTimeout(() => setTempProviderId(providerId as string), 0);
-              setError(null);
-              setIsLoading(true);
-            }}
-          >
-            <Ionicons name="refresh" size={20} color={AppColors.white} />
-            <Text style={[styles.errorBackButtonText, { color: AppColors.white }]}>
-              Tentar Novamente
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.errorBackButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color={styles.errorBackButtonText.color} />
-            <Text style={styles.errorBackButtonText}>{t('common.back')}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
+    return null;
   }
 
   const bookableService = provider.providerServices?.find(isServiceAvailable);
@@ -1016,9 +942,7 @@ if (isAuthenticated && user?.id) {
 
           <View style={styles.tabContentContainer}>
 
-            <SecurityBanner
-              onPress={() => router.push('/client/explore/security' as any)}
-            />
+            <SecurityBanner onPress={() => router.push('/client/explore/security' as any)} />
 
             {provider && (
               <SideIcon
@@ -1050,6 +974,7 @@ if (isAuthenticated && user?.id) {
               />
             )}
 
+            {/*
             <View style={styles.actionButtonsContainer}>
               <Animated.View style={{ transform: [{ scale: callButtonAnim }] }}>
                 <TouchableOpacity
@@ -1074,33 +999,33 @@ if (isAuthenticated && user?.id) {
               </Animated.View>
 
               <Animated.View style={{ transform: [{ scale: chatButtonAnim }] }}>
-                {canInitiateChat ? (
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={handleChatPress}
-                    onPressIn={() => handleActionButtonPressIn(chatButtonAnim)}
-                    onPressOut={() => handleActionButtonPressOut(chatButtonAnim)}
-                  >
-                    <Ionicons
-                      name="chatbubble-outline"
-                      size={16}
-                      color={styles.actionButtonText.color}
-                    />
-                    <Text style={styles.actionButtonText}>{t('provider_details.chat')}</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={[styles.actionButton, styles.disabledActionButton]}>
-                    <Ionicons
-                      name="chatbubble-outline"
-                      size={16}
-                      color={styles.disabledActionButtonText.color}
-                    />
-                    <Text style={[styles.actionButtonText, styles.disabledActionButtonText]}>
-                      {t('provider_details.chat')}
-                    </Text>
-                  </View>
-                )}
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => {
+                    if (!requireAuthOrRedirect('chat')) return;
+                    NotificationUIService.showInfo(
+                      t('provider_details.chat_functionality'),
+                      t('provider_details.chat')
+                    );
+                  }}
+                  onPressIn={() => handleActionButtonPressIn(chatButtonAnim)}
+                  onPressOut={() => handleActionButtonPressOut(chatButtonAnim)}
+                >
+                  <Ionicons
+                    name="chatbubble-outline"
+                    size={16}
+                    color={styles.actionButtonText.color}
+                  />
+                  <Text style={styles.actionButtonText}>{t('provider_details.chat')}</Text>
+                </TouchableOpacity>
               </Animated.View>
+
+              <View style={[styles.actionButton, styles.disabledActionButton]}>
+                <Ionicons name="chatbubble-outline" size={16} color="#9aa2b6" />
+                <Text style={[styles.actionButtonText, styles.disabledActionButtonText]}>
+                  {t('provider_details.privacy_mode')}
+                </Text>
+              </View>
 
               <Animated.View style={{ transform: [{ scale: mapButtonAnim }] }}>
                 <TouchableOpacity
@@ -1141,13 +1066,39 @@ if (isAuthenticated && user?.id) {
                 </TouchableOpacity>
               </Animated.View>
             </View>
+            */}
 
-            <Text style={styles.sectionTitle}>
-              {t('provider_details.reviews_and_recommendations_title', 'Avaliações & Recomendações')}
-            </Text>
-            <RecommendationsSection reviews={provider.reviews || []} />
+            <TouchableOpacity
+              style={[
+                localStyles.reviewSectionHeader,
+                !hasReviews && localStyles.reviewSectionHeaderCollapsed,
+              ]}
+              activeOpacity={hasReviews ? 1 : 0.75}
+              onPress={!hasReviews ? () => setReviewsExpanded((prev) => !prev) : undefined}
+            >
+              <View style={localStyles.reviewHeaderContent}>
+                <Text style={styles.sectionTitle}>
+                  {t('provider_details.reviews_and_recommendations_title', 'Avaliações & Recomendações')}
+                </Text>
+                {!hasReviews && (
+                  <Ionicons
+                    name="chevron-down"
+                    size={20}
+                    color={AppColors.textBody}
+                    style={[
+                      localStyles.expandIcon,
+                      {
+                        transform: [{ rotate: isReviewsExpanded ? '180deg' : '0deg' }],
+                      },
+                    ]}
+                  />
+                )}
+              </View>
+            </TouchableOpacity>
 
-            {provider.reviews && provider.reviews.length > 0 ? (
+            {hasReviews && <RecommendationsSection reviews={displayReviews} />}
+
+            {hasReviews ? (
               <View style={styles.reviewsDetailContainer}>
                 <View style={styles.averageRatingContainer}>
                   <Image source={Icons3D.like} style={styles.likeIcon} />
@@ -1161,11 +1112,11 @@ if (isAuthenticated && user?.id) {
                   </Text>
                 </View>
 
-                {provider.reviews.slice(0, 3).map((review, index) => (
+                {displayReviews.slice(0, 3).map((review, index) => (
                   <ReviewCard key={review.id || index} review={review} />
                 ))}
 
-                {provider.reviews.length > 3 && (
+                {displayReviews.length > 3 && (
                   <TouchableOpacity
                     style={styles.viewAllReviewsButton}
                     onPress={handleViewAllReviews}
@@ -1182,19 +1133,23 @@ if (isAuthenticated && user?.id) {
                 )}
               </View>
             ) : (
-              
-              
-              <View style={styles.newProviderNoReviewsContainer}>
-                <View style={styles.newProviderBadgeContainer}>
-                  <Ionicons name="sparkles" size={24} color={'#398beeff'} />
-                </View>
-                <Text style={styles.newProviderNoReviewsTitle}>
-                  {t('provider_details.new_provider_title', 'Novo na LimpeJá!')}
-                </Text>
-                <Text style={styles.newProviderNoReviewsSubtitle}>
-                  {t('provider_details.be_the_first_review', 'Seja o primeiro cliente a deixar uma avaliação.')}
-                </Text>
-              </View>
+              isReviewsExpanded && (
+                <View style={styles.newProviderNoReviewsContainer}>
+                  <View style={styles.newProviderBadgeContainer}>
+                    <Image
+                      source={require('../../../assets/images/vass.png')}
+                      style={styles.newProviderBadgeIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <Text style={styles.newProviderNoReviewsTitle}>
+                    {t('provider_details.new_provider_title', 'Novo na LimpeJá!')}
+                  </Text>
+                  <Text style={styles.newProviderNoReviewsSubtitle}>
+                    {t('provider_details.be_the_first_review', 'Seja o primeiro cliente a deixar uma avaliação.')}
+                  </Text>
+                </View>
+              )
             )}
             
           </View>
@@ -1227,6 +1182,20 @@ if (isAuthenticated && user?.id) {
 }
 
 const localStyles = StyleSheet.create({
+  reviewSectionHeader: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewHeaderContent: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  expandIcon: {
+    marginTop: 14,
+  },
+  reviewSectionHeaderCollapsed: {
+    marginBottom: 10,
+  },
   unavailableNotice: {
     marginHorizontal: 24,
     marginBottom: 12,
