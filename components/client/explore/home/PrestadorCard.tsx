@@ -6,7 +6,6 @@ import { Animated, Dimensions, Easing, Image, Platform, StyleSheet, Text, Toucha
 import AnimatedReanimated, { Keyframe as ReKeyframe } from 'react-native-reanimated';
 import { AppShadows } from '../../../../constants/appStyles'; // Ajuste o caminho conforme necessário
 import { Icons3D } from '../../../../constants/icons3d';
-import { useProviderMetrics } from '../../../../hooks/useProviderMetrics';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 // Importar os novos formatadores e helpers
 import { AnalyticsService } from '../../../../services/analyticsService';
@@ -51,8 +50,6 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const slideAnim = useRef(new Animated.Value(20)).current;
     const { t } = useTranslation();
     
-    const providerMetrics = useProviderMetrics(item.id);
-
     // Animação de entrada (fade e slide)
     useEffect(() => {
         Animated.parallel([
