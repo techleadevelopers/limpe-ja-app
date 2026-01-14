@@ -29,8 +29,8 @@ const NavBar: React.FC = () => {
     { name: 'Chat', icon: 'chatbubble-ellipses', route: '/client/messages' },
     { name: 'Perfil', icon: 'person', route: '/client/profile' },
   ];
-  const BASE_ICON_SIZE = 23;
-  const iconSize = Platform.OS === 'android' ? BASE_ICON_SIZE * 0.95 : BASE_ICON_SIZE;
+  const BASE_ICON_SIZE = Platform.OS === 'android' ? 23 : 26;
+  const iconSize = Platform.OS === 'android' ? BASE_ICON_SIZE * 0.95 : BASE_ICON_SIZE * 0.95;
 
   const navItemAnims = useRef(navItems.map(() => new Animated.Value(1))).current;
   const rippleAnims = useRef(navItems.map(() => new Animated.Value(0))).current;
@@ -81,7 +81,7 @@ const NavBar: React.FC = () => {
     <View style={styles.navBar} onLayout={onLayout}>
       {/* BACKGROUND LUXO */}
       <BlurView
-        intensity={Platform.OS === 'ios' ? 40 : 85}
+        intensity={Platform.OS === 'ios' ? 40 : 65}
         tint="light"
         style={StyleSheet.absoluteFillObject}
       />
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
 
   navText: {
-    fontSize: 10,
+    fontSize: Platform.OS === 'android' ? 10 : 8,
     letterSpacing: 0.1,
     fontFamily: 'Montserrat-Regular',
     
