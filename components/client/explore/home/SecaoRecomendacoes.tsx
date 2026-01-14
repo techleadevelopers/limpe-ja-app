@@ -99,11 +99,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={[styles.sectionTitle, { color: titleColor }]}>{titulo}</Text>
-        {onVerTudoPress ? (
-          <TouchableOpacity onPress={onVerTudoPress} style={styles.viewAllButton}>
-            <Ionicons name="add" size={16} color="#398beeff" />
-          </TouchableOpacity>
-        ) : null}
+        
       </View>
 
       <View style={styles.carouselWrapper}>
