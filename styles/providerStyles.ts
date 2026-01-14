@@ -86,6 +86,7 @@ export const styles = StyleSheet.create({
     
   },
 
+
   // Content Area Styles (REVERTIDO PARA O FUNDO BRANCO SÓLIDO)
   contentArea: {
     paddingTop: 20,
