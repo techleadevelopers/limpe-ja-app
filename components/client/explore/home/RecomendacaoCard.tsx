@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useIsFocused } from '@react-navigation/native';
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import AnimatedReanimated, {
   cancelAnimation,
   Easing,
@@ -24,9 +24,9 @@ import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 import { formatDistance, getNextAvailableDate } from '../../../../utils/formatters';
 import { getFormattedServicePrice, getNumericPriceValue } from '../../../../utils/service-helpers';
 
-const AnimatedCardBackground = AnimatedReanimated.createAnimatedComponent(LinearGradient);
-const AnimatedPlusButtonGradient = AnimatedReanimated.createAnimatedComponent(LinearGradient);
-const AnimatedPriceReflection = AnimatedReanimated.createAnimatedComponent(LinearGradient);
+const AnimatedCardBackground = AnimatedReanimated.View;
+const AnimatedPlusButtonGradient = AnimatedReanimated.View;
+const AnimatedPriceReflection = AnimatedReanimated.View;
 // Usar Animated.Text direto evita que RN interprete as strings fora de um host Text
 const AnimatedText = AnimatedReanimated.Text;
 
@@ -355,33 +355,20 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
   // Obtém o valor numérico do preço principal para comparações futuras
   const numericMainPrice = mainServiceForDisplay ? getNumericPriceValue(mainServiceForDisplay) : null;
 
-// Ref para armazenar o número aleatório de avaliações, estável por prestador
-  const stableRandomReviewCountRef = useRef<number | null>(null);
-
   // --- INÍCIO DA MODIFICAÇÃO PARA O NÚMERO DE AVALIAÇÕES ---
   // Calcula o número real de avaliações
   const actualReviewCount = typeof item.reviewCount === 'number'
     ? item.reviewCount
     : (Array.isArray(item.reviews) ? item.reviews.length : 0);
 
-  let displayedReviewCount: number;
+  const hasReviews = actualReviewCount > 0;
+  const displayedReviewCount = hasReviews ? actualReviewCount : 0;
+  const badgeText = hasReviews
+    ? String(displayedReviewCount)
+    : t('provider_details.badge_new', { defaultValue: 'Novo' });
+  const badgeIconName = hasReviews ? 'star' : 'sparkles';
+  const badgeIconColor = hasReviews ? '#5da2ecff' : '#facc15';
 
-  if (actualReviewCount === 0) {
-    // Se não há avaliações reais e ainda não geramos um número aleatório para este item, gere um.
-    if (stableRandomReviewCountRef.current === null) {
-      stableRandomReviewCountRef.current = Math.floor(Math.random() * (25 - 5 + 1)) + 5;
-    }
-    displayedReviewCount = stableRandomReviewCountRef.current;
-  } else {
-    // Se há avaliações reais, use-as e limpe o ref para o caso de o item mudar ou reviewCount voltar a ser 0.
-    stableRandomReviewCountRef.current = null; // Limpa o ref
-    displayedReviewCount = actualReviewCount;
-  }
-
-  // A flag `hasRating` controla a visibilidade do badge de avaliações.
-  // A solicitação é para mudar o *valor* quando ele for 0, não para esconder o badge.
-  // Então, mantemos `hasRating` como true para garantir que o badge esteja sempre presente,
-  // conforme já estava no código original.
   const hasRating = true;
   // --- FIM DA MODIFICAÇÃO ---
 
@@ -492,7 +479,9 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
   const distanceLabel = distanceValueMeters !== null ? formatDistance(distanceValueMeters, null) : null;
   const showDistancePill = distanceLabel !== null;
 
-  type NextAvailabilitySource = ProviderDisplayInfo['nextAvailable'] | ProviderDisplayInfo['nextSlot'];
+type NextAvailabilitySource =
+  | ProviderDisplayInfo['nextAvailable']
+  | NonNullable<ProviderDisplayInfo['nextSlot']>;
 
   type FormattedNextAvailable = {
     dayLabel: string;
@@ -500,7 +489,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
     timestamp: number;
   };
 
-  const formatNextAvailable = (next?: NextAvailabilitySource): FormattedNextAvailable | null => {
+  const formatNextAvailable = (next?: NextAvailabilitySource | null): FormattedNextAvailable | null => {
+    if (!next) return null;
     const nextDate = getNextAvailableDate(next);
     if (!nextDate) return null;
     const today = new Date();
@@ -683,11 +673,14 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
 
       {/* CORRIGIDO: Aplica hoverScaleStyle (Reanimated) ao AnimatedCardBackground para compatibilidade */}
       <AnimatedCardBackground
-        colors={['rgba(230, 240, 255, 0.7)', 'rgba(196, 197, 205, 0.23)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
         style={[styles.animatedCardContainer, hoverScaleStyle, animatedBorderStyle]}
       >
+        <LinearGradient
+          colors={['rgba(230, 240, 255, 0.7)', 'rgba(196, 197, 205, 0.23)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
         <TouchableOpacity
           style={styles.cardContentWrapper}
           onPress={handleCardPress}
@@ -700,11 +693,14 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
             <Image source={avatarSource} style={styles.cardImage} />
             {/* SEL0 DE SEGURANÇA REFINADO */}
             <AnimatedPlusButtonGradient
-              colors={['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.92)']}
               style={[styles.securityBadge, subtleTrembleAnimatedStyle]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
             >
+              <LinearGradient
+                colors={['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.92)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
               {shouldShowReflection && (
                 <AnimatedReanimated.View style={[styles.reflectionOverlay, animatedReflectionStyle]}>
                   <LinearGradient
@@ -720,17 +716,31 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
             </AnimatedPlusButtonGradient>
 
             {hasRating && (
-              <View style={styles.ratingBadge}>
-                <Ionicons
-                  name="star"
-                  size={S(11)}
-                  color="#5da2ecff"
-                  style={styles.ratingBadgeIcon}
-                />
-                <Text style={styles.ratingBadgeText} allowFontScaling={false}>
-                  {/* AQUI É ONDE A MODIFICAÇÃO É APLICADA: */}
-                  {displayedReviewCount}
-                </Text>
+              <View
+                style={[
+                  styles.ratingBadge,
+                  !hasReviews && styles.ratingBadgeNew,
+                ]}
+              >
+                {hasReviews ? (
+                  <>
+                    <Ionicons
+                      name="star"
+                      size={S(11)}
+                      color="#5da2ecff"
+                      style={styles.ratingBadgeIcon}
+                    />
+                    <Text style={styles.ratingBadgeText} allowFontScaling={false}>
+                      {String(displayedReviewCount)}
+                    </Text>
+                  </>
+                ) : (
+                  <View style={styles.ratingBadgeNew}>
+                    <Text style={styles.ratingBadgeNewText}>
+                      NOVO
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
 
@@ -772,11 +782,15 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
                   {shouldShowReflection && (
                     <AnimatedPriceReflection
                       pointerEvents="none"
-                      colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
                       style={[styles.priceReflectionStripe, priceReflectionStyle]}
-                    />
+                    >
+                      <LinearGradient
+                        colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={StyleSheet.absoluteFillObject}
+                      />
+                    </AnimatedPriceReflection>
                   )}
                   {(() => {
                     const priceText =
@@ -839,7 +853,7 @@ const styles = StyleSheet.create({
   cardWrapperWithDistance: { // NOVO ESTILO: Container pai para posicionamento absoluto
     width: S(116),
     height: S(163), // AUMENTADO: De 194 para 210px (espaço extra para textos abaixo dos ícones ~16px)
-    marginRight: Platform.OS === 'android' ? S(-1) : S(13),
+    marginRight: Platform.OS === 'android' ? S(-1) : S(10),
     marginBottom: Platform.OS === 'android' ? -4 : 2,
     marginTop: Platform.OS === 'android' ? 3 : 8,
     left: Platform.OS === 'android' ? 0 : 3,
@@ -1004,18 +1018,33 @@ right: Platform.OS === 'android' ? -4 : -4,
     flexDirection: 'row', // ícone em cima, número embaixo
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f1f2f1', // clean premium glass  
+   
     paddingHorizontal: 4,
     paddingVertical: 2,
     gap: 2,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.9)', // slate-200
+    borderRadius: 8,
+   
     shadowColor: '#5da2ec',
     shadowOpacity: 0.12,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 },
     elevation: 0,
+  },
+  ratingBadgeNew: {
+    backgroundColor: '#6f9ff2',
+    paddingHorizontal: 2,
+    paddingVertical: 1,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ratingBadgeNewText: {
+    fontSize: S(8),
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Montserrat-ExtraBold' : 'Montserrat-Regular',
+    color: '#fff',
   },
   ratingBadgeIcon: {
     marginBottom: 2,
@@ -1307,11 +1336,12 @@ right: Platform.OS === 'android' ? -4 : -4,
 
   securityBadge: {
     position: 'absolute',
-    width: 23,
-    height: 23,
+    width: Platform.OS === 'android' ? S(26) : S(28),
+    height: Platform.OS === 'android' ? S(26) : S(28),
     bottom: -17,  // fixa no canto inferior direito da foto
     right: 15,
     borderRadius: 20,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 3,
