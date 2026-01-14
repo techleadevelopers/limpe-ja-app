@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { ackNotification, getNotificationStream } from 'services/notificationService';
 import NotificationUIService from '../services/notificationUIService';
+import i18n from '../i18n';
 import { resolveSocketUrl } from '../utils/socket';
 import { dedupeAppEvents } from '../utils/notificationStreamUtils';
 import type { AppEvent } from '../types/backend/events';
@@ -67,16 +68,18 @@ export function useNotificationsSocket(authToken?: string | null) {
         });
       }
 
-      const title = event.title ?? 'NotificaA§ALo';
-      const message = event.message ?? 'VocAa recebeu uma nova notificaA§ALo.';
+      const title = event.title ?? 'Notificação';
+      const message = event.message ?? 'Você recebeu uma nova notificação.';
+      const localizedTitle = i18n.t(title, { defaultValue: title });
+      const localizedMessage = i18n.t(message, { defaultValue: message });
       const deepLink =
         (event.payload?.deepLink as string | undefined) ??
         event.targetUrl ??
         undefined;
       NotificationUIService.showAppEvent({
         dedupeKey: dedupeId,
-        title,
-        message,
+        title: localizedTitle,
+        message: localizedMessage,
         type: 'info',
         deepLink,
       });
@@ -100,8 +103,8 @@ export function useNotificationsSocket(authToken?: string | null) {
         kind.includes('booking');
       if (isService) {
         await scheduleLocalNotification({
-          title,
-          body: message,
+          title: localizedTitle,
+          body: localizedMessage,
           data: event.payload ?? null,
         });
         playAlertSound();
