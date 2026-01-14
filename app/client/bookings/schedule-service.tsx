@@ -2906,7 +2906,7 @@ const styles = StyleSheet.create({
   stepActiveText: {
     color: AppColors.white,
     fontWeight: '700',
-    fontSize: 11,
+    fontSize: Platform.OS === 'android' ? 11 : 10,
     textAlign: 'center',
   },
   stepItemGhost: {
@@ -2915,7 +2915,7 @@ const styles = StyleSheet.create({
   stepGhostText: {
     color: AppColors.mediumGray,
     fontWeight: '600',
-    fontSize: 11,
+    fontSize: Platform.OS === 'android' ? 11 : 10,
     textAlign: 'center',
   },
   floatingSummaryContainer: {
@@ -2936,12 +2936,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   floatingSummaryText: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: '500',
     color: AppColors.textBody,
   },
   floatingSummaryPrice: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'android' ? 18 : 17,
     fontWeight: 'bold',
     color: AppColors.primaryInteractive,
   },
@@ -3003,7 +3003,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   pricingErrorText: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 12 : 11,
     color: '#B91C1C',
     marginBottom: 6,
   },
@@ -3015,7 +3015,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   pricingErrorActionText: {
-    fontSize: 13,
+    fontSize: Platform.OS === 'android' ? 13 : 12,
     fontWeight: '700',
     color: AppColors.white,
   },
@@ -3026,7 +3026,7 @@ const styles = StyleSheet.create({
   },
   insuranceLoadingText: {
     marginTop: 8,
-    fontSize: 13,
+    fontSize: Platform.OS === 'android' ? 13 : 12,
     color: AppColors.textAuxiliary,
   },
   insuranceErrorBanner: {
@@ -3039,7 +3039,7 @@ const styles = StyleSheet.create({
   },
   insuranceErrorText: {
     color: AppColors.textAuxiliary,
-    fontSize: 13,
+    fontSize: Platform.OS === 'android' ? 13 : 12,
     marginBottom: 6,
   },
   insuranceRetryButton: {
@@ -3058,18 +3058,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 18,
   },
   reviewInsuranceNoneText: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     fontWeight: '600',
     color: AppColors.textAuxiliary,
   },
   safetyBannerTitle: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 12 : 11,
     fontWeight: '800',
     color: AppColors.textBody,
     marginBottom: 2,
   },
   safetyBannerSubtitle: {
-    fontSize: 11,
+    fontSize: Platform.OS === 'android' ? 11 : 10,
     color: AppColors.textAuxiliary,
     lineHeight: 16,
   },
@@ -3082,7 +3082,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   sectionTitlePlain: {
-    fontSize: 22,
+    fontSize: Platform.OS === 'android' ? 22 : 20,
     fontWeight: Platform.OS === 'ios' ? '600' : '700',
     color: AppColors.textBody,
     letterSpacing: 0.2,
@@ -3102,7 +3102,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   reviewSectionTitle: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'android' ? 18 : 17,
   },
   card: {
     backgroundColor: AppColors.white,
@@ -3113,14 +3113,14 @@ const styles = StyleSheet.create({
    
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: Platform.OS === 'android' ? 20 : 19,
     fontWeight: 'bold',
     color: AppColors.textBody,
     marginBottom: 20,
     textAlign: 'left',
   },
   sectionHeaderTitle: {
-    fontSize: 20,
+    fontSize: Platform.OS === 'android' ? 20 : 19,
     fontWeight: 'bold',
     color: AppColors.textBody,
     marginHorizontal: 20,
@@ -3134,7 +3134,7 @@ const styles = StyleSheet.create({
     borderBottomColor: AppColors.backgroundNeutral,
   },
   compactSectionTitle: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: '600',
     color: AppColors.textBody,
     marginBottom: 8,
@@ -3153,7 +3153,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     color: AppColors.textBody,
   },
   compactApplyCouponButton: {
@@ -3169,7 +3169,7 @@ const styles = StyleSheet.create({
   compactApplyCouponButtonText: {
     color: AppColors.white,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
   },
   compactCouponFeedbackContainer: {
     flexDirection: 'row',
@@ -3179,7 +3179,7 @@ const styles = StyleSheet.create({
   },
   compactCouponAppliedText: {
     marginLeft: 6,
-    fontSize: 13,
+    fontSize: Platform.OS === 'android' ?  13 : 12,
     fontWeight: '500',
   },
   summarySection: {
@@ -3195,12 +3195,12 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     color: AppColors.textBody,
     lineHeight: 24,
   },
   summaryLabel: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: '600',
   },
   reviewRow: {
@@ -3223,7 +3223,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   reviewRowLabel: {
-    fontSize: 11,
+    fontSize: Platform.OS === 'android' ? 11 : 10,
     fontWeight: '600',
     color: AppColors.textAuxiliary,
     textTransform: 'uppercase',
@@ -3231,12 +3231,12 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
   reviewRowValue: {
-    fontSize: 15,
+    fontSize: Platform.OS === 'android' ? 15 : 14,
     fontWeight: '700',
     color: '#1A1A1A',
   },
   reviewValueLine: {
-    fontSize: 14,
+    fontSize:  Platform.OS === 'android' ? 14 : 13,
     color: AppColors.textBody,
   },
   reviewAction: {
@@ -3244,7 +3244,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   reviewActionText: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 12 : 11,
     fontWeight: '600',
     color: AppColors.primaryInteractive,
   },
@@ -3255,7 +3255,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   reviewInsurancePrice: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     fontWeight: '800',
     color: AppColors.successStandard,
     backgroundColor: '#E8F5E9',
@@ -3283,11 +3283,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   paymentLabel: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     color: AppColors.textAuxiliary,
   },
   paymentValue: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: '600',
     color: AppColors.textBody,
   },
@@ -3297,7 +3297,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   paymentMicrocopy: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 12 : 11,
     color: AppColors.textAuxiliary,
     textAlign: 'center',
     marginTop: 6,
@@ -3311,13 +3311,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   timeSlotsHelperText: {
-    fontSize: Platform.OS === 'android' ? 13 : 14,
-    lineHeight: 20,
+    fontSize: Platform.OS === 'android' ? 13 : 13,
+    lineHeight: Platform.OS === 'android' ? 20 : 19,
     color: '#6B7280',
     fontWeight: '500',
   },
   timeSlotsHelperSubText: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     lineHeight: 20,
     color: '#6B7280',
     marginTop: 2,
@@ -3358,11 +3358,11 @@ const styles = StyleSheet.create({
   },
   durationBadgeCircleText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     fontWeight: '800',
   },
   durationBadgeLabel: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 12 : 11,
     fontWeight: '600',
     color: '#1f2a44',
     textAlign: 'center',
@@ -3373,16 +3373,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   timeSummaryText: {
-    fontSize: 13,
+    fontSize: Platform.OS === 'android' ? 13 : 12,
     color: AppColors.textAuxiliary,
     textAlign: 'center',
   },
   priceLabel: {
-    fontSize: 15,
+    fontSize: Platform.OS === 'android' ? 15 : 14,
     color: AppColors.textBody,
   },
   priceValue: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: '600',
     color: AppColors.textBody,
   },
@@ -3399,18 +3399,18 @@ const styles = StyleSheet.create({
     borderTopColor: AppColors.backgroundNeutral,
   },
   totalPriceLabel: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: '600',
     color: AppColors.textBody,
   },
   totalPriceValue: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'android' ? 24 : 22,
     fontWeight: 'bold',
     color: AppColors.primaryInteractive,
   },
   quoteStatusText: {
     marginTop: 6,
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 12 : 11,
     color: AppColors.textAuxiliary,
     textAlign: 'center',
   },
@@ -3419,7 +3419,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   cancellationPolicyText: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 12 : 11,
     color: AppColors.primaryInteractive,
     textDecorationLine: 'underline',
   },
@@ -3453,7 +3453,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'android' ? 18 : 17,
     fontWeight: '700',
     color: AppColors.textBody,
   },
@@ -3462,13 +3462,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalListItem: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     lineHeight: 20,
     color: AppColors.textBody,
     marginBottom: 6,
   },
   modalFinePrint: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'android' ? 12 : 11,
     lineHeight: 18,
     color: AppColors.mediumGray,
     marginBottom: 14,
@@ -3482,7 +3482,7 @@ const styles = StyleSheet.create({
   },
   modalActionText: {
     color: AppColors.white,
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     fontWeight: '600',
   },
   notesFinalSection: {
@@ -3504,7 +3504,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 15,
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
     color: AppColors.textBody,
   },
   applyCouponButton: {
@@ -3519,7 +3519,7 @@ const styles = StyleSheet.create({
   applyCouponButtonText: {
     color: AppColors.white,
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 14 : 13,
   },
   bottomNextStepWrap: {
     position: 'absolute',
@@ -3557,7 +3557,7 @@ const styles = StyleSheet.create({
   },
   nextStepButtonText: {
     color: AppColors.white,
-    fontSize: 16,
+    fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: '700',
   },
   slotBadgeContainer: {
@@ -3583,7 +3583,7 @@ const styles = StyleSheet.create({
   },
   slotBadgeText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: Platform.OS === 'android' ? 18 : 17,
     fontWeight: '800',
   },
 });
