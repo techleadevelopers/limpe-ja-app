@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { ReportPanicDto } from './dto/report-panic.dto';
 import { ReportIncidentDto } from './dto/report-incident.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
@@ -121,7 +122,7 @@ export class SafetyService {
   async getIncidentsForUser(userId: string) {
     return this.prisma.incident.findMany({
       where: { reporterId: userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as Prisma.SortOrder },
     });
   }
 
@@ -132,7 +133,7 @@ export class SafetyService {
    */
   async listAllIncidents() {
     return this.prisma.incident.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as Prisma.SortOrder },
       // Opcional: Inclua dados relacionados se necessário para a visualização do administrador
       // include: {
       //   reporter: { select: { id: true, fullName: true, email: true } },
@@ -183,7 +184,7 @@ export class SafetyService {
   async listPanicAlerts(status?: string) {
     return this.prisma.panicAlert.findMany({
       where: status ? { status } : {},
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as Prisma.SortOrder },
     });
   }
 
