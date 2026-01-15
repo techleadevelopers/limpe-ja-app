@@ -219,6 +219,7 @@
       "service_not_available": "O serviço selecionado não está disponível para este provedor.",
       "address_needed_title": "Endereço Necessário",
       "address_needed_message": "Seu endereço não está completo. Por favor, preencha para prosseguir.",
+      "terms_required_message": "Você precisa aceitar os Termos de Uso para agendar um serviço.",
       "error_fetching_slots": "Não foi possível carregar os horários disponíveis.",
       "unavailable_time_slot": "Horário Indisponível",
       "unavailable_time_slot_message": "Este horário já está agendado ou não disponível. Por favor, selecione outro.",
