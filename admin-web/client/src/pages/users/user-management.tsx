@@ -271,8 +271,6 @@ const getInitials = (name: string) =>
 export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
   const [selectedClientForEdit, setSelectedClientForEdit] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -296,15 +294,8 @@ export default function UserManagement() {
     [clients, searchTerm, statusFilter],
   );
 
-  const totalPages = Math.max(1, Math.ceil(filteredClients.length / pageSize));
-  const paginatedClients = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredClients.slice(start, start + pageSize);
-  }, [filteredClients, currentPage]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+  const providerUsers = filteredClients.filter(user => user.role === "PROVIDER");
+  const clientUsers = filteredClients.filter(user => user.role !== "PROVIDER");
 
   const stats = {
     total: clients?.length || 0,
@@ -361,6 +352,137 @@ const handleDeleteUser = (id: string) => {
     notifyMutation.mutate({ clientId });
   };
 
+  const renderUserEntry = (user: Client, index: number) => {
+    const totalSpent = Number(user.totalSpent ?? 0);
+    const lastActivity = user.lastActivity ? formatRelativeTime(user.lastActivity) : "Sem atividade";
+    return (
+      <motion.div
+        key={user.id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="p-4 border border-gray-200 rounded-xl hover:shadow-lg transition-all duration-200"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-base font-semibold text-gray-600">
+                  {getInitials(user.name || user.email || "??")}
+                </span>
+              )}
+            </div>
+
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-1 flex-wrap">
+                <h3 className="font-semibold text-gray-900">{user.name}</h3>
+                <Badge className={`text-xs px-2 py-1 border-0 ${getStatusBadge(user.status)}`}>
+                  {user.status}
+                </Badge>
+                <Badge className={`text-xs px-2 py-1 border-0 ${getRoleBadge(user.role)}`}>
+                  {user.role || "N/A"}
+                </Badge>
+                <Badge className={`text-xs px-2 py-1 border ${getLoyaltyBadge(user.loyaltyTier)}`}>
+                  {user.loyaltyTier}
+                </Badge>
+                {user.verificationStatus && (
+                  <Badge className={`text-xs px-2 py-1 border ${getVerificationBadge(user.verificationStatus)}`}>
+                    {user.verificationStatus.replace(/_/g, " ").toLowerCase()}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
+                <span className="flex items-center gap-1">
+                  <Mail size={14} />
+                  {user.email}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar size={14} />
+                  {user.completedBookingsCount} agendamentos
+                </span>
+              </div>
+
+              <div className="flex items-center gap-4 text-sm text-gray-500 mt-1 flex-wrap">
+                <span>Total Gasto: R$ {totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                <span>Última atividade: {lastActivity}</span>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-gray-500 mt-1 flex-wrap">
+                <span className="text-orange-600">No-Show: {user.noShowCount}</span>
+                <span className="text-red-600">Cancelamentos: {user.cancellationCount}</span>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-gray-500 mt-1 flex-wrap">
+                <span className="flex items-center gap-1">
+                  <Calendar size={12} />
+                  Último login: {user.lastLogin ? formatRelativeTime(user.lastLogin) : "—"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-medium-blue text-medium-blue hover:bg-medium-blue hover:text-white"
+              onClick={() => handleOpenEditModal(user.id)}
+            >
+              <Edit size={14} className="mr-1" />
+              Ver / Editar
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-emerald-100 text-emerald-700 hover:bg-emerald-50"
+              onClick={() => handleNotifyClient(user.userId)}
+              disabled={notifyMutation.isPending}
+            >
+              <MessageCircle size={14} className="mr-1" />
+              Notificar
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 border-red-100 hover:bg-red-50"
+              onClick={() => handleDeleteUser(user.id)}
+              disabled={deleteUserMutation.isPending}
+            >
+              <Ban size={14} className="mr-1" />
+              Excluir
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+  const renderUserSection = (title: string, users: Client[], emptyMessage: string) => (
+    <Card className="shadow-floating border-0 h-full">
+      <CardHeader className="flex items-center justify-between pb-4">
+        <div>
+          <CardTitle className="text-lg font-semibold text-gray-900">{title}</CardTitle>
+          <p className="text-xs text-gray-500">{users.length} registro{users.length === 1 ? "" : "s"}</p>
+        </div>
+        <Badge className="text-xs px-3 py-1 border-0 bg-gray-100 text-gray-700">
+          {users.length}
+        </Badge>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {users.length === 0 ? (
+          <div className="text-sm text-gray-500">{emptyMessage}</div>
+        ) : (
+          users.map((user, index) => renderUserEntry(user, index))
+        )}
+      </CardContent>
+    </Card>
+  );
   const handleExportCsv = () => {
     const headers = [
       'Nome',
@@ -402,7 +524,7 @@ const handleDeleteUser = (id: string) => {
     <div className="flex h-screen bg-admin-bg">
       <Sidebar />
       
-      <div className="flex-1 ml-72 overflow-hidden">
+      <div className="flex-1 ml-72 flex flex-col">
         <Header 
           title="Gestão de Usuários"
           subtitle="Gerencie contas de clientes, perfis e programas de fidelidade."
@@ -562,179 +684,48 @@ const handleDeleteUser = (id: string) => {
             </CardContent>
           </Card>
 
-          {/* Customer List */}
-          <Card className="shadow-floating border-0">
-            <CardContent className="pt-6">
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center p-4 bg-gray-50 rounded-xl animate-pulse">
-                      <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
-                      <div className="ml-4 flex-1">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                      </div>
-                      <div className="w-24 h-8 bg-gray-200 rounded"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : isError ? (
-                <div className="text-center py-12 text-red-600">
-                  <p>Erro ao carregar clientes: {error?.message}</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {paginatedClients.map((client, index) => {
-                    const totalSpent = Number(client.totalSpent ?? 0);
-                    const lastActivity = client.lastActivity ? formatRelativeTime(client.lastActivity) : "Sem atividade";
-                    return (
-                    <motion.div
-                      key={client.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="p-4 border border-gray-200 rounded-xl hover:shadow-md transition-all duration-200"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                            {client.avatarUrl ? (
-                              <img
-                                src={client.avatarUrl}
-                                alt={client.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-base font-semibold text-gray-600">
-                                {getInitials(client.name || client.email || "??")}
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-1">
-                              <h3 className="font-semibold text-gray-900">{client.name}</h3>
-                              <Badge className={`text-xs px-2 py-1 border-0 ${getStatusBadge(client.status)}`}>
-                                {client.status}
-                              </Badge>
-                              <Badge className={`text-xs px-2 py-1 border-0 ${getRoleBadge(client.role)}`}>
-                                {client.role || "N/A"}
-                              </Badge>
-                              <Badge className={`text-xs px-2 py-1 border ${getLoyaltyBadge(client.loyaltyTier)}`}>
-                                {client.loyaltyTier}
-                              </Badge>
-                              {client.verificationStatus && (
-                                <Badge className={`text-xs px-2 py-1 border ${getVerificationBadge(client.verificationStatus)}`}>
-                                  {client.verificationStatus.replace(/_/g, " ").toLowerCase()}
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                              <span className="flex items-center gap-1">
-                                <Mail size={14} />
-                                {client.email}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Calendar size={14} />
-                                {client.completedBookingsCount} agendamentos
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                              <span>Total Gasto: R$ {totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                              <span>Última atividade: {lastActivity}</span>
-                            </div>
-                            {/* NOVAS MÉTRICAS DE COMPORTAMENTO */}
-                            <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                              <span className="text-orange-600">No-Show: {client.noShowCount}</span>
-                              <span className="text-red-600">Cancelamentos: {client.cancellationCount}</span>
-                            </div>
-                            <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
-                              <span className="flex items-center gap-1">
-                                <Calendar size={12} />
-                                Último login: {client.lastLogin ? formatRelativeTime(client.lastLogin) : "—"}
-                              </span>
-                            </div>
-                          </div>
+          {/* Lista segmentada de Prestadores e Clientes */}
+          {isLoading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {[...Array(2)].map((_, index) => (
+                <Card key={index} className="shadow-floating border-0">
+                  <CardContent className="space-y-4 pt-6">
+                    {[...Array(3)].map((_, loaderIndex) => (
+                      <div
+                        key={loaderIndex}
+                        className="flex items-center p-4 bg-gray-50 rounded-xl animate-pulse"
+                      >
+                        <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
+                        <div className="ml-4 flex-1 space-y-2">
+                          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                          <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                         </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-medium-blue text-medium-blue hover:bg-medium-blue hover:text-white"
-                            onClick={() => handleOpenEditModal(client.id)}
-                          >
-                            <Edit size={14} className="mr-1" />
-                            Ver / Editar
-                          </Button>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-emerald-100 text-emerald-700 hover:bg-emerald-50"
-                            onClick={() => handleNotifyClient(client.userId)}
-                            disabled={notifyMutation.isPending}
-                          >
-                            <MessageCircle size={14} className="mr-1" />
-                            Notificar
-                          </Button>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 border-red-100 hover:bg-red-50"
-                            onClick={() => handleDeleteUser(client.id)}
-                            disabled={deleteUserMutation.isPending}
-                          >
-                            <Ban size={14} className="mr-1" />
-                            Excluir
-                          </Button>
-                        </div>
+                        <div className="w-20 h-6 bg-gray-200 rounded"></div>
                       </div>
-                    </motion.div>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : isError ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-red-700">
+              <p className="text-lg font-semibold mb-2">Erro ao carregar usuários</p>
+              <p className="text-sm">{error?.message || "Algo deu errado, tente novamente mais tarde."}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {renderUserSection(
+                "Prestadores",
+                providerUsers,
+                "Nenhum prestador encontrado com os filtros atuais."
               )}
-              
-              {!isLoading && filteredClients.length === 0 && (
-                <div className="text-center py-12">
-                  <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum cliente encontrado</h3>
-                  <p className="text-gray-500">
-                    {searchTerm ? `Nenhum cliente corresponde a "${searchTerm}"` : "Nenhum cliente registrado ainda."}
-                  </p>
-                </div>
+              {renderUserSection(
+                "Clientes",
+                clientUsers,
+                "Nenhum cliente encontrado com os filtros atuais."
               )}
-              {!isLoading && filteredClients.length > 0 && (
-                <div className="flex items-center justify-between pt-4">
-                  <p className="text-sm text-gray-500">
-                    Página {currentPage} de {totalPages} · {filteredClients.length} clientes
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Próxima
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            </div>
+          )}
         </main>
       </div>
 
