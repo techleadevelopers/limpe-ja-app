@@ -41,9 +41,9 @@ export async function acquireDevicePushToken(): Promise<string | null> {
   return null;
 }
 
-export async function registerDevicePushToken(): Promise<{ ok: true } | null> {
+export async function registerDevicePushToken(existingToken?: string): Promise<{ ok: true } | null> {
   if (!Device.isDevice) return null;
-  const token = await acquireDevicePushToken();
+  const token = existingToken ?? (await acquireDevicePushToken());
   if (!token) return null;
   try {
     const payload = { token, platform: Platform.OS } as const;
