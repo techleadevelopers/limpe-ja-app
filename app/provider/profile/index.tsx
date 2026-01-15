@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
+import { ShieldCheck, Lock, Check } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -129,6 +130,8 @@ export default function ProviderProfileScreen() {
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
+  const [isTermsModalVisible, setTermsModalVisible] = useState(false);
+  const [acceptingTerms, setAcceptingTerms] = useState(false);
   const TERMS_KEY = '@LimpeJa:providerTermsAccepted';
 
   useEffect(() => {
@@ -142,10 +145,15 @@ export default function ProviderProfileScreen() {
       try {
         if ((user as any)?.termsAcceptedAt) {
           setTermsAccepted(true);
+          setTermsModalVisible(false);
           return;
         }
         const flag = await AsyncStorage.getItem(TERMS_KEY);
-        setTermsAccepted(flag === '1');
+        const accepted = flag === '1';
+        setTermsAccepted(accepted);
+        if (!accepted) {
+          setTermsModalVisible(true);
+        }
       } catch {
         // ignore
       }
@@ -176,10 +184,11 @@ export default function ProviderProfileScreen() {
   const handleAcceptTerms = async () => {
     try {
       const termsVersion = 'v1';
-      const resp = await acceptProviderTerms(termsVersion);
-      await AsyncStorage.setItem(TERMS_KEY, '1');
-      setTermsAccepted(true);
-      await updateUser({ termsAcceptedAt: resp.termsAcceptedAt, termsVersion: resp.termsVersion });
+        const resp = await acceptProviderTerms(termsVersion);
+        await AsyncStorage.setItem(TERMS_KEY, '1');
+        setTermsAccepted(true);
+        await updateUser({ termsAcceptedAt: resp.termsAcceptedAt, termsVersion: resp.termsVersion });
+        setTermsModalVisible(false);
       // Corrigido: condicoes -> condições
       Alert.alert('Termos aceitos', 'Obrigado por aceitar os termos e condições.');
     } catch (e: any) {
@@ -316,6 +325,46 @@ export default function ProviderProfileScreen() {
           <ListRow label="Sair" ionIcon="log-out-outline" destructive onPress={handleLogout} />
         </View>
       </ScrollView>
+      <Modal
+        visible={isTermsModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (termsAccepted) {
+            setTermsModalVisible(false);
+          }
+        }}
+      >
+        <View style={styles.termsOverlay}>
+          <View style={styles.termsModal}>
+            <Text style={styles.termsModalTitle}>Termos de Serviço</Text>
+            <ScrollView style={styles.termsModalBody}>
+              <Text style={styles.termsModalParagraph}>
+                Bem-vindo(a) ao LimpeJA!. Estes termos regulam o uso da plataforma; apenas continue após aceitá-los.
+              </Text>
+              <Text style={styles.termsModalSubtitle}>1. Aceitação</Text>
+              <Text style={styles.termsModalParagraph}>
+                Ao utilizar o LimpeJA!, você concorda com todos os termos estabelecidos para clientes e provedores.
+              </Text>
+              <Text style={styles.termsModalSubtitle}>2. Serviços oferecidos</Text>
+              <Text style={styles.termsModalParagraph}>
+                Somos um marketplace que conecta clientes a profissionais autônomos de limpeza residencial e corporativa.
+              </Text>
+              <Text style={styles.termsModalSubtitle}>3. Pagamento e cancelamento</Text>
+              <Text style={styles.termsModalParagraph}>
+                Pagamentos via PIX são processados pela plataforma; cancelamentos podem ter taxas conforme política.
+              </Text>
+              <Text style={styles.termsModalSubtitle}>4. Segurança e responsabilidade</Text>
+              <Text style={styles.termsModalParagraph}>
+                Validamos documentos e antecedentes, mas não nos responsabilizamos por eventos fora do controle do app.
+              </Text>
+            </ScrollView>
+            <TouchableOpacity style={styles.termsModalButton} onPress={handleAcceptTerms}>
+              <Text style={styles.termsModalButtonText}>Aceitar e continuar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={showEditNameModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -457,4 +506,55 @@ const styles = StyleSheet.create({
   modalConfirm: { backgroundColor: '#2D8CFF' },
   modalButtonTextCancel: { color: '#333', fontWeight: '600' },
   modalButtonTextConfirm: { color: '#fff', fontWeight: '700' },
+  termsOverlay: {
+    ...Platform.select({
+      ios: { backgroundColor: 'rgba(0,0,0,0.35)', shadowColor: '#000' },
+      android: { backgroundColor: 'rgba(0,0,0,0.35)' },
+    }),
+    position: 'absolute',
+    inset: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  termsModal: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    maxHeight: '80%',
+  },
+  termsModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1B1B1F',
+    marginBottom: 12,
+  },
+  termsModalBody: {
+    marginBottom: 16,
+  },
+  termsModalSubtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 6,
+    color: '#2E3D50',
+  },
+  termsModalParagraph: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#4B5563',
+  },
+  termsModalButton: {
+    backgroundColor: '#2D8CFF',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  termsModalButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
 });
