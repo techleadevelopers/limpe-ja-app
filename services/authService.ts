@@ -231,6 +231,19 @@ class AuthService {
         }
     }
 
+    async updateFcmToken(token: string): Promise<void> {
+        if (!token) {
+            return;
+        }
+        try {
+            await api.patch('/users/me', { fcmToken: token });
+        } catch (error: any) {
+            if (__DEV__) {
+                console.warn('[AuthService Frontend] updateFcmToken falhou:', error?.response?.data ?? error?.message ?? error);
+            }
+        }
+    }
+
     setAuthToken(token: string | null): void {
         this.authToken = token;
         if (token) {
