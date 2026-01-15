@@ -10,7 +10,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
 
     name: 'LimpeJá',
     slug: 'limpeja',
-    version: '1.0.29',
+    version: '1.0.30',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'cleaning',
@@ -27,7 +27,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.techleadevelopers.limpeja',
-      buildNumber: '33',
+      buildNumber: '34',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription:
@@ -44,7 +44,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     },
 
     android: {
-      versionCode: 17,
+      versionCode: 18,
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#ffffff',
