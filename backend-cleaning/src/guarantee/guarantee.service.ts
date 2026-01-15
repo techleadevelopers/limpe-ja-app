@@ -6,6 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { SubmitClaimDto } from './dto/submit-claim.dto';
 import { UpdateClaimDto } from './dto/update-claim.dto';
 import { NotificationsService } from '../notifications/notifications.service'; // Assuming NotificationsService
@@ -72,7 +73,7 @@ export class GuaranteeService {
     return this.prisma.guaranteeClaim.findMany({
       where: { clientId },
       include: { booking: true, provider: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as Prisma.SortOrder },
     });
   }
 
