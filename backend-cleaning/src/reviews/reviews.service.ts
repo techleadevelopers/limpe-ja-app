@@ -99,10 +99,10 @@ export interface SmartSuggestion {
 type ProviderWithRelationsForSuggestions = Prisma.ProviderGetPayload<{
   include: {
     providerServices: { include: { service: true } };
-    reviewsReceived: { orderBy: { createdAt: 'desc' }; take: 50 };
+    reviewsReceived: { orderBy: { createdAt: Prisma.SortOrder }; take: 50 };
     bookings: {
       where: { status: 'FINISHED' }; // ✅ CORREÇÃO AQUI (trocou BookingStatus.FINISHED por 'FINISHED')
-      orderBy: { createdAt: 'desc' };
+      orderBy: { createdAt: Prisma.SortOrder };
       take: 100;
     };
   };
@@ -440,7 +440,7 @@ private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as Prisma.SortOrder },
       take: limit,
       skip: (page - 1) * limit,
     });
@@ -456,7 +456,7 @@ private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
           include: { providerService: { include: { service: true } } },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as Prisma.SortOrder },
     });
 
     // ... (restante da função)
@@ -536,10 +536,10 @@ private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
       where: { id: providerId },
       include: {
         providerServices: { include: { service: true } },
-        reviewsReceived: { orderBy: { createdAt: 'desc' }, take: 50 },
+        reviewsReceived: { orderBy: { createdAt: 'desc' as Prisma.SortOrder }, take: 50 },
         bookings: {
           where: { status: 'FINISHED' }, // ✅ CORREÇÃO AQUI (trocou BookingStatus.FINISHED por 'FINISHED')
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: 'desc' as Prisma.SortOrder },
           take: 100,
         },
       },
@@ -629,7 +629,7 @@ private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
     );
     const reviews = await this.prisma.review.findMany({
       where: { providerId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as Prisma.SortOrder },
       take: 5,
       include: {
         client: {
