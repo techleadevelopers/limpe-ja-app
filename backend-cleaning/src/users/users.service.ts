@@ -354,18 +354,18 @@ export class UsersService {
               availability: true,
             },
           },
-        loyalty: true,
-        referredBy: true,
-        referralsMade: true,
-        userConsents: {
-          orderBy: { consentedAt: 'desc' as Prisma.SortOrder },
-          select: {
-            documentType: true,
-            version: true,
-            consentedAt: true,
+          loyalty: true,
+          referredBy: true,
+          referralsMade: true,
+          userConsents: {
+            orderBy: { consentedAt: 'desc' as Prisma.SortOrder },
+            select: {
+              documentType: true,
+              version: true,
+              consentedAt: true,
+            },
           },
         },
-      },
       })) as unknown as UserWithIncludes[];
 
       this.logger.log(
@@ -401,6 +401,12 @@ export class UsersService {
       }
       if (updateUserDto.avatarUrl !== undefined) {
         data.avatarUrl = updateUserDto.avatarUrl;
+      }
+      if (updateUserDto.fcmToken !== undefined) {
+        data.fcmToken = updateUserDto.fcmToken;
+        this.logger.log(
+          `[UsersService] update: Persistindo fcmToken para userId ${id}.`,
+        );
       }
 
       // Atualiza Client/Provider se necessário
