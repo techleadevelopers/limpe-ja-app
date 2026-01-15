@@ -8,12 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Calendar, CheckCircle, XCircle, Clock, DollarSign, MoreHorizontal, MessageSquare } from "lucide-react";
+import { Search, Calendar, CheckCircle, XCircle, Clock, DollarSign, MoreHorizontal, MessageSquare, LifeBuoy } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchAllBookings, fetchBookingDetails, updateBookingStatus } from "@/lib/api";
+import { cancelBookingWithRefund } from "@/lib/api";
 import { Booking, BookingStatus } from "@/lib/types";
 
 // Helper function for status badge styling
@@ -45,6 +47,7 @@ const BookingDetailsModal = ({ isOpen, onClose, bookingId }: BookingDetailsModal
   const { toast } = useToast();
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus | "">("");
   const [notes, setNotes] = useState("");
+  const [adminNotes, setAdminNotes] = useState("");
 
   const { data: booking, isLoading, isError, error } = useQuery<Booking, Error>({
     queryKey: ['/bookings', bookingId],
@@ -71,6 +74,26 @@ const BookingDetailsModal = ({ isOpen, onClose, bookingId }: BookingDetailsModal
     if (bookingId && selectedStatus) {
       updateStatusMutation.mutate({ id: bookingId, status: selectedStatus, notes });
     }
+  };
+
+  const forceRefundMutation = useMutation({
+    mutationFn: (data: { id: string; reason?: string }) => cancelBookingWithRefund(data.id, data.reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/bookings', bookingId] });
+      toast({ title: "Ação executada", description: "Estorno forçado concluído com sucesso." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro", description: `Não foi possível forçar o cancelamento: ${error.message}`, variant: "destructive" });
+    },
+  });
+
+  const handleForceRefund = () => {
+    if (!bookingId) return;
+    if (!window.confirm("Tem certeza que deseja forçar o cancelamento e estorno deste agendamento? Esta ação notificará o backend imediatamente.")) {
+      return;
+    }
+    forceRefundMutation.mutate({ id: bookingId, reason: adminNotes || undefined });
   };
 
   if (!bookingId) return null;
@@ -182,21 +205,47 @@ const BookingDetailsModal = ({ isOpen, onClose, bookingId }: BookingDetailsModal
               </CardContent>
             </Card>
 
-            {/* Placeholder para outras ações */}
+            {/* Ação de Suporte */}
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Outras Ações</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <LifeBuoy size={20} />
+                  Ação de Suporte
+                </CardTitle>
               </CardHeader>
-              <CardContent className="flex gap-4">
-                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-100" disabled>
-                  Reembolsar (Em Breve)
-                </Button>
-                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-100" disabled>
-                  Reagendar (Em Breve)
-                </Button>
-                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-100" disabled>
-                  Abrir Disputa (Em Breve)
-                </Button>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="adminNotes">Notas Internas do Admin</Label>
+                  <Textarea
+                    id="adminNotes"
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    placeholder="Registre observações, incidentes ou instruções que só o time administrativo verá."
+                    className="min-h-[120px]"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    variant="outline"
+                    className="border-medium-blue text-medium-blue hover:bg-medium-blue/10"
+                    onClick={() => {
+                      const rawNumber = (booking?.provider?.phone || booking?.client?.phone || "+5519993223932").replace(/\D/g, "");
+                      const message = encodeURIComponent(`LimpeJá Admin Chat — agendamento ${booking?.id}`);
+                      window.open(`https://wa.me/${rawNumber}?text=${message}`, "_blank");
+                    }}
+                  >
+                    <MessageSquare size={16} className="mr-2" />
+                    Chat de Emergência
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1 md:flex-auto"
+                    onClick={handleForceRefund}
+                    disabled={forceRefundMutation.isPending}
+                  >
+                    Forçar Estorno/Cancelamento
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
