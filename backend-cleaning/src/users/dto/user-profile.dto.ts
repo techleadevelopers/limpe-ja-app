@@ -15,6 +15,7 @@ import {
 import { Type } from 'class-transformer';
 import { ProviderDetailsDto } from '../../providers/dto/provider-details.dto';
 import { UserWithIncludes } from '../users.service';
+import { ConsentDocumentType } from '../../compliance/compliance.constants';
 
 // === TIPOS DE SERVIÇO (MANTIDOS) ===
 import { ProviderWithCalculatedRating } from '../../providers/providers.service';
@@ -117,6 +118,22 @@ export class UserProfileDto {
   })
   @IsEnum(UserRole)
   role: UserRole;
+
+  @ApiPropertyOptional({
+    description: 'Timestamp do aceite dos Termos de Uso',
+    example: '2026-01-15T10:00:00.000Z',
+  })
+  @IsOptional()
+  @IsString()
+  termsAcceptedAt?: string;
+
+  @ApiPropertyOptional({
+    description: 'Versão dos Termos aceitos',
+    example: '1.0',
+  })
+  @IsOptional()
+  @IsString()
+  termsVersion?: string;
 
   @ApiProperty({
     description: 'Data de criação do usuário',
@@ -351,5 +368,16 @@ export class UserProfileDto {
 
     this.referralsMade = user.referralsMade?.map((r: Referral) => r.id) ?? [];
     this.referredBy = user.referredBy?.map((r: Referral) => r.id) ?? [];
+
+    const latestTermsConsent = user.userConsents?.find(
+      (consent) => consent.documentType === ConsentDocumentType.TERMS,
+    );
+    if (latestTermsConsent) {
+      this.termsVersion = latestTermsConsent.version;
+      this.termsAcceptedAt =
+        latestTermsConsent.consentedAt instanceof Date
+          ? latestTermsConsent.consentedAt.toISOString()
+          : (latestTermsConsent.consentedAt as string);
+    }
   }
 }
