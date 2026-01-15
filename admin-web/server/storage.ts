@@ -91,6 +91,7 @@ export class MemStorage implements IStorage {
           livenessScore: 98.1,
           qualityScore: 89.5
         },
+        avatarUrl: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=200&q=80",
         fiveStarReviewCount: 23,
         monthlyBookingsCount: 45,
         totalEarnings: "2500.00",
@@ -117,6 +118,7 @@ export class MemStorage implements IStorage {
         totalEarnings: "1800.00",
         latitude: "-23.560520",
         longitude: "-46.643309",
+        avatarUrl: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=200&q=80",
         createdAt: new Date(),
         updatedAt: new Date(),
       }
@@ -212,6 +214,7 @@ export class MemStorage implements IStorage {
       totalEarnings: insertProvider.totalEarnings || "0.00",
       latitude: insertProvider.latitude || null,
       longitude: insertProvider.longitude || null,
+      avatarUrl: insertProvider.avatarUrl || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
