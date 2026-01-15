@@ -13,7 +13,7 @@ import {
 } from './dto/calculate-price.dto';
 import { CreatePricingRuleDto } from './dto/create-pricing-rule.dto';
 import { UpdatePricingRuleDto } from './dto/update-pricing-rule.dto';
-import { PricingScope, PricingRule } from '@prisma/client';
+import { PricingScope, PricingRule, Prisma } from '@prisma/client';
 import { BookingsService } from '../bookings/bookings.service';
 import { CacheService } from '../cache/cache.service';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -199,7 +199,7 @@ export class PricingService {
 
   async findAllRules() {
     return this.prisma.pricingRule.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as Prisma.SortOrder },
     });
   }
 
@@ -317,7 +317,7 @@ export class PricingService {
         isActive: true,
         OR: orFilters,
       },
-      orderBy: [{ createdAt: 'desc' }],
+      orderBy: [{ createdAt: 'desc' as Prisma.SortOrder }],
     });
 
     const prioritizedScopes: (PricingScope | null)[] = [
