@@ -21,6 +21,8 @@ import SafetyAlerts from "@/pages/safety/safety-alerts";
 import LoginPage from "@/pages/login";
 import BookingOversight from "@/pages/bookings/booking-oversight";
 import LiveTracking from "@/pages/live-tracking";
+import ReferralManagement from "@/pages/referrals/referral-management";
+import SupportCenter from "@/pages/support-center";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Skeleton } from "./components/ui/skeleton";
 import { AnimatePresence, motion } from "framer-motion";
@@ -139,6 +141,16 @@ function AppRouter() {
           <Route path="/settings">
             <PrivateRoute>
               <Settings />
+            </PrivateRoute>
+          </Route>
+          <Route path="/support-center">
+            <PrivateRoute>
+              <SupportCenter />
+            </PrivateRoute>
+          </Route>
+          <Route path="/referral-management">
+            <PrivateRoute>
+              <ReferralManagement />
             </PrivateRoute>
           </Route>
           <Route path="/">
