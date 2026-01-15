@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2, Search, Filter, Tag, DollarSign, Percent, Calendar, CheckCircle, XCircle } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -191,6 +192,8 @@ export default function CouponManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const [isPushModalOpen, setIsPushModalOpen] = useState(false);
+  const [selectedPushCoupon, setSelectedPushCoupon] = useState<Coupon | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -216,6 +219,21 @@ export default function CouponManagement() {
     }
   };
 
+  const openPushModal = (coupon: Coupon) => {
+    setSelectedPushCoupon(coupon);
+    setIsPushModalOpen(true);
+  };
+
+  const handlePushConfirm = () => {
+    if (!selectedPushCoupon) return;
+    setIsPushModalOpen(false);
+    toast({
+      title: "Campanha disparada",
+      description: `O cupom ${selectedPushCoupon.code} será enviado para clientes inativos.`,
+    });
+    setSelectedPushCoupon(null);
+  };
+
   const handleEditCoupon = (coupon: Coupon) => {
     setSelectedCoupon(coupon);
     setIsEditModalOpen(true);
@@ -227,6 +245,19 @@ export default function CouponManagement() {
     const matchesStatus = statusFilter === "all" || coupon.status === statusFilter;
     return matchesSearch && matchesStatus;
   }) || [];
+
+  const activeCampaigns = filteredCoupons
+    .filter(c => getCouponStatus(c) === CouponStatus.ACTIVE)
+    .slice(0, 3);
+
+  const calculateROI = (coupon: Coupon) => {
+    const uses = coupon.usesCount;
+    const perUseValue =
+      coupon.type === CouponType.PERCENTAGE
+        ? `${coupon.value}%`
+        : `R$ ${coupon.value.toFixed(2)}`;
+    return `${uses} usos • ${perUseValue}`;
+  };
 
   const getCouponStatus = (coupon: Coupon): CouponStatus => {
     const now = new Date();
@@ -376,6 +407,48 @@ export default function CouponManagement() {
             </CardContent>
           </Card>
 
+          {/* Campanhas Ativas */}
+          <Card className="mb-6 shadow-floating border-0">
+            <CardHeader className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Campanhas Ativas</CardTitle>
+                <p className="text-sm text-gray-500">Promoções preparadas para reengajar clientes.</p>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {activeCampaigns.length === 0 ? (
+                <p className="text-sm text-gray-500">Nenhuma campanha ativa no momento.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {activeCampaigns.map((campaign) => (
+                    <motion.div
+                      key={campaign.id}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.35 }}
+                      className="border border-gray-200 rounded-xl p-4 bg-white flex flex-col justify-between h-full"
+                    >
+                      <div>
+                        <p className="text-[11px] uppercase tracking-widest text-gray-500">Campanha</p>
+                        <h3 className="text-lg font-semibold text-gray-900 mt-1">{campaign.code}</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {campaign.type === CouponType.PERCENTAGE
+                            ? `${campaign.value}% de desconto`
+                            : `R$ ${campaign.value.toFixed(2)} de desconto`}
+                        </p>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-4 space-y-1">
+                        <p>Usos: {campaign.usesCount}</p>
+                        <p>Alvo: {campaign.target.replace(/_/g, ' ')}</p>
+                        <p>ROI: {calculateROI(campaign)}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Coupon List */}
           <Card className="shadow-floating border-0">
             <CardContent className="pt-6">
@@ -405,51 +478,55 @@ export default function CouponManagement() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {filteredCoupons.map((coupon, index) => {
-                    const status = getCouponStatus(coupon);
-                    const statusClass = getStatusBadgeClass(status);
-                    
-                    return (
-                      <motion.div
-                        key={coupon.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className="p-4 border border-gray-200 rounded-xl hover:shadow-md transition-all duration-200"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                                coupon.type === CouponType.PERCENTAGE ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600'
-                            }`}>
-                                {coupon.type === CouponType.PERCENTAGE ? <Percent size={20} /> : <DollarSign size={20} />}
+                <Table className="min-w-full">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Cupom</TableCell>
+                      <TableCell>Tipo</TableCell>
+                      <TableCell>Alvo</TableCell>
+                      <TableCell>ROI</TableCell>
+                      <TableCell>Válido</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Ações</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredCoupons.map((coupon) => {
+                      const status = getCouponStatus(coupon);
+                      const statusClass = getStatusBadgeClass(status);
+                      const isHistorical = status === CouponStatus.EXPIRED || status === CouponStatus.USED_UP;
+                      return (
+                        <TableRow
+                          key={coupon.id}
+                          className={`transition duration-150 ${
+                            isHistorical ? "opacity-60 hover:opacity-70" : "hover:bg-gray-50"
+                          }`}
+                        >
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-gray-900">{coupon.code}</span>
+                              <span className="text-xs text-gray-500">
+                                {coupon.type === CouponType.PERCENTAGE
+                                  ? `${coupon.value}%`
+                                  : `R$ ${coupon.value.toFixed(2)}`}
+                              </span>
                             </div>
-                            
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-1">
-                                <h3 className="font-semibold text-gray-900">{coupon.code}</h3>
-                                <Badge className={`text-xs px-2 py-1 border-0 ${statusClass}`}>
-                                  {status.replace(/_/g, ' ')}
-                                </Badge>
-                              </div>
-                              
-                              <div className="flex items-center gap-4 text-sm text-gray-600">
-                                <span>
-                                  {coupon.type === CouponType.PERCENTAGE ? `${coupon.value}% de desconto` : `R$ ${coupon.value.toFixed(2)} de desconto`}
-                                
-                                </span>
-                                <span>Alvo: {coupon.target.replace(/_/g, ' ')} {coupon.targetId ? `(${coupon.targetId})` : ''}</span>
-                              </div>
-                              
-                              <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                                <span>Usos: {coupon.usesCount} / {coupon.maxUses === 0 ? 'Ilimitado' : coupon.maxUses}</span>
-                                <span>Válido de: {new Date(coupon.validFrom).toLocaleDateString()} até: {new Date(coupon.validUntil).toLocaleDateString()}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
+                          </TableCell>
+                          <TableCell>{coupon.type.replace(/_/g, ' ')}</TableCell>
+                          <TableCell>
+                            {coupon.target.replace(/_/g, ' ')}
+                            {coupon.targetId ? ` (${coupon.targetId})` : ''}
+                          </TableCell>
+                          <TableCell>{calculateROI(coupon)}</TableCell>
+                          <TableCell>
+                            {new Date(coupon.validFrom).toLocaleDateString()} até {new Date(coupon.validUntil).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`text-xs px-2 py-1 border-0 ${statusClass}`}>
+                              {status.replace(/_/g, ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="space-x-2 flex flex-wrap">
                             <Button
                               variant="outline"
                               size="sm"
@@ -459,7 +536,14 @@ export default function CouponManagement() {
                               <Edit size={14} className="mr-1" />
                               Editar
                             </Button>
-                            
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                              onClick={() => openPushModal(coupon)}
+                            >
+                              Disparar para Clientes Inativos
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -469,12 +553,12 @@ export default function CouponManagement() {
                             >
                               <Trash2 size={14} />
                             </Button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>
@@ -494,6 +578,27 @@ export default function CouponManagement() {
         }}
         coupon={selectedCoupon || undefined}
       />
+
+      <Dialog open={isPushModalOpen} onOpenChange={() => setIsPushModalOpen(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Disparar Campanha</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Deseja enviar este cupom via Push e E-mail para todos os clientes que não pedem limpeza há mais de 15 dias?
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button className="bg-medium-blue hover:bg-blue-700 text-white" onClick={handlePushConfirm}>
+                Confirmar envio
+              </Button>
+              <Button variant="outline" onClick={() => setIsPushModalOpen(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
