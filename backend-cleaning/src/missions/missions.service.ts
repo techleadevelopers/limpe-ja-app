@@ -23,8 +23,10 @@ import { LoyaltyService } from '../loyalty/loyalty.service';
 import {
   MissionsProgressService,
   MissionWithProgressView,
+  TrackEventResult,
 } from './progress.service';
 import { MissionViewDto } from './dto/mission-view.dto';
+import { NotificationService } from '../services/NotificationService';
 
 // <<-- CORREÇÃO: REMOVER esta definição. Ela não é mais necessária aqui
 // type MissionProgressWithMission = Prisma.MissionProgressGetPayload<{
@@ -44,6 +46,7 @@ export class MissionsService {
     @Inject(forwardRef(() => LoyaltyService))
     private loyaltyService: LoyaltyService,
     private missionsProgressService: MissionsProgressService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   /**
@@ -51,10 +54,19 @@ export class MissionsService {
    * e recalcula o progresso do usuário para todas as missões ativas relacionadas ao evento.
    * DELEGA PARA MissionsProgressService.
    */
-  async trackEvent(userId: string, name: string, meta?: any) {
+  async trackEvent(
+    userId: string,
+    name: string,
+    meta?: any,
+  ): Promise<TrackEventResult> {
     this.logger.log(
       `[MissionsService] trackEvent: userId=${userId}, event=${name}`,
     );
+    const missions = await this.prisma.mission.findMany({
+      where: { isActive: true, eventName: name },
+    });
+    const missionById = new Map(missions.map((mission) => [mission.id, mission]));
+
     const result = await this.missionsProgressService.trackEvent(
       userId,
       name,
@@ -65,7 +77,7 @@ export class MissionsService {
       `[TELEMETRY] mission_event_tracked: { userId: ${userId}, eventName: ${name}, meta: ${JSON.stringify(meta)} }`,
     );
 
-    result.updated.forEach((update) => {
+    for (const update of result.updated) {
       this.logger.log(
         `[trackEvent] user=${userId} missionId=${update.missionId} -> ${update.currentValue}/${update.targetValue} ${update.status === MissionStatus.COMPLETED ? '(COMPLETED)' : ''}`,
       );
@@ -77,10 +89,35 @@ export class MissionsService {
         this.logger.log(
           `[MissionsService] Missão ${update.missionId} COMPLETED para userId ${userId}. Notificar para resgate.`,
         );
+        const mission = missionById.get(update.missionId);
+        if (!mission) {
+          continue;
+        }
+        try {
+          await this.notificationService.sendToUser(
+            userId,
+            'Missão concluída! 🎯',
+            `Você acabou de completar a missão "${mission.title}". Continue assim!`,
+            {
+              missionId: mission.id,
+              missionCode: mission.code,
+              missionTitle: mission.title,
+              percent: update.percent,
+            },
+          );
+          this.logger.log(
+            `[Push] Missão ${mission.id} notificada para ${userId}`,
+          );
+        } catch (error) {
+          this.logger.warn(
+            `[MissionsService] Falha ao notificar userId ${userId} sobre a missão ${mission.id}: ${error instanceof Error ? error.message : JSON.stringify(error)}`,
+          );
+        }
       }
-    });
-  }
+    }
 
+    return result;
+  }
   /** Lista missões ativas + progresso do usuário */
   async getMyMissions(userId: string, userRole: UserRole): Promise<MissionViewDto[]> {
     // <<-- CORREÇÃO: Mudar o tipo esperado para MissionWithProgressView[]
