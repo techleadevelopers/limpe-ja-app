@@ -80,7 +80,7 @@ export class ChatService {
         providerId: providerProfileId,
         status: { in: CHAT_ACTIVE_STATUSES },
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: 'desc' as Prisma.SortOrder },
     });
 
     if (activeBooking) {
@@ -93,7 +93,7 @@ export class ChatService {
         providerId: providerProfileId,
         status: { in: CHAT_FINAL_STATUSES },
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: 'desc' as Prisma.SortOrder },
     });
 
     return { activeBooking: null, finalizedBooking };
@@ -544,7 +544,7 @@ export class ChatService {
     type ChatWithRelations = Prisma.ChatGetPayload<{
       include: {
         messages: {
-          orderBy: { timestamp: 'desc' };
+          orderBy: { timestamp: Prisma.SortOrder };
           take: 1;
         };
         participant1: {
@@ -574,7 +574,7 @@ export class ChatService {
       },
       include: {
         messages: {
-          orderBy: { timestamp: 'desc' },
+          orderBy: { timestamp: 'desc' as Prisma.SortOrder },
           take: 1,
         },
         participant1: {
@@ -597,7 +597,7 @@ export class ChatService {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: 'desc' as Prisma.SortOrder,
       },
     });
 
