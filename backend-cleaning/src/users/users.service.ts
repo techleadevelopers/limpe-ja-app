@@ -65,7 +65,7 @@ export type UserWithIncludes = Prisma.UserGetPayload<{
         reviewsReceived: { include: { client: { include: { user: true } } } };
         bookings: {
           where: { status: 'FINISHED' };
-          orderBy: { createdAt: 'desc' };
+          orderBy: { createdAt: Prisma.SortOrder };
           take: 100;
         };
         availability: true;
@@ -74,6 +74,14 @@ export type UserWithIncludes = Prisma.UserGetPayload<{
     loyalty: true;
     referredBy: true;
     referralsMade: true;
+    userConsents: {
+      select: {
+        documentType: true;
+        version: true;
+        consentedAt: true;
+      };
+      orderBy: { consentedAt: Prisma.SortOrder };
+    };
   };
 }>;
 
@@ -152,7 +160,7 @@ export class UsersService {
               },
               bookings: {
                 where: { status: 'FINISHED' },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { createdAt: 'desc' as Prisma.SortOrder },
                 take: 100,
               },
               availability: true,
@@ -161,6 +169,14 @@ export class UsersService {
           loyalty: true,
           referredBy: true,
           referralsMade: true,
+          userConsents: {
+            orderBy: { consentedAt: 'desc' as Prisma.SortOrder },
+            select: {
+              documentType: true,
+              version: true,
+              consentedAt: true,
+            },
+          },
         },
       })) as unknown as UserWithIncludes | null;
 
@@ -223,7 +239,7 @@ export class UsersService {
                 },
                 bookings: {
                   where: { status: 'FINISHED' },
-                  orderBy: { createdAt: 'desc' },
+                  orderBy: { createdAt: 'desc' as Prisma.SortOrder },
                   take: 100,
                 },
                 availability: true,
@@ -232,6 +248,14 @@ export class UsersService {
             loyalty: true,
             referredBy: true,
             referralsMade: true,
+            userConsents: {
+              orderBy: { consentedAt: 'desc' as Prisma.SortOrder },
+              select: {
+                documentType: true,
+                version: true,
+                consentedAt: true,
+              },
+            },
           },
         });
         return fallbackUser as unknown as UserWithIncludes | null;
@@ -270,7 +294,7 @@ export class UsersService {
     );
     try {
       const users = (await this.prisma.user.findMany({
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: 'desc' as Prisma.SortOrder },
         where: {
           deletionScheduledAt: null, // Soft delete do schema
         },
@@ -324,16 +348,24 @@ export class UsersService {
               },
               bookings: {
                 where: { status: 'FINISHED' },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { createdAt: 'desc' as Prisma.SortOrder },
                 take: 100,
               },
               availability: true,
             },
           },
-          loyalty: true,
-          referredBy: true,
-          referralsMade: true,
+        loyalty: true,
+        referredBy: true,
+        referralsMade: true,
+        userConsents: {
+          orderBy: { consentedAt: 'desc' as Prisma.SortOrder },
+          select: {
+            documentType: true,
+            version: true,
+            consentedAt: true,
+          },
         },
+      },
       })) as unknown as UserWithIncludes[];
 
       this.logger.log(
