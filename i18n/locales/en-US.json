@@ -196,6 +196,7 @@
                                                  "service_not_available":  "The selected service is not available for this provider.",
                                                  "address_needed_title":  "Address Required",
                                                  "address_needed_message":  "Your address is incomplete. Please fill it in to proceed.",
+                                                 "terms_required_message":  "You must accept the Terms of Use before scheduling a cleaning.",
                                                  "error_fetching_slots":  "Could not load available time slots.",
                                                  "unavailable_time_slot":  "Unavailable Time Slot",
                                                  "unavailable_time_slot_message":  "This time slot is already booked or unavailable. Please select another.",
