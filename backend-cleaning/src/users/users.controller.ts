@@ -160,6 +160,11 @@ export class UsersController {
           updateUserDto,
         )}`,
       );
+      if (updateUserDto.fcmToken) {
+        this.logger.log(
+          `[UsersController] updateMyProfile: Recebido fcmToken para ${userId}: ${updateUserDto.fcmToken}`,
+        );
+      }
 
       const updatedUser = await this.usersService.update(userId, updateUserDto);
       if (!updatedUser) {
