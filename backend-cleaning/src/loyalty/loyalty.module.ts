@@ -6,6 +6,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { UsersModule } from '../users/users.module';
 import { CouponsModule } from '../coupons/coupons.module';
 import { MissionsModule } from '../missions/missions.module';
+import { ServicesModule } from '../services/services.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { MissionsModule } from '../missions/missions.module';
     forwardRef(() => UsersModule),
     forwardRef(() => CouponsModule), // Adicionado forwardRef para CouponsModule
     forwardRef(() => MissionsModule), // Adicionado forwardRef para MissionsModule
+    ServicesModule,
   ],
   controllers: [LoyaltyController],
   providers: [LoyaltyService],
