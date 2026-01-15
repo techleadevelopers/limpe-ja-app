@@ -19,6 +19,7 @@ import {
 import 'react-native-reanimated';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import PaymentConfirmedOverlay from "../components/global/PaymentConfirmedOverlay"; // ðŸ”µ ADICIONADO
 import AppQueryClientProvider from '../components/provider/query-client-provider';
 import { toastConfig } from '../components/Toast';
@@ -31,6 +32,9 @@ import { useBookingStatusMeta } from '../hooks/useBookingStatusMeta';
 import i18n from '../i18n';
 import { getBookingsForUser } from '../services/bookingService';
 import NotificationUIService from '../services/notificationUIService';
+import authService from '../services/authService';
+import { acquireDevicePushToken, registerDevicePushToken } from '../services/pushService';
+import { requestNotificationPermissions } from '../utils/permissions';
 import { UserRole, VerificationStatus } from '../types/backend/auth';
 import { useNotificationsSocket } from '../hooks/useNotificationsSocket';
 import { BookingDetails, BookingStatus } from '../types/backend/bookings';
@@ -70,7 +74,138 @@ function minutesBetween(a: Date, b: Date): number {
   return Math.round((a.getTime() - b.getTime()) / 60000);
 }
 
+type NotificationData = Record<string, unknown>;
+
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient as any);
+const NOTIFICATION_PERMISSION_FLAG = 'notifications_permission_requested';
+
+const safeParseNotificationPayload = (value?: unknown): NotificationData | undefined => {
+  if (!value) return undefined;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return undefined;
+    }
+  }
+  if (typeof value === 'object') {
+    return value as NotificationData;
+  }
+  return undefined;
+};
+
+const normalizeNotificationPayload = (payload?: NotificationData): NotificationData => {
+  if (!payload) return {};
+  const normalized: NotificationData = { ...payload };
+  [
+    safeParseNotificationPayload(payload.payload),
+    safeParseNotificationPayload(payload.data),
+    safeParseNotificationPayload((payload.appEvent as NotificationData | undefined)?.payload),
+  ].forEach((entry) => {
+    if (entry) {
+      Object.assign(normalized, entry);
+    }
+  });
+  return normalized;
+};
+
+const pickStringValue = (value?: unknown): string | undefined => {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  return undefined;
+};
+
+const getBookingIdFromPayload = (payload?: NotificationData): string | undefined => {
+  const normalized = normalizeNotificationPayload(payload);
+  const booking = normalized.booking as NotificationData | undefined;
+  const candidates = [
+    normalized.bookingId,
+    normalized.booking_id,
+    booking?.id,
+    booking?._id,
+    booking?.bookingId,
+    booking?.booking_id,
+  ];
+  for (const candidate of candidates) {
+    const value = pickStringValue(candidate);
+    if (value) {
+      return value;
+    }
+  }
+  return undefined;
+};
+
+const getMissionIdFromPayload = (payload?: NotificationData): string | undefined => {
+  const normalized = normalizeNotificationPayload(payload);
+  const candidates = [
+    normalized.missionId,
+    normalized.mission_id,
+    normalized.payload?.missionId,
+    normalized.appEvent?.missionId,
+  ];
+  for (const candidate of candidates) {
+    const value = pickStringValue(candidate);
+    if (value) {
+      return value;
+    }
+  }
+  return undefined;
+};
+
+const getTypeFromPayload = (payload?: NotificationData): string | undefined => {
+  const normalized = normalizeNotificationPayload(payload);
+  const candidates = [
+    normalized.type,
+    normalized.notificationType,
+    normalized.payloadType,
+    (payload?.appEvent as NotificationData | undefined)?.type,
+  ];
+  for (const candidate of candidates) {
+    const value = pickStringValue(candidate);
+    if (value) {
+      return value.toUpperCase();
+    }
+  }
+  return undefined;
+};
+
+const getStatusFromPayload = (payload?: NotificationData): string | undefined => {
+  const normalized = normalizeNotificationPayload(payload);
+  const candidates = [
+    normalized.status,
+    normalized.booking?.status,
+    normalized.payload?.status,
+    (payload?.appEvent as NotificationData | undefined)?.status,
+  ];
+  for (const candidate of candidates) {
+    const value = pickStringValue(candidate);
+    if (value) {
+      return value.toUpperCase();
+    }
+  }
+  return undefined;
+};
+
+const getPaymentStatusFromPayload = (payload?: NotificationData): string | undefined => {
+  const normalized = normalizeNotificationPayload(payload);
+  const candidates = [
+    normalized.paymentStatus,
+    normalized.payload?.paymentStatus,
+    normalized.data?.paymentStatus,
+    (payload?.appEvent as NotificationData | undefined)?.paymentStatus,
+  ];
+  for (const candidate of candidates) {
+    const value = pickStringValue(candidate);
+    if (value) {
+      return value.toUpperCase();
+    }
+  }
+  return undefined;
+};
 
 function FloatingActiveServicePill({
     enabled,
@@ -268,6 +403,8 @@ const QA_PANEL_ENABLED = typeof __DEV__ !== 'undefined' && __DEV__
   ? true
   : process.env.EXPO_PUBLIC_ENABLE_QA_PANEL === 'true';
 
+const PENDING_PAYMENT_KEY = 'pending_payment';
+
 function RootLayoutContent() {
     const { isAuthenticated, isLoading: authIsLoading, user, token } = useAuth();
     const router = useRouter();
@@ -275,14 +412,246 @@ function RootLayoutContent() {
     const { paymentOverlayVisible } = useAuth();  // ðŸ”µ ADICIONADO
     const pathname = usePathname();
     const { t } = useTranslation();
+    const lastPushTokenRef = useRef<string | null>(null);
+    const [notificationPermissionRequested, setNotificationPermissionRequested] = useState(false);
+    const registerPushToken = useCallback(
+        async (token?: string) => {
+            if (!isAuthenticated) {
+                return;
+            }
+            try {
+                const resolvedToken = token ?? (await acquireDevicePushToken());
+                if (!resolvedToken) {
+                    return;
+                }
+                if (lastPushTokenRef.current === resolvedToken) {
+                    return;
+                }
+                lastPushTokenRef.current = resolvedToken;
+                await authService.updateFcmToken(resolvedToken);
+                registerDevicePushToken(resolvedToken).catch(() => {});
+            } catch (error) {
+                if (__DEV__) {
+                    console.warn('[RootLayout] Falha ao registrar token de push:', error);
+                }
+            }
+        },
+        [isAuthenticated],
+    );
+    const playSecurityAlarm = useCallback(async () => {
+        try {
+            const { Audio } = await import('expo-av');
+            const sound = new Audio.Sound();
+            await sound.loadAsync(require('../assets/sounds/new-booking.mp3'));
+            await sound.playAsync();
+            sound.setOnPlaybackStatusUpdate((status: any) => {
+                if (status?.didJustFinish) {
+                    sound.unloadAsync().catch(() => {});
+                }
+            });
+        } catch (error) {
+            if (__DEV__) {
+                console.warn('[RootLayout] Falha ao tocar alerta de segurança:', error);
+            }
+        }
+    }, []);
+    const handleNotificationDeepLink = useCallback(
+        (payload?: NotificationData): boolean => {
+            if (!payload) {
+                return false;
+            }
+            const bookingId = getBookingIdFromPayload(payload);
+            const missionId = getMissionIdFromPayload(payload);
+            const type = getTypeFromPayload(payload);
+            const status = getStatusFromPayload(payload);
+            const paymentStatus = getPaymentStatusFromPayload(payload);
+            const title =
+                pickStringValue(payload.title ?? payload.appEvent?.title) ??
+                t('common.notification', { defaultValue: 'Notificação' });
+            const message =
+                pickStringValue(payload.message ?? payload.body) ??
+                t('common.notification_received', { defaultValue: 'Você recebeu uma nova notificação.' });
+            if (type === 'PANIC_ALERT') {
+                NotificationUIService.showError(message, title);
+                if (user?.role === UserRole.ADMIN) {
+                    playSecurityAlarm();
+                    router.push('/common/safety/panic' as any);
+                }
+                return true;
+            }
+            if (bookingId && (status === BookingStatus.STARTED || type === 'STARTED')) {
+                router.push(CLIENT_ROUTES.BOOKING_DETAILS(bookingId) as any);
+                return true;
+            }
+            if (bookingId && type?.includes('PROOF')) {
+                router.push({
+                    pathname: CLIENT_ROUTES.BOOKING_DETAILS(bookingId),
+                    params: { highlight: 'proofs' },
+                } as any);
+                NotificationUIService.showInfo(
+                    message || t('notifications.proof_sent', { defaultValue: 'Fotos do serviço enviadas.' }),
+                    title || t('notifications.proof', { defaultValue: 'Comprovantes' }),
+                );
+                return true;
+            }
+            if (missionId) {
+                router.push({
+                    pathname: CLIENT_ROUTES.MISSIONS,
+                    params: { focus: 'confetti' },
+                } as any);
+                NotificationUIService.showSuccess(
+                    message || t('missions.completed', { defaultValue: 'Missão concluída!' }),
+                    title || t('missions.missions', { defaultValue: 'Missões' }),
+                );
+                return true;
+            }
+            if (bookingId && paymentStatus === 'FAILED') {
+                router.push({
+                    pathname: CLIENT_ROUTES.BOOKING_DETAILS(bookingId),
+                    params: { highlight: 'payment' },
+                } as any);
+                NotificationUIService.showError(
+                    message || t('payments.failed', { defaultValue: 'Pagamento falhou.' }),
+                    title || t('payments.payment', { defaultValue: 'Pagamento' }),
+                );
+                return true;
+            }
+            return false;
+        },
+        [router, user?.role, playSecurityAlarm, t],
+    );
+    const handleForegroundNotification = useCallback(
+        (notification?: any) => {
+            const payload = notification?.request?.content?.data ?? {};
+            const type = getTypeFromPayload(payload);
+            const title =
+                pickStringValue(payload.title) ??
+                notification?.request?.content?.title ??
+                t('common.notification', { defaultValue: 'Notificação' });
+            const body =
+                pickStringValue(payload.message ?? notification?.request?.content?.body) ??
+                t('common.notification_received', { defaultValue: 'Você recebeu uma nova atualização.' });
+            if (type === 'PANIC_ALERT') {
+                NotificationUIService.showError(body, title);
+                if (user?.role === UserRole.ADMIN) {
+                    playSecurityAlarm();
+                    handleNotificationDeepLink(payload);
+                }
+                return;
+            }
+            NotificationUIService.showInfo(body, title);
+        },
+        [handleNotificationDeepLink, playSecurityAlarm, t, user?.role],
+    );
     const [appReady, setAppReady] = useState(false);
     const [initializationError, setInitializationError] = useState<string | null>(null);
+
+    const navigatePendingPayment = useCallback(async () => {
+        if (!appReady || !isAuthenticated || user?.role !== UserRole.CLIENT) {
+            return false;
+        }
+        try {
+            const payload = await AsyncStorage.getItem(PENDING_PAYMENT_KEY);
+            if (!payload) {
+                return false;
+            }
+            const parsed = JSON.parse(payload) as { bookingId?: string };
+            const bookingId = parsed?.bookingId;
+            if (!bookingId) {
+                await AsyncStorage.removeItem(PENDING_PAYMENT_KEY);
+                return false;
+            }
+            router.replace({
+                pathname: '/client/bookings/success',
+                params: {
+                    bookingId,
+                    paymentMethod: 'PIX',
+                },
+            } as any);
+            return true;
+        } catch {
+            return false;
+        }
+    }, [appReady, isAuthenticated, router, user?.role]);
 
     // ativa o socket de notificaÃ§Ãµes somente quando o app estiver pronto e o token disponÃ­vel,
     // evitando chamadas de overlay enquanto o layout inicial ainda estÃ¡ escondido.
     useNotificationsSocket(appReady ? token : null);
     // one-time local notifications channel (Android). Harmless on iOS.
     useEffect(() => { if (setupNotificationsOnce) { setupNotificationsOnce(); } }, []);
+    useEffect(() => {
+        if (!appReady || !isAuthenticated || notificationPermissionRequested) {
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            try {
+                const stored = await AsyncStorage.getItem(NOTIFICATION_PERMISSION_FLAG);
+                if (stored === '1') {
+                    await registerPushToken();
+                } else {
+                    const granted = await requestNotificationPermissions();
+                    if (granted) {
+                        await registerPushToken();
+                    }
+                }
+            } catch (error) {
+                if (__DEV__) {
+                    console.warn('[RootLayout] Falha ao solicitar permissoes de notificacao:', error);
+                }
+            } finally {
+                if (!cancelled) {
+                    setNotificationPermissionRequested(true);
+                }
+                try {
+                    await AsyncStorage.setItem(NOTIFICATION_PERMISSION_FLAG, '1');
+                } catch {
+                    // ignore
+                }
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [appReady, isAuthenticated, notificationPermissionRequested, registerPushToken]);
+    useEffect(() => {
+        if (!appReady || !isAuthenticated) {
+            return;
+        }
+        let sub: any;
+        (async () => {
+            try {
+                const Notifications = (await import('expo-notifications')).default || (await import('expo-notifications'));
+                sub = Notifications.addDevicePushTokenListener((event: any) => {
+                    const token = event?.data;
+                    if (typeof token === 'string' && token) {
+                        registerPushToken(token);
+                    }
+                });
+            } catch {}
+        })();
+        return () => {
+            try {
+                sub?.remove?.();
+            } catch {}
+        };
+    }, [appReady, isAuthenticated, registerPushToken]);
+
+    useEffect(() => {
+        let sub: any;
+        (async () => {
+            try {
+                const Notifications = (await import('expo-notifications')).default || (await import('expo-notifications'));
+                sub = Notifications.addNotificationReceivedListener((notification: any) => {
+                    handleForegroundNotification(notification);
+                });
+            } catch {}
+        })();
+        return () => {
+            try {
+                sub?.remove?.();
+            } catch {}
+        };
+    }, [handleForegroundNotification]);
+
     // Deep-link handler for notification taps (local or push)
     const navigateFromChatNotification = useCallback(
         (payload: Record<string, any> | undefined) => {
@@ -367,6 +736,9 @@ function RootLayoutContent() {
                             if (navigateFromChatNotification(payload)) {
                                 return;
                             }
+                            if (handleNotificationDeepLink(payload)) {
+                                return;
+                            }
                             const url = (
                                 payload?.appEvent?.targetUrl ??
                                 payload?.url ??
@@ -385,7 +757,7 @@ function RootLayoutContent() {
                 sub?.remove?.();
             } catch {}
         };
-    }, [router, navigateFromChatNotification]);
+    }, [router, navigateFromChatNotification, handleNotificationDeepLink]);
 
     useEffect(() => {
         const prepareApp = async () => {
@@ -485,6 +857,10 @@ function RootLayoutContent() {
         const decideAndRedirect = async () => {
             const path = pathname ?? '';
             const isFeedbackRoute = isPathOrChild('/common/feedback', normalizePath(path));
+
+            if (await navigatePendingPayment()) {
+                return;
+            }
 
             const normalizedPath = normalizePath(path);
             if (QA_PANEL_ENABLED && normalizedPath === '/dev-panel') {
@@ -634,7 +1010,7 @@ function RootLayoutContent() {
         };
 
         decideAndRedirect();
-    }, [isAuthenticated, user, authIsLoading, router, segments, pathname, appReady, initializationError]);
+    }, [isAuthenticated, user, authIsLoading, router, segments, pathname, appReady, initializationError, navigatePendingPayment]);
 
     if (!appReady || authIsLoading || initializationError) {
         return (
