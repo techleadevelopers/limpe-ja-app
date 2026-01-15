@@ -44,6 +44,9 @@ export interface RegisterClientDto {
   address: CreateAddressDto;
   referralCode?: string; // NOVO: Campo opcional para código de indicação
   dateOfBirth?: string;  // <- Adicione esta linha
+  termsAccepted?: boolean;
+  termsAcceptedAt?: string;
+  termsVersion?: string;
 }
 
 /**
