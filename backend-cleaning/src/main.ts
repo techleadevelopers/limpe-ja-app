@@ -241,9 +241,25 @@ async function bootstrap() {
   // =======================================================
   //                    FIREBASE ADMIN
   // =======================================================
+  const projectId = configService.get<string>('FIREBASE_PROJECT_ID');
+  const clientEmail = configService.get<string>('FIREBASE_CLIENT_EMAIL');
+  const privateKey = configService.get<string>('FIREBASE_PRIVATE_KEY');
+  const hasEnvCredentials = Boolean(projectId && clientEmail && privateKey);
+
   try {
-    admin.initializeApp();
-    console.log('[Firebase Admin] Inicializado automaticamente.');
+    if (hasEnvCredentials) {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId,
+          clientEmail,
+          privateKey: privateKey.replace(/\\n/g, '\n'),
+        }),
+      });
+      console.log('[Firebase Admin] Inicializado via variáveis FIREBASE_*.');
+    } else {
+      admin.initializeApp();
+      console.log('[Firebase Admin] Inicializado automaticamente.');
+    }
   } catch (error: any) {
     console.error(`[Firebase Admin] Erro: ${error.message}`);
 
