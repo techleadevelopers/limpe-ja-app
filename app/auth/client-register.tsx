@@ -45,6 +45,8 @@ const LOGO_IMAGE = require('../../assets/images/logo2.png');
 /* ---------------------- fim BubblesRN ---------------------- */
 
 const REFERRAL_STORAGE_KEY = 'pending-referral';
+const TERMS_VERSION = '1.0';
+const TERMS_ROUTE = '/common/terms-of-service';
 
 const devLog = (...args: unknown[]) => {
     if (__DEV__) {
@@ -121,6 +123,8 @@ export default function ClientRegisterScreen() {
     const [city, setCity] = useState('');
     const [state, setState] = useState('');
     const [complement, setComplement] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
+    const [termsAcceptedAt, setTermsAcceptedAt] = useState<string | null>(null);
 
     const [isLoading, setIsLoading] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
@@ -408,7 +412,9 @@ export default function ClientRegisterScreen() {
                     email, username, phone, cpf, dateOfBirth, password,
                     referralCode,
                     cep, street, number, neighborhood, city, state, complement,
-                    currentStep, subStepAddress
+                    currentStep, subStepAddress,
+                    termsAccepted,
+                    termsAcceptedAt,
                 };
                 await AsyncStorage.setItem('clientRegisterFormData', JSON.stringify(formData));
             } catch (e) {
@@ -420,7 +426,7 @@ export default function ClientRegisterScreen() {
             saveFormData();
         }, 500); // Save 500ms after last change
         return () => clearTimeout(handler);
-    }, [email, username, phone, cpf, dateOfBirth, password, referralCode, cep, street, number, neighborhood, city, state, complement, currentStep, subStepAddress]);
+    }, [email, username, phone, cpf, dateOfBirth, password, referralCode, cep, street, number, neighborhood, city, state, complement, currentStep, subStepAddress, termsAccepted, termsAcceptedAt]);
 
     // Load from AsyncStorage on component mount
     useEffect(() => {
@@ -443,6 +449,8 @@ export default function ClientRegisterScreen() {
                     setCity(parsedFormData.city || '');
                     setState(parsedFormData.state || '');
                     setComplement(parsedFormData.complement || '');
+                    setTermsAccepted(Boolean(parsedFormData?.termsAccepted));
+                    setTermsAcceptedAt(parsedFormData?.termsAcceptedAt || null);
                     setReferralCode(parsedFormData.referralCode || '');
                     setCurrentStep(parsedFormData.currentStep || 1);
                     setSubStepAddress(parsedFormData.subStepAddress || 1);
@@ -586,8 +594,8 @@ export default function ClientRegisterScreen() {
     }, [street, number, neighborhood, city, state]);
 
     const checkAddressSubStep3Validity = useCallback(() => {
-        return true; // Complement is optional
-    }, []);
+        return termsAccepted;
+    }, [termsAccepted]);
 
     // --- BLUR HANDLERS (SET SPECIFIC ERRORS) ---
     const handleEmailBlur = useCallback(() => {
@@ -733,6 +741,26 @@ export default function ClientRegisterScreen() {
         setComplementError(null); // Optional, no error
     }, []);
 
+    const toggleTermsAcceptance = useCallback(() => {
+        setTermsAccepted((prev) => {
+            if (prev) {
+                setTermsAcceptedAt(null);
+                return false;
+            }
+            setTermsAcceptedAt(new Date().toISOString());
+            return true;
+        });
+        setGeneralError(null);
+    }, []);
+
+    const handleViewTerms = useCallback(() => {
+        try {
+            router.push(TERMS_ROUTE as any);
+        } catch {
+            router.replace(TERMS_ROUTE as any);
+        }
+    }, [router]);
+
     const handleNext = async () => {
         devLog(`[ClientRegister] handleNext: Tentando avançar do Step ${currentStep}. SubStep: ${subStepAddress}`);
         setGeneralError(null);
@@ -816,7 +844,11 @@ export default function ClientRegisterScreen() {
                 const isValid = checkAddressSubStep3Validity();
                 if (!isValid) {
                     handleComplementBlur();
-                    setGeneralError('Por favor, verifique o complemento.');
+                    setGeneralError(
+                        t('schedule_service.terms_required_message', {
+                            defaultValue: 'Você precisa aceitar os Termos de Uso para continuar.',
+                        }),
+                    );
                     devWarn("[ClientRegister] handleNext: Falha ao avançar: Sub-step 3 inválido.");
                     return;
                 }
@@ -871,6 +903,9 @@ export default function ClientRegisterScreen() {
                             latitude,
                             longitude,
                         } as CreateAddressDto,
+                        termsAccepted: true,
+                        termsAcceptedAt: termsAcceptedAt || new Date().toISOString(),
+                        termsVersion: TERMS_VERSION,
                     };
                     devLog("[ClientRegister] handleNext (Step 5 - final sub-step): Chamando signUpClient do AuthContext para registro inicial.");
                     await signUpClient(registerData);
@@ -1567,6 +1602,34 @@ export default function ClientRegisterScreen() {
                                         </View>
                                         <AnimatedErrorMessage message={complementError} isVisible={!!complementError} centered={false} containerStyle={styles.inlineErrorLift} />
 
+                                        <TouchableOpacity
+                                            style={styles.termsRow}
+                                            onPress={toggleTermsAcceptance}
+                                            activeOpacity={0.8}
+                                        >
+                                            <View
+                                                style={[
+                                                    styles.termsCheckbox,
+                                                    termsAccepted && styles.termsCheckboxChecked,
+                                                ]}
+                                            >
+                                                {termsAccepted && (
+                                                    <Ionicons
+                                                        name="checkmark"
+                                                        size={14}
+                                                        color="#fff"
+                                                    />
+                                                )}
+                                            </View>
+                                            <Text style={styles.termsLabel} numberOfLines={2}>
+                                                ☑️ Li e concordo com os{' '}
+                                                <Text style={styles.termsLink} onPress={handleViewTerms}>
+                                                    Termos de Uso
+                                                </Text>{' '}
+                                                e Política de Privacidade do Limpeja.
+                                            </Text>
+                                        </TouchableOpacity>
+
                                         <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
                                         <View style={styles.navigationButtons}>
                                             <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
@@ -1798,7 +1861,37 @@ const styles = StyleSheet.create({
         marginBottom: 24,
         marginTop: 8,
         width: '100%',
-    }
+    },
+    termsRow: {
+        width: '100%',
+        marginTop: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    termsCheckbox: {
+        width: 22,
+        height: 22,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#00BCD4',
+        marginRight: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+    },
+    termsCheckboxChecked: {
+        backgroundColor: '#00BCD4',
+    },
+    termsLabel: {
+        flex: 1,
+        fontSize: 13,
+        color: '#4A5568',
+        lineHeight: 18,
+    },
+    termsLink: {
+        color: '#00BCD4',
+        textDecorationLine: 'underline',
+    },
 });
 
 
