@@ -550,6 +550,13 @@ export const updateBookingStatus = async (id: string, status: ExtendedBookingSta
     });
 };
 
+export const cancelBookingWithRefund = async (id: string, reason?: string): Promise<Booking> => {
+    return fetchApi(`/bookings/${id}/cancel-with-refund`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+    });
+};
+
 // --- FunÃ§Ãµes de Disputas ---
 export const fetchAllDisputes = async (status?: DisputeStatus): Promise<Dispute[]> => {
     const query = status ? `?status=${status}` : '';
