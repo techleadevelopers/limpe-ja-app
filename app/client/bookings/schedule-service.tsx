@@ -136,6 +136,15 @@ const normalizeBookingError = (error: any, t: TFunction): NormalizedBookingError
     });
     code = 'SLOT_CONFLICT';
     blockAction = false;
+  } else if (
+    messageIndicator.includes('TERMS_NOT_ACCEPTED') ||
+    messageIndicator.includes('TERMS-NOT-ACCEPTED')
+  ) {
+    message = t('schedule_service.terms_required_message', {
+      defaultValue: 'Você precisa aceitar os Termos de Uso para continuar.',
+    });
+    code = 'TERMS_NOT_ACCEPTED';
+    blockAction = true;
   } else if (!message || message.length === 0) {
     message = t('common.network_error', { defaultValue: 'Não foi possível concluir o agendamento. Tente novamente.' });
     code = 'GENERIC';
@@ -635,47 +644,64 @@ const BookingSummaryPreview = ({
       )}
 
       <Animated.View style={[styles.summarySection, summarySectionAnim]}>
-        {reviewRows.map((row) => (
-          <View key={row.key} style={styles.reviewRow}>
-            <Animated.View style={[styles.reviewRowIconContainer, animatedIconStyle]}>
-              <Ionicons name={row.icon as any} size={20} color={AppColors.primaryInteractive} />
-            </Animated.View>
-            <View style={styles.reviewRowContent}>
-              <Text style={styles.reviewRowLabel}>{row.label}</Text>
-              {typeof row.value === 'string' ? (
-                <Text style={styles.reviewRowValue}>{row.value}</Text>
-              ) : (
-                row.value
+        <View style={styles.premiumSummaryCard}>
+          {reviewRows.map((row) => (
+            <View key={row.key} style={styles.premiumSummaryRow}>
+              <Ionicons
+                name={row.icon as any}
+                size={18}
+                color={AppColors.primaryInteractive}
+                style={styles.premiumSummaryIcon}
+              />
+              <View style={styles.premiumSummaryContent}>
+                <Text style={styles.premiumSummaryLabel}>{row.label}</Text>
+                {typeof row.value === 'string' ? (
+                  <Text style={styles.premiumSummaryValue}>{row.value}</Text>
+                ) : (
+                  row.value
+                )}
+              </View>
+              {row.action && row.key === 'insurance' && (
+                <TouchableOpacity onPress={row.action} style={styles.reviewAction}>
+                  <Text style={styles.reviewActionText}>{changeLabel}</Text>
+                </TouchableOpacity>
               )}
             </View>
-            {row.action && row.key === 'insurance' && (
-              <TouchableOpacity onPress={row.action} style={styles.reviewAction}>
-                <Text style={styles.reviewActionText}>{changeLabel}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ))}
+          ))}
+        </View>
 
-        <View style={styles.paymentBreakdown}>
-          <View style={styles.paymentLine}>
-            <Text style={styles.paymentLabel}>{t('schedule_service.subtotal', { defaultValue: 'Subtotal' })}</Text>
-            <Text style={styles.paymentValue}>{formatBRL(subtotal)}</Text>
+        <View style={styles.premiumCostCard}>
+          <View style={styles.premiumCostRow}>
+            <View>
+              <Text style={styles.premiumSummaryLabel}>
+                {t('schedule_service.subtotal', { defaultValue: 'Subtotal' })}
+              </Text>
+              <Text style={styles.premiumSummaryValue}>{formatBRL(subtotal)}</Text>
+            </View>
+            <Text style={styles.premiumSummaryValue}>{formatBRL(finalPrice)}</Text>
           </View>
           {discountAmount > 0 && (
-            <View style={styles.paymentLine}>
-              <Text style={styles.paymentLabel}>{t('schedule_service.discount', { defaultValue: 'Desconto' })}</Text>
-              <Text style={[styles.paymentValue, styles.discountValue]}>- {formatBRL(discountAmount)}</Text>
+            <View style={styles.premiumCostRow}>
+              <Text style={styles.premiumSummaryLabel}>
+                {t('schedule_service.discount', { defaultValue: 'Desconto' })}
+              </Text>
+              <Text style={[styles.premiumSummaryValue, styles.discountValue]}>- {formatBRL(discountAmount)}</Text>
             </View>
           )}
           {insuranceFeeCents > 0 && (
-            <View style={styles.paymentLine}>
-              <Text style={styles.paymentLabel}>{t('schedule_service.insurance_fee', { defaultValue: 'Seguro' })}</Text>
-              <Text style={styles.paymentValue}>{formatBRL(insuranceFeeCents / 100)}</Text>
+            <View style={styles.premiumCostRow}>
+              <Text style={styles.premiumSummaryLabel}>
+                {t('schedule_service.insurance_fee', { defaultValue: 'Seguro' })}
+              </Text>
+              <Text style={[styles.premiumSummaryValue, styles.insuranceThinValue]}>
+                {formatBRL(insuranceFeeCents / 100)}
+              </Text>
             </View>
           )}
-          <View style={styles.paymentDivider} />
-          <View style={styles.paymentLine}>
-            <Text style={styles.totalPriceLabel}>{t('schedule_service.total_to_pay', { defaultValue: 'Total a Pagar' })}</Text>
+          <View style={styles.premiumCostRow}>
+            <Text style={styles.totalPriceLabel}>
+              {t('schedule_service.total_to_pay', { defaultValue: 'Total a Pagar' })}
+            </Text>
             <Animated.Text
               style={[
                 styles.totalPriceValue,
@@ -688,6 +714,7 @@ const BookingSummaryPreview = ({
                       }),
                     },
                   ],
+                  marginLeft: 0,
                 },
               ]}
             >
@@ -701,7 +728,7 @@ const BookingSummaryPreview = ({
 
         {quoteStatus === 'refreshing' && (
           <Text style={styles.quoteStatusText}>
-            {t('schedule_service.quote_refreshing', { defaultValue: 'Atualizando cotaA§ALo...' })}
+            {t('schedule_service.quote_refreshing', { defaultValue: 'Atualizando cotação...' })}
           </Text>
         )}
         {quoteStatus === 'rateLimited' && quoteRateLimitRemainingSeconds > 0 && (
@@ -734,6 +761,7 @@ export default function ScheduleServiceScreen() {
   const { user } = useAuth();
   const typedUser = user as UserProfile | null;
   const { t } = useTranslation();
+  const hasAcceptedTerms = Boolean(typedUser?.termsVersion);
   const { isLargePhone } = useDevice();
 
   const navWrap: StyleProp<ViewStyle> = useMemo(
@@ -842,6 +870,7 @@ const availabilityFetchKey = useMemo(() => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
+  const bookingInFlightRef = useRef(false);
   const [isFetchingSlots, setIsFetchingSlots] = useState(false);
   const isSearchingNextDateRef = useRef(false);
   const [isCancellationOverlayVisible, setCancellationOverlayVisible] = useState(false);
@@ -1735,6 +1764,14 @@ const handleDaySelect = useCallback(
     }
   }, [currentStep, router, reviewStepAnim, fadeAnim, scaleAnim]);
 
+  const handleOpenTerms = useCallback(() => {
+    try {
+      router.push('/common/terms-of-service' as any);
+    } catch {
+      router.replace('/common/terms-of-service' as any);
+    }
+  }, [router]);
+
   const handleConfirmBooking = useCallback(async () => {
     if (shouldBlockBookingRequests) {
       if (bookingBlockingError) {
@@ -1743,6 +1780,17 @@ const handleDaySelect = useCallback(
           t('common.error', { defaultValue: 'Erro' }),
         );
       }
+      return;
+    }
+
+    if (!hasAcceptedTerms) {
+      const termsMessage = t('schedule_service.terms_required_message', {
+        defaultValue: 'Você precisa aceitar os Termos de Uso para agendar.',
+      });
+      NotificationUIService.showError(
+        termsMessage,
+        t('common.error', { defaultValue: 'Erro' }),
+      );
       return;
     }
 
@@ -1790,6 +1838,10 @@ const handleDaySelect = useCallback(
     }
 
     let requestedDurationMinutes = 0;
+    if (bookingInFlightRef.current) {
+      return;
+    }
+    bookingInFlightRef.current = true;
 
     if (isMounted.current) setIsBooking(true);
 
@@ -1895,6 +1947,7 @@ const handleDaySelect = useCallback(
         t('common.error', { defaultValue: 'Erro' }),
       );
     } finally {
+      bookingInFlightRef.current = false;
       if (isMounted.current) setIsBooking(false);
     }
   }, [
@@ -2271,7 +2324,11 @@ const handleDaySelect = useCallback(
     if (!isPricingConfigReady || !selectedProviderService) return true;
 
     const baseDisabled =
-      selectedSlots.length === 0 || !hasCompleteAddress(address) || isBooking || quoteLoading;
+      selectedSlots.length === 0 ||
+      !hasCompleteAddress(address) ||
+      isBooking ||
+      quoteLoading ||
+      !hasAcceptedTerms;
 
     if (!isHourlyService(selectedProviderService)) {
       return baseDisabled || providerNeedsApproval || shouldBlockBookingRequests;
@@ -2798,6 +2855,19 @@ const handleDaySelect = useCallback(
           </Animated.View>
         )}
 
+        {currentStep === 3 && !hasAcceptedTerms && (
+          <View style={styles.termsWarningContainer}>
+            <Text style={styles.termsWarningText}>
+              {t('schedule_service.terms_required_message', {
+                defaultValue: 'Você precisa aceitar os Termos de Uso para continuar.',
+              })}{' '}
+              <Text style={styles.termsLink} onPress={handleOpenTerms}>
+                Leia os Termos de Uso
+              </Text>
+            </Text>
+          </View>
+        )}
+
         {slotBadgeVisible && (
           <TouchableOpacity style={styles.slotBadgeContainer} activeOpacity={0.9}>
             <Animated.View style={[styles.slotBadgeButton, { transform: [{ scale: slotBadgeScale }] }]}>
@@ -3185,6 +3255,57 @@ const styles = StyleSheet.create({
   summarySection: {
     marginTop: 8,
   },
+  premiumSummaryCard: {
+    backgroundColor: '#F9F9F9',
+    borderRadius: 20,
+    padding: 16,
+    marginHorizontal: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 0,
+  },
+  premiumSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  premiumSummaryIcon: {
+    marginTop: 3,
+    marginRight: 10,
+  },
+  premiumSummaryContent: {
+    flex: 1,
+  },
+  premiumSummaryLabel: {
+    fontSize: Platform.OS === 'android' ? 12 : 11,
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  premiumSummaryValue: {
+    fontSize: Platform.OS === 'android' ? 15 : 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: 2,
+  },
+  premiumCostCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    marginHorizontal: 12,
+    marginBottom: 11,
+    borderWidth: 1,
+    borderColor: '#ECEFF3',
+  },
+  premiumCostRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 10,
+  },
   summaryItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3302,6 +3423,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 6,
   },
+  discountValue: {
+    color: '#EF4444',
+  },
+  insuranceThinValue: {
+    fontWeight: '400',
+  },
   timeSlotsHelperContainer: {
     marginHorizontal: 40,
     marginTop: 1,
@@ -3385,9 +3512,6 @@ const styles = StyleSheet.create({
     fontSize: Platform.OS === 'android' ? 16 : 15,
     fontWeight: '600',
     color: AppColors.textBody,
-  },
-  discountValue: {
-    color: AppColors.primaryInteractive,
   },
   totalPriceSummary: {
     flexDirection: 'row',
@@ -3585,5 +3709,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: Platform.OS === 'android' ? 18 : 17,
     fontWeight: '800',
+  },
+  termsWarningContainer: {
+    paddingHorizontal: 40,
+    marginTop: 8,
+  },
+  termsWarningText: {
+    color: '#F56565',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  termsLink: {
+    color: AppColors.primaryInteractive,
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });
