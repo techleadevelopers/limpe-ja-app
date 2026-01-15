@@ -24,5 +24,10 @@ export class UpdateUserDto {
   @IsUrl()
   avatarUrl?: string; // Adicionado
 
+  @ApiProperty({ example: 'fcm_abcdef123', required: false })
+  @IsOptional()
+  @IsString()
+  fcmToken?: string;
+
   // Adicione outras propriedades que podem ser atualizadas, se houver
 }
