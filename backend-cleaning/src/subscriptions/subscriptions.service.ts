@@ -12,6 +12,7 @@ import {
   SubscriptionFrequency,
   SubscriptionStatus,
   UserRole,
+  Prisma,
 } from '@prisma/client'; // Prisma enums
 import { BookingsService } from '../bookings/bookings.service'; // Assuming BookingsService exists
 import { PaymentsService } from '../payments/payments.service'; // Assuming PaymentsService exists
@@ -110,7 +111,7 @@ export class SubscriptionsService {
           include: { service: { select: { id: true, name: true } } },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as Prisma.SortOrder },
     });
   }
 
@@ -124,7 +125,7 @@ export class SubscriptionsService {
           include: { service: { select: { id: true, name: true } } },
         },
         generatedBookings: {
-          orderBy: { scheduledDate: 'desc' },
+          orderBy: { scheduledDate: 'desc' as Prisma.SortOrder },
           select: { id: true, scheduledDate: true, status: true },
         },
       },
