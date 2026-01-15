@@ -5,11 +5,16 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, LoyaltyTransactionType } from '@prisma/client';
+import {
+  Prisma,
+  LoyaltyTransaction,
+  LoyaltyTransactionType,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddPointsDto } from './dto/add-points.dto';
 import { RedeemPointsDto } from './dto/redeem-points.dto';
 import { CouponsService } from '../coupons/coupons.service';
+import { NotificationService } from '../services/NotificationService';
 
 @Injectable()
 export class LoyaltyService {
@@ -18,6 +23,7 @@ export class LoyaltyService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly couponsService: CouponsService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   /**
@@ -32,6 +38,7 @@ export class LoyaltyService {
       throw new BadRequestException('Pontos devem ser > 0.');
 
     let finalPoints = points;
+    let createdTransaction: LoyaltyTransaction | null = null;
 
     // --- NOVO: Lógica de Multiplicadores ---
     // O 'points' recebido no DTO é o 'pontos_base' (calculado pelo módulo chamador, ex: BookingsService)
@@ -88,7 +95,7 @@ export class LoyaltyService {
         update: { currentPoints: { increment: finalPoints } },
       });
 
-      await tx.loyaltyTransaction.create({
+      createdTransaction = await tx.loyaltyTransaction.create({
         data: {
           userId,
           points: finalPoints,
@@ -107,6 +114,35 @@ export class LoyaltyService {
 
       return loyalty.currentPoints;
     });
+
+    if (finalPoints > 0 && createdTransaction) {
+      const notificationTitle = 'Pontos de fidelidade recebidos!';
+      const notificationBody =
+        'Você ganhou novos pontos de fidelidade! 🌟 Continue assim.';
+      const notificationPayload: Record<string, unknown> = {
+        points: finalPoints,
+        type,
+        referenceId: referenceId ?? undefined,
+        transactionId: createdTransaction.id,
+      };
+      try {
+        await this.notificationService.sendToUser(
+          userId,
+          notificationTitle,
+          notificationBody,
+          notificationPayload,
+        );
+        this.logger.log(
+          `[Push] LoyaltyTransaction ${createdTransaction.id} | userId ${userId} | points ${finalPoints}`,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `[LoyaltyService] Falha ao notificar user ${userId} sobre pontos ganhos: ${
+            error instanceof Error ? error.message : JSON.stringify(error)
+          }`,
+        );
+      }
+    }
 
     return currentBalance;
   }
