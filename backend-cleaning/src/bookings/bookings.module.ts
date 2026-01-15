@@ -16,10 +16,12 @@ import { InsuranceModule } from '../insurance/insurance.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
 import { MissionsModule } from '../missions/missions.module';
 import { ReferralsModule } from '../referrals/referrals.module';
+import { ComplianceModule } from '../compliance/compliance.module';
 import { RedisLockModule } from '../common/locks/redis-lock.module'; // NOVO: Importar RedisLockModule
 import { I18nModule } from '../common/i18n/i18n.module'; // NOVO: Importar I18nModule
 import { CacheModule } from '../cache/cache.module';
 import { SchedulerModule } from '../scheduler/scheduler.module';
+import { ServicesModule } from '../services/services.module';
 
 @Module({
   imports: [
@@ -39,8 +41,10 @@ import { SchedulerModule } from '../scheduler/scheduler.module';
     forwardRef(() => ReferralsModule),
     RedisLockModule, // NOVO: Adicionar RedisLockModule
     CacheModule,
+    ServicesModule,
     I18nModule, // NOVO: Adicionar I18nModule
     SchedulerModule,
+    ComplianceModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService],
