@@ -4,9 +4,11 @@ import {
   IsEmail,
   IsString,
   IsNotEmpty,
+  IsBoolean,
   MinLength,
   ValidateNested,
   IsOptional,
+  IsISO8601,
   Matches,
   Length,
 } from 'class-validator'; // Adicionado Length
@@ -81,4 +83,27 @@ export class RegisterClientDto {
   @IsOptional()
   @IsString()
   referralCode?: string; // <<-- ADICIONADO
+
+  @ApiProperty({
+    description: 'Confirma que o usuA!rio leu e aceitou os Termos de Uso',
+    example: true,
+  })
+  @IsBoolean()
+  termsAccepted: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Data de aceite dos Termos em formato ISO 8601',
+    example: '2026-01-15T10:00:00.000Z',
+  })
+  @IsOptional()
+  @IsISO8601()
+  termsAcceptedAt?: string;
+
+  @ApiPropertyOptional({
+    description: 'VersÃ£o dos Termos aceitos',
+    example: '1.0',
+  })
+  @IsOptional()
+  @IsString()
+  termsVersion?: string;
 }
