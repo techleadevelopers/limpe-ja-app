@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { Notification } from '@prisma/client';
+import { Notification, Prisma } from '@prisma/client';
 import { MarkAsReadDto } from './dto/mark-as-read.dto';
 import { I18nService } from '../common/i18n/i18n.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -83,7 +83,7 @@ export class NotificationsService {
           dedupeKey,
           createdAt: { gte: since },
         },
-        orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: 'desc' as Prisma.SortOrder },
       });
       if (duplicate) {
         return duplicate;
@@ -212,7 +212,7 @@ export class NotificationsService {
           userId,
           ...(includeRead ? {} : { isRead: false }),
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: 'desc' as Prisma.SortOrder },
       });
     } catch (error) {
       this.logger.error(
