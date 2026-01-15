@@ -62,7 +62,7 @@ const loginProviderInclude = {
   },
   bookings: {
     where: { status: BookingStatus.FINISHED },
-    orderBy: { createdAt: Prisma.SortOrder.desc },
+    orderBy: { createdAt: 'desc' as Prisma.SortOrder },
     take: 100,
   },
   // CORREÇÃO: Adicionado availability para resolver erro de tipagem no mapProviderToCalculatedRating
@@ -99,6 +99,14 @@ export type UserWithAllRelations = Prisma.UserGetPayload<{
     loyalty: true;
     referredBy: true;
     referralsMade: true;
+    userConsents: {
+      orderBy: { consentedAt: Prisma.SortOrder };
+      select: {
+        documentType: true;
+        version: true;
+        consentedAt: true;
+      };
+    };
   };
 }>;
 
@@ -163,16 +171,24 @@ export class AuthService {
     const fullUser = (await this.prisma.user.findUnique({
       where: { id: user.id },
       include: {
-        client: {
-          include: loginClientInclude,
-        },
-        provider: {
-          include: loginProviderInclude,
-        },
-        loyalty: true, // Incluído
-        referredBy: true, // Incluído
-        referralsMade: true, // Incluído
+      client: {
+        include: loginClientInclude,
       },
+      provider: {
+        include: loginProviderInclude,
+      },
+      loyalty: true, // Incluído
+      referredBy: true, // Incluído
+      referralsMade: true, // Incluído
+      userConsents: {
+        orderBy: { consentedAt: 'desc' as Prisma.SortOrder },
+        select: {
+          documentType: true,
+          version: true,
+          consentedAt: true,
+        },
+      },
+    },
     })) as UserWithAllRelations;
 
     if (!fullUser) {
@@ -217,8 +233,18 @@ export class AuthService {
     registerClientDto: RegisterClientDto,
     options?: RegisterOptions,
   ): Promise<AuthResponseDto> {
-    const { email, password, fullName, phone, address, cpf, referralCode } =
-      registerClientDto; // NOVO: referralCode
+    const {
+      email,
+      password,
+      fullName,
+      phone,
+      address,
+      cpf,
+      referralCode,
+      termsAccepted,
+      termsAcceptedAt,
+      termsVersion,
+    } = registerClientDto; // NOVO: referralCode
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
@@ -245,6 +271,12 @@ export class AuthService {
           'Este CPF já está cadastrado como cliente.',
         );
       }
+    }
+
+    if (!termsAccepted) {
+      throw new BadRequestException(
+        'O aceite dos Termos de Uso A© obrigatA3rio.',
+      );
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -310,13 +342,31 @@ export class AuthService {
         );
       }
 
-      // --- NOVO: Lógica de Indicação no Registro ---
+            // --- NOVO: Lógica de Indicação no Registro ---
       if (referralCode) {
         await this.handleReferralCode(referralCode, newUserClient.id);
       }
       // --- Fim da Lógica de Indicação ---
 
-      await this.recordDefaultConsents(newUserClient.id, options);
+      const termsVersionToUse =
+        termsVersion ?? DEFAULT_CONSENT_VERSIONS[ConsentDocumentType.TERMS];
+      await this.complianceService.recordConsent(
+        newUserClient.id,
+        ConsentDocumentType.TERMS,
+        termsVersionToUse,
+        {
+          source: 'signup',
+          ip: options?.ip,
+          userAgent: options?.userAgent,
+          acceptedAt: termsAcceptedAt
+            ? new Date(termsAcceptedAt)
+            : new Date(),
+        },
+      );
+
+      await this.recordDefaultConsents(newUserClient.id, options, [
+        ConsentDocumentType.TERMS,
+      ]);
 
       // Telemetria: client_registered
       this.logger.log(
@@ -672,6 +722,7 @@ export class AuthService {
   private async recordDefaultConsents(
     userId: string,
     options?: RegisterOptions,
+    skipDocumentTypes: ConsentDocumentType[] = [],
   ): Promise<void> {
     const entries = Object.entries(DEFAULT_CONSENT_VERSIONS) as [
       ConsentDocumentType,
@@ -679,8 +730,12 @@ export class AuthService {
     ][];
     const source = options?.source ?? 'signup';
 
+    const filteredEntries = entries.filter(
+      ([documentType]) => !skipDocumentTypes.includes(documentType),
+    );
+
     await Promise.all(
-      entries.map(([documentType, version]) =>
+      filteredEntries.map(([documentType, version]) =>
         this.complianceService.recordConsent(userId, documentType, version, {
           source,
           ip: options?.ip,
@@ -716,7 +771,7 @@ export class AuthService {
         },
       },
       orderBy: {
-        createdAt: Prisma.SortOrder.desc,
+        createdAt: 'desc' as Prisma.SortOrder,
       },
     });
 
