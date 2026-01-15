@@ -10,6 +10,28 @@ import type { AppEvent } from '../types/backend/events';
 import { emitBookingEvent } from '../services/bookingEventBus';
 import { scheduleLocalNotification } from '../services/localNotificationService';
 
+const stripDiacritics = (value: string): string =>
+  value.normalize?.('NFD').replace(/[\u0300-\u036f]/g, '') ?? value;
+
+const eventTextForMatching = (event: AppEvent): string => {
+  const parts = [
+    event.title,
+    event.message,
+    event.type,
+    event.category,
+    typeof event.payload?.status === 'string' ? event.payload.status : undefined,
+  ];
+  return parts
+    .filter(Boolean)
+    .map((part) => stripDiacritics(String(part)))
+    .join(' ')
+    .toLowerCase();
+};
+
+const isServiceStartedEvent = (event: AppEvent): boolean => {
+  return eventTextForMatching(event).includes('servico iniciado');
+};
+
 export function useNotificationsSocket(authToken?: string | null) {
   const isPlayingRef = useRef(false);
   const processedKeysRef = useRef(new Set<string>());
@@ -76,13 +98,16 @@ export function useNotificationsSocket(authToken?: string | null) {
         (event.payload?.deepLink as string | undefined) ??
         event.targetUrl ??
         undefined;
-      NotificationUIService.showAppEvent({
-        dedupeKey: dedupeId,
-        title: localizedTitle,
-        message: localizedMessage,
-        type: 'info',
-        deepLink,
-      });
+      const isServiceStartedNotification = isServiceStartedEvent(event);
+      if (!isServiceStartedNotification) {
+        NotificationUIService.showAppEvent({
+          dedupeKey: dedupeId,
+          title: localizedTitle,
+          message: localizedMessage,
+          type: 'info',
+          deepLink,
+        });
+      }
 
       const createdAt = new Date(event.createdAt ?? Date.now());
       if (!Number.isNaN(createdAt.getTime())) {
@@ -101,7 +126,7 @@ export function useNotificationsSocket(authToken?: string | null) {
         kind.includes('servico') ||
         kind.includes('agendamento') ||
         kind.includes('booking');
-      if (isService) {
+      if (!isServiceStartedNotification && isService) {
         await scheduleLocalNotification({
           title: localizedTitle,
           body: localizedMessage,
@@ -172,12 +197,12 @@ export function useNotificationsSocket(authToken?: string | null) {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (
-        nextState === 'active' &&
-        (appStateRef.current === 'background' || appStateRef.current === 'inactive')
-      ) {
-        fetchPendingEvents();
-      }
+        if (
+          nextState === 'active' &&
+          (appStateRef.current === 'background' || appStateRef.current === 'inactive')
+        ) {
+          fetchPendingEvents();
+        }
       appStateRef.current = nextState;
     });
     return () => {
