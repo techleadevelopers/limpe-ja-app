@@ -16,6 +16,8 @@ import {
   LifeBuoy,
   CalendarClock,
   Radar,
+  MessageSquare,
+  Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -82,6 +84,11 @@ export default function Sidebar() {
     { path: "/live-tracking", icon: Radar, label: "Live Tracking", isActive: location === "/live-tracking" },
     { path: "/payment-management", icon: DollarSign, label: "Gestão de Pagamentos", isActive: location === "/payment-management" },
     { path: "/safety-alerts", icon: LifeBuoy, label: "Alertas de Segurança", badge: pendingSafetyAlertsData?.count || 0, isActive: location === "/safety-alerts" },
+    { path: "/support-center", icon: MessageSquare, label: "Central de Suporte", isActive: location === "/support-center" },
+  ];
+
+  const growth: NavItem[] = [
+    { path: "/referral-management", icon: Gift, label: "Programa de Indicações", isActive: location === "/referral-management" },
   ];
 
   const handleLogout = async () => {
@@ -138,6 +145,7 @@ export default function Sidebar() {
       <nav className="p-4">
         {renderGroup("Principal", primary)}
         {renderGroup("Operações", ops)}
+        {renderGroup("Crescimento", growth)}
 
         {/* Settings Section */}
         <div className="mt-8 pt-6 border-t border-gray-100">
