@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, CheckCircle, User, X, MapPin, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -193,40 +194,43 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
             className="space-y-6"
           >
             {/* Provider Info */}
-            <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-              <img
-                src={`https://images.unsplash.com/photo-150720939${Math.floor(Math.random() * 10)}?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100`}
-                alt={`${resolvedName} profile`}
-                className="w-16 h-16 rounded-full object-cover"
-              />
-              <div className="ml-4 flex-1">
-                <h3 className="text-lg font-semibold text-gray-900">{resolvedName}</h3>
-                <p className="text-gray-600">{provider.email}</p>
-                <div className="flex items-center mt-2 space-x-4">
-                  <span className="text-sm text-gray-600 flex items-center">
-                    <Star className="w-4 h-4 text-yellow-400 mr-1" />
-                    4.8 ({provider.fiveStarReviewCount} avaliações)
-                  </span>
-                  <span className="text-sm text-gray-600 flex items-center">
-                    <User className="w-4 h-4 mr-1" />
-                    {provider.jobsCompleted || 0} trabalhos concluídos
-                  </span>
+            
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16 ring-1 ring-gray-200 shadow-sm">
+                  {provider.avatarUrl ? (
+                    <AvatarImage
+                      src={provider.avatarUrl}
+                      alt={resolvedName}
+                    />
+                  ) : (
+                    <AvatarFallback>
+                      <User className="w-5 h-5 text-gray-500" />
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{resolvedName}</h3>
+                    <p className="text-sm text-gray-600">{provider.email}</p>
+                    <div className="flex items-center mt-2 space-x-4">
+                      <span className="text-sm text-gray-600 flex items-center">
+                        <Star className="w-4 h-4 text-yellow-400 mr-1" />
+                        4.8 ({provider.fiveStarReviewCount} avaliacoes)
+                      </span>
+                      <span className="text-sm text-gray-600 flex items-center">
+                        <User className="w-4 h-4 mr-1" />
+                        {provider.jobsCompleted || 0} trabalhos concluidos
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <Badge
-                className={`
-                  ${
-                    provider.verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW
-                      ? "bg-orange-100 text-orange-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  } border-0 text-sm px-3 py-1
-                `}
-              >
+              <Badge className="border-0 text-sm px-3 py-1">
                 {provider.verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW
-                  ? "Revisão Manual"
+                  ? "Revisao Manual"
                   : "Documentos Pendentes"}
               </Badge>
             </div>
+
 
             {/* Document Upload & OCR Results */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
