@@ -642,6 +642,29 @@ export default function SupportIndex() {
 
   const ListHeader = () => (
     <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+      <TouchableOpacity
+        style={[styles.whatsappBtn, { marginBottom: 14 }]}
+        onPress={openWhatsApp}
+        accessibilityRole="button"
+        accessibilityLabel="Falar com o suporte via WhatsApp"
+        accessibilityHint="Abre o WhatsApp para conversar com o time LimpeJá."
+      >
+        <View style={styles.whatsappIconWrap}>
+          {Icons3D.whatsapp ? (
+            <Image source={Icons3D.whatsapp} style={styles.whatsappIcon3d} />
+          ) : (
+            <Ionicons name="logo-whatsapp" size={24} color="#FFFFFF" />
+          )}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.whatsappBtnTxt}>Atendimento rápido</Text>
+          <Text style={[styles.whatsappBtnTxt, { fontSize: 12, textTransform: 'none' }]}>
+            fale agora com nosso time
+          </Text>
+        </View>
+        <Text style={[styles.whatsappBtnTxt, { fontSize: 12 }]}>+55 19 99322-3932</Text>
+      </TouchableOpacity>
+
       <View style={styles.formCard}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
           <Ionicons name="add-circle" size={26} color="#3A6FD8" />
@@ -742,25 +765,8 @@ export default function SupportIndex() {
         </View>
 
         <TouchableOpacity
-          style={styles.whatsappBtn}
-          onPress={openWhatsApp}
-          accessibilityRole="button"
-          accessibilityLabel="Falar pelo WhatsApp"
-          accessibilityHint="Toque para abrir o WhatsApp e enviar mensagem para suporte."
-        >
-          <View style={styles.whatsappIconWrap}>
-            {Icons3D.whatsapp ? (
-              <Image source={Icons3D.whatsapp} style={styles.whatsappIcon3d} />
-            ) : (
-              <Ionicons name="logo-whatsapp" size={24} color="#FFFFFF" /> 
-            )}
-          </View>
-          <Text style={styles.whatsappBtnTxt}>Fale pelo WhatsApp</Text>
-        </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.chatBtn}
-            onPress={() => router.push('/client/messages' as any)}
+          style={styles.chatBtn}
+          onPress={() => router.push('/client/messages' as any)}
           accessibilityRole="button"
           accessibilityLabel="Conversar com o suporte"
           accessibilityHint="Toque para abrir o chat de suporte dentro do app."
