@@ -16,26 +16,44 @@ import {
   UserRole,
   Prisma,
 } from '@prisma/client'; // Assumindo enums do Prisma
-import { NotificationsService } from '../notifications/notifications.service';
 import { SupportSlaPolicy } from './policies/sla.policy';
 import { SupportStateMachine } from './states/support.state-machine';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
+import { NotificationService } from '../services/NotificationService';
 
 @Injectable()
 export class SupportService {
   private readonly logger = new Logger(SupportService.name);
-  // Em um ambiente real, este ID seria configurável ou obtido dinamicamente.
-  // Por exemplo, você poderia ter um serviço para buscar todos os IDs de usuários administradores.
-  private readonly ADMIN_NOTIFICATION_USER_ID = 'SEU_ID_DE_USUARIO_ADMIN_AQUI'; // <-- ATENÇÃO: Substitua pelo ID real do usuário admin ou lógica para encontrá-lo.
 
   constructor(
     private prisma: PrismaService,
-    private notificationsService: NotificationsService,
+    private notificationService: NotificationService,
     private slaPolicy: SupportSlaPolicy,
     private stateMachine: SupportStateMachine,
     @InjectQueue('support-escalations') private escalationsQueue: Queue, // Injetar fila de escalonamento
   ) {}
+
+  private async notifyAdmins(
+    title: string,
+    body: string,
+    payload?: Record<string, unknown>,
+  ) {
+    const admins = await this.prisma.user.findMany({
+      where: { role: UserRole.ADMIN },
+      select: { id: true },
+    });
+    if (!admins.length) {
+      this.logger.warn('[SupportService] Nenhum admin encontrado para notificação.');
+      return;
+    }
+
+    await Promise.all(
+      admins.map((admin) =>
+        this.notificationService.sendToUser(admin.id, title, body, payload),
+      ),
+    );
+  }
 
   async createTicket(
     userId: string,
@@ -107,11 +125,10 @@ export class SupportService {
 
     // Notificar admin ou equipe de suporte sobre novo ticket
     // Usando sendPushNotification para notificar o admin
-    await this.notificationsService.sendPushNotification(
-      this.ADMIN_NOTIFICATION_USER_ID, // ID do usuário administrador
+    await this.notifyAdmins(
       `Novo ticket de suporte #${newTicket.id} - ${newTicket.subject}`,
       `Categoria: ${newTicket.category}. Aberto por: ${userId}.`,
-      { ticketId: newTicket.id, category: newTicket.category, userId: userId }, // Dados adicionais
+      { ticketId: newTicket.id, category: newTicket.category, userId },
     );
 
     // Agendar job de escalonamento SLA
@@ -211,20 +228,19 @@ export class SupportService {
     if (userRole === UserRole.CLIENT) {
       // Notificar agente/admin
       // Usando sendPushNotification para notificar o admin
-      await this.notificationsService.sendPushNotification(
-        this.ADMIN_NOTIFICATION_USER_ID, // ID do usuário administrador
+      await this.notifyAdmins(
         `Nova mensagem no ticket #${ticket.id} - ${ticket.subject}`,
         `Cliente ${userId} adicionou: "${body}"`,
-        { ticketId: ticket.id, userId: userId, messageBody: body }, // Dados adicionais
+        { ticketId: ticket.id, userId, messageBody: body },
       );
     } else {
       // Notificar cliente
       // Usando sendPushNotification para notificar o cliente
-      await this.notificationsService.sendPushNotification(
+      await this.notificationService.sendToUser(
         ticket.userId,
         `Seu ticket #${ticket.id} tem uma nova mensagem!`,
         `"${body}"`,
-        { ticketId: ticket.id, messageBody: body }, // Dados adicionais
+        { ticketId: ticket.id, messageBody: body },
       );
     }
 
@@ -279,11 +295,11 @@ export class SupportService {
 
     // Notificar o cliente sobre a mudança de status
     // Usando sendPushNotification para notificar o cliente
-    await this.notificationsService.sendPushNotification(
+    await this.notificationService.sendToUser(
       ticket.userId,
       `Status do seu ticket #${ticket.id} atualizado para: ${newStatus}`,
       `Seu ticket "${ticket.subject}" agora está com o status ${newStatus}.`,
-      { ticketId: ticket.id, newStatus: newStatus }, // Dados adicionais
+      { ticketId: ticket.id, newStatus },
     );
 
     return updatedTicket;
@@ -316,11 +332,11 @@ export class SupportService {
     });
 
     // Usando sendPushNotification para notificar o agente
-    await this.notificationsService.sendPushNotification(
+    await this.notificationService.sendToUser(
       agentId,
       `Você foi atribuído ao ticket #${ticket.id}`,
       `O ticket "${ticket.subject}" foi atribuído a você.`,
-      { ticketId: ticket.id, assignedAgentId: agentId }, // Dados adicionais
+      { ticketId: ticket.id, assignedAgentId: agentId },
     );
 
     return updatedTicket;
@@ -337,11 +353,10 @@ export class SupportService {
       // Aqui você pode:
       // 1. Notificar um grupo de admins/gerentes
       // Usando sendPushNotification para notificar o admin
-      await this.notificationsService.sendPushNotification(
-        this.ADMIN_NOTIFICATION_USER_ID, // ID do usuário administrador
+      await this.notifyAdmins(
         `ALERTA SLA EXPIRADO: Ticket #${ticketId} - ${ticket.subject}`,
         `O ticket de categoria ${category} excedeu o SLA e ainda está ${ticket.status}. Por favor, verifique!`,
-        { ticketId: ticket.id, category: category, status: ticket.status }, // Dados adicionais
+        { ticketId: ticket.id, category, status: ticket.status },
       );
       // 2. Mudar o status do ticket para um estado de "escalado"
       // await this.updateTicketStatus(ticketId, SupportTicketStatus.ESCALATED); // Se você tiver este status
