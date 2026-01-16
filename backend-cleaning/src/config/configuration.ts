@@ -84,6 +84,22 @@ export default () => ({
     },
   },
 
+  zapi: {
+    baseUrl: stripTrailingSlash(process.env.ZAPI_BASE_URL),
+    token: process.env.ZAPI_TOKEN,
+    instanceId: process.env.ZAPI_INSTANCE_ID,
+  },
+
+  // WhatsApp Business API
+  whatsapp: {
+    apiBaseUrl: stripTrailingSlash(process.env.WHATSAPP_API_BASE_URL),
+    apiToken: process.env.WHATSAPP_API_TOKEN,
+    pixKey: process.env.WHATSAPP_PIX_KEY,
+    pixReceiverName:
+      process.env.WHATSAPP_PIX_RECEIVER_NAME ??
+      'BlueCoder Software e Data LTDA',
+  },
+
   // Email
   email: {
     provider: process.env.EMAIL_SERVICE_PROVIDER || undefined,
