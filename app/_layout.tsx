@@ -45,48 +45,27 @@ import { useBookingStatusMeta } from "../hooks/useBookingStatusMeta";
 import i18n from "../i18n";
 import { getBookingsForUser } from "../services/bookingService";
 import NotificationUIService from "../services/notificationUIService";
-import messaging from "@react-native-firebase/messaging";
 import authService from "../services/authService";
 import {
-  acquireDevicePushToken,
   registerDevicePushToken,
+  registerForPushNotificationsAsync,
 } from "../services/pushService";
-import { requestNotificationPermissions } from "../utils/permissions";
 import { UserRole, VerificationStatus } from "../types/backend/auth";
 import { useNotificationsSocket } from "../hooks/useNotificationsSocket";
 import { BookingDetails, BookingStatus } from "../types/backend/bookings";
 import { initializeObservability } from "../services/observability";
+import * as Notifications from "expo-notifications";
+import { requestNotificationPermissions } from "../utils/permissions";
 
-// Optional local notifications setup (Android channel) Ã¢â¬â safe, no-op on iOS if unavailable
-
-let setupNotificationsOnce: (() => Promise<void>) | null = async () => {
-  try {
-    // dynamic import to avoid compile-time hard dependency
-
-    const Notifications =
-      (await import("expo-notifications")).default ||
-      (await import("expo-notifications"));
-
-    if ((Notifications as any)?.setNotificationChannelAsync) {
-      await (Notifications as any).setNotificationChannelAsync(
-        "high-priority",
-        {
-          name: "High Priority",
-
-          importance: (Notifications as any).AndroidImportance?.MAX ?? 5,
-
-          sound: "default",
-
-          vibrationPattern: [0, 250, 250, 250],
-
-          lockscreenVisibility: 1,
-        },
-      );
-    }
-  } catch {}
-
-  setupNotificationsOnce = null;
-};
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowList: true,
+  }),
+});
 
 function parseDateTime(dateIso: string, timeHHmm: string): Date {
   try {
@@ -170,14 +149,13 @@ const normalizeNotificationPayload = (
   ];
 
   entries.forEach((entry) => {
-    if (entry && typeof entry === 'object') {
+    if (entry && typeof entry === "object") {
       Object.assign(normalized, entry);
     }
   });
 
   return normalized;
 };
-
 
 const pickStringValue = (value?: unknown): string | undefined => {
   if (typeof value === "string" && value.trim().length > 0) {
@@ -220,12 +198,12 @@ const getMissionIdFromPayload = (
 ): string | undefined => {
   const normalized = normalizeNotificationPayload(payload);
 
- const candidates = [
-  (normalized as any).missionId,
-  (normalized as any).mission_id,
-  (normalized as any).payload?.missionId,
-  (normalized as any).appEvent?.missionId,
-];
+  const candidates = [
+    (normalized as any).missionId,
+    (normalized as any).mission_id,
+    (normalized as any).payload?.missionId,
+    (normalized as any).appEvent?.missionId,
+  ];
 
   for (const candidate of candidates) {
     const value = pickStringValue(candidate);
@@ -284,7 +262,7 @@ const getPaymentStatusFromPayload = (
   // 1. Normalizamos o payload para garantir que temos um objeto plano
   const normalized = normalizeNotificationPayload(payload);
 
-  // 2. Criamos a lista de candidatos usando (normalized as any) 
+  // 2. Criamos a lista de candidatos usando (normalized as any)
   // para o TS ignorar a falta de propriedades específicas
   const candidates = [
     (normalized as any).paymentStatus,
@@ -639,7 +617,8 @@ function RootLayoutContent() {
       }
 
       try {
-        const resolvedToken = token ?? (await acquireDevicePushToken());
+        const resolvedToken =
+          token ?? (await registerForPushNotificationsAsync());
 
         if (!resolvedToken) {
           return;
@@ -703,11 +682,11 @@ function RootLayoutContent() {
       const paymentStatus = getPaymentStatusFromPayload(payload);
 
       const title =
-  pickStringValue(
-    (payload as any).title ?? 
-    (payload as any).appEvent?.title ?? 
-    (payload as any).data?.title
-  ) ?? t("common.notification", { defaultValue: "Notificação" });
+        pickStringValue(
+          (payload as any).title ??
+            (payload as any).appEvent?.title ??
+            (payload as any).data?.title,
+        ) ?? t("common.notification", { defaultValue: "Notificação" });
 
       const message =
         pickStringValue(payload.message ?? payload.body) ??
@@ -882,16 +861,23 @@ function RootLayoutContent() {
 
   useNotificationsSocket(appReady ? token : null);
 
-  // one-time local notifications channel (Android). Harmless on iOS.
-
   useEffect(() => {
-    if (setupNotificationsOnce) {
-      setupNotificationsOnce();
+    if (Platform.OS !== "android") {
+      return;
     }
+
+    Notifications.setNotificationChannelAsync("default", {
+      name: "Default",
+      importance: Notifications.AndroidImportance?.MAX ?? 5,
+      sound: "default",
+      vibrationPattern: [0, 250, 250, 250],
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility?.PUBLIC ?? 1,
+    }).catch(() => {});
   }, []);
 
+
   useEffect(() => {
-    if (!appReady || !isAuthenticated || notificationPermissionRequested) {
+    if (!appReady || notificationPermissionRequested) {
       return;
     }
 
@@ -899,23 +885,14 @@ function RootLayoutContent() {
 
     (async () => {
       try {
-        const stored = await AsyncStorage.getItem(NOTIFICATION_PERMISSION_FLAG);
-
-        if (stored === "1") {
-          await registerPushToken();
-        } else {
-          const granted = await requestNotificationPermissions();
-
-          if (granted) {
-            await registerPushToken();
-          }
+        const granted = await requestNotificationPermissions();
+        if (!granted || cancelled) {
+          return;
         }
+        await registerPushToken();
       } catch (error) {
         if (__DEV__) {
-          console.warn(
-            "[RootLayout] Falha ao solicitar permissoes de notificacao:",
-            error,
-          );
+          console.warn("[RootLayout] Falha ao registrar token de push:", error);
         }
       } finally {
         if (!cancelled) {
@@ -933,59 +910,44 @@ function RootLayoutContent() {
     return () => {
       cancelled = true;
     };
-  }, [
-    appReady,
-    isAuthenticated,
-    notificationPermissionRequested,
-    registerPushToken,
-  ]);
+  }, [appReady, notificationPermissionRequested, registerPushToken]);
 
+  useEffect(() => {
+    if (!appReady || !isAuthenticated || !notificationPermissionRequested) {
+      return;
+    }
+
+    registerPushToken();
+  }, [appReady, isAuthenticated, notificationPermissionRequested, registerPushToken]);
   useEffect(() => {
     if (!appReady || !isAuthenticated) {
       return;
     }
-    let unsubscribe: (() => void) | undefined;
-    try {
-      unsubscribe = messaging().onTokenRefresh((token) => {
-        if (token) {
+    type PushTokenEvent = { data?: string | null; token?: string | null };
+    const subscription = Notifications.addPushTokenListener(
+      (event: PushTokenEvent) => {
+        const token = (event.data ?? event.token) as string | undefined;
+        if (typeof token === "string" && token) {
           registerPushToken(token);
         }
-      });
-    } catch (error) {
-      if (__DEV__) {
-        console.warn(
-          "[RootLayout] Falha no listener de token do Firebase Messaging:",
-          error,
-        );
-      }
-    }
+      },
+    );
     return () => {
       try {
-        unsubscribe?.();
+        subscription.remove();
       } catch {}
     };
   }, [appReady, isAuthenticated, registerPushToken]);
 
   useEffect(() => {
-    let sub: any;
-
-    (async () => {
-      try {
-        const Notifications =
-          (await import("expo-notifications")).default ||
-          (await import("expo-notifications"));
-
-        sub = Notifications.addNotificationReceivedListener(
-          (notification: any) => {
-            handleForegroundNotification(notification);
-          },
-        );
-      } catch {}
-    })();
-
+    const subscription = Notifications.addNotificationReceivedListener(
+      (notification: any) => {
+        handleForegroundNotification(notification);
+      },
+    );
     return () => {
       try {
-        sub?.remove?.();
+        subscription.remove();
       } catch {}
     };
   }, [handleForegroundNotification]);
@@ -1083,49 +1045,38 @@ function RootLayoutContent() {
   );
 
   useEffect(() => {
-    let sub: any;
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response: any) => {
+        try {
+          const payload = (response?.notification?.request?.content?.data ??
+            {}) as NotificationData;
+          if (navigateFromChatNotification(payload)) {
+            return;
+          }
 
-    (async () => {
-      try {
-        const Notifications =
-          (await import("expo-notifications")).default ||
-          (await import("expo-notifications"));
+          if (handleNotificationDeepLink(payload)) {
+            return;
+          }
 
-        sub = (Notifications as any).addNotificationResponseReceivedListener?.(
-          (response: any) => {
-            try {
-              const payload = (response?.notification?.request?.content?.data ??
-                {}) as NotificationData;
-              if (navigateFromChatNotification(payload)) {
-                return;
-              }
+          const url = ((payload as any)?.appEvent?.targetUrl ??
+            (payload as any)?.targetUrl ??
+            (payload as any)?.url ??
+            (payload as any)?.deeplink) as string | undefined;
 
-              if (handleNotificationDeepLink(payload)) {
-                return;
-              }
-
-             const url = (
-  (payload as any)?.appEvent?.targetUrl ??
-  (payload as any)?.targetUrl ?? 
-  (payload as any)?.url ??
-  (payload as any)?.deeplink
-) as string | undefined;
-
-              if (url && typeof url === "string") {
-                (router as any)?.push?.(url);
-              }
-            } catch {}
-          },
-        );
-      } catch {}
-    })();
+          if (url && typeof url === 'string') {
+            (router as any)?.push?.(url);
+          }
+        } catch {}
+      },
+    );
 
     return () => {
       try {
-        sub?.remove?.();
+        subscription.remove();
       } catch {}
     };
   }, [router, navigateFromChatNotification, handleNotificationDeepLink]);
+
 
   useEffect(() => {
     const prepareApp = async () => {
@@ -1143,7 +1094,7 @@ function RootLayoutContent() {
         // Removido: console.error('[RootLayoutContent | prepareApp] ERRO FATAL durante a inicializaÃ§Ã£o do aplicativo:', e);
 
         setInitializationError(
-          e?.message ?? "Erro desconhecido na inicializaÃ§Ã£o.",
+          e?.message ?? "Erro desconhecido na inicialização.",
         );
 
         try {
@@ -1215,7 +1166,7 @@ function RootLayoutContent() {
 
     if (initializationError) {
       console.error(
-        `[RootLayoutContent] Erro de inicializaÃ§Ã£o: ${initializationError}`,
+        `[RootLayoutContent] Erro de inicialização: ${initializationError}`,
       );
 
       return;
@@ -1330,9 +1281,9 @@ function RootLayoutContent() {
           // AÃ§Ã£o protegida em modo guest: alerta nativo e navegaÃ§Ã£o para cadastro de cliente
 
           Alert.alert(
-            "Cadastro necessÃ¡rio",
+            "Cadastro necessário",
 
-            "Crie seu cadastro para agendar serviÃ§os de limpeza",
+            "Crie seu cadastro para agendar serviços de limpeza",
 
             [
               {
