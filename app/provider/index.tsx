@@ -1,6 +1,7 @@
 // LimpeJaApp/app/provider/index.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics'; // CORREÇÃO: Import separado e correto para Haptics
+import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -23,11 +24,13 @@ import { useAuth } from '../../hooks/useAuth';
 // Import NotificationUIService
 import { toastUserError } from '../../_shared/errors/uiFeedback';
 import ProviderNavBar from '../../components/provider/navigation/ProviderNavBar';
+import { appQueryClient } from '../../components/provider/query-client-provider';
 import { subscribeToProviderNotifications } from '../../services/notificationBus';
 import NotificationUIService from '../../services/notificationUIService'; // Added
 // Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/dashboardService';
+import { uploadMyAvatar } from '../../services/providerService';
 // Importações das tipagens centralizadas
 import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
 // CORREÇÃO: Usar a interface ProviderDashboard do arquivo de provedores,
@@ -118,8 +121,10 @@ const DashboardHeader: React.FC<{
   providerName: string | undefined;
   avatarUrl: string | undefined | null;
   onProfilePress: () => void;
+  onAvatarPress: () => void;
+  isUploadingAvatar: boolean;
   isReducedMotionEnabled: boolean; // Passado para animações
-}> = ({ providerName, avatarUrl, onProfilePress, isReducedMotionEnabled }) => {
+}> = ({ providerName, avatarUrl, onProfilePress, onAvatarPress, isUploadingAvatar, isReducedMotionEnabled }) => {
   const insets = useSafeAreaInsets(); // CORREÇÃO: Hook para calcular insets (top = status bar no iOS)
   const { scaleAnim, onPressIn, onPressOut } = useAnimatedTouch();
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -147,25 +152,41 @@ const DashboardHeader: React.FC<{
         <Text style={headerStyles.greetingText}>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
         <Text style={headerStyles.currentDateText}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
       </View>
-      <TouchableOpacity
-        onPress={() => {
-          onProfilePress();
-        }}
-        style={[headerStyles.avatarButton, { transform: [{ scale: scaleAnim }] }]}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        accessibilityRole="button"
-        accessibilityLabel="Ir para o perfil"
-        accessibilityHint="Toque para editar seu perfil."
-      >
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={headerStyles.avatar} defaultSource={require('../../assets/images/default-avatar.png')} />
-        ) : (
-          <View style={headerStyles.avatarPlaceholder}>
-            <Ionicons name="person" size={24} color={WHITE} accessibilityHidden={true} />
-          </View>
-        )}
-      </TouchableOpacity>
+      <View style={headerStyles.avatarColumn}>
+        <TouchableOpacity
+          onPress={onAvatarPress}
+          style={[headerStyles.avatarButton, { transform: [{ scale: scaleAnim }] }]}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          accessibilityRole="button"
+          accessibilityLabel="Atualizar foto"
+          accessibilityHint="Toque para trocar a foto do perfil."
+        >
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={headerStyles.avatar} defaultSource={require('../../assets/images/default-avatar.png')} />
+          ) : (
+            <View style={headerStyles.avatarPlaceholder}>
+              <Ionicons name="person" size={24} color={WHITE} accessibilityHidden={true} />
+            </View>
+          )}
+          {isUploadingAvatar && (
+            <View style={headerStyles.avatarUploadingOverlay} pointerEvents="none">
+              <ActivityIndicator size="small" color={WHITE} />
+            </View>
+          )}
+        </TouchableOpacity>
+        <Text style={headerStyles.avatarReminder}>
+          💡 Use uma foto de ação com uniforme ou vassoura para passar confiança.
+        </Text>
+        <TouchableOpacity
+          onPress={onProfilePress}
+          accessibilityRole="button"
+          accessibilityLabel="Ver perfil completo"
+          accessibilityHint="Navegue para a tela de perfil."
+        >
+          <Text style={headerStyles.profileLinkText}>Ver perfil completo</Text>
+        </TouchableOpacity>
+      </View>
     </Animated.View>
   );
 };
@@ -209,6 +230,10 @@ const headerStyles = StyleSheet.create({
     color: TEXT_MUTED,
     marginTop: Spacing.xs,
   },
+  avatarColumn: {
+    alignItems: 'flex-end',
+    flexShrink: 0,
+  },
   avatarButton: {
     width: 40.5,
     height: 40.5,
@@ -227,6 +252,25 @@ const headerStyles = StyleSheet.create({
     backgroundColor: ICON_PRIMARY,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  avatarUploadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.28)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarReminder: {
+    fontSize: 11,
+    color: TEXT_MUTED,
+    marginTop: 6,
+    textAlign: 'right',
+  },
+  profileLinkText: {
+    fontSize: 12,
+    color: ICON_PRIMARY,
+    fontWeight: '600',
+    marginTop: 2,
+    textDecorationLine: 'underline',
   },
 });
 
@@ -941,8 +985,9 @@ const ConfirmedServiceItem: React.FC<{
 // Componente principal do Dashboard do Provedor (refinado com reduced motion global e haptics)
 export default function ProviderDashboardScreen() {
   const router = useRouter();
-  const { user, isLoading: authLoading, logout } = useAuth(); // Corrigido: usando logout em vez de signOut
+  const { user, isLoading: authLoading, logout, updateUser } = useAuth(); // Corrigido: usando logout em vez de signOut
   const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<BookingDetails[]>([]);
   const [upcomingServices, setUpcomingServices] = useState<BookingDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1155,6 +1200,45 @@ export default function ProviderDashboardScreen() {
     setIsRefreshing(true);
     fetchData();
   }, [fetchData, isReducedMotionEnabled]);
+  const handleAvatarPress = useCallback(async () => {
+    if (isUploadingAvatar) return;
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
+        NotificationUIService.showError(
+          'Precisamos da sua permissão para acessar a galeria e atualizar sua foto.',
+          'Permissão necessária',
+        );
+        return;
+      }
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (pickerResult.canceled) return;
+      const fileUri = pickerResult.assets?.[0]?.uri ?? (pickerResult as any).uri;
+      if (!fileUri) return;
+      setIsUploadingAvatar(true);
+      const { url } = await uploadMyAvatar(fileUri);
+      NotificationUIService.showSuccess('Perfil atualizado! Sua nova foto já está visível para os clientes.', 'Foto atualizada');
+      if (user) {
+        await updateUser({ avatarUrl: url });
+      }
+      setDashboardData((prev) =>
+        prev ? { ...prev, avatarUrl: url, updatedAt: new Date().toISOString() } : prev,
+      );
+      appQueryClient.invalidateQueries({ queryKey: ['providers'] });
+      if (user?.id) {
+        appQueryClient.invalidateQueries({ queryKey: ['provider', user.id] });
+      }
+    } catch (error: any) {
+      NotificationUIService.showError(error, 'Não foi possível atualizar a foto.');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  }, [isUploadingAvatar, updateUser, user]);
   const handleViewAllServicesPress = () => {
     if (__DEV__) {
       console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviços.");
@@ -1408,6 +1492,8 @@ export default function ProviderDashboardScreen() {
           providerName={headerProviderName || dashboardData?.fullName}
           avatarUrl={headerAvatarUrl}
           onProfilePress={() => router.push('/provider/profile' as any)}
+          onAvatarPress={handleAvatarPress}
+          isUploadingAvatar={isUploadingAvatar}
           isReducedMotionEnabled={isReducedMotionEnabled}
         />
         {/*QA_PANEL_ENABLED && (
