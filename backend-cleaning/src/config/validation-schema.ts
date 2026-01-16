@@ -70,6 +70,31 @@ export const validationSchema = Joi.object({
     .required()
     .description('Chave da API de terceiros (facematch/liveness)'),
 
+  // WhatsApp Business API (opcional em dev/test)
+  WHATSAPP_API_BASE_URL: Joi.string()
+    .uri()
+    .allow('', null)
+    .optional()
+    .description('Endpoint base da API do WhatsApp Business'),
+
+  WHATSAPP_API_TOKEN: Joi.string().allow('', null).optional(),
+
+  WHATSAPP_PIX_KEY: Joi.string().allow('', null).optional(),
+
+  WHATSAPP_PIX_RECEIVER_NAME: Joi.string().allow('', null).optional(),
+
+  // Z-API integration
+  ZAPI_INSTANCE_ID: Joi.string().allow('', null).optional(),
+
+  ZAPI_TOKEN: Joi.string()
+    .required()
+    .description('Token da Z-API usado no endpoint de envio de mensagens'),
+
+  ZAPI_BASE_URL: Joi.string()
+    .uri()
+    .required()
+    .description('Base URL da Z-API (instância + token)'),
+
   // Email Service
   EMAIL_SERVICE_PROVIDER: Joi.string().allow('', null).optional(),
 
