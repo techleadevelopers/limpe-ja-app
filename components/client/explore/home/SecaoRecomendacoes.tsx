@@ -220,11 +220,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: Platform.OS === 'android' ? 15 : 15.5,
     fontFamily: 'Montserrat-Regular',
-    fontWeight: Platform.OS === 'android' ? '600' : '600',
-    color: 'rgba(44, 62, 80, 0.85)',
+    fontWeight: '600',
+    color: 'rgba(95, 118, 141, 0.7)',
     letterSpacing: 0.5,
-    marginTop: 22,
-    right: Platform.OS === 'android' ? 4 : 0,
+    marginTop: 20,
+    marginBottom: 0,
+    right: Platform.OS === 'android' ? 0 : 0,
   },
   viewAllButton: {
     flexDirection: 'row',
