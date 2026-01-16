@@ -43,6 +43,7 @@ import { logMissingConfigOnce } from '../common/logging/missing-config.logger';
 import { ConnectService } from '../connect/connect.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateNotificationDto } from '../notifications/dto/create-notification.dto';
+import { WhatsappService } from '../services/whatsappService';
 import { PaymentIntentLocker } from './payment-intent-locker';
 import { canTransition, PaymentIntentState } from './payment.state-machine';
 import {
@@ -185,6 +186,7 @@ export class PaymentsService {
     private readonly payoutsService: PayoutsService,
     private readonly queues: QueuesService,
     private readonly notificationsService: NotificationsService,
+    private readonly whatsappService: WhatsappService,
     private readonly connectService: ConnectService,
   ) {
     this.pagseguroApiToken =
@@ -476,6 +478,29 @@ export class PaymentsService {
           priority: 1,
           idempotencyKey: `notif:payment_confirmed:provider:${b.id}`,
         });
+      }
+      const clientPhone = b.client?.user?.phone ?? b.client?.phone;
+      if (clientPhone) {
+        const scheduledDate = b.scheduledDate
+          ? new Intl.DateTimeFormat('pt-BR', {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric',
+            }).format(new Date(b.scheduledDate))
+          : '';
+        const scheduledTime = formatScheduledTime(b.scheduledTime);
+        const scheduleLabel =
+          [scheduledDate, scheduledTime].filter(Boolean).join(' às ') ||
+          'horário agendado';
+        void this.whatsappService.notifyPaymentConfirmed(
+          clientName,
+          scheduleLabel,
+          clientPhone,
+          {
+            bookingId: b.id,
+            status: BookingStatus.CONFIRMED,
+          },
+        );
       }
       await this.persistPaymentConfirmedNotification(b);
     }
