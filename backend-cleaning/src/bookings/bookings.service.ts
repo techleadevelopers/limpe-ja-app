@@ -10,6 +10,7 @@ import {
   forwardRef,
   Inject,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -37,6 +38,7 @@ import { ProviderWithCalculatedRating } from '../providers/providers.service';
 import { ProviderServicesService } from '../provider-services/provider-services.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationService } from '../services/NotificationService';
+import { WhatsappService } from '../services/whatsappService';
 import { ComplianceService } from '../compliance/compliance.service';
 import {
   ConsentDocumentType,
@@ -207,6 +209,8 @@ export class BookingsService {
     private providerServicesService: ProviderServicesService,
     private notificationsService: NotificationsService,
     private notificationService: NotificationService,
+    private readonly whatsappService: WhatsappService,
+    private readonly configService: ConfigService,
     private complianceService: ComplianceService,
     private queuesService: QueuesService,
     private pricingService: PricingService,
@@ -1751,7 +1755,7 @@ private getScheduledAtInSaoPaulo(
       );
     }
 
-      return this.prisma.booking.create({
+      const booking = await this.prisma.booking.create({
         data: {
           clientId: data.clientId,
           providerId: data.providerId,
@@ -1768,20 +1772,109 @@ private getScheduledAtInSaoPaulo(
           expiresAt: new Date(Date.now() + PENDING_PAYMENT_TIMEOUT_MS),
         },
         include: {
-        client: { include: { user: true } },
-        provider: { include: { user: true } },
-        providerService: { include: { service: true } },
-        review: true,
-        address: true,
-        subscription: true,
-        incidents: true,
-        guaranteeClaims: true,
-        coupon: true,
-        paymentIntent: true,
-        bookingInsurance: true,
-        bookingProofs: true,
-      },
+          client: { include: { user: true } },
+          provider: { include: { user: true } },
+          providerService: { include: { service: true } },
+          review: true,
+          address: true,
+          subscription: true,
+          incidents: true,
+          guaranteeClaims: true,
+          coupon: true,
+          paymentIntent: true,
+          bookingInsurance: true,
+          bookingProofs: true,
+        },
+      });
+      return booking;
+    }
+
+  private runWhatsappForStatus(
+    booking: BookingWithDetailsRelations,
+    status: BookingStatus,
+  ) {
+    void this.handleBookingWhatsappNotification(booking, status).catch((error) => {
+      this.logger.warn(
+        `[BookingsService] WhatsApp ${status} falhou: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     });
+  }
+
+  private async handleBookingWhatsappNotification(
+    booking: BookingWithDetailsRelations,
+    status: BookingStatus,
+  ) {
+    const phone = this.getClientPhone(booking);
+    if (!phone) {
+      return;
+    }
+
+    const clientName =
+      booking.client?.user?.fullName ??
+      booking.client?.fullName ??
+      'Cliente';
+
+    if (status === BookingStatus.PENDING_PAYMENT) {
+      await this.whatsappService.notifyNewOrder(
+        clientName,
+        this.configService.get<string>('whatsapp.pixKey') ?? '',
+        phone,
+        {
+          bookingId: booking.id,
+          status,
+        },
+      );
+      return;
+    }
+
+    if (status === BookingStatus.CONFIRMED) {
+      await this.whatsappService.notifyPaymentConfirmed(
+        clientName,
+        this.formatBookingSchedule(booking),
+        phone,
+        {
+          bookingId: booking.id,
+          status,
+        },
+      );
+    }
+  }
+
+  private getClientPhone(booking: BookingWithDetailsRelations): string | undefined {
+    return (
+      booking.client?.user?.phone?.trim() ??
+      booking.client?.phone?.trim() ??
+      undefined
+    );
+  }
+
+  private getClientDisplayName(
+    booking: BookingWithDetailsRelations,
+  ): string {
+    return (
+      booking.client?.user?.fullName ??
+      booking.client?.fullName ??
+      'Cliente'
+    );
+  }
+
+  private formatBookingSchedule(booking: BookingWithDetailsRelations): string {
+    const parts: string[] = [];
+    if (booking.scheduledDate) {
+      parts.push(
+        new Intl.DateTimeFormat('pt-BR', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        }).format(new Date(booking.scheduledDate)),
+      );
+    }
+    if (booking.scheduledTime) {
+      parts.push(booking.scheduledTime);
+    }
+    return parts.length ? parts.join(' às ') : 'horário pendente';
   }
 
   // NEW: Method to infer demand for pricing service
@@ -1868,6 +1961,18 @@ private getScheduledAtInSaoPaulo(
       this.logger.log(
         `[BookingsService] createBookingAndPixCharge - Resposta PIX Charge recebida: ${JSON.stringify(pixChargeResponse)}`,
       );
+      const clientPhone = this.getClientPhone(bookingPrisma);
+      if (clientPhone) {
+        void this.whatsappService.notifyNewOrder(
+          this.getClientDisplayName(bookingPrisma),
+          pixChargeResponse.qrCodeText,
+          clientPhone,
+          {
+            bookingId: bookingDto.id,
+            status: BookingStatus.PENDING_PAYMENT,
+          },
+        );
+      }
       return { booking: bookingDto, pixCharge: pixChargeResponse };
     } catch (error: any) {
       this.logger.error(
@@ -2162,6 +2267,8 @@ private getScheduledAtInSaoPaulo(
         this.logger.warn(` Falha nos lembretes: ${e.message}`);
       }
     }
+
+    void this.runWhatsappForStatus(updatedBooking, newStatus);
 
     return updatedBooking;
   }
