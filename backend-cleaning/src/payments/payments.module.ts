@@ -7,6 +7,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { CouponsModule } from '../coupons/coupons.module';
+import { ServicesModule } from '../services/services.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailModule } from '../email/email.module';
 import { QueuesModule } from '../queues/queues.module';
@@ -20,6 +21,7 @@ import { CacheModule } from '../cache/cache.module';
     forwardRef(() => ProvidersModule),
     forwardRef(() => BookingsModule),
     CouponsModule,
+    ServicesModule,
     NotificationsModule,
     EmailModule,
     CacheModule,
