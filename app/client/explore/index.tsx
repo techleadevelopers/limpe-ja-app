@@ -65,7 +65,7 @@ import { getNumericPriceValue } from '../../../utils/service-helpers';
 import ScreenContainer from '@/components/layout/ScreenContainer';
 import { useDevice } from '@/utils/responsive';
 import CarouselBannerItem from '../../../components/client/explore/home/CarouselBannerItem';
-// import CategoriaCard from '../../../components/client/explore/home/CategoriaCard';
+import CategoriaCard from '../../../components/client/explore/home/CategoriaCard';
 import DEFENSE_SOS from '../../../components/client/explore/home/DEFENSE_SOS';
 import NavBar from '../../../components/client/explore/home/NavBar';
 import NewHeader from '../../../components/client/explore/home/NewHeader';
@@ -73,6 +73,7 @@ import PrestadorCard from '../../../components/client/explore/home/PrestadorCard
 import RecomendacaoCard from '../../../components/client/explore/home/RecomendacaoCard';
 import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrestadores';
 import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRecomendacoes';
+import SecaoContainer from '../../../components/client/explore/home/SecaoContainer';
 import { normalizeProviderList } from '../../../components/client/explore/home/providerAvailability';
 import { useTutorial } from '../../../hooks/useTutorial';
 
@@ -345,7 +346,7 @@ export default function ExploreClientScreen() {
         },
       ]}>
       <View style={styles.categoryTitleWrapper}>
-       
+        <Text style={styles.categorySectionTitle}>Dia a dia</Text>
         <TouchableOpacity
           onPress={() => router.push('/client/explore/todas-categorias' as any)}
           style={styles.viewAllButton}
@@ -353,19 +354,21 @@ export default function ExploreClientScreen() {
           {/* <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />*/}
         </TouchableOpacity>
       </View>
-        {/* <SecaoContainer<Service>
-        titulo={t('search.all_categories')}
-        onVerTudoPress={() => router.push('/client/explore/todas-categorias' as any)}
-        data={categoriesToRender}
-        renderItem={({ item }) => {
-          if (!item || !item.name) return null;
-          return (
-            <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
-          );
-        }}
-        horizontal={true}
-        noDataText={t('search.no_results')}
-      /> */}
+        {isAuthenticated && (
+          <SecaoContainer<Service>
+            titulo={t('search.all_categories')}
+            onVerTudoPress={() => router.push('/client/explore/todas-categorias' as any)}
+            data={categoriesToRender}
+            renderItem={({ item }) => {
+              if (!item || !item.name) return null;
+              return (
+                <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
+              );
+            }}
+            horizontal={true}
+            noDataText={t('search.no_results')}
+          />
+        )}
     </Animated.View>
   );
 
@@ -912,26 +915,29 @@ export default function ExploreClientScreen() {
                   ],
                 }}>
                 {/* Aplica o ajuste de margem inferior para visitantes Android */}
-                <View style={[styles.androidHeaderLift, isAndroidVisitor && { marginBottom: 20 }]}>
-                  <NewHeader
-                    userName={userNameDisplay}
-                    userAddress={addressToDisplay}
-                    isVisitor={!isAuthenticated}
-                  />
-                </View>
+              <View style={[styles.androidHeaderLift, isAndroidVisitor && { marginBottom: 20 }]}>
+                <NewHeader
+                  userName={userNameDisplay}
+                  userAddress={addressToDisplay}
+                  isVisitor={!isAuthenticated}
+                />
+              </View>
+            </Animated.View>
+            {/* Banner for logged-in users is currently disabled */}
+            {/*
+            {isAuthenticated && primaryBanner && (
+              <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim }]}>
+                <CarouselBannerItem
+                  title={primaryBanner.title}
+                  discount={primaryBanner.discount}
+                  description={primaryBanner.description}
+                  buttonText={primaryBanner.buttonText}
+                  badgeText={primaryBanner.badgeText}
+                  onPress={primaryBanner.onPress}
+                />
               </Animated.View>
-              {primaryBanner && (
-                <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim }]}>
-                  <CarouselBannerItem
-                    title={primaryBanner.title}
-                    discount={primaryBanner.discount}
-                    description={primaryBanner.description}
-                    buttonText={primaryBanner.buttonText}
-                    badgeText={primaryBanner.badgeText}
-                    onPress={primaryBanner.onPress}
-                  />
-                </Animated.View>
-              )}
+            )}
+            */}
               {/*QA_PANEL_ENABLED && (
                 <TouchableOpacity
                   style={styles.devPanelBadge}
@@ -943,17 +949,15 @@ export default function ExploreClientScreen() {
                 </TouchableOpacity>
               )}*/}
 
-              {/* NOVO BLOCO CONDICIONAL: Acesso Rápido (Logado) OU Como Funciona (Visitante) */}
-              {isAuthenticated ? (
-                // Usuário LOGADO: Exibe ACESSO RÁPIDO
-                Platform.OS !== 'android' && renderCategoriesSection()
-              ) : (
-                // Usuário VISITANTE: Exibe COMO FUNCIONA
+              {/* Exibe o bloco Dia a dia (categories) somente quando autenticado */}
+              {isAuthenticated && renderCategoriesSection()}
+              {/* Visitante continua vendo o bloco Como Funciona */}
+              {!isAuthenticated && (
                 <View
                   style={[
                     styles.howItWorksTutorialContainer,
                     visitorHowItWorksAdjustment,
-                    { width: '101%', left: -26, },
+                    { width: '90%', left: 0 },
                   ]}>
                   <Text style={styles.howItWorksTitle} allowFontScaling={false}>
                     Como funciona o LimpeJá
@@ -978,7 +982,7 @@ export default function ExploreClientScreen() {
                       </Text>
                     </View>
                   </View>
-  
+
                 </View>
               )}
               {/* FIM NOVO BLOCO CONDICIONAL */}
@@ -1054,10 +1058,10 @@ export default function ExploreClientScreen() {
                       },
                     ],
                   }}>
-                  <SecaoPrestadores
-                    titulo={t('search.nearby_providers')}
-                    onVerTudoPress={() => router.push('/client/explore/todos-prestadores-proximos' as any)}
-                    data={prestadoresData}
+                <SecaoPrestadores
+                  titulo={t('search.nearby_providers')}
+                  onVerTudoPress={() => router.push('/client/explore/todos-prestadores-proximos' as any)}
+                  data={prestadoresData}
 
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
@@ -1074,7 +1078,18 @@ export default function ExploreClientScreen() {
 
                 </Animated.View>
 
-                {isAuthenticated && Platform.OS === 'android' && renderCategoriesSection()}
+                {!isAuthenticated && primaryBanner && (
+                  <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim, marginTop: 18 }]}>
+                    <CarouselBannerItem
+                      title={primaryBanner.title}
+                      discount={primaryBanner.discount}
+                      description={primaryBanner.description}
+                      buttonText={primaryBanner.buttonText}
+                      badgeText={primaryBanner.badgeText}
+                      onPress={primaryBanner.onPress}
+                    />
+                  </Animated.View>
+                )}
 
                 {/* Spacer para scroll extra (compensa absolutos) */}
                 <View style={{ height: 10 }} />
@@ -1308,7 +1323,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#F1F2F2',
     paddingTop: 0,
-    paddingBottom: 10,
+    paddingBottom: 62,
     paddingHorizontal: 2,
   },
   devPanelBadge: {
@@ -1345,13 +1360,12 @@ const styles = StyleSheet.create({
     marginBottom: -3,
   },
   categorySectionTitle: {
-    fontSize: 16.5,
+    fontSize: Platform.OS === 'android' ? 15 : 15.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '600',
-    color: 'rgba(44, 62, 80, 0.85)',
+    color: 'rgba(95, 118, 141, 0.7)',
     letterSpacing: 0.5,
-    marginBottom: 10,
-    marginLeft: 16,
+    marginBottom: 8,
   },
   carouselContainer: {
     marginTop: 8,
@@ -1551,15 +1565,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
-  howItWorksTutorialContainer: {
+    howItWorksTutorialContainer: {
     marginHorizontal: 11,
-    marginBottom: Platform.OS === 'android' ? 18 : 12, // Este valor será sobrescrito condicionalmente
+    marginBottom: Platform.OS === 'android' ? 18 : 12,
     paddingVertical: Platform.OS === 'android' ? 12 : 12,
-    paddingHorizontal: 29,
+    paddingHorizontal: 26,
     borderRadius: 18,
     backgroundColor: '#ffffffff',
     borderWidth: Platform.OS === 'android' ? 0 : 1,
     borderColor: COR_BORDA_SUAVE,
+    width: '80%',
+    alignSelf: 'center',
     
   },
   howItWorksTitle: {
@@ -1585,7 +1601,7 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   howItWorksStepLabel: {
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
     color: AppColors.textBody,
     fontFamily: 'Montserrat-Regular', // ✅ AGORA O ANDROID VAI ACHAR
