@@ -28,8 +28,18 @@ const eventTextForMatching = (event: AppEvent): string => {
     .toLowerCase();
 };
 
+const SERVICE_STARTED_PATTERNS = [
+  'servico iniciado',
+  'service started',
+  'booking started',
+  'started service',
+  'servico em andamento',
+  'service in progress',
+];
+
 const isServiceStartedEvent = (event: AppEvent): boolean => {
-  return eventTextForMatching(event).includes('servico iniciado');
+  const text = eventTextForMatching(event);
+  return SERVICE_STARTED_PATTERNS.some((pattern) => text.includes(pattern));
 };
 
 export function useNotificationsSocket(authToken?: string | null) {
