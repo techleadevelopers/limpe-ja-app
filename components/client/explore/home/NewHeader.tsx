@@ -242,7 +242,7 @@ const getGreeting = () => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: Platform.OS === 'android' ? 10 : -180,
+    paddingVertical: Platform.OS === 'android' ? 20 : -180,
     left: 3,
     top: Platform.OS === 'android' ? 2 : 0,
     marginTop: Platform.OS === 'android' ? 18 : 0,
