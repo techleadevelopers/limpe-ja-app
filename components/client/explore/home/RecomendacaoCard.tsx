@@ -20,6 +20,7 @@ import AnimatedReanimated, {
 import { CLIENT_ROUTES } from '../../../../constants/routes';
 import { ProviderServiceOffering } from '../../../../types/backend/provider-service';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
+import { cacheBustAvatarUrl } from '../../../../utils/avatar';
 // Importar os novos formatadores e helpers
 import { formatDistance, getNextAvailableDate } from '../../../../utils/formatters';
 import { getFormattedServicePrice, getNumericPriceValue } from '../../../../utils/service-helpers';
@@ -337,8 +338,9 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
     }
   };
 
-  const avatarSource = item.avatarUrl
-    ? { uri: item.avatarUrl }
+  const avatarUri = cacheBustAvatarUrl(item.avatarUrl, item.updatedAt) ?? item.avatarUrl;
+  const avatarSource = avatarUri
+    ? { uri: avatarUri }
     : require('../../../../assets/images/default-avatar.png');
 
   // --- Lógica para determinar o serviço principal a ser exibido como "A partir de" ---
