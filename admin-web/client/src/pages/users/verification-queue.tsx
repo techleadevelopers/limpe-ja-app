@@ -235,9 +235,9 @@ export default function VerificationQueue() {
                     const statusInfo = getStatusInfo(provider.verificationStatus || "");
                     const StatusIcon = statusInfo.icon;
                     
-                    return (
-                      <motion.div
-                        key={provider.id}
+                        return (
+                          <motion.div
+                            key={provider.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.3, delay: index * 0.1 }}
@@ -248,15 +248,24 @@ export default function VerificationQueue() {
                           <StatusIcon size={20} />
                         </div>
                         
-                        <div className="ml-4 flex-1">
-                          <div className="flex items-center gap-3 mb-1">
-                            <h3 className="font-semibold text-gray-900">{providerFullName}</h3>
-                            <Badge className={`text-xs px-2 py-1 border ${statusInfo.badge}`}>
-                              {statusInfo.priority} Prioridade
-                            </Badge>
+                        <div className="ml-4 flex-1 flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 border border-white shadow-sm flex-shrink-0">
+                            <img
+                              src={provider.avatarUrl || 'https://static.limpeja.com/default-avatar.png'}
+                              alt={`Avatar de ${providerFullName}`}
+                              className="w-full h-full object-cover"
+                            />
                           </div>
-                          <p className="text-sm text-gray-600">{provider.email}</p>
-                          <p className="text-xs text-gray-500 mt-1">{statusInfo.text}</p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <h3 className="font-semibold text-gray-900">{providerFullName}</h3>
+                              <Badge className={`text-xs px-2 py-1 border ${statusInfo.badge}`}>
+                                {statusInfo.priority} Prioridade
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600">{provider.email}</p>
+                            <p className="text-xs text-gray-500 mt-1">{statusInfo.text}</p>
+                          </div>
                         </div>
                         
                         <div className="text-right">
