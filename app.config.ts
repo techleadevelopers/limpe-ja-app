@@ -10,7 +10,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
 
     name: 'LimpeJá',
     slug: 'limpeja',
-    version: '1.0.30',
+    version: '1.0.31',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'cleaning',
@@ -27,7 +27,8 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.techleadevelopers.limpeja',
-      buildNumber: '34',
+      googleServicesFile: './GoogleService-Info.plist',
+      buildNumber: '35',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription:
@@ -44,7 +45,8 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     },
 
     android: {
-      versionCode: 18,
+      versionCode: 19,
+      googleServicesFile: './google-services.json',
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#ffffff',
@@ -70,6 +72,11 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
       [
         'expo-build-properties',
         {
+          android: {
+            compileSdkVersion: 34,
+            targetSdkVersion: 34,
+            buildToolsVersion: '34.0.0',
+          },
           ios: {
             useFrameworks: 'dynamic',
             useModularHeaders: true,
