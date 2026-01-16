@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ProviderDisplayInfo } from '../types/backend/providers';
 import { formatDistance } from '../utils/formatters';
+import { cacheBustAvatarUrl } from '../utils/avatar';
 
 interface ProviderCardProps {
   provider: ProviderDisplayInfo;
@@ -28,6 +29,7 @@ const formatNextAvailable = (iso?: string | null) => {
 
 const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress, isVerified = false }) => {
   const { t } = useTranslation();
+  const avatarUri = cacheBustAvatarUrl(provider.avatarUrl, provider.updatedAt) ?? provider.avatarUrl;
 
   const minPrice = provider.providerServices && provider.providerServices.length > 0
     ? provider.providerServices.reduce((min, service) => {
@@ -63,7 +65,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress, isVerifi
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(provider.id)}>
       <Image
-        source={provider.avatarUrl ? { uri: provider.avatarUrl } : require('/assets/images/default-avatar.png')}
+        source={avatarUri ? { uri: avatarUri } : require('/assets/images/default-avatar.png')}
         style={styles.avatar}
       />
       <View style={styles.infoContainer}>
