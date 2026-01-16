@@ -609,6 +609,7 @@ model Booking {
   bookingInsurance BookingInsurance?
   bookingProofs    BookingProof[]
   notificationSchedules NotificationSchedule[]
+  notificationLogs NotificationLog[]
   policyHits        MessagePolicyHit[]
 
   // Metadata
@@ -755,6 +756,32 @@ model NotificationSchedule {
 
   @@index([bookingId])
   @@index([status, runAt])
+}
+
+model NotificationLog {
+  id            String          @id @default(uuid())
+  bookingId     String
+  booking       Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  status        BookingStatus?
+  messageKey    String
+  recipientPhone String?
+  payload       Json?
+  externalMessageId String?
+  createdAt     DateTime        @default(now())
+
+  @@index([bookingId, status, messageKey])
+  @@index([externalMessageId])
+  @@map("NotificationLogs")
+}
+
+model WhatsappWebhookLog {
+  id            String   @id @default(uuid())
+  messageId     String?
+  phone         String?
+  text          String?
+  status        String?
+  payload       Json?
+  createdAt     DateTime @default(now())
 }
 
 model Review {
