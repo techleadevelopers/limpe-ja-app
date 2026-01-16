@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "35489557635",
-    "project_id": "semiotic-anvil-461613-c0",
-    "storage_bucket": "semiotic-anvil-461613-c0.firebasestorage.app"
+    "project_number": "60502803798",
+    "project_id": "limpeja-app",
+    "storage_bucket": "limpeja-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:35489557635:android:fa20487f5dbc67e07fffb6",
+        "mobilesdk_app_id": "1:60502803798:android:accad6db016d7b863982f7",
         "android_client_info": {
           "package_name": "com.techleadevelopers.limpeja"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCJha5n2T32XfHbTYyBisLS-pMQnxHFGDo"
+          "current_key": "AIzaSyB5bzbEPUvh87BHeKAxL_nMaQsSwvGKuTw"
         }
       ],
       "services": {
