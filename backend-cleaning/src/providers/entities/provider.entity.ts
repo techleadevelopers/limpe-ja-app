@@ -29,6 +29,18 @@ export class ProviderEntity implements PrismaProvider {
   fullName: string;
 
   @ApiPropertyOptional({
+    description: 'Latitude do provedor',
+    example: -23.55052,
+  })
+  latitude: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Longitude do provedor',
+    example: -46.633308,
+  })
+  longitude: number | null;
+
+  @ApiPropertyOptional({
     description: 'CPF do provedor',
     example: '123.456.789-00',
   })
