@@ -66,13 +66,13 @@ export class WhatsappService {
       this.logger.warn(
         '[WhatsappService] Número de telefone ausente; envio ignorado.',
       );
-      return false;
+      return { success: false };
     }
     if (!message?.trim()) {
       this.logger.warn(
         '[WhatsappService] Mensagem vazia; envio de WhatsApp bloqueado.',
       );
-      return false;
+      return { success: false };
     }
 
     const normalized = this.normalizePhone(phone);
@@ -310,6 +310,8 @@ export class WhatsappService {
     if (extra) {
       Object.assign(payload, extra);
     }
-    return Object.keys(payload).length ? payload : undefined;
+    return Object.keys(payload).length
+      ? (payload as Prisma.JsonValue)
+      : undefined;
   }
 }
