@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('webhooks/whatsapp')
@@ -21,26 +22,22 @@ export class WhatsappWebhookController {
     const status =
       String(body?.['status'] ?? body?.['messageStatus'] ?? body?.['event'] ?? '')
         .trim() || undefined;
+    const event =
+      String(body?.['event'] ?? body?.['type'] ?? '')
+        .trim() || 'unknown';
+    const instanceId =
+      String(body?.['instanceId'] ?? body?.['instance'] ?? '')
+        .trim() || 'unknown';
 
     if (messageId && status) {
       await this.updateNotificationLog(messageId, status, body);
     }
 
-    const text =
-      (typeof body?.['message'] === 'string'
-        ? body['message']
-        : body?.['message'] && typeof body['message'] === 'object'
-        ? String((body['message'] as any).body ?? '')
-        : '') ||
-      String(body?.['text'] ?? body?.['body'] ?? '');
-
     await this.prisma.whatsappWebhookLog.create({
       data: {
-        messageId,
-        phone: this.extractPhone(body),
-        text: text || undefined,
-        status,
-        payload: body,
+        event,
+        instanceId,
+        data: body as Prisma.JsonObject,
       },
     });
 
