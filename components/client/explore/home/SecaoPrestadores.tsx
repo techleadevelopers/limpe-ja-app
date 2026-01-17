@@ -68,7 +68,7 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={[styles.sectionTitle, { color: titleColor }]}>{titulo}</Text>
+        <Text style={[styles.sectionTitle,]}>{titulo}</Text>
         {onVerTudoPress ? (
           <TouchableOpacity
             onPress={onVerTudoPress}
@@ -131,8 +131,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'rgba(95, 118, 141, 0.7)',
     letterSpacing: 0.5,
-  marginTop: 20,
-  marginBottom: 0,
+    marginTop: 20,
+    marginBottom: 0,
+    right: Platform.OS === 'android' ? 0 : 0,
 },
   viewAllButton: {
     flexDirection: 'row',
