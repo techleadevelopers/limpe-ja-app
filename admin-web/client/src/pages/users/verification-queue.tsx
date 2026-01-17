@@ -141,6 +141,7 @@ export default function VerificationQueue() {
 
   const pendingDocuments = queue?.filter((p: Provider) => p.verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD) || [];
   const pendingReview = queue?.filter((p: Provider) => p.verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW) || [];
+  const selectedProviderStatusInfo = selectedProvider ? getStatusInfo(selectedProvider.verificationStatus || "") : null;
 
   return (
     <div className="flex h-screen bg-admin-bg">
@@ -152,7 +153,7 @@ export default function VerificationQueue() {
           subtitle={`${queue?.length || 0} provedores aguardando revisão de verificação.`}
         />
         
-        <main className="flex-1 overflow-y-auto p-8">
+        <main className="flex-1 overflow-y-auto p-8 scrollbar-premium">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="glass-card shadow-floating border-0">
               <CardContent className="pt-6">
@@ -197,136 +198,177 @@ export default function VerificationQueue() {
             </Card>
           </div>
 
-          <div className="md:flex md:space-x-6">
-            <Card className="glass-card shadow-floating border-0 md:w-1/2">
-              <CardContent className="pt-6">
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center p-4 bg-gray-50 rounded-xl animate-pulse">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-                      <div className="ml-4 flex-1">
-                        <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-                        <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+          <section className="md:flex md:gap-6">
+            <div className="flex-1">
+              <div className="rounded-[32px] border border-white/70 bg-white shadow-floating shadow-slate-200/70">
+                <div className="px-6 py-6">
+                  <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between mb-5 border-b border-gray-100 pb-4">
+                    <div>
+                      <p className="text-[0.6rem] font-semibold uppercase tracking-[0.4em] text-gray-400">Fila de Verificacao</p>
+                      <h2 className="text-2xl font-semibold text-gray-900">Provedores aguardando</h2>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-yellow-500/80" />
+                        Documentos
                       </div>
-                      <div className="text-right">
-                        <div className="w-20 h-6 bg-gray-200 rounded-full mb-2"></div>
-                        <div className="w-16 h-3 bg-gray-200 rounded"></div>
+                      <div className="flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-orange-500/80" />
+                        Revisão
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : isError ? (
-                <div className="text-center py-12 text-red-600">
-                  <p>Erro ao carregar a fila de verificação: {error?.message}</p>
-                </div>
-              ) : queue?.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Clock className="w-8 h-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma verificação pendente</h3>
-                  <p className="text-gray-500">Todos os provedores foram verificados. Ótimo trabalho!</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {queue?.map((provider: Provider, index: number) => {
-                    const providerFullName = getProviderFullName(provider);
-                    const statusInfo = getStatusInfo(provider.verificationStatus || "");
-                    const StatusIcon = statusInfo.icon;
-                    
+
+                  {isLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-gray-50/70 px-4 py-5 animate-pulse">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-gray-200" />
+                            <div className="space-y-2">
+                              <div className="h-4 w-28 rounded bg-gray-200" />
+                              <div className="h-3 w-20 rounded bg-gray-200" />
+                            </div>
+                          </div>
+                          <div className="space-y-2 text-right">
+                            <div className="h-6 w-24 rounded-full bg-gray-200" />
+                            <div className="h-3 w-16 rounded bg-gray-200" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : isError ? (
+                    <div className="text-center py-12 text-red-600 text-sm">
+                      <p>Erro ao carregar a fila de verificacao: {error?.message}</p>
+                    </div>
+                  ) : queue?.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Clock className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma verificacao pendente</h3>
+                      <p className="text-gray-500">Todos os provedores foram verificados. Otimo trabalho</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {queue?.map((provider: Provider, index: number) => {
+                        const providerFullName = getProviderFullName(provider);
+                        const statusInfo = getStatusInfo(provider.verificationStatus || "");
+                        const StatusIcon = statusInfo.icon;
+                        const isActive = selectedProvider?.id === provider.id;
                         return (
                           <motion.div
                             key={provider.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                        className={`flex items-center p-4 rounded-xl transition-all duration-200 cursor-pointer ${selectedProvider?.id === provider.id ? "bg-light-blue/20 ring-1 ring-light-blue/40" : "bg-gray-50 hover:bg-gray-100 hover:shadow-md"}`}
-                        onClick={() => handleProviderClick(provider)}
-                      >
-                        <div className={`w-12 h-12 ${statusInfo.iconBg} rounded-xl flex items-center justify-center`}>
-                          <StatusIcon size={20} />
-                        </div>
-                        
-                        <div className="ml-4 flex-1 flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 border border-white shadow-sm flex-shrink-0">
-                            <img
-                              src={provider.avatarUrl || 'https://static.limpeja.com/default-avatar.png'}
-                              alt={`Avatar de ${providerFullName}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-1">
-                              <h3 className="font-semibold text-gray-900">{providerFullName}</h3>
-                              <Badge className={`text-xs px-2 py-1 border ${statusInfo.badge}`}>
-                                {statusInfo.priority} Prioridade
-                              </Badge>
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.3, delay: index * 0.1 }}
+                            className={`flex w-full items-center gap-4 rounded-[26px] border px-4 py-5 transition-all duration-200 cursor-pointer ${isActive ? "border-light-blue/60 bg-light-blue/10 shadow-lg" : "border-transparent bg-slate-50/70 hover:border-gray-200 hover:bg-white hover:shadow-lg"}`}
+                            onClick={() => handleProviderClick(provider)}
+                          >
+                            <div className={`w-12 h-12 ${statusInfo.iconBg} rounded-2xl flex items-center justify-center`}>
+                              <StatusIcon size={20} />
                             </div>
-                            <p className="text-sm text-gray-600">{provider.email}</p>
-                            <p className="text-xs text-gray-500 mt-1">{statusInfo.text}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="text-right">
-                          <Badge className={`border ${statusInfo.badge} mb-2`}>
-                            {provider.verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD ? "Documentos" : "Revisão"}
-                          </Badge>
-                          <p className="text-xs text-gray-500">
-                            {formatRelativeTime(new Date(provider.createdAt))}
-                          </p>
-                          <div className="mt-2">
-                            <Button size="sm" className="bg-medium-blue hover:bg-blue-700 text-white">
-                              Revisar
-                            </Button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+
+                            <div className="flex-1 min-w-0 flex items-center gap-3">
+                              <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-white bg-gray-200 shadow-sm">
+                                <img
+                                  src={provider.avatarUrl || "https://static.limpeja.com/default-avatar.png"}
+                                  alt={`Avatar de ${providerFullName}`}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <h3 className="truncate text-lg font-semibold text-gray-900">{providerFullName}</h3>
+                                  <Badge className={`text-xs px-2 py-1 border ${statusInfo.badge}`}>
+                                    {statusInfo.priority} Prioridade
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-gray-600">{provider.email}</p>
+                                <p className="text-xs text-gray-500 mt-1">{statusInfo.text}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col items-end gap-2 text-right">
+                              <Badge className={`border ${statusInfo.badge} bg-white/80 text-xs font-semibold`}>
+                                {provider.verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD ? "Documentos" : "Revisão"}
+                              </Badge>
+                              <p className="text-xs text-gray-500">
+                                {formatRelativeTime(new Date(provider.createdAt))}
+                              </p>
+                              <Button size="sm" className="bg-medium-blue hover:bg-blue-700 text-white">
+                                Revisar
+                              </Button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {selectedProvider && (
-              <Card className="glass-card shadow-floating border-0 mt-6 md:mt-0 md:w-1/2">
-                <CardContent className="pt-6">
-                  <div className="flex items-center mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-light-blue/30 flex items-center justify-center mr-3">
+              <div className="mt-6 md:mt-0 md:w-1/2">
+                <div className="rounded-[32px] border border-white/70 bg-white shadow-floating shadow-slate-200/70 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-12 w-12 rounded-xl bg-light-blue/30 flex items-center justify-center">
                       <Eye className="text-medium-blue" size={20} />
                     </div>
                     <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Selecionado</p>
                       <h3 className="text-lg font-semibold text-gray-900">{getProviderFullName(selectedProvider)}</h3>
-                      <p className="text-sm text-gray-600">{selectedProvider.email || selectedProvider.phone || "Contato não informado"}</p>
+                      <p className="text-sm text-gray-600">{selectedProvider.email || selectedProvider.phone || "Contato nao informado"}</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  {selectedProviderStatusInfo && (
+                    <p className="text-sm text-gray-500 mb-4">{selectedProviderStatusInfo.text}</p>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4 mb-5 text-xs uppercase tracking-wide text-gray-500">
                     <div>
-                      <p className="text-xs text-gray-500">Status atual</p>
-                      <p className="text-sm font-medium">{selectedProvider.verificationStatus}</p>
+                      <p className="text-[0.65rem]">Status atual</p>
+                      <p className="text-base font-semibold text-gray-900">{selectedProvider.verificationStatus}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Tempo na fila</p>
-                      <p className="text-sm font-medium">{formatRelativeTime(new Date(selectedProvider.createdAt || Date.now()))}</p>
+                      <p className="text-[0.65rem]">Tempo na fila</p>
+                      <p className="text-base font-semibold text-gray-900">{formatRelativeTime(new Date(selectedProvider.createdAt || Date.now()))}</p>
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
-                    <Button onClick={() => handleApproveProvider(selectedProvider.id)} className="bg-emerald-500 hover:bg-emerald-600 text-white">Aprovar (A)</Button>
-                    <Button variant="outline" onClick={() => {
-                      const reason = prompt("Motivo da rejeição?") || "";
-                      handleRejectProvider(selectedProvider.id, reason);
-                    }}>Rejeitar (R)</Button>
-                    <Button variant="destructive" onClick={() => handleBlockProvider(selectedProvider.id)}>Bloquear (B)</Button>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <Button
+                      onClick={() => handleApproveProvider(selectedProvider.id)}
+                      className="w-full rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white sm:w-auto"
+                    >
+                      Aprovar (A)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const reason = prompt("Motivo da rejeicao?") || "";
+                        handleRejectProvider(selectedProvider.id, reason);
+                      }}
+                      className="w-full rounded-2xl sm:w-auto"
+                    >
+                      Rejeitar (R)
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleBlockProvider(selectedProvider.id)}
+                      className="w-full rounded-2xl sm:w-auto"
+                    >
+                      Bloquear (B)
+                    </Button>
                   </div>
 
                   <p className="text-xs text-gray-500 mt-3">Atalhos: A aprovar, R rejeitar, B bloquear</p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
-          </div>
+          </section>
         </main>
       </div>
 
