@@ -467,6 +467,9 @@ model Provider {
   monthlyBookingsCount    Int                @default(0)
   badges                  String[]
 
+  latitude                Float?
+  longitude               Float?
+
   // Pagamentos (PIX)
   pixKey                  String?
   pixKeyMasked            String?
@@ -775,13 +778,11 @@ model NotificationLog {
 }
 
 model WhatsappWebhookLog {
-  id            String   @id @default(uuid())
-  messageId     String?
-  phone         String?
-  text          String?
-  status        String?
-  payload       Json?
-  createdAt     DateTime @default(now())
+  id         String   @id @default(uuid())
+  event      String
+  instanceId String
+  data       Json
+  createdAt  DateTime @default(now())
 }
 
 model Review {
@@ -882,6 +883,7 @@ model Availability {
   providerId  String
   provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
   dayOfWeek   Int
+  date        DateTime?
   startTime   String
   endTime     String
   isAvailable Boolean  @default(true)
