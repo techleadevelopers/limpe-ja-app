@@ -333,6 +333,7 @@ export default function ExploreClientScreen() {
     <Animated.View
       style={[
         styles.categoriesSection,
+        !isAuthenticated && styles.visitorCategoriesSectionSpacing,
         {
           opacity: categoriesAnim,
           transform: [
@@ -354,21 +355,19 @@ export default function ExploreClientScreen() {
           {/* <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />*/}
         </TouchableOpacity>
       </View>
-        {isAuthenticated && (
-          <SecaoContainer<Service>
-            titulo={t('search.all_categories')}
-            onVerTudoPress={() => router.push('/client/explore/todas-categorias' as any)}
-            data={categoriesToRender}
-            renderItem={({ item }) => {
-              if (!item || !item.name) return null;
-              return (
-                <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
-              );
-            }}
-            horizontal={true}
-            noDataText={t('search.no_results')}
-          />
-        )}
+        <SecaoContainer<Service>
+          titulo={t('search.all_categories')}
+          onVerTudoPress={() => router.push('/client/explore/todas-categorias' as any)}
+          data={categoriesToRender}
+          renderItem={({ item }) => {
+            if (!item || !item.name) return null;
+            return (
+              <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
+            );
+          }}
+          horizontal={true}
+          noDataText={t('search.no_results')}
+        />
     </Animated.View>
   );
 
@@ -949,10 +948,10 @@ export default function ExploreClientScreen() {
                 </TouchableOpacity>
               )}*/}
 
-              {/* Exibe o bloco Dia a dia (categories) somente quando autenticado */}
-              {isAuthenticated && renderCategoriesSection()}
+              {/* Exibe o bloco Dia a dia (categories) */}
+              {renderCategoriesSection()}
               {/* Visitante continua vendo o bloco Como Funciona */}
-              {!isAuthenticated && (
+              {/* 
                 <View
                   style={[
                     styles.howItWorksTutorialContainer,
@@ -984,7 +983,7 @@ export default function ExploreClientScreen() {
                   </View>
 
                 </View>
-              )}
+              )}*/}
               {/* FIM NOVO BLOCO CONDICIONAL */}
 
               {/* ContentWrapper ÚNICO - TODO o conteúdo aqui */}
@@ -1348,7 +1347,7 @@ const styles = StyleSheet.create({
   },
   categoriesSection: {
     marginTop: 2,
-    marginBottom: 5,
+    marginBottom: -15,
     paddingHorizontal: 6,
   },
   categoryTitleWrapper: {
@@ -1359,6 +1358,9 @@ const styles = StyleSheet.create({
     marginTop: 3,
     marginBottom: -3,
   },
+  visitorCategoriesSectionSpacing: {
+    marginTop: -12,
+  },
   categorySectionTitle: {
     fontSize: Platform.OS === 'android' ? 15 : 15.5,
     fontFamily: 'Montserrat-Regular',
@@ -1366,6 +1368,7 @@ const styles = StyleSheet.create({
     color: 'rgba(95, 118, 141, 0.7)',
     letterSpacing: 0.5,
     marginBottom: 8,
+    left: 5,
   },
   carouselContainer: {
     marginTop: 8,
