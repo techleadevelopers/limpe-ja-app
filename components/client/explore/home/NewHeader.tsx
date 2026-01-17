@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     borderBottomStartRadius: 40,
     borderTopEndRadius: 40,
     borderTopStartRadius: 40,
-    marginBottom: Platform.OS === 'android' ? 0 : -2,
+    marginBottom: Platform.OS === 'android' ? -10 : -2,
 
     flexDirection: 'row',
     justifyContent: 'space-between',
