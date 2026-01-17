@@ -259,8 +259,8 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     bottom: 2,
     borderRadius: 45,
-    marginBottom: Platform.OS === 'android' ? -5 : -14,
-    marginTop:  Platform.OS === 'android' ? 10 : 14,
+    marginBottom: Platform.OS === 'android' ? -10 : -14,
+    marginTop:  Platform.OS === 'android' ? 15 : 14,
     alignItems: 'center',
     
   },
