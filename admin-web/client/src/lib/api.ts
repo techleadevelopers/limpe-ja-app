@@ -217,12 +217,29 @@ const shouldDedupe = (key: string) => {
     return now - last < 5000;
 };
 
+const ERROR_MESSAGE_OVERRIDES: Record<string, string> = {
+    "error.prisma.generic": "Não foi possível carregar os dados. Tente novamente em instantes.",
+    "errors.network.retry_saved": "Não foi possível concluir a requisição agora. Tente novamente.",
+};
+
 const buildUnifiedError = (error: AxiosError) => {
     const payload: any = error.response?.data ?? {};
     return {
         status: error.response?.status,
         messageKey: payload.messageKey ?? "errors.network.retry_saved",
-        message: payload.message ?? "We couldn’t complete this now. Your progress is safe; try again.",
+        message: (() => {
+            const overrideKey = payload.messageKey ?? payload.message;
+            const override =
+                overrideKey && ERROR_MESSAGE_OVERRIDES[overrideKey]
+                    ? ERROR_MESSAGE_OVERRIDES[overrideKey]
+                    : undefined;
+            if (override) return override;
+            if (payload.message) return payload.message;
+            return (
+                ERROR_MESSAGE_OVERRIDES["errors.network.retry_saved"]
+                ?? "We couldn’t complete this now. Your progress is safe; try again."
+            );
+        })(),
         requestId: payload.requestId ?? error.response?.headers?.["x-request-id"],
         fieldErrors: payload.fieldErrors ?? null,
     };
