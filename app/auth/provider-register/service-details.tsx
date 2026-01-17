@@ -316,7 +316,7 @@ export default function ServiceDetailsScreen() {
     setDescriptionError(null);
 
     if (!formData.profilePhoto) {
-      setProfilePhotoError('Por favor, adicione uma foto de perfil.');
+      setProfilePhotoError('Adicione uma foto de vitrine profissional para aparecer na busca.');
       isValid = false;
     }
     if (!formData.description.trim()) {
@@ -703,6 +703,21 @@ const getMicrocopyText = () => {
                     style={styles.imageOverlay}
                   />
                 </TouchableOpacity>
+                <View style={styles.photoHintContainer}>
+                  <Text style={styles.photoHintTitle}>Foto de vitrine profissional</Text>
+                  <Text style={styles.photoHintText}>
+                    Perfis com foto profissional recebem mais solicitações.
+                  </Text>
+                  <View style={styles.photoHintBulletRow}>
+                    <Text style={styles.photoHintBulletText}>✅ Meio corpo, fundo claro e boa iluminação</Text>
+                  </View>
+                  <View style={styles.photoHintBulletRow}>
+                    <Text style={styles.photoHintBulletText}>✅ Roupa neutra ou uniforme e postura profissional</Text>
+                  </View>
+                  <View style={styles.photoHintBulletRow}>
+                    <Text style={styles.photoHintBulletText}>❌ Evite selfie muito próxima e filtros exagerados</Text>
+                  </View>
+                </View>
                 {profilePhotoError && <Text style={styles.inlineErrorMessageCentered}>{profilePhotoError}</Text>}
 
 
@@ -1118,6 +1133,33 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 40,
+  },
+  photoHintContainer: {
+    marginTop: 10,
+    marginBottom: 4,
+    alignItems: 'flex-start',
+  },
+  photoHintTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 2,
+  },
+  photoHintText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 6,
+    lineHeight: 16,
+  },
+  photoHintBulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 2,
+  },
+  photoHintBulletText: {
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 16,
   },
   formContainer: {
     marginBottom: 30,
