@@ -1872,7 +1872,11 @@ private getScheduledAtInSaoPaulo(
       );
     }
     if (booking.scheduledTime) {
-      parts.push(booking.scheduledTime);
+      parts.push(
+        typeof booking.scheduledTime === 'string'
+          ? booking.scheduledTime
+          : formatScheduledTime(booking.scheduledTime as Date),
+      );
     }
     return parts.length ? parts.join(' às ') : 'horário pendente';
   }
