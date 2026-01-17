@@ -4,6 +4,7 @@ export class AvailabilityEntity implements PrismaAvailability {
   id: string;
   providerId: string;
   dayOfWeek: number;
+  date: Date | null;
   // Ajuste de tipagem para compatibilidade com o novo Prisma
   startTime: string | any; 
   endTime: string | any;
