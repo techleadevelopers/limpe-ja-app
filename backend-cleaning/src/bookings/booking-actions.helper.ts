@@ -1,8 +1,4 @@
-import {
-  BookingStatus,
-  PaymentIntentStatus,
-  UserRole,
-} from '@prisma/client';
+import { BookingStatus, PaymentIntentStatus, UserRole } from '@prisma/client';
 import {
   calculateExpectedEnd,
   calculateScheduledAtInSaoPaulo,
@@ -102,9 +98,12 @@ function canCompleteService(ctx: BookingActionContext): boolean {
         ? new Date(ctx.startedAt)
         : ctx.scheduledStart instanceof Date
           ? ctx.scheduledStart
-            : typeof ctx.scheduledStart === 'string'
-              ? new Date(ctx.scheduledStart)
-              : calculateScheduledAtInSaoPaulo(ctx.scheduledDate, scheduledTimeValue);
+          : typeof ctx.scheduledStart === 'string'
+            ? new Date(ctx.scheduledStart)
+            : calculateScheduledAtInSaoPaulo(
+                ctx.scheduledDate,
+                scheduledTimeValue,
+              );
   if (Number.isNaN(runReference.getTime())) return false;
   const runMinutes = Math.round(
     (now.getTime() - runReference.getTime()) / 60000,
