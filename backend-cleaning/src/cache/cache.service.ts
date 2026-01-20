@@ -67,7 +67,11 @@ export class CacheService {
     }
   }
 
-  async setIfNotExists<T>(key: string, value: T, ttl?: number): Promise<boolean> {
+  async setIfNotExists<T>(
+    key: string,
+    value: T,
+    ttl?: number,
+  ): Promise<boolean> {
     if (this.redisClient?.isOpen) {
       try {
         const rawValue =
@@ -110,5 +114,9 @@ export class CacheService {
     } catch (error) {
       this.logger.error(`Erro ao resetar o cache: ${error.message}`);
     }
+  }
+
+  getRedisClient(): RedisClientType | undefined {
+    return this.redisClient;
   }
 }
