@@ -17,7 +17,9 @@ const createGuard = (overrides: {
   return new MetricsServiceTokenGuard(configServiceMock as any);
 };
 
-const createContextWithHeaders = (headers: Record<string, string> = {}): ExecutionContext =>
+const createContextWithHeaders = (
+  headers: Record<string, string> = {},
+): ExecutionContext =>
   ({
     switchToHttp: () => ({
       getRequest: () => ({ headers }),
@@ -37,7 +39,7 @@ const createContextWithHeaders = (headers: Record<string, string> = {}): Executi
     getArgs: () => [],
     getArgByIndex: () => undefined,
     getType: () => 'http',
-  } as unknown as ExecutionContext);
+  }) as unknown as ExecutionContext;
 
 describe('MetricsServiceTokenGuard', () => {
   it('denies access in production when token header is missing', () => {
