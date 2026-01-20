@@ -381,7 +381,7 @@ export default function ProviderServicesScreen() {
       subText = "Configure seus serviços para receber mais pedidos ou verifique seus agendamentos confirmados.";
       ctaButton = (
         <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push(PROVIDER_ROUTES.EDIT_SERVICES as any)}>
-          <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
+          <Ionicons name="settings-outline" size={18} color="#FFFFFF" />
           <Text style={styles.emptyStateButtonText}>Configurar Meus Serviços</Text>
         </TouchableOpacity>
       );
@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
     color: '#343A40',
     marginTop: 15,
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 10,
