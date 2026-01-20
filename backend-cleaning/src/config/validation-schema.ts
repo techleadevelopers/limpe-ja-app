@@ -37,7 +37,9 @@ export const validationSchema = Joi.object({
   NOTIFICATIONS_DEDUPE_WINDOW_SECONDS: Joi.number()
     .min(30)
     .default(180)
-    .description('Janela (segundos) para deduplicar AppEvents com mesmo dedupeKey.'),
+    .description(
+      'Janela (segundos) para deduplicar AppEvents com mesmo dedupeKey.',
+    ),
   NOTIFICATIONS_DEFAULT_TTL_SECONDS: Joi.number()
     .min(60)
     .default(300)
@@ -59,6 +61,25 @@ export const validationSchema = Joi.object({
     .allow('', null)
     .optional()
     .description('DSN do Sentry'),
+  SENTRY_API_TOKEN: Joi.string()
+    .allow('', null)
+    .optional()
+    .description('Token da API do Sentry (Bearer).'),
+  SENTRY_API_ORG_SLUG: Joi.string()
+    .allow('', null)
+    .optional()
+    .description('Slug da organização no Sentry.'),
+  SENTRY_API_PROJECT_SLUG: Joi.string()
+    .allow('', null)
+    .optional()
+    .description('Slug do projeto no Sentry.'),
+  SENTRY_API_BASE_URL: Joi.string()
+    .uri()
+    .allow('', null)
+    .optional()
+    .description(
+      'Base URL para a API do Sentry (ex: https://sentry.io/api/0).',
+    ),
 
   // Cellereit Facematch
   THIRD_PARTY_FACEMATCH_API_URL: Joi.string()
