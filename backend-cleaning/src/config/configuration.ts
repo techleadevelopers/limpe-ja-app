@@ -72,6 +72,12 @@ export default () => ({
   // Sentry
   sentry: {
     dsn: process.env.SENTRY_DSN || undefined,
+    apiToken: process.env.SENTRY_API_TOKEN,
+    orgSlug: process.env.SENTRY_API_ORG_SLUG,
+    projectSlug: process.env.SENTRY_API_PROJECT_SLUG,
+    apiBaseUrl:
+      stripTrailingSlash(process.env.SENTRY_API_BASE_URL) ||
+      'https://sentry.io/api/0',
   },
 
   // Upload storage is handled by UploadThing (no GCS config)
