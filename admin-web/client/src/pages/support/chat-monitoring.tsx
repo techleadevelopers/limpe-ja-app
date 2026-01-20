@@ -7,15 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { fetchChatLogs } from '@/lib/api';
 import { Search } from 'lucide-react';
+import { useDebounce } from '@/hooks/use-debounce';
 
 export default function ChatMonitoringPage() {
   const [chatId, setChatId] = useState('');
   const [term, setTerm] = useState('');
   const [limit, setLimit] = useState(100);
+  const debouncedTerm = useDebounce(term, 300);
+  const debouncedChatId = useDebounce(chatId, 300);
 
   const { data: logs = [], refetch, isFetching } = useQuery({
-    queryKey: ['chat-logs', chatId, term, limit],
-    queryFn: () => fetchChatLogs(chatId || undefined, term || undefined, limit),
+    queryKey: ['chat-logs', debouncedChatId, debouncedTerm, limit],
+    queryFn: () =>
+      fetchChatLogs(debouncedChatId || undefined, debouncedTerm || undefined, limit),
   });
 
   const ordered = useMemo(() => logs.slice().sort((a, b) => a.createdAt.localeCompare(b.createdAt)), [logs]);
@@ -67,4 +71,3 @@ export default function ChatMonitoringPage() {
     </div>
   );
 }
-
