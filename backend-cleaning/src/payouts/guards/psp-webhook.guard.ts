@@ -25,9 +25,9 @@ export class PspWebhookGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<
-      Request & { rawBody?: string; body?: unknown }
-    >();
+    const request = context
+      .switchToHttp()
+      .getRequest<Request & { rawBody?: string; body?: unknown }>();
     const eventId = this.resolveEventId(request);
     if (!eventId) {
       this.logger.warn('Missing PSP webhook event id.');
@@ -40,8 +40,9 @@ export class PspWebhookGuard implements CanActivate {
     const source = this.resolveSource(request);
     const isPixWebhook = source === 'psp:pix';
     const allowInsecure =
-      String(this.configService.get<string>('ALLOW_INSECURE_WEBHOOKS') || '')
-        .toLowerCase() === 'true';
+      String(
+        this.configService.get<string>('ALLOW_INSECURE_WEBHOOKS') || '',
+      ).toLowerCase() === 'true';
 
     const secret = isPixWebhook
       ? this.configService.get<string>('PIX_WEBHOOK_SECRET')
@@ -125,9 +126,7 @@ export class PspWebhookGuard implements CanActivate {
   }
 
   private respondWithReplay(context: ExecutionContext): void {
-    const response = context
-      .switchToHttp()
-      .getResponse<Response>() as Response | undefined;
+    const response = context.switchToHttp().getResponse<Response>();
     if (response && !response.headersSent) {
       response.status(HttpStatus.OK).json({ ok: true, replay: true });
     }
@@ -178,15 +177,21 @@ export class PspWebhookGuard implements CanActivate {
     );
     const parsed = Number(rawTolerance);
     const fallbackSeconds = 60;
-    const configuredSeconds = Number.isFinite(parsed) && parsed > 0 ? parsed : fallbackSeconds;
+    const configuredSeconds =
+      Number.isFinite(parsed) && parsed > 0 ? parsed : fallbackSeconds;
     const isProd = process.env.NODE_ENV === 'production';
     const minSeconds = isProd ? 10 : 1;
     const maxSeconds = 300;
-    const clampedSeconds = Math.min(Math.max(configuredSeconds, minSeconds), maxSeconds);
+    const clampedSeconds = Math.min(
+      Math.max(configuredSeconds, minSeconds),
+      maxSeconds,
+    );
     return clampedSeconds * 1000;
   }
 
-  private parseTimestampToMs(value: string | number | undefined): number | undefined {
+  private parseTimestampToMs(
+    value: string | number | undefined,
+  ): number | undefined {
     if (value === undefined || value === null) {
       return undefined;
     }
@@ -218,13 +223,17 @@ export class PspWebhookGuard implements CanActivate {
     return undefined;
   }
 
-  private resolveEventId(request: Request & { body?: unknown }): string | undefined {
+  private resolveEventId(
+    request: Request & { body?: unknown },
+  ): string | undefined {
     const headerId = this.getHeader(request, 'x-event-id');
     const payloadId = this.extractEventIdFromPayload(request.body);
     return this.normalizeEventId(headerId ?? payloadId);
   }
 
-  private extractEventIdFromPayload(payload: unknown): string | number | undefined {
+  private extractEventIdFromPayload(
+    payload: unknown,
+  ): string | number | undefined {
     const record = this.asRecord(payload);
     if (!record) {
       return undefined;
@@ -245,7 +254,9 @@ export class PspWebhookGuard implements CanActivate {
     );
   }
 
-  private extractTimestampFromPayload(payload: unknown): string | number | undefined {
+  private extractTimestampFromPayload(
+    payload: unknown,
+  ): string | number | undefined {
     const record = this.asRecord(payload);
     if (!record) {
       return undefined;
@@ -268,7 +279,9 @@ export class PspWebhookGuard implements CanActivate {
       : undefined;
   }
 
-  private normalizeEventId(value: string | number | undefined): string | undefined {
+  private normalizeEventId(
+    value: string | number | undefined,
+  ): string | undefined {
     if (value === undefined || value === null) {
       return undefined;
     }
@@ -285,9 +298,7 @@ export class PspWebhookGuard implements CanActivate {
     );
   }
 
-  private asStringOrNumber(
-    value: unknown,
-  ): string | number | undefined {
+  private asStringOrNumber(value: unknown): string | number | undefined {
     if (value === undefined || value === null) {
       return undefined;
     }
