@@ -1,5 +1,11 @@
-﻿/* eslint-disable no-case-declarations */
-import dayjs from 'dayjs';
+import dayjsModule = require('dayjs');
+const dayjs: typeof import('dayjs') =
+  (
+    (dayjsModule as typeof import('dayjs') & {
+      default?: typeof import('dayjs');
+    }).default ?? dayjsModule
+  ) as typeof import('dayjs');
+
 import {
   Injectable,
   NotFoundException,
@@ -24,6 +30,7 @@ import {
   Booking,
   BookingStatus,
   PaymentIntentStatus,
+  PricingType,
   ProviderService,
   UserRole,
   Prisma,
@@ -79,6 +86,117 @@ import { I18nService } from '../common/i18n/i18n.service';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { Request } from 'express';
 
+const ADMIN_BOOKING_LIST_SELECT = {
+  id: true,
+  clientId: true,
+  providerId: true,
+  providerServiceId: true,
+  status: true,
+  scheduledDate: true,
+  scheduledTime: true,
+  totalPrice: true,
+  createdAt: true,
+  updatedAt: true,
+  client: {
+    select: {
+      id: true,
+      fullName: true,
+      user: {
+        select: {
+          fullName: true,
+        },
+      },
+    },
+  },
+  provider: {
+    select: {
+      id: true,
+      fullName: true,
+      user: {
+        select: {
+          fullName: true,
+        },
+      },
+    },
+  },
+  providerService: {
+    select: {
+      id: true,
+      service: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          icon: true,
+          defaultPricingType: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.BookingSelect;
+
+type AdminBookingListRow = Prisma.BookingGetPayload<{
+  select: typeof ADMIN_BOOKING_LIST_SELECT;
+}>;
+
+export interface StatusCounts {
+  pending: number;
+  confirmed: number;
+  completed: number;
+  canceled: number;
+}
+
+export interface AdminBookingListItemDto {
+  id: string;
+  clientId: string;
+  providerId: string;
+  providerServiceId: string;
+  status: BookingStatus;
+  scheduledDate: Date;
+  scheduledTime?: string | null;
+  totalPrice: number;
+  createdAt: Date;
+  updatedAt: Date;
+  clientFullName?: string | null;
+  providerFullName?: string | null;
+  client?: {
+    id: string;
+    fullName?: string | null;
+  };
+  provider?: {
+    id: string;
+    fullName?: string | null;
+  };
+  service?: {
+    id: string;
+    name: string;
+    description?: string | null;
+    icon?: string | null;
+    defaultPricingType?: PricingType | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+}
+
+export interface AdminBookingPage {
+  items: AdminBookingListItemDto[];
+  totalCount: number;
+  nextCursor?: string;
+  statusCounts: StatusCounts;
+}
+
+const decimalToNumber = (value?: Prisma.Decimal | number | null): number => {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+  if (typeof value === 'number') {
+    return value;
+  }
+  return Number(value.toNumber());
+};
+
 import { RedisLockService } from '../common/locks/redis-lock.service';
 import { CacheService } from '../cache/cache.service';
 import { SchedulerService } from '../scheduler/scheduler.service';
@@ -120,8 +238,7 @@ const PRICING_VERSION =
 const QUOTE_HASH_VERSION =
   process.env.BOOKING_QUOTE_HASH_VERSION ?? PRICING_VERSION;
 const QUOTE_EXPIRATION_MS =
-  Number(process.env.BOOKING_QUOTE_TTL_MS ?? 10 * 60 * 1000) ||
-  10 * 60 * 1000;
+  Number(process.env.BOOKING_QUOTE_TTL_MS ?? 10 * 60 * 1000) || 10 * 60 * 1000;
 const QUOTE_CACHE_TTL_SECONDS = 60;
 const QUOTE_CACHE_KEY_PREFIX = 'quote:';
 const CANCELLATION_COOLDOWN_MS = (() => {
@@ -250,8 +367,7 @@ export class BookingsService {
       return undefined;
     }
     const rawHeader =
-      request.headers['idempotency-key'] ??
-      request.headers['Idempotency-Key'];
+      request.headers['idempotency-key'] ?? request.headers['Idempotency-Key'];
     if (!rawHeader) {
       return undefined;
     }
@@ -310,7 +426,7 @@ export class BookingsService {
    * Converte (YYYY-MM-DD + HH:mm) como horário local do timeZone
    * para um Date correto (instante real), independente do TZ do servidor.
    */
-private getScheduledAtInSaoPaulo(
+  private getScheduledAtInSaoPaulo(
     dateValue: string | number | Date,
     timeHHmm: string | null | undefined,
   ): Date {
@@ -344,12 +460,12 @@ private getScheduledAtInSaoPaulo(
     return guess;
   }
 
-   // Novo: normaliza scheduledTime que pode vir como Date ou string para HH:mm (ou null)
+  // Novo: normaliza scheduledTime que pode vir como Date ou string para HH:mm (ou null)
   private normalizeScheduledTimeForHelper(
     time: string | Date | null | undefined,
   ): string | null {
     if (!time) return null;
-    return typeof time === 'string' ? time : formatScheduledTime(time as Date);
+    return typeof time === 'string' ? time : formatScheduledTime(time);
   }
 
   private formatDateToYyyyMmDd(date: Date): string {
@@ -360,10 +476,7 @@ private getScheduledAtInSaoPaulo(
   }
 
   private getSaoPauloWeekRange(date: Date) {
-    const offsetMinutes = this.tzOffsetMinutes(
-      date,
-      'America/Sao_Paulo',
-    );
+    const offsetMinutes = this.tzOffsetMinutes(date, 'America/Sao_Paulo');
     const localTimestamp = date.getTime() + offsetMinutes * 60_000;
     const localDate = new Date(localTimestamp);
     const diffToMonday = (localDate.getUTCDay() + 6) % 7;
@@ -487,7 +600,11 @@ private getScheduledAtInSaoPaulo(
     work: () => Promise<T>,
   ): Promise<T> {
     const lockKey = this.buildWeeklyLockKey(clientId, providerId, weekStart);
-    const lockValue = this.buildWeeklyLockValue(clientId, providerId, weekStart);
+    const lockValue = this.buildWeeklyLockValue(
+      clientId,
+      providerId,
+      weekStart,
+    );
     const lockAcquired = await this.redisLockService.acquireLock(
       lockKey,
       lockValue,
@@ -522,17 +639,12 @@ private getScheduledAtInSaoPaulo(
       include: includeWithDefaults,
     });
     if (!booking) {
-      throw new NotFoundException(
-        `Booking ${bookingId} não encontrado.`,
-      );
+      throw new NotFoundException(`Booking ${bookingId} não encontrado.`);
     }
     return booking as unknown as BookingWithDetailsRelations;
   }
 
-  private async ensureProofRecorded(
-    bookingId: string,
-    type: BookingProofType,
-  ) {
+  private async ensureProofRecorded(bookingId: string, type: BookingProofType) {
     const proof = await this.prisma.bookingProof.findUnique({
       where: {
         bookingId_type: {
@@ -553,8 +665,7 @@ private getScheduledAtInSaoPaulo(
       return false;
     }
     return (
-      insurance.proofRequired ||
-      insurance.planId === InsurancePlanId.PREMIUM
+      insurance.proofRequired || insurance.planId === InsurancePlanId.PREMIUM
     );
   }
 
@@ -610,7 +721,9 @@ private getScheduledAtInSaoPaulo(
       throw new NotFoundException('Booking nao encontrado.');
     }
     if (booking.provider?.userId !== providerUserId) {
-      throw new ForbiddenException('Somente o prestador pode enviar comprovantes.');
+      throw new ForbiddenException(
+        'Somente o prestador pode enviar comprovantes.',
+      );
     }
 
     if (!payload.photos || payload.photos.length === 0) {
@@ -732,9 +845,7 @@ private getScheduledAtInSaoPaulo(
       )?.status;
 
     if (!currentStatus) {
-      throw new NotFoundException(
-        `Booking ${bookingId} não encontrado.`,
-      );
+      throw new NotFoundException(`Booking ${bookingId} não encontrado.`);
     }
 
     if (currentStatus === newStatus) {
@@ -767,7 +878,9 @@ private getScheduledAtInSaoPaulo(
     });
     if (!booking) {
       throw new NotFoundException(
-        await this.i18n.translate('booking.notFound', locale, { id: bookingId }),
+        await this.i18n.translate('booking.notFound', locale, {
+          id: bookingId,
+        }),
       );
     }
     if (booking.provider.userId !== actorUserId) {
@@ -776,7 +889,9 @@ private getScheduledAtInSaoPaulo(
       );
     }
     if (booking.status !== BookingStatus.CONFIRMED) {
-      throw new BadRequestException('Apenas agendamentos confirmados podem ser aceitos.');
+      throw new BadRequestException(
+        'Apenas agendamentos confirmados podem ser aceitos.',
+      );
     }
     if (booking.acceptedAt) {
       throw new BadRequestException('Agendamento já foi aceito.');
@@ -834,9 +949,10 @@ private getScheduledAtInSaoPaulo(
     }
   }
 
-  private async notifyClientAcceptance(
-    booking: { id: string; client?: { userId: string } | null },
-  ) {
+  private async notifyClientAcceptance(booking: {
+    id: string;
+    client?: { userId: string } | null;
+  }) {
     const userId = booking.client?.userId;
     if (!userId) return;
     try {
@@ -1105,7 +1221,6 @@ private getScheduledAtInSaoPaulo(
           ),
         );
       }
-
 
       const bookingInclude = this.getBookingInclude();
 
@@ -1392,9 +1507,12 @@ private getScheduledAtInSaoPaulo(
     const quoteHash = this.hashRequestKey(requestKey);
     const cacheKey = `${QUOTE_CACHE_KEY_PREFIX}${quoteHash}`;
 
-    const cached = await this.cacheService.get<BookingQuoteResponseDto>(cacheKey);
+    const cached =
+      await this.cacheService.get<BookingQuoteResponseDto>(cacheKey);
     if (cached) {
-      this.logger.log(`[BookingsService] quote.cache.hit requestKey=${requestKey}`);
+      this.logger.log(
+        `[BookingsService] quote.cache.hit requestKey=${requestKey}`,
+      );
       return cached;
     }
 
@@ -1483,19 +1601,21 @@ private getScheduledAtInSaoPaulo(
       cityCode: createBookingDto.address?.city,
     });
 
-    let subtotal = new Prisma.Decimal(dynamicPrice.finalPrice);
+    const subtotal = new Prisma.Decimal(dynamicPrice.finalPrice);
     let finalPrice = subtotal;
     let discountAmount = new Prisma.Decimal(0);
     let couponId: string | null = null;
     const couponCode = createBookingDto.couponCode?.trim();
 
     if (couponCode) {
-      this.logger.log(`[BookingsService] quote - Tentando aplicar cupom: ${couponCode}`);
+      this.logger.log(
+        `[BookingsService] quote - Tentando aplicar cupom: ${couponCode}`,
+      );
 
       const couponResult = await this.couponsService.applyCoupon(
         couponCode,
         options.clientUserId,
-        ({
+        {
           originalPrice: finalPrice.toNumber(),
           clientId,
           providerId: provider.id,
@@ -1503,7 +1623,7 @@ private getScheduledAtInSaoPaulo(
           legacyProviderServiceId: providerService.serviceId,
           scheduledDate: createBookingDto.scheduledDate,
           serviceId: providerService.serviceId,
-        }) as any,
+        } as any,
       );
 
       if (couponResult.coupon) {
@@ -1545,7 +1665,9 @@ private getScheduledAtInSaoPaulo(
         ? requestedInsurancePlan
         : null;
     const insuranceFeeCents = selectedInsurance?.finalPriceCents ?? 0;
-    const insuranceFeeDecimal = new Prisma.Decimal(insuranceFeeCents).dividedBy(100);
+    const insuranceFeeDecimal = new Prisma.Decimal(insuranceFeeCents).dividedBy(
+      100,
+    );
     finalPrice = finalPrice.add(insuranceFeeDecimal);
 
     const quoteId = quoteHash;
@@ -1563,9 +1685,7 @@ private getScheduledAtInSaoPaulo(
       ...(couponId
         ? [
             {
-              label: couponCode
-                ? `Cupom ${couponCode}`
-                : 'Cupom aplicado',
+              label: couponCode ? `Cupom ${couponCode}` : 'Cupom aplicado',
               amount: -Number(discountAmount.toNumber()),
               type: 'coupon',
             },
@@ -1638,7 +1758,8 @@ private getScheduledAtInSaoPaulo(
       serviceId: options.providerService.serviceId ?? undefined,
       scheduledDate: options.createBookingDto.scheduledDate,
       scheduledTime: options.createBookingDto.scheduledTime,
-      durationMinutes: options.createBookingDto.requestedDurationMinutes ?? null,
+      durationMinutes:
+        options.createBookingDto.requestedDurationMinutes ?? null,
       couponCode: couponCode || null,
       subscriptionId: options.subscriptionId ?? null,
       addons: normalizedAddons,
@@ -1755,51 +1876,53 @@ private getScheduledAtInSaoPaulo(
       );
     }
 
-      const booking = await this.prisma.booking.create({
-        data: {
-          clientId: data.clientId,
-          providerId: data.providerId,
-          providerServiceId: data.providerServiceId,
-          scheduledDate: new Date(`${data.scheduledDate}T00:00:00.000Z`),
-          scheduledTime: scheduledStart,
-          scheduledStart,
-          durationMinutes,
-          scheduledEnd,
-          totalPrice: new Prisma.Decimal(data.totalPrice),
-          subscriptionId: data.subscriptionId,
-          addressId: data.addressId,
-          status: BookingStatus.PENDING_PAYMENT,
-          expiresAt: new Date(Date.now() + PENDING_PAYMENT_TIMEOUT_MS),
-        },
-        include: {
-          client: { include: { user: true } },
-          provider: { include: { user: true } },
-          providerService: { include: { service: true } },
-          review: true,
-          address: true,
-          subscription: true,
-          incidents: true,
-          guaranteeClaims: true,
-          coupon: true,
-          paymentIntent: true,
-          bookingInsurance: true,
-          bookingProofs: true,
-        },
-      });
-      return booking;
-    }
+    const booking = await this.prisma.booking.create({
+      data: {
+        clientId: data.clientId,
+        providerId: data.providerId,
+        providerServiceId: data.providerServiceId,
+        scheduledDate: new Date(`${data.scheduledDate}T00:00:00.000Z`),
+        scheduledTime: scheduledStart,
+        scheduledStart,
+        durationMinutes,
+        scheduledEnd,
+        totalPrice: new Prisma.Decimal(data.totalPrice),
+        subscriptionId: data.subscriptionId,
+        addressId: data.addressId,
+        status: BookingStatus.PENDING_PAYMENT,
+        expiresAt: new Date(Date.now() + PENDING_PAYMENT_TIMEOUT_MS),
+      },
+      include: {
+        client: { include: { user: true } },
+        provider: { include: { user: true } },
+        providerService: { include: { service: true } },
+        review: true,
+        address: true,
+        subscription: true,
+        incidents: true,
+        guaranteeClaims: true,
+        coupon: true,
+        paymentIntent: true,
+        bookingInsurance: true,
+        bookingProofs: true,
+      },
+    });
+    return booking;
+  }
 
   private runWhatsappForStatus(
     booking: BookingWithDetailsRelations,
     status: BookingStatus,
   ) {
-    void this.handleBookingWhatsappNotification(booking, status).catch((error) => {
-      this.logger.warn(
-        `[BookingsService] WhatsApp ${status} falhou: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    });
+    void this.handleBookingWhatsappNotification(booking, status).catch(
+      (error) => {
+        this.logger.warn(
+          `[BookingsService] WhatsApp ${status} falhou: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      },
+    );
   }
 
   private async handleBookingWhatsappNotification(
@@ -1812,9 +1935,7 @@ private getScheduledAtInSaoPaulo(
     }
 
     const clientName =
-      booking.client?.user?.fullName ??
-      booking.client?.fullName ??
-      'Cliente';
+      booking.client?.user?.fullName ?? booking.client?.fullName ?? 'Cliente';
 
     if (status === BookingStatus.PENDING_PAYMENT) {
       await this.whatsappService.notifyNewOrder(
@@ -1842,7 +1963,9 @@ private getScheduledAtInSaoPaulo(
     }
   }
 
-  private getClientPhone(booking: BookingWithDetailsRelations): string | undefined {
+  private getClientPhone(
+    booking: BookingWithDetailsRelations,
+  ): string | undefined {
     return (
       booking.client?.user?.phone?.trim() ??
       booking.client?.phone?.trim() ??
@@ -1850,13 +1973,9 @@ private getScheduledAtInSaoPaulo(
     );
   }
 
-  private getClientDisplayName(
-    booking: BookingWithDetailsRelations,
-  ): string {
+  private getClientDisplayName(booking: BookingWithDetailsRelations): string {
     return (
-      booking.client?.user?.fullName ??
-      booking.client?.fullName ??
-      'Cliente'
+      booking.client?.user?.fullName ?? booking.client?.fullName ?? 'Cliente'
     );
   }
 
@@ -1875,7 +1994,7 @@ private getScheduledAtInSaoPaulo(
       parts.push(
         typeof booking.scheduledTime === 'string'
           ? booking.scheduledTime
-          : formatScheduledTime(booking.scheduledTime as Date),
+          : formatScheduledTime(booking.scheduledTime),
       );
     }
     return parts.length ? parts.join(' às ') : 'horário pendente';
@@ -1988,6 +2107,194 @@ private getScheduledAtInSaoPaulo(
         }),
       );
     }
+  }
+
+  async findAdminBookingsPage(options?: {
+    cursor?: string;
+    take?: number;
+    status?: BookingStatus;
+    search?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<AdminBookingPage> {
+    const take = Math.min(Math.max(options?.take ?? 20, 5), 50);
+    const where: Prisma.BookingWhereInput = {};
+    if (options?.status) {
+      where.status = options.status;
+    }
+
+    if (options?.startDate || options?.endDate) {
+      const scheduledFilter: Prisma.DateTimeFilter = {};
+      if (options.startDate) {
+        scheduledFilter.gte = options.startDate;
+      }
+      if (options.endDate) {
+        scheduledFilter.lte = options.endDate;
+      }
+      where.scheduledDate = scheduledFilter;
+    }
+
+    const normalizedSearch = options?.search?.trim();
+    if (normalizedSearch) {
+      const searchClause: Prisma.BookingWhereInput = {
+        OR: [
+          { id: { contains: normalizedSearch, mode: 'insensitive' } },
+          {
+            client: {
+              is: {
+                OR: [
+                  { fullName: { contains: normalizedSearch, mode: 'insensitive' } },
+                  {
+                    user: {
+                      is: {
+                        fullName: { contains: normalizedSearch, mode: 'insensitive' },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            provider: {
+              is: {
+                OR: [
+                  { fullName: { contains: normalizedSearch, mode: 'insensitive' } },
+                  {
+                    user: {
+                      is: {
+                        fullName: { contains: normalizedSearch, mode: 'insensitive' },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      };
+      const currentAnd = Array.isArray(where.AND)
+        ? where.AND
+        : where.AND
+        ? [where.AND]
+        : [];
+      where.AND = [...currentAnd, searchClause];
+    }
+
+    const queryArgs: Prisma.BookingFindManyArgs = {
+      where,
+      select: ADMIN_BOOKING_LIST_SELECT,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take,
+    };
+
+    if (options?.cursor) {
+      queryArgs.cursor = { id: options.cursor };
+      queryArgs.skip = 1;
+    }
+
+    const bookingsPromise = this.prisma.booking.findMany(
+      queryArgs,
+    ) as unknown as Promise<AdminBookingListRow[]>;
+
+    const [bookings, totalCount, statusGroups] = await Promise.all([
+      bookingsPromise,
+      this.prisma.booking.count({ where }),
+      this.prisma.booking.groupBy({
+        by: ['status'],
+        _count: {
+          _all: true,
+        },
+        where,
+      }),
+    ]);
+
+    const statusTotals = statusGroups.reduce<Record<BookingStatus, number>>(
+      (acc, entry) => {
+        acc[entry.status] = entry._count._all;
+        return acc;
+      },
+      {} as Record<BookingStatus, number>,
+    );
+    const getCount = (statuses: BookingStatus[]) =>
+      statuses.reduce((sum, status) => sum + (statusTotals[status] ?? 0), 0);
+    const pendingStatuses = [
+      BookingStatus.PENDING,
+      BookingStatus.PENDING_PROVIDER_CONFIRMATION,
+    ];
+    const confirmedStatuses = [BookingStatus.CONFIRMED, BookingStatus.STARTED];
+    const completedStatuses = [BookingStatus.FINISHED];
+    const canceledStatuses = [
+      BookingStatus.CANCELED,
+      BookingStatus.REJECTED,
+      BookingStatus.NO_SHOW,
+    ];
+
+    const items = bookings.map((booking) => {
+      const clientName =
+        booking.client?.user?.fullName ?? booking.client?.fullName ?? null;
+      const providerName =
+        booking.provider?.user?.fullName ?? booking.provider?.fullName ?? null;
+      const service =
+        booking.providerService?.service && booking.providerService.service;
+      const scheduledTimeLabel = booking.scheduledTime
+        ? formatScheduledTime(booking.scheduledTime)
+        : null;
+      return {
+        id: booking.id,
+        clientId: booking.clientId,
+        providerId: booking.providerId,
+        providerServiceId: booking.providerServiceId,
+        status: booking.status,
+        scheduledDate: booking.scheduledDate,
+        scheduledTime: scheduledTimeLabel,
+        totalPrice: decimalToNumber(booking.totalPrice),
+        createdAt: booking.createdAt,
+        updatedAt: booking.updatedAt,
+        clientFullName: clientName,
+        providerFullName: providerName,
+        client: booking.client
+          ? {
+              id: booking.client.id,
+              fullName: clientName ?? undefined,
+            }
+          : undefined,
+        provider: booking.provider
+          ? {
+              id: booking.provider.id,
+              fullName: providerName ?? undefined,
+            }
+          : undefined,
+        service: service
+          ? {
+              id: service.id,
+              name: service.name,
+              description: service.description,
+              icon: service.icon,
+              defaultPricingType: service.defaultPricingType,
+              createdAt: service.createdAt,
+              updatedAt: service.updatedAt,
+            }
+          : undefined,
+      };
+    });
+
+    const nextCursor =
+      bookings.length === take ? bookings[bookings.length - 1].id : undefined;
+
+    return {
+      items,
+      totalCount,
+      nextCursor,
+      statusCounts: {
+        pending: getCount(pendingStatuses),
+        confirmed: getCount(confirmedStatuses),
+        completed: getCount(completedStatuses),
+        canceled: getCount(canceledStatuses),
+      },
+    };
   }
 
   async findUserBookings(
@@ -2139,7 +2446,7 @@ private getScheduledAtInSaoPaulo(
     return booking as BookingWithDetailsRelations;
   }
 
- async updateStatus(
+  async updateStatus(
     id: string,
     newStatus: BookingStatus,
     userRole: UserRole,
@@ -2149,7 +2456,7 @@ private getScheduledAtInSaoPaulo(
       `[BookingsService] updateStatus: Tentando atualizar agendamento ${id} para status ${newStatus} por role ${userRole}.`,
     );
     const locale = (request as any)?.locale || 'pt-BR';
-    
+
     // Busca o booking com as relações necessárias
     const booking = await this.prisma.booking.findUnique({
       where: { id },
@@ -2164,7 +2471,9 @@ private getScheduledAtInSaoPaulo(
     });
 
     if (!booking) {
-      this.logger.error(`[BookingsService] updateStatus - Agendamento com ID "${id}" não encontrado.`);
+      this.logger.error(
+        `[BookingsService] updateStatus - Agendamento com ID "${id}" não encontrado.`,
+      );
       throw new NotFoundException(
         await this.i18n.translate('booking.notFound', locale, { id }),
       );
@@ -2172,21 +2481,35 @@ private getScheduledAtInSaoPaulo(
 
     // Lógica de Redundância
     if (booking.status === newStatus) {
-      this.logger.log(`[BookingsService] updateStatus: booking ${id} já está no status ${newStatus}.`);
+      this.logger.log(
+        `[BookingsService] updateStatus: booking ${id} já está no status ${newStatus}.`,
+      );
       return this.fetchBookingWithDetails(id);
     }
 
     // Identificação do Ator (quem está fazendo a alteração)
-    const actorUserId = (request as any)?.user?.['userId'] || (request as any)?.user?.['id'];
-    const actorRole = (request as any)?.user?.['role'] || (request as any)?.role || userRole;
-    
+    const actorUserId =
+      (request as any)?.user?.['userId'] || (request as any)?.user?.['id'];
+    const actorRole =
+      (request as any)?.user?.['role'] || (request as any)?.role || userRole;
+
     // Validação de Permissão (Simplificada para o exemplo, mantenha a sua lógica de actorClientId/ProviderId)
     // ... (mantenha seus checks de actorClientId e actorProviderId aqui)
 
     // Validação de Transição de Status
-    const finalizedStates = [BookingStatus.FINISHED, BookingStatus.CANCELED, BookingStatus.REJECTED, BookingStatus.NO_SHOW];
-    if (finalizedStates.includes(booking.status as any) && userRole !== UserRole.ADMIN) {
-      throw new BadRequestException(await this.i18n.translate('booking.badRequest.statusFinalized', locale));
+    const finalizedStates = [
+      BookingStatus.FINISHED,
+      BookingStatus.CANCELED,
+      BookingStatus.REJECTED,
+      BookingStatus.NO_SHOW,
+    ];
+    if (
+      finalizedStates.includes(booking.status as any) &&
+      userRole !== UserRole.ADMIN
+    ) {
+      throw new BadRequestException(
+        await this.i18n.translate('booking.badRequest.statusFinalized', locale),
+      );
     }
 
     // --- Lógica de Negócio de Transição (Pode usar sua lógica de switch/case aqui) ---
@@ -2196,32 +2519,62 @@ private getScheduledAtInSaoPaulo(
     const dataToUpdate: Prisma.BookingUpdateInput = { status: newStatus };
 
     // CORREÇÃO TIME: Início do Serviço (ARRIVED -> STARTED)
-    if (userRole === UserRole.PROVIDER && booking.status === BookingStatus.ARRIVED && newStatus === BookingStatus.STARTED) {
+    if (
+      userRole === UserRole.PROVIDER &&
+      booking.status === BookingStatus.ARRIVED &&
+      newStatus === BookingStatus.STARTED
+    ) {
       const scheduledAt = this.getScheduledAtInSaoPaulo(
         booking.scheduledDate,
         this.normalizeScheduledTimeForHelper(booking.scheduledTime),
       );
-      const diffMin = Math.round((now.getTime() - scheduledAt.getTime()) / 60000);
-      
+      const diffMin = Math.round(
+        (now.getTime() - scheduledAt.getTime()) / 60000,
+      );
+
       if (!(diffMin >= -15 && diffMin <= 120)) {
-        throw new BadRequestException('Início fora da janela permitida (15min antes até 2h depois).');
+        throw new BadRequestException(
+          'Início fora da janela permitida (15min antes até 2h depois).',
+        );
       }
       dataToUpdate.startedAt = now;
-      if (actorUserId) dataToUpdate.startedByUser = { connect: { id: actorUserId } };
+      if (actorUserId)
+        dataToUpdate.startedByUser = { connect: { id: actorUserId } };
     }
 
     // CORREÇÃO TIME: Finalização (STARTED -> FINISHED)
-    if (userRole === UserRole.PROVIDER && booking.status === BookingStatus.STARTED && newStatus === BookingStatus.FINISHED) {
-      const refStart = booking.startedAt ?? booking.scheduledStart ?? this.getScheduledAtInSaoPaulo(booking.scheduledDate, this.normalizeScheduledTimeForHelper(booking.scheduledTime));
-      
-      const runMin = Math.round((now.getTime() - new Date(refStart as any).getTime()) / 60000);
-      const minRunMinutes = parseInt(process.env.MIN_SERVICE_MINUTES ?? '15', 10);
+    if (
+      userRole === UserRole.PROVIDER &&
+      booking.status === BookingStatus.STARTED &&
+      newStatus === BookingStatus.FINISHED
+    ) {
+      const refStart =
+        booking.startedAt ??
+        booking.scheduledStart ??
+        this.getScheduledAtInSaoPaulo(
+          booking.scheduledDate,
+          this.normalizeScheduledTimeForHelper(booking.scheduledTime),
+        );
+
+      const runMin = Math.round(
+        (now.getTime() - new Date(refStart as any).getTime()) / 60000,
+      );
+      const minRunMinutes = parseInt(
+        process.env.MIN_SERVICE_MINUTES ?? '15',
+        10,
+      );
 
       if (runMin < minRunMinutes) {
-        throw new BadRequestException(await this.i18n.translate('booking.badRequest.finishTooEarly', locale));
+        throw new BadRequestException(
+          await this.i18n.translate(
+            'booking.badRequest.finishTooEarly',
+            locale,
+          ),
+        );
       }
       dataToUpdate.completedAt = now;
-      if (actorUserId) dataToUpdate.completedByUser = { connect: { id: actorUserId } };
+      if (actorUserId)
+        dataToUpdate.completedByUser = { connect: { id: actorUserId } };
     }
 
     // Persistência no Banco
@@ -2232,13 +2585,20 @@ private getScheduledAtInSaoPaulo(
     });
 
     // CAST SEGURO para a interface que o controller espera
-    const updatedBooking = (updatedBookingRaw as unknown) as BookingWithDetailsRelations;
+    const updatedBooking =
+      updatedBookingRaw as unknown as BookingWithDetailsRelations;
 
     // Efeitos Colaterais (Side Effects)
     if (newStatus === BookingStatus.FINISHED) {
       // Atualiza contadores e lealdade
-      await this.prisma.client.update({ where: { id: booking.clientId }, data: { completedBookingsCount: { increment: 1 } } });
-      await this.prisma.provider.update({ where: { id: booking.providerId }, data: { monthlyBookingsCount: { increment: 1 } } });
+      await this.prisma.client.update({
+        where: { id: booking.clientId },
+        data: { completedBookingsCount: { increment: 1 } },
+      });
+      await this.prisma.provider.update({
+        where: { id: booking.providerId },
+        data: { monthlyBookingsCount: { increment: 1 } },
+      });
       // ... (chame loyaltyService, missionsService, etc.)
     }
 
@@ -2249,9 +2609,11 @@ private getScheduledAtInSaoPaulo(
           updatedBooking.scheduledDate,
           this.normalizeScheduledTimeForHelper(updatedBooking.scheduledTime),
         );
-        
-        const timeString = this.normalizeScheduledTimeForHelper(updatedBooking.scheduledTime) || '00:00';
-        const [hh, mm] = timeString.split(':').map(n => parseInt(n, 10));
+
+        const timeString =
+          this.normalizeScheduledTimeForHelper(updatedBooking.scheduledTime) ||
+          '00:00';
+        const [hh, mm] = timeString.split(':').map((n) => parseInt(n, 10));
 
         await this.schedulerService.scheduleBookingReminders({
           bookingId: updatedBooking.id,
@@ -2463,10 +2825,14 @@ private getScheduledAtInSaoPaulo(
     }
 
     // bloco de onTheWayService
-    const updated = await this.changeBookingStatus(bookingId, BookingStatus.ON_THE_WAY, {
-      booking,
-      include: DEFAULT_BOOKING_DETAILS_INCLUDE,
-    });
+    const updated = await this.changeBookingStatus(
+      bookingId,
+      BookingStatus.ON_THE_WAY,
+      {
+        booking,
+        include: DEFAULT_BOOKING_DETAILS_INCLUDE,
+      },
+    );
 
     // side-effects: notifications
     await this.notifyClientStatusUpdate(updated, BookingStatus.ON_THE_WAY);
@@ -2498,15 +2864,24 @@ private getScheduledAtInSaoPaulo(
     const now = new Date();
     const gpsData = this.buildGpsFields(location, 'arrived');
     // bloco de arriveAtLocation
-    const updated = await this.changeBookingStatus(bookingId, BookingStatus.ARRIVED, {
-      booking,
-      data: { arrivedAt: now, ...gpsData },
-      include: DEFAULT_BOOKING_DETAILS_INCLUDE,
-    });
+    const updated = await this.changeBookingStatus(
+      bookingId,
+      BookingStatus.ARRIVED,
+      {
+        booking,
+        data: { arrivedAt: now, ...gpsData },
+        include: DEFAULT_BOOKING_DETAILS_INCLUDE,
+      },
+    );
 
     // side-effects: notifications
     await this.notifyClientStatusUpdate(updated, BookingStatus.ARRIVED);
-    this.logGpsEvent(booking.id, booking.providerId, 'arriveAtLocation', location);
+    this.logGpsEvent(
+      booking.id,
+      booking.providerId,
+      'arriveAtLocation',
+      location,
+    );
     this.logger.log(
       `[BookingsService] arriveAtLocation: Booking ${bookingId} CHEGOU.`,
     );
@@ -2557,9 +2932,9 @@ private getScheduledAtInSaoPaulo(
         : booking.scheduledStart
           ? new Date(booking.scheduledStart)
           : this.getScheduledAtInSaoPaulo(
-        booking.scheduledDate,
-        this.normalizeScheduledTimeForHelper(booking.scheduledTime),
-      );
+              booking.scheduledDate,
+              this.normalizeScheduledTimeForHelper(booking.scheduledTime),
+            );
     if (!scheduledStart) {
       throw new BadRequestException('Horário agendado inválido.');
     }
@@ -2567,24 +2942,32 @@ private getScheduledAtInSaoPaulo(
     const nowUtcMs = Date.now();
     const scheduledStartMs = scheduledStart.getTime();
     if (nowUtcMs < scheduledStartMs - windowMs) {
-      throw new BadRequestException('Fora da janela de início (antes de -15min).');
+      throw new BadRequestException(
+        'Fora da janela de início (antes de -15min).',
+      );
     }
     if (nowUtcMs > scheduledStartMs + windowMs) {
-      throw new BadRequestException('Fora da janela de início (mais de +15min).');
+      throw new BadRequestException(
+        'Fora da janela de início (mais de +15min).',
+      );
     }
 
     const now = new Date();
 
     const gpsData = this.buildGpsFields(location, 'started');
-    const updated = await this.changeBookingStatus(bookingId, BookingStatus.STARTED, {
-      booking,
-      data: {
-        startedAt: now,
-        startedByUser: { connect: { id: providerUserId } },
-        ...gpsData,
+    const updated = await this.changeBookingStatus(
+      bookingId,
+      BookingStatus.STARTED,
+      {
+        booking,
+        data: {
+          startedAt: now,
+          startedByUser: { connect: { id: providerUserId } },
+          ...gpsData,
+        },
+        include: DEFAULT_BOOKING_DETAILS_INCLUDE,
       },
-      include: DEFAULT_BOOKING_DETAILS_INCLUDE,
-    });
+    );
 
     // side-effects: notifications
     await this.notifyClientStatusUpdate(updated, BookingStatus.STARTED);
@@ -2629,15 +3012,22 @@ private getScheduledAtInSaoPaulo(
       throw new NotFoundException('Agendamento nao encontrado.');
     }
     if (booking.provider.userId !== providerUserId) {
-      throw new ForbiddenException('Somente o prestador pode solicitar o início manual.');
+      throw new ForbiddenException(
+        'Somente o prestador pode solicitar o início manual.',
+      );
     }
     if (booking.status !== BookingStatus.ARRIVED) {
-      throw new BadRequestException('Somente atendimentos com chegada registrada podem pedir início manual.');
+      throw new BadRequestException(
+        'Somente atendimentos com chegada registrada podem pedir início manual.',
+      );
     }
 
-    const sanitizedReason = (reason ?? 'GPS indisponível').trim() || 'GPS indisponível';
+    const sanitizedReason =
+      (reason ?? 'GPS indisponível').trim() || 'GPS indisponível';
     const providerName =
-      booking.provider?.fullName ?? booking.provider?.user?.fullName ?? 'Prestador';
+      booking.provider?.fullName ??
+      booking.provider?.user?.fullName ??
+      'Prestador';
     const clientName = booking.client?.fullName ?? 'Cliente';
     const scheduledStart =
       booking.scheduledStart instanceof Date
@@ -2645,9 +3035,9 @@ private getScheduledAtInSaoPaulo(
         : booking.scheduledStart
           ? new Date(booking.scheduledStart)
           : this.getScheduledAtInSaoPaulo(
-            booking.scheduledDate,
-            this.normalizeScheduledTimeForHelper(booking.scheduledTime),
-          );
+              booking.scheduledDate,
+              this.normalizeScheduledTimeForHelper(booking.scheduledTime),
+            );
     const scheduledLabel = scheduledStart
       ? scheduledStart.toLocaleString('pt-BR', {
           dateStyle: 'short',
@@ -2693,7 +3083,10 @@ private getScheduledAtInSaoPaulo(
         BookingProofType.CHECKOUT,
       );
       const planId = booking.bookingInsurance.planId;
-      if (['PREMIUM', 'TOTAL'].includes(planId ?? '') && !checkoutProof.videoUrl) {
+      if (
+        ['PREMIUM', 'TOTAL'].includes(planId ?? '') &&
+        !checkoutProof.videoUrl
+      ) {
         throw new BadRequestException('checkout-proof-video-required');
       }
     }
@@ -2718,15 +3111,19 @@ private getScheduledAtInSaoPaulo(
       throw new BadRequestException('Ainda não atingiu o horário final.');
 
     const gpsData = this.buildGpsFields(location, 'completed');
-    const updated = await this.changeBookingStatus(bookingId, BookingStatus.FINISHED, {
-      booking,
-      data: {
-        completedAt: new Date(),
-        completedByUser: { connect: { id: providerUserId } },
-        ...gpsData,
+    const updated = await this.changeBookingStatus(
+      bookingId,
+      BookingStatus.FINISHED,
+      {
+        booking,
+        data: {
+          completedAt: new Date(),
+          completedByUser: { connect: { id: providerUserId } },
+          ...gpsData,
+        },
+        include: DEFAULT_BOOKING_DETAILS_INCLUDE,
       },
-      include: DEFAULT_BOOKING_DETAILS_INCLUDE,
-    });
+    );
 
     await this.schedulerService.notifyJobEnded({
       bookingId,
@@ -2765,13 +3162,17 @@ private getScheduledAtInSaoPaulo(
       );
     }
 
-
     await this.notificationService.notifyBookingStatusPush(
       updated.id,
       updated.client?.id ?? null,
       BookingStatus.FINISHED,
     );
-    this.logGpsEvent(booking.id, booking.providerId, 'completeService', location);
+    this.logGpsEvent(
+      booking.id,
+      booking.providerId,
+      'completeService',
+      location,
+    );
     return updated;
   }
 
@@ -2783,7 +3184,11 @@ private getScheduledAtInSaoPaulo(
     const now = new Date();
     const inProgress = await this.prisma.booking.findMany({
       where: { status: BookingStatus.STARTED },
-      include: { paymentIntent: true, bookingInsurance: true, bookingProofs: true },
+      include: {
+        paymentIntent: true,
+        bookingInsurance: true,
+        bookingProofs: true,
+      },
     });
 
     const toComplete = inProgress.filter((b) => {
@@ -2798,13 +3203,17 @@ private getScheduledAtInSaoPaulo(
 
     for (const b of toComplete) {
       const expectedEnd = this.getExpectedEnd(b as any);
-      const updated = await this.changeBookingStatus(b.id, BookingStatus.FINISHED, {
-        booking: b as Booking,
-        data: {
-          completedAt: expectedEnd ?? now,
+      const updated = await this.changeBookingStatus(
+        b.id,
+        BookingStatus.FINISHED,
+        {
+          booking: b as Booking,
+          data: {
+            completedAt: expectedEnd ?? now,
+          },
+          include: DEFAULT_BOOKING_DETAILS_INCLUDE,
         },
-        include: DEFAULT_BOOKING_DETAILS_INCLUDE,
-      });
+      );
       this.logger.log(
         `[BookingsService] autoCompleteOverdueBookings: booking ${b.id} marcado como FINISHED automaticamente.`,
       );
@@ -2844,7 +3253,6 @@ private getScheduledAtInSaoPaulo(
         updated.client?.id ?? null,
         BookingStatus.FINISHED,
       );
-
     }
 
     return { completed: toComplete.map((b) => b.id) };
@@ -3047,10 +3455,14 @@ private getScheduledAtInSaoPaulo(
     }
 
     const finalStatus = newStatus || BookingStatus.FINISHED;
-    const updatedBooking = await this.changeBookingStatus(bookingId, finalStatus, {
-      booking,
-      include: DEFAULT_BOOKING_DETAILS_INCLUDE,
-    });
+    const updatedBooking = await this.changeBookingStatus(
+      bookingId,
+      finalStatus,
+      {
+        booking,
+        include: DEFAULT_BOOKING_DETAILS_INCLUDE,
+      },
+    );
 
     // side-effects: ledger adjustments quando finaliza disputa
     if (
@@ -3139,4 +3551,3 @@ private getScheduledAtInSaoPaulo(
     return updatedBooking;
   }
 }
-
