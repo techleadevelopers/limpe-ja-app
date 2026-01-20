@@ -20,14 +20,14 @@ export class WhatsappWebhookController {
   async handle(@Body() body: Record<string, unknown>) {
     const messageId = this.extractMessageId(body);
     const status =
-      String(body?.['status'] ?? body?.['messageStatus'] ?? body?.['event'] ?? '')
-        .trim() || undefined;
+      String(
+        body?.['status'] ?? body?.['messageStatus'] ?? body?.['event'] ?? '',
+      ).trim() || undefined;
     const event =
-      String(body?.['event'] ?? body?.['type'] ?? '')
-        .trim() || 'unknown';
+      String(body?.['event'] ?? body?.['type'] ?? '').trim() || 'unknown';
     const instanceId =
-      String(body?.['instanceId'] ?? body?.['instance'] ?? '')
-        .trim() || 'unknown';
+      String(body?.['instanceId'] ?? body?.['instance'] ?? '').trim() ||
+      'unknown';
 
     if (messageId && status) {
       await this.updateNotificationLog(messageId, status, body);
@@ -85,8 +85,13 @@ export class WhatsappWebhookController {
   private extractMessageId(body: Record<string, unknown> | null | undefined) {
     if (!body) return undefined;
     return (
-      String(body['messageId'] ?? body['id'] ?? body['msgId'] ?? body['requestId'] ?? '')
-        .trim() || undefined
+      String(
+        body['messageId'] ??
+          body['id'] ??
+          body['msgId'] ??
+          body['requestId'] ??
+          '',
+      ).trim() || undefined
     );
   }
 
@@ -102,7 +107,7 @@ export class WhatsappWebhookController {
       return raw.trim();
     }
     if (typeof raw === 'object' && raw !== null) {
-      return String((raw as any).value ?? '').trim() || undefined;
+      return String(raw.value ?? '').trim() || undefined;
     }
     return undefined;
   }
