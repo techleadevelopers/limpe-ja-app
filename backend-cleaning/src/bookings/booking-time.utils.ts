@@ -9,13 +9,11 @@ export function calculateScheduledAtInSaoPaulo(
   timeHHmm?: string | Date | null,
 ): Date {
   const d = new Date(dateValue);
-  
+
   // Normaliza o tempo usando a função formatScheduledTime que extrai HH:mm corretamente
   const finalTimeStr = formatScheduledTime(timeHHmm);
 
-  const [hhRaw, mmRaw] = finalTimeStr
-    .split(':')
-    .map((n) => parseInt(n, 10));
+  const [hhRaw, mmRaw] = finalTimeStr.split(':').map((n) => parseInt(n, 10));
 
   const hh = Number.isFinite(hhRaw) ? hhRaw : 0;
   const mm = Number.isFinite(mmRaw) ? mmRaw : 0;
@@ -91,10 +89,13 @@ export function calculateExpectedEnd(info: BookingScheduleInfo): Date {
           ? info.scheduledStart
           : typeof info.scheduledStart === 'string'
             ? new Date(info.scheduledStart)
-            : calculateScheduledAtInSaoPaulo(info.scheduledDate, info.scheduledTime);
+            : calculateScheduledAtInSaoPaulo(
+                info.scheduledDate,
+                info.scheduledTime,
+              );
 
   const durationMinutes = Number.isFinite(info.durationMinutes ?? NaN)
-    ? info.durationMinutes!
+    ? info.durationMinutes
     : 60;
 
   return new Date(base.getTime() + durationMinutes * 60 * 1000);
@@ -111,7 +112,7 @@ export function formatScheduledTime(
   if (typeof value === 'number') {
     return formatScheduledTime(new Date(value));
   }
-  
+
   if (value instanceof Date) {
     // Usamos getUTC para garantir que o horário persistido no banco (ex: 10:00)
     // seja extraído como 10:00, ignorando o fuso horário local do servidor Railway.
@@ -119,7 +120,7 @@ export function formatScheduledTime(
     const mm = value.getUTCMinutes().toString().padStart(2, '0');
     return `${hh}:${mm}`;
   }
-  
+
   if (typeof value === 'string') {
     if (value.includes('T')) {
       // Se for uma string ISO, extrai a parte do tempo
@@ -129,7 +130,7 @@ export function formatScheduledTime(
     // Se for string simples "HH:mm:ss" ou "HH:mm", retorna os 5 primeiros caracteres
     return value.slice(0, 5);
   }
-  
+
   return '00:00';
 }
 
@@ -139,5 +140,5 @@ export function formatScheduledTime(
 export function scheduledTimeToMinutes(value?: string | Date | null): number {
   const hhmm = formatScheduledTime(value);
   const [hh, mm] = hhmm.split(':').map((n) => parseInt(n, 10) || 0);
-  return (hh * 60) + mm;
+  return hh * 60 + mm;
 }
