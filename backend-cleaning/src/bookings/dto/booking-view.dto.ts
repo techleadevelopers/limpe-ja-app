@@ -28,7 +28,8 @@ export interface BookingViewOptions {
 
 export class BookingViewDto extends BookingDetailsDto {
   @ApiProperty({
-    description: 'Texto exibido no badge que indica o estado resumido do agendamento.',
+    description:
+      'Texto exibido no badge que indica o estado resumido do agendamento.',
     example: 'Nova Solicitação',
   })
   badgeLabel: string;
@@ -40,7 +41,8 @@ export class BookingViewDto extends BookingDetailsDto {
   showAcceptRejectActions: boolean;
 
   @ApiProperty({
-    description: 'Define se o botão de chat deve ficar visível para o provedor.',
+    description:
+      'Define se o botão de chat deve ficar visível para o provedor.',
     example: true,
   })
   showChatAction: boolean;
@@ -54,6 +56,7 @@ export class BookingViewDto extends BookingDetailsDto {
     const role = options.userRole;
     this.showAcceptRejectActions =
       role === UserRole.PROVIDER && PENDING_STATUSES.has(source.status);
-    this.showChatAction = role === UserRole.PROVIDER && CHAT_STATUSES.has(source.status);
+    this.showChatAction =
+      role === UserRole.PROVIDER && CHAT_STATUSES.has(source.status);
   }
 }
