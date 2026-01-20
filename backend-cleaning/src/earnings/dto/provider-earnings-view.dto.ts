@@ -2,7 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class ProviderEarningsViewDto {
   @ApiProperty({
-    description: 'Indica se o módulo de ganhos deve ser exibido (há valores para mostrar).',
+    description:
+      'Indica se o módulo de ganhos deve ser exibido (há valores para mostrar).',
     example: true,
   })
   showEarnings: boolean;
