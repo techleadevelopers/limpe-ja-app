@@ -6,7 +6,12 @@ import { ProvidersService } from './providers.service';
 import { MissionsService } from '../missions/missions.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { EarningsService } from '../earnings/earnings.service';
-import { UserRole, CouponStatus, CouponTarget, RewardType } from '@prisma/client';
+import {
+  UserRole,
+  CouponStatus,
+  CouponTarget,
+  RewardType,
+} from '@prisma/client';
 
 @Injectable()
 export class ProviderPromotionsService {
@@ -18,37 +23,40 @@ export class ProviderPromotionsService {
     private readonly earningsService: EarningsService,
   ) {}
 
-  async getPromotionsCenter(userId: string): Promise<ProviderPromotionsCenterViewDto> {
+  async getPromotionsCenter(
+    userId: string,
+  ): Promise<ProviderPromotionsCenterViewDto> {
     const provider = await this.providersService.findByUserId(userId);
     if (!provider) {
       throw new NotFoundException('Provider não encontrado.');
     }
 
     const now = new Date();
-    const [coupons, missions, loyaltyRecord, earningsResponse, rewards] = await Promise.all([
-      this.prisma.coupon.findMany({
-        where: {
-          target: CouponTarget.SPECIFIC_PROVIDER,
-          targetId: provider.id,
-          status: CouponStatus.ACTIVE,
-          validFrom: { lte: now },
-          validUntil: { gte: now },
-        },
-        orderBy: { validUntil: 'asc' },
-      }),
-      this.missionsService.getMyMissions(userId, UserRole.PROVIDER),
-      this.prisma.loyalty.findUnique({ where: { userId } }),
-      this.earningsService.getEarnings(userId),
-      this.prisma.reward.findMany({
-        where: { isActive: true },
-        select: {
-          id: true,
-          description: true,
-          costPoints: true,
-          type: true,
-        },
-      }),
-    ]);
+    const [coupons, missions, loyaltyRecord, earningsResponse, rewards] =
+      await Promise.all([
+        this.prisma.coupon.findMany({
+          where: {
+            target: CouponTarget.SPECIFIC_PROVIDER,
+            targetId: provider.id,
+            status: CouponStatus.ACTIVE,
+            validFrom: { lte: now },
+            validUntil: { gte: now },
+          },
+          orderBy: { validUntil: 'asc' },
+        }),
+        this.missionsService.getMyMissions(userId, UserRole.PROVIDER),
+        this.prisma.loyalty.findUnique({ where: { userId } }),
+        this.earningsService.getEarnings(userId),
+        this.prisma.reward.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            description: true,
+            costPoints: true,
+            type: true,
+          },
+        }),
+      ]);
 
     const currentPoints = loyaltyRecord?.currentPoints ?? 0;
 
