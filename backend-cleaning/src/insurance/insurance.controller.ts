@@ -30,7 +30,9 @@ export class InsuranceController {
     };
   }
 
-  private buildProvider(query: GetInsurancePlansQuery): InsuranceProviderProfile {
+  private buildProvider(
+    query: GetInsurancePlansQuery,
+  ): InsuranceProviderProfile {
     return {
       rating: this.toNumber(query.providerRating),
       completedBookings: this.toNumber(query.providerCompletedBookings),
