@@ -26,7 +26,7 @@ describe('PspWebhookGuard', () => {
         getRequest: () => request,
         getResponse: () => response,
       }),
-    } as ExecutionContext);
+    }) as ExecutionContext;
 
   const buildRequest = (
     headers: Record<string, string>,
@@ -51,8 +51,8 @@ describe('PspWebhookGuard', () => {
 
   let configService: ConfigService;
   let cacheService: CacheService;
-let guard: PspWebhookGuard;
-let prismaService: any;
+  let guard: PspWebhookGuard;
+  let prismaService: any;
 
   beforeEach(() => {
     configService = {
