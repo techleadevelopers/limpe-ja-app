@@ -116,19 +116,25 @@ describe('AuthService password reset security', () => {
     prismaMock.user.findUnique.mockResolvedValue(user as any);
     prismaMock.user.update.mockResolvedValue(user as any);
 
-    prismaMock.passwordResetToken.create.mockImplementation(async ({ data }) => {
-      latestTokenRecord = {
-        id: `reset-${Math.random().toString(36).slice(2)}`,
-        createdAt: new Date(),
-        ...data,
-      };
-      return latestTokenRecord;
-    });
-    prismaMock.passwordResetToken.findFirst.mockImplementation(() => latestTokenRecord);
-    prismaMock.passwordResetToken.update.mockImplementation(async ({ data }) => {
-      latestTokenRecord = { ...latestTokenRecord, ...data };
-      return latestTokenRecord;
-    });
+    prismaMock.passwordResetToken.create.mockImplementation(
+      async ({ data }) => {
+        latestTokenRecord = {
+          id: `reset-${Math.random().toString(36).slice(2)}`,
+          createdAt: new Date(),
+          ...data,
+        };
+        return latestTokenRecord;
+      },
+    );
+    prismaMock.passwordResetToken.findFirst.mockImplementation(
+      () => latestTokenRecord,
+    );
+    prismaMock.passwordResetToken.update.mockImplementation(
+      async ({ data }) => {
+        latestTokenRecord = { ...latestTokenRecord, ...data };
+        return latestTokenRecord;
+      },
+    );
 
     await authService.forgotPassword(user.email);
     await authService.forgotPassword(user.email);
