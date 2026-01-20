@@ -30,8 +30,7 @@ describe('EarningsService getEarnings', () => {
       return recentEntries;
     });
 
-  const createAggregateMock =
-    (grossAmount: number, availableAmount: number) =>
+  const createAggregateMock = (grossAmount: number, availableAmount: number) =>
     jest.fn(async ({ where }: { where: any }) => {
       if (where.type === LedgerEntryType.HOLD) {
         return {
