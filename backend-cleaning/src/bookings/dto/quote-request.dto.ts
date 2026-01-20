@@ -19,7 +19,10 @@ import {
 } from '../../insurance/insurance.constants';
 
 class BookingQuoteAddonDto {
-  @ApiProperty({ description: 'ID do item adicional', example: 'addon-cleaning' })
+  @ApiProperty({
+    description: 'ID do item adicional',
+    example: 'addon-cleaning',
+  })
   @IsString()
   id: string;
 
@@ -62,7 +65,8 @@ export class BookingQuoteRequestDto {
   providerId: string;
 
   @ApiPropertyOptional({
-    description: 'ID do serviço (podendo ser usado quando providerServiceId estiver ausente)',
+    description:
+      'ID do serviço (podendo ser usado quando providerServiceId estiver ausente)',
     example: 'f0e9d8c7-b6a5-4321-fedc-ba9876543210',
   })
   @IsOptional()
