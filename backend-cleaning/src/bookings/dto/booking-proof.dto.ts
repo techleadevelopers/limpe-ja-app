@@ -37,7 +37,8 @@ export class SubmitBookingProofDto {
   photos: string[];
 
   @ApiPropertyOptional({
-    description: 'URL do vídeo complementar (obrigatório para checkout em planos premium)',
+    description:
+      'URL do vídeo complementar (obrigatório para checkout em planos premium)',
   })
   @IsOptional()
   @IsString()
@@ -72,7 +73,10 @@ export class SubmitBookingProofDto {
 }
 
 export class BookingProofResponseDto {
-  @ApiProperty({ description: 'Identificador do comprovante', example: 'proof-123' })
+  @ApiProperty({
+    description: 'Identificador do comprovante',
+    example: 'proof-123',
+  })
   @IsString()
   id: string;
 
@@ -88,7 +92,10 @@ export class BookingProofResponseDto {
   @IsString({ each: true })
   photos: string[];
 
-  @ApiPropertyOptional({ description: 'URL do vídeo enviado', example: 'https://...' })
+  @ApiPropertyOptional({
+    description: 'URL do vídeo enviado',
+    example: 'https://...',
+  })
   @IsOptional()
   @IsString()
   videoUrl?: string | null;
@@ -143,11 +150,17 @@ export class BookingProofResponseDto {
   @IsISO8601()
   capturedAt?: string | null;
 
-  @ApiProperty({ description: 'ID do usuário que enviou o comprovante', example: 'user-1' })
+  @ApiProperty({
+    description: 'ID do usuário que enviou o comprovante',
+    example: 'user-1',
+  })
   @IsString()
   userId: string;
 
-  @ApiProperty({ description: 'Data de criação do registro', example: '2025-01-01T09:00:00.000Z' })
+  @ApiProperty({
+    description: 'Data de criação do registro',
+    example: '2025-01-01T09:00:00.000Z',
+  })
   @IsString()
   createdAt: string;
 
@@ -168,7 +181,9 @@ export class BookingProofResponseDto {
     this.id = data.id;
     this.type = data.type;
     this.photos = Array.isArray(data.photos)
-      ? data.photos.filter((photo): photo is string => typeof photo === 'string')
+      ? data.photos.filter(
+          (photo): photo is string => typeof photo === 'string',
+        )
       : [];
     this.videoUrl = data.videoUrl ?? null;
     this.hashes = toRecord(data.hashes ?? null);
@@ -179,13 +194,17 @@ export class BookingProofResponseDto {
         ? data.createdAt.toISOString()
         : data.createdAt;
     this.latitude =
-      typeof data.latitude === 'number' ? data.latitude : data.latitude ?? null;
+      typeof data.latitude === 'number'
+        ? data.latitude
+        : (data.latitude ?? null);
     this.longitude =
-      typeof data.longitude === 'number' ? data.longitude : data.longitude ?? null;
+      typeof data.longitude === 'number'
+        ? data.longitude
+        : (data.longitude ?? null);
     this.accuracyMeters =
       typeof data.accuracyMeters === 'number'
         ? data.accuracyMeters
-        : data.accuracyMeters ?? null;
+        : (data.accuracyMeters ?? null);
     this.capturedAt = data.capturedAt
       ? data.capturedAt instanceof Date
         ? data.capturedAt.toISOString()
