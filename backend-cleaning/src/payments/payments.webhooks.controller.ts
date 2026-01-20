@@ -44,7 +44,7 @@ export class PaymentsWebhooksController {
     const rawBody =
       typeof rawBodyInput === 'string'
         ? rawBodyInput
-        : rawBodyInput?.toString?.('utf8') ?? '';
+        : (rawBodyInput?.toString?.('utf8') ?? '');
 
     let parsed: Record<string, unknown> = {};
     try {
@@ -57,7 +57,10 @@ export class PaymentsWebhooksController {
     }
 
     try {
-      const result = await this.paymentsService.handlePixWebhook(rawBody, parsed);
+      const result = await this.paymentsService.handlePixWebhook(
+        rawBody,
+        parsed,
+      );
       return res.status(200).json(result);
     } catch (error) {
       this.logger.error(
@@ -69,9 +72,7 @@ export class PaymentsWebhooksController {
       if (error instanceof HttpException) {
         throw error;
       }
-      throw new InternalServerErrorException(
-        'Falha ao processar webhook PIX.',
-      );
+      throw new InternalServerErrorException('Falha ao processar webhook PIX.');
     }
   }
 
