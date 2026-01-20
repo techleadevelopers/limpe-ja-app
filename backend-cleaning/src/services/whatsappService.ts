@@ -177,10 +177,19 @@ export class WhatsappService {
     guardHours?: number;
     metadata?: Prisma.JsonValue;
   }): Promise<boolean> {
-    const { bookingId, status, messageKey, phone, message, guardHours, metadata } =
-      params;
+    const {
+      bookingId,
+      status,
+      messageKey,
+      phone,
+      message,
+      guardHours,
+      metadata,
+    } = params;
 
-    if (await this.hasRecentLog({ bookingId, status, messageKey, guardHours })) {
+    if (
+      await this.hasRecentLog({ bookingId, status, messageKey, guardHours })
+    ) {
       this.logger.log(
         `[WhatsappService] Pulando ${messageKey} para booking ${bookingId} (${status}); já enviado recentemente.`,
       );
