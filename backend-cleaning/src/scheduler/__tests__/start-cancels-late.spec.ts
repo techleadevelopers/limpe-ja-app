@@ -1,4 +1,7 @@
-import { NotificationScheduleStatus, NotificationScheduleType } from '@prisma/client';
+import {
+  NotificationScheduleStatus,
+  NotificationScheduleType,
+} from '@prisma/client';
 import { SchedulerService } from '../scheduler.service';
 
 describe('SchedulerService job started flow', () => {
@@ -38,11 +41,7 @@ describe('SchedulerService job started flow', () => {
       translate: jest.fn().mockImplementation((key) => Promise.resolve(key)),
     };
 
-    scheduler = new SchedulerService(
-      prismaMock as any,
-      notificationsMock as any,
-      i18nMock as any,
-    );
+    scheduler = new SchedulerService(prismaMock, notificationsMock, i18nMock);
     await scheduler.onModuleInit();
   });
 
