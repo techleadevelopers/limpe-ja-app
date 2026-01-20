@@ -9,7 +9,11 @@ interface SaoPauloDayRange {
   dayOfWeek: number;
 }
 
-function buildDayRange(year: number, month: number, day: number): SaoPauloDayRange {
+function buildDayRange(
+  year: number,
+  month: number,
+  day: number,
+): SaoPauloDayRange {
   const startUtc = Date.UTC(year, month, day) - SAO_PAULO_TIMEZONE_OFFSET_MS;
   const start = new Date(startUtc);
   return {
@@ -40,7 +44,9 @@ function getSaoPauloLocalDateComponents(timestamp: number) {
   };
 }
 
-export function getSaoPauloDayRangeFromDateString(date: string): SaoPauloDayRange {
+export function getSaoPauloDayRangeFromDateString(
+  date: string,
+): SaoPauloDayRange {
   const { year, month, day } = parseIsoDate(date);
   return buildDayRange(year, month, day);
 }
