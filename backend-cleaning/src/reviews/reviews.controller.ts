@@ -50,10 +50,12 @@ export class ReviewsController {
   private mapToEntity(review: any): ReviewEntity {
     if (review?.booking) {
       if (review.booking.scheduledDate instanceof Date) {
-        review.booking.scheduledDate = review.booking.scheduledDate.toISOString();
+        review.booking.scheduledDate =
+          review.booking.scheduledDate.toISOString();
       }
       if (review.booking.scheduledTime instanceof Date) {
-        review.booking.scheduledTime = review.booking.scheduledTime.toISOString();
+        review.booking.scheduledTime =
+          review.booking.scheduledTime.toISOString();
       }
     }
     return new ReviewEntity(review);
