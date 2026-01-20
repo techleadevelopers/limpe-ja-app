@@ -61,25 +61,25 @@ describe('ComplianceService', () => {
       .mockResolvedValueOnce({ version: '2.1' })
       .mockResolvedValueOnce({ version: '3.0' });
 
-    await expect(
-      service.checkConsent('user-1', 'TERMS', '2.0'),
-    ).resolves.toBe(true);
-    await expect(
-      service.checkConsent('user-1', 'TERMS', '3.1'),
-    ).resolves.toBe(false);
+    await expect(service.checkConsent('user-1', 'TERMS', '2.0')).resolves.toBe(
+      true,
+    );
+    await expect(service.checkConsent('user-1', 'TERMS', '3.1')).resolves.toBe(
+      false,
+    );
   });
 
   it('falls back to lexical comparison when no digits are available', async () => {
     prismaMock.userConsent.findFirst.mockResolvedValue({ version: 'alpha' });
-    await expect(
-      service.checkConsent('user-1', 'TERMS', 'beta'),
-    ).resolves.toBe(false);
+    await expect(service.checkConsent('user-1', 'TERMS', 'beta')).resolves.toBe(
+      false,
+    );
   });
 
   it('returns false when consent is missing', async () => {
     prismaMock.userConsent.findFirst.mockResolvedValue(null);
-    await expect(
-      service.checkConsent('user-1', 'TERMS', '1.0'),
-    ).resolves.toBe(false);
+    await expect(service.checkConsent('user-1', 'TERMS', '1.0')).resolves.toBe(
+      false,
+    );
   });
 });
