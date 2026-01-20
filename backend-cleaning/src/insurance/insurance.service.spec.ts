@@ -24,12 +24,18 @@ describe('InsuranceService', () => {
 
     const premium = plans.find((plan) => plan.id === 'PREMIUM');
     expect(premium?.eligible).toBe(false);
-    expect(premium?.reasons).toContain('Premium requires at least 2 completed client bookings.');
+    expect(premium?.reasons).toContain(
+      'Premium requires at least 2 completed client bookings.',
+    );
 
     const total = plans.find((plan) => plan.id === 'TOTAL');
     expect(total?.eligible).toBe(false);
-    expect(total?.reasons).toContain('Total requires at least 5 completed client bookings.');
-    expect(total?.reasons).toContain('Total requires a provider rating of 4.85 or higher.');
+    expect(total?.reasons).toContain(
+      'Total requires at least 5 completed client bookings.',
+    );
+    expect(total?.reasons).toContain(
+      'Total requires a provider rating of 4.85 or higher.',
+    );
   });
 
   it('marks premium and total eligible when requirements are met and no extra risk applies', () => {
