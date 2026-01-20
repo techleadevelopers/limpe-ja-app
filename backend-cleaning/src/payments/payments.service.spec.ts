@@ -1,9 +1,8 @@
+import { BookingStatus, PaymentIntentStatus, Prisma } from '@prisma/client';
 import {
-  BookingStatus,
-  PaymentIntentStatus,
-  Prisma,
-} from '@prisma/client';
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 
 describe('PaymentsService finalizePixPayment', () => {
@@ -79,7 +78,7 @@ describe('PaymentsService finalizePixPayment', () => {
       bookingId: 'booking-1',
       paymentIntentId: 'pi-1',
     });
-    expect((prismaMock.$transaction as jest.Mock).mock.calls[0][0]).toBeTruthy();
+    expect(prismaMock.$transaction.mock.calls[0][0]).toBeTruthy();
     expect(prismaMock.booking.update).toHaveBeenCalledWith({
       where: { id: 'booking-1' },
       data: { expiresAt: null },
@@ -118,7 +117,13 @@ describe('PaymentsService finalizePixPayment', () => {
       id: 'pi-2',
       bookingId: 'booking-2',
       status: PaymentIntentStatus.PAID,
-      booking: { id: 'booking-2', totalPrice: new Prisma.Decimal(100), provider: { userId: 'provider-2' }, client: { userId: 'client-2' }, status: BookingStatus.CONFIRMED },
+      booking: {
+        id: 'booking-2',
+        totalPrice: new Prisma.Decimal(100),
+        provider: { userId: 'provider-2' },
+        client: { userId: 'client-2' },
+        status: BookingStatus.CONFIRMED,
+      },
     });
 
     const result = await (paymentsService as any).finalizePixPayment({
@@ -175,7 +180,10 @@ describe('PaymentsService handlePixWebhook', () => {
   });
 
   it('acknowledges non-final statuses without calling finalize', async () => {
-    const finalizeSpy = jest.spyOn(paymentsService as any, 'finalizePixPayment');
+    const finalizeSpy = jest.spyOn(
+      paymentsService as any,
+      'finalizePixPayment',
+    );
     const payload = JSON.stringify({
       reference_id: 'ref',
       charges: [{ status: 'PENDING' }],
@@ -184,7 +192,11 @@ describe('PaymentsService handlePixWebhook', () => {
     const result = await paymentsService.handlePixWebhook(payload, undefined);
 
     expect(finalizeSpy).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ ok: true, didUpdate: false, paymentIntentId: null });
+    expect(result).toMatchObject({
+      ok: true,
+      didUpdate: false,
+      paymentIntentId: null,
+    });
   });
 
   it('propagates errors when finalize fails', async () => {
