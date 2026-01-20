@@ -18,6 +18,6 @@ import { NotificationsModule } from '../notifications/notifications.module';
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway, ChatRateLimitService],
-  exports: [ChatService], // Exporta ChatService se outros módulos precisarem usá-lo
+  exports: [ChatService, ChatGateway], // Exporta ChatService e ChatGateway para outros módulos
 })
 export class ChatModule {}
