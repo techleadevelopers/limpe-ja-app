@@ -18,6 +18,7 @@ import {
   Radar,
   MessageSquare,
   Gift,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -82,6 +83,7 @@ export default function Sidebar() {
     },
     { path: "/dispute-management", icon: Handshake, label: "Gestão de Disputas", badge: pendingDisputesData?.count || 0, isActive: location === "/dispute-management" },
     { path: "/live-tracking", icon: Radar, label: "Live Tracking", isActive: location === "/live-tracking" },
+    { path: "/observability", icon: Activity, label: "Monitoramento de Sa�de", isActive: location === "/observability" },
     { path: "/payment-management", icon: DollarSign, label: "Gestão de Pagamentos", isActive: location === "/payment-management" },
     { path: "/safety-alerts", icon: LifeBuoy, label: "Alertas de Segurança", badge: pendingSafetyAlertsData?.count || 0, isActive: location === "/safety-alerts" },
     { path: "/support-center", icon: MessageSquare, label: "Central de Suporte", isActive: location === "/support-center" },
@@ -208,3 +210,4 @@ export default function Sidebar() {
     </div>
   );
 }
+
