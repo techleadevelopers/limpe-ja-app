@@ -9,7 +9,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const tokenExpired =
       info instanceof TokenExpiredError ||
       err instanceof TokenExpiredError ||
-      (info && typeof info.name === 'string' && info.name === 'TokenExpiredError');
+      (info &&
+        typeof info.name === 'string' &&
+        info.name === 'TokenExpiredError');
 
     if (tokenExpired) {
       throw new UnauthorizedException({
