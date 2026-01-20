@@ -22,9 +22,7 @@ import { Request } from 'express';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.PROVIDER)
 export class ProviderPromotionsController {
-  constructor(
-    private readonly promotionsService: ProviderPromotionsService,
-  ) {}
+  constructor(private readonly promotionsService: ProviderPromotionsService) {}
 
   @Get()
   async findAll(@Req() req: Request) {
@@ -33,10 +31,7 @@ export class ProviderPromotionsController {
   }
 
   @Post()
-  async create(
-    @Req() req: Request,
-    @Body() dto: CreateProviderPromotionDto,
-  ) {
+  async create(@Req() req: Request, @Body() dto: CreateProviderPromotionDto) {
     const user = req.user as AuthenticatedProviderUser;
     return this.promotionsService.createPromotion(user, dto);
   }
