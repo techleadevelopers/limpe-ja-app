@@ -1,14 +1,16 @@
-import axios, { AxiosError, AxiosRequestConfig, Method } from "axios";
+import axios, { AxiosError, AxiosRequestConfig, Method, isAxiosError } from "axios";
 
 import {
-    Activity, AuthResponse, AuthUser,
-    Availability, Booking,
+    Activity, AuthResponse, AuthUser, UserProfile,
+    Availability, Booking, LiveStatusPayload,
+    BookingPage,
     BookingStatus,
     ClaimStatus,
     Client,
     Coupon,
     CouponStatus,
     DashboardMetrics,
+    ObservabilityHealthPayload,
     DataRequest, DetailedRatingBreakdown,
     Dispute, DisputeMessage,
     DisputeStatus,
@@ -21,6 +23,8 @@ import {
     PanicAlert,
     PricingRule,
     Provider,
+    AdminProviderPage,
+    ProviderVisibilityStatus,
     ProviderService,
     QueueInfo, QueueJob,
     Referral,
@@ -78,7 +82,7 @@ const resolveBaseUrl = (): string => {
     return RAILWAY_API_BASE_URL;
 };
 
-const API_BASE_URL = resolveBaseUrl();
+export const API_BASE_URL = resolveBaseUrl();
 const DEFAULT_TIMEOUT_MS = 30000;
 
 let onUnauthorizedCallback: UnauthorizedHandler | null = null;
@@ -120,7 +124,7 @@ const randomId = () => {
         if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
             return crypto.randomUUID();
         }
-    } catch (_) {
+    } catch {
         // ignore
     }
     return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -130,7 +134,7 @@ const normalizeString = (value?: string | null): string => {
     return value?.trim() ?? "";
 };
 
-const deriveFullName = (...values: Array<string | undefined | null>): string => {
+const deriveFullName = (...values: (string | undefined | null)[]): string => {
     for (const value of values) {
         const normalized = normalizeString(value);
         if (normalized) {
@@ -294,7 +298,7 @@ export const fetchApi = async <T>(path: string, options: RequestInit = {}): Prom
         if (typeof body === "string") {
             try {
                 axiosConfig.data = JSON.parse(body);
-            } catch (_) {
+            } catch {
                 axiosConfig.data = body;
             }
         } else {
@@ -306,7 +310,7 @@ export const fetchApi = async <T>(path: string, options: RequestInit = {}): Prom
         const response = await apiClient.request<T>(axiosConfig);
         return response.data;
     } catch (err) {
-        if (axios.isAxiosError(err)) {
+        if (isAxiosError(err)) {
             throw buildUnifiedError(err);
         }
         throw err;
@@ -334,6 +338,14 @@ export const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     return fetchApi('/admin/dashboard/metrics');
 };
 
+export const fetchAdminHealth = async (): Promise<ObservabilityHealthPayload> => {
+    return fetchApi('/admin/health');
+};
+
+export const fetchLiveStatus = async (): Promise<LiveStatusPayload> => {
+    return fetchApi('/live-status');
+};
+
 export const fetchRevenueTrend = async (months?: number): Promise<RevenueTrendPoint[]> => {
     const query = months ? `?months=${months}` : '';
     return fetchApi(`/admin/dashboard/revenue-trend${query}`);
@@ -344,6 +356,23 @@ export const fetchProviders = async (): Promise<Provider[]> => {
     const response = await fetchApi<any[]>('/providers');
     return (response ?? []).map(mapProviderPayload);
 };
+
+export const fetchAdminProvidersPage = async (params: {
+    page?: number;
+    limit?: number;
+    searchTerm?: string;
+    serviceId?: string;
+    verificationStatus?: VerificationStatus;
+  }): Promise<AdminProviderPage> => {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.searchTerm) query.set('searchTerm', params.searchTerm);
+    if (params.serviceId) query.set('serviceId', params.serviceId);
+    if (params.verificationStatus) query.set('verificationStatus', params.verificationStatus);
+    const queryString = query.toString();
+    return fetchApi<AdminProviderPage>(`/admin/providers${queryString ? `?${queryString}` : ''}`);
+  };
 
 export const fetchProviderById = async (id: string): Promise<Provider> => {
     const response = await fetchApi<any>(`/providers/${id}`);
@@ -362,6 +391,21 @@ export const updateProviderStatus = async (
     const response = await fetchApi<any>(`/verification/${id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status: status, rejectionReason }),
+    });
+    return mapProviderPayload(response);
+};
+
+export const updateProviderVisibility = async (
+    id: string,
+    visibilityStatus: ProviderVisibilityStatus,
+    visibilityReason?: string | null
+): Promise<Provider> => {
+    const response = await fetchApi<any>(`/admin/providers/${id}/visibility`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+            visibilityStatus,
+            visibilityReason: visibilityReason ?? null,
+        }),
     });
     return mapProviderPayload(response);
 };
@@ -477,6 +521,16 @@ export const fetchClientById = async (id: string): Promise<Client> => {
     const user = await fetchApi<any>(`/users/${id}`);
     return mapUserProfileToClient(user);
 };
+
+export const fetchUserProfileById = async (id: string): Promise<UserProfile> => {
+    return fetchApi<UserProfile>(`/users/${id}`);
+};
+
+export const forceLogoutUser = async (userId: string): Promise<void> => {
+    await fetchApi(`/admin/telemetry/force-logout/${userId}`, {
+        method: 'POST',
+    });
+};
 export const updateClientProfile = async (id: string, data: Partial<Client>): Promise<Client> => {
     return fetchApi(`/clients/${id}`, {
         method: 'PATCH',
@@ -554,6 +608,38 @@ export const updateProviderAvailability = async (providerId: string, data: Parti
 export const fetchAllBookings = async (status?: BookingStatus): Promise<Booking[]> => {
     const query = status ? `?status=${status}` : '';
     return fetchApi(`/bookings${query}`);
+};
+
+export const fetchBookingsPage = async (params: {
+    cursor?: string;
+    limit?: number;
+    status?: BookingStatus;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+} = {}): Promise<BookingPage> => {
+    const query = new URLSearchParams();
+    query.set('paginated', '1');
+    if (params.cursor) {
+        query.set('cursor', params.cursor);
+    }
+    if (params.limit) {
+        query.set('limit', String(params.limit));
+    }
+    if (params.status) {
+        query.set('status', params.status);
+    }
+    if (params.search) {
+        query.set('search', params.search);
+    }
+    if (params.startDate) {
+        query.set('startDate', params.startDate);
+    }
+    if (params.endDate) {
+        query.set('endDate', params.endDate);
+    }
+    const queryString = query.toString();
+    return fetchApi<BookingPage>(`/bookings${queryString ? `?${queryString}` : ''}`);
 };
 
 export const fetchBookingDetails = async (id: string): Promise<Booking> => {
