@@ -33,7 +33,9 @@ export class IncidentsController {
 
   @Post()
   @Roles(UserRole.CLIENT, UserRole.PROVIDER)
-  @ApiOperation({ summary: 'Abre um sinistro de seguro para um agendamento concluído.' })
+  @ApiOperation({
+    summary: 'Abre um sinistro de seguro para um agendamento concluído.',
+  })
   async createClaim(
     @Body() payload: CreateIncidentClaimDto,
     @Req() req: RequestWithUser,
