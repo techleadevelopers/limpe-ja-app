@@ -26,7 +26,7 @@ const OFFICIAL_STATUS_NAMES = new Set<string>(Object.values(BookingStatus));
 export function normalizeBookingStatus(
   status: BookingStatus | LegacyBookingStatus | string,
 ): BookingStatus {
-  const statusName = status as string;
+  const statusName = status;
   if (OFFICIAL_STATUS_NAMES.has(statusName)) {
     return statusName as BookingStatus;
   }
