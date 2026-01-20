@@ -146,7 +146,10 @@ export class AvailabilityService {
         const startTime = normalizeSlotTime(slot.startTime);
         const endTime = normalizeSlotTime(slot.endTime);
         if (!startTime || !endTime) {
-          console.warn('[AvailabilityService] ignorando slot com horA!rio invA!lido', slot);
+          console.warn(
+            '[AvailabilityService] ignorando slot com horA!rio invA!lido',
+            slot,
+          );
           return null;
         }
         return {
@@ -161,7 +164,9 @@ export class AvailabilityService {
     console.log(
       '[AvailabilityService] normalizedAvailability',
       requestedDateKey,
-      sanitizedAvailability.map((slot) => `${slot.startTime}-${slot.endTime} (${slot.isAvailable})`),
+      sanitizedAvailability.map(
+        (slot) => `${slot.startTime}-${slot.endTime} (${slot.isAvailable})`,
+      ),
     );
 
     // 2. Buscar agendamentos ocupados na data real (2026...)
@@ -209,9 +214,7 @@ export class AvailabilityService {
     const updatedRecords: Availability[] = [];
     const nowTimestamp = Date.now();
     const currentDayRange = getSaoPauloDayRangeFromTimestamp(nowTimestamp);
-    const nowInTimeZone = new Date(
-      nowTimestamp + SAO_PAULO_TIMEZONE_OFFSET_MS,
-    );
+    const nowInTimeZone = new Date(nowTimestamp + SAO_PAULO_TIMEZONE_OFFSET_MS);
     const minutesNow =
       nowInTimeZone.getUTCHours() * 60 + nowInTimeZone.getUTCMinutes();
     const todayDow = currentDayRange.dayOfWeek;
@@ -247,7 +250,7 @@ export class AvailabilityService {
           `Intervalo inválido: ${startTime} deve ser menor que ${endTime}.`,
         );
       }
-      
+
       if (dayOfWeek === todayDow && endMin <= minutesNow) {
         throw new BadRequestException(
           'Não é permitido alterar slot já passado.',
@@ -259,7 +262,9 @@ export class AvailabilityService {
           booking.scheduledDate.getTime(),
         ).dayOfWeek;
         const bookMin = this.toMinutes(booking.scheduledTime);
-        return bookingDow === dayOfWeek && bookMin < endMin && bookMin >= startMin;
+        return (
+          bookingDow === dayOfWeek && bookMin < endMin && bookMin >= startMin
+        );
       });
 
       if (overlappingBooking) {
@@ -321,9 +326,7 @@ export class AvailabilityService {
           where: { providerId, dayOfWeek, startTime, endTime },
         });
         if (existingSlot) {
-          throw new ConflictException(
-            `Um slot de disponibilidade já existe.`,
-          );
+          throw new ConflictException(`Um slot de disponibilidade já existe.`);
         }
         const newSlot = await this.prisma.availability.create({
           data: {
@@ -366,9 +369,7 @@ export class AvailabilityService {
     }
     const nowTimestamp = Date.now();
     const dayRange = getSaoPauloDayRangeFromTimestamp(nowTimestamp);
-    const nowInTimeZone = new Date(
-      nowTimestamp + SAO_PAULO_TIMEZONE_OFFSET_MS,
-    );
+    const nowInTimeZone = new Date(nowTimestamp + SAO_PAULO_TIMEZONE_OFFSET_MS);
     const minutesNow =
       nowInTimeZone.getUTCHours() * 60 + nowInTimeZone.getUTCMinutes();
     if (dayOfWeek === dayRange.dayOfWeek && endMin <= minutesNow) {
@@ -403,7 +404,9 @@ export class AvailabilityService {
         booking.scheduledDate.getTime(),
       ).dayOfWeek;
       const bookMin = this.toMinutes(booking.scheduledTime);
-      return bookingDow === dayOfWeek && bookMin < endMin && bookMin >= startMin;
+      return (
+        bookingDow === dayOfWeek && bookMin < endMin && bookMin >= startMin
+      );
     });
     if (overlappingBooking) {
       throw new ConflictException(
@@ -443,9 +446,7 @@ export class AvailabilityService {
     });
 
     if (strikeCount >= SLOT_HOLD_STRIKE_THRESHOLD) {
-      throw new BadRequestException(
-        'Cancelamentos excessivos para este slot.',
-      );
+      throw new BadRequestException('Cancelamentos excessivos para este slot.');
     }
   }
 
@@ -459,9 +460,7 @@ export class AvailabilityService {
       });
     } catch (error) {
       if (error.code === 'P2025') {
-        throw new NotFoundException(
-          `Slot não encontrado.`,
-        );
+        throw new NotFoundException(`Slot não encontrado.`);
       }
       throw error;
     }
