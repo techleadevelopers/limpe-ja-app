@@ -3,7 +3,8 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class ProviderAvailabilitySummaryDto {
   @ApiProperty({
-    description: 'Quantidade de provedores com endereço dentro do raio solicitado.',
+    description:
+      'Quantidade de provedores com endereço dentro do raio solicitado.',
     example: 28,
   })
   availableProvidersCount: number;
