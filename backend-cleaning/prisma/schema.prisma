@@ -36,6 +36,12 @@ enum VerificationStatus {
   BLOCKED
 }
 
+enum ProviderVisibilityStatus {
+  VISIBLE
+  VITRINE_IRREGULAR
+  PENDING_VITRINE_REVIEW
+}
+
 enum PricingType {
   FIXED_PRICE
   HOURLY
@@ -448,6 +454,9 @@ model Provider {
   yearsOfExperience       Int?
   avatarUrl               String?
   verificationStatus      VerificationStatus  @default(PENDING_INITIAL_REVIEW)
+  visibilityStatus        ProviderVisibilityStatus @default(VISIBLE)
+  visibilityReason        String?
+  visibilityUpdatedAt     DateTime?
 
   // Documentos e verificação
   cpf                     String?             @unique
@@ -490,7 +499,10 @@ model Provider {
   updatedAt               DateTime           @updatedAt
   slotHoldStrikes         SlotHoldStrike[]
 
-  @@index([verificationStatus, yearsOfExperience])
+  @@index([fullName], name: "idx_provider_full_name")
+  @@index([verificationStatus], name: "idx_provider_verification_status")
+  @@index([visibilityStatus], name: "idx_provider_visibility_status")
+  @@index([verificationStatus, yearsOfExperience], name: "idx_provider_verification_status_years_experience")
 }
 
 model ProviderPromotion {
@@ -531,6 +543,7 @@ model ProviderService {
 
   /// Unique constraint now ignores pricingType (only one hourly contract per provider/service).
   @@unique([providerId, serviceId])
+  @@index([serviceId], name: "idx_provider_service_service_id")
 }
 
 model ProviderServiceVersion {
