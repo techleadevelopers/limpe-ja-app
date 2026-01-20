@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { INSURANCE_PLANS, InsurancePlanDefinition, InsurancePlanId } from './insurance.constants';
+import {
+  INSURANCE_PLANS,
+  InsurancePlanDefinition,
+  InsurancePlanId,
+} from './insurance.constants';
 
 const RISK_CAP = 0.4;
 
@@ -39,7 +43,11 @@ export class InsuranceService {
   getPlans(input: InsurancePlansInput): InsurancePlanProposal[] {
     const normalizedInput = this.normalizeInput(input);
     const { clientCompleted, estimateTotalCents, provider } = normalizedInput;
-    const riskModifier = this.calculateRiskModifier(clientCompleted, estimateTotalCents, provider);
+    const riskModifier = this.calculateRiskModifier(
+      clientCompleted,
+      estimateTotalCents,
+      provider,
+    );
     const riskMultiplierBps = Math.round(riskModifier * 10000);
 
     return INSURANCE_PLANS.map((plan) => {
@@ -54,7 +62,9 @@ export class InsuranceService {
     });
   }
 
-  private normalizeInput(input: InsurancePlansInput): InsurancePlansCalculationContext {
+  private normalizeInput(
+    input: InsurancePlansInput,
+  ): InsurancePlansCalculationContext {
     return {
       clientCompleted: this.toNonNegativeNumber(input.clientCompleted),
       estimateTotalCents: this.toNonNegativeNumber(input.estimateTotalCents),
@@ -62,7 +72,9 @@ export class InsuranceService {
     };
   }
 
-  private normalizeProvider(provider?: InsuranceProviderProfile): NormalizedProviderProfile {
+  private normalizeProvider(
+    provider?: InsuranceProviderProfile,
+  ): NormalizedProviderProfile {
     return {
       rating: this.toNonNegativeNumber(provider?.rating),
       completedBookings: this.toNonNegativeNumber(provider?.completedBookings),
