@@ -171,24 +171,24 @@ export class AuthService {
     const fullUser = (await this.prisma.user.findUnique({
       where: { id: user.id },
       include: {
-      client: {
-        include: loginClientInclude,
-      },
-      provider: {
-        include: loginProviderInclude,
-      },
-      loyalty: true, // Incluído
-      referredBy: true, // Incluído
-      referralsMade: true, // Incluído
-      userConsents: {
-        orderBy: { consentedAt: 'desc' as Prisma.SortOrder },
-        select: {
-          documentType: true,
-          version: true,
-          consentedAt: true,
+        client: {
+          include: loginClientInclude,
+        },
+        provider: {
+          include: loginProviderInclude,
+        },
+        loyalty: true, // Incluído
+        referredBy: true, // Incluído
+        referralsMade: true, // Incluído
+        userConsents: {
+          orderBy: { consentedAt: 'desc' as Prisma.SortOrder },
+          select: {
+            documentType: true,
+            version: true,
+            consentedAt: true,
+          },
         },
       },
-    },
     })) as UserWithAllRelations;
 
     if (!fullUser) {
@@ -342,7 +342,7 @@ export class AuthService {
         );
       }
 
-            // --- NOVO: Lógica de Indicação no Registro ---
+      // --- NOVO: Lógica de Indicação no Registro ---
       if (referralCode) {
         await this.handleReferralCode(referralCode, newUserClient.id);
       }
@@ -358,9 +358,7 @@ export class AuthService {
           source: 'signup',
           ip: options?.ip,
           userAgent: options?.userAgent,
-          acceptedAt: termsAcceptedAt
-            ? new Date(termsAcceptedAt)
-            : new Date(),
+          acceptedAt: termsAcceptedAt ? new Date(termsAcceptedAt) : new Date(),
         },
       );
 
@@ -745,7 +743,10 @@ export class AuthService {
     );
   }
 
-  async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+  async confirmPasswordReset(
+    token: string,
+    newPassword: string,
+  ): Promise<void> {
     let payload: { userId?: string };
 
     try {
