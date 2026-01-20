@@ -1,5 +1,6 @@
 import {
   Provider as PrismaProvider,
+  ProviderVisibilityStatus,
   User,
   Address,
   ProviderService,
@@ -88,6 +89,25 @@ export class ProviderEntity implements PrismaProvider {
     example: VerificationStatus.APPROVED,
   })
   verificationStatus: VerificationStatus;
+
+  @ApiProperty({
+    description: 'Status da visibilidade da vitrine do provedor',
+    enum: ProviderVisibilityStatus,
+    example: ProviderVisibilityStatus.VISIBLE,
+  })
+  visibilityStatus: ProviderVisibilityStatus;
+
+  @ApiPropertyOptional({
+    description: 'Motivo associado ao status de visibilidade',
+    example: 'Selfie informal',
+  })
+  visibilityReason: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Última atualização do status de visibilidade',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  visibilityUpdatedAt: Date | null;
 
   @ApiPropertyOptional({
     description: 'URL da foto frontal do documento',
