@@ -1,4 +1,7 @@
-import { ProviderWithCalculatedRating, ProvidersService } from './providers.service';
+import {
+  ProviderWithCalculatedRating,
+  ProvidersService,
+} from './providers.service';
 import { CacheService } from '../cache/cache.service';
 import { DocumentProcessingService } from '../document-processing/document-processing.service';
 import { SettingsService } from '../settings/settings.service';
@@ -158,8 +161,12 @@ describe('ProvidersService caching', () => {
   });
 
   it('retains verificationStatus when mapping providers', () => {
-    const provider = makeProviderRecord({ verificationStatus: VerificationStatus.PENDING_MANUAL_REVIEW });
+    const provider = makeProviderRecord({
+      verificationStatus: VerificationStatus.PENDING_MANUAL_REVIEW,
+    });
     const mapped = service.mapProviderToCalculatedRating(provider);
-    expect(mapped.verificationStatus).toBe(VerificationStatus.PENDING_MANUAL_REVIEW);
+    expect(mapped.verificationStatus).toBe(
+      VerificationStatus.PENDING_MANUAL_REVIEW,
+    );
   });
 });
