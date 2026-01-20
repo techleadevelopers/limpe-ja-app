@@ -6,7 +6,7 @@ export class AvailabilityEntity implements PrismaAvailability {
   dayOfWeek: number;
   date: Date | null;
   // Ajuste de tipagem para compatibilidade com o novo Prisma
-  startTime: string | any; 
+  startTime: string | any;
   endTime: string | any;
   isAvailable: boolean;
   createdAt: Date; // O Prisma costuma exigir esses campos na interface
@@ -14,8 +14,8 @@ export class AvailabilityEntity implements PrismaAvailability {
 
   constructor(partial: Partial<AvailabilityEntity>) {
     Object.assign(this, partial);
-    
-    // Garantia de que, se vierem como Date do banco, 
+
+    // Garantia de que, se vierem como Date do banco,
     // a Entity possa tratar ou converter se necessário
     if (partial.startTime instanceof Date) {
       this.startTime = partial.startTime.toISOString();
