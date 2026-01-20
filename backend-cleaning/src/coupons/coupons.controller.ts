@@ -158,10 +158,7 @@ export class CouponsController {
     description: 'Cupom atualizado.',
     type: CouponEntity,
   })
-  async updateCoupon(
-    @Param('id') id: string,
-    @Body() dto: UpdateCouponDto,
-  ) {
+  async updateCoupon(@Param('id') id: string, @Body() dto: UpdateCouponDto) {
     return this.couponsService.update(id, dto);
   }
 
@@ -198,5 +195,4 @@ export class CouponsController {
     bookingData.clientId = bookingData.clientId ?? req.user.userId;
     return this.couponsService.applyCoupon(code, req.user.userId, bookingData);
   }
-
 }
