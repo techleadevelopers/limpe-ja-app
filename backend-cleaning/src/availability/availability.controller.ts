@@ -87,12 +87,15 @@ export class AvailabilityController {
     @Query() query: GetAvailabilityDto,
   ) {
     this.validateProviderId(providerId);
-    
-    const result = await this.availabilityService.getAvailability(providerId, query);
-    
-    // Se o service retorna { available, occupiedTimes }, mande apenas o available 
+
+    const result = await this.availabilityService.getAvailability(
+      providerId,
+      query,
+    );
+
+    // Se o service retorna { available, occupiedTimes }, mande apenas o available
     // para o frontend não quebrar
-    return result.available || result; 
+    return result.available || result;
   }
 
   @Patch()
