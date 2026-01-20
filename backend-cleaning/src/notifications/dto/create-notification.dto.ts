@@ -92,7 +92,8 @@ export class CreateNotificationDto {
   idempotencyKey?: string;
 
   @ApiPropertyOptional({
-    description: 'Chave de deduplicação do AppEvent (ex: type:bookingId:userId)',
+    description:
+      'Chave de deduplicação do AppEvent (ex: type:bookingId:userId)',
     example: 'BOOKING_UPDATED:booking-123:client-456',
   })
   @IsOptional()
@@ -100,7 +101,8 @@ export class CreateNotificationDto {
   dedupeKey?: string;
 
   @ApiPropertyOptional({
-    description: 'Identificador de entidade relacionada (bookingId, messageId, etc.)',
+    description:
+      'Identificador de entidade relacionada (bookingId, messageId, etc.)',
     example: 'booking-123',
   })
   @IsOptional()
