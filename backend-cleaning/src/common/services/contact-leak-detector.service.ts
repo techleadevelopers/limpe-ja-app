@@ -13,8 +13,7 @@ export interface ContactLeakResult {
 export class ContactLeakDetector {
   private readonly phoneRegex =
     /(?:\+55[\s-]*)?(?:\(?\d{2}\)?[\s-]*)?(?:9\d{4}[\s-]?\d{4}|[2-8]\d{3}[\s-]?\d{4})/g;
-  private readonly emailRegex =
-    /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+  private readonly emailRegex = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
   private readonly linkRegex =
     /\b(?:https?:\/\/|whatsapp\.me\/|wa\.me\/|bit\.ly\/)[^\s]{5,}\b/gi;
 
@@ -22,8 +21,14 @@ export class ContactLeakDetector {
     const normalized = content || '';
     const orderedChecks: Array<{ type: LeakType; matches: string[] }> = [
       { type: 'PHONE', matches: this.extractPhoneMatches(normalized) },
-      { type: 'EMAIL', matches: this.extractMatches(this.emailRegex, normalized) },
-      { type: 'LINK', matches: this.extractMatches(this.linkRegex, normalized) },
+      {
+        type: 'EMAIL',
+        matches: this.extractMatches(this.emailRegex, normalized),
+      },
+      {
+        type: 'LINK',
+        matches: this.extractMatches(this.linkRegex, normalized),
+      },
     ];
 
     for (const candidate of orderedChecks) {
