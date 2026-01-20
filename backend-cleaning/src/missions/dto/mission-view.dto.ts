@@ -22,7 +22,8 @@ export class MissionViewDto {
   percent: number;
 
   @ApiProperty({
-    description: 'Indica se a missão pode ser resgatada (COMPLETED e não resgatada).',
+    description:
+      'Indica se a missão pode ser resgatada (COMPLETED e não resgatada).',
     example: true,
   })
   canClaim: boolean;
