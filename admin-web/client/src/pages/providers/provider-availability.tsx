@@ -7,18 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { fetchProviders, fetchProviderAvailability, updateProviderAvailability } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from '@/hooks/use-debounce';
 
 export default function ProviderAvailabilityPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [providerId, setProviderId] = useState('');
+  const debouncedProviderId = useDebounce(providerId, 300);
 
   const { data: providers = [] } = useQuery({ queryKey: ['providers:list'], queryFn: fetchProviders });
   const selected = useMemo(() => providers.find((p: any) => p.id === providerId), [providers, providerId]);
   const { data: availability = [], isFetching } = useQuery({
-    queryKey: ['providers:availability', providerId],
-    enabled: !!providerId,
-    queryFn: () => fetchProviderAvailability(providerId!),
+    queryKey: ['providers:availability', debouncedProviderId],
+    enabled: !!debouncedProviderId,
+    queryFn: () => fetchProviderAvailability(debouncedProviderId!),
   });
 
   const mutation = useMutation({
@@ -90,4 +92,3 @@ export default function ProviderAvailabilityPage() {
     </div>
   );
 }
-
