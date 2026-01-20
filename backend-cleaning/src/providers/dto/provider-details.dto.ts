@@ -3,6 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   Review,
   Client as PrismaClient,
+  ProviderVisibilityStatus,
   VerificationStatus,
   User,
 } from '@prisma/client';
@@ -119,6 +120,31 @@ export class ProviderDetailsDto {
   @IsOptional()
   @IsEnum(VerificationStatus)
   verificationStatus?: VerificationStatus;
+
+  @ApiProperty({
+    enum: ProviderVisibilityStatus,
+    description: 'Status da visibilidade da vitrine do provedor',
+    example: ProviderVisibilityStatus.VISIBLE,
+  })
+  @IsOptional()
+  @IsEnum(ProviderVisibilityStatus)
+  visibilityStatus?: ProviderVisibilityStatus;
+  
+  @ApiPropertyOptional({
+    description: 'Motivo registrado para a restricao de visibilidade',
+    example: 'Selfie informal',
+  })
+  @IsOptional()
+  @IsString()
+  visibilityReason?: string | null;
+  
+  @ApiPropertyOptional({
+    description: 'Data e hora da ultima atualizacao do status de visibilidade',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  @IsOptional()
+  @IsString()
+  visibilityUpdatedAt?: string | null;
 
   @ApiPropertyOptional({
     type: () => CreateAddressDto,
@@ -246,6 +272,10 @@ export class ProviderDetailsDto {
     this.yearsOfExperience = source.yearsOfExperience;
     this.bio = source.bio;
     this.verificationStatus = source.verificationStatus; // NOVO
+    this.visibilityStatus =
+      source.visibilityStatus ?? ProviderVisibilityStatus.VISIBLE;
+    this.visibilityReason = source.visibilityReason ?? null;
+    this.visibilityUpdatedAt = source.visibilityUpdatedAt ?? null;
 
     // Email já vem direto em ProviderWithCalculatedRating
     this.email = source.email;
