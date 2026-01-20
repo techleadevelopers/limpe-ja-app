@@ -120,7 +120,8 @@ export class NotificationsController {
 
   @Get('stream')
   @ApiOperation({
-    summary: 'Stream de eventos (AppEvents) desde um timestamp para reconciliação',
+    summary:
+      'Stream de eventos (AppEvents) desde um timestamp para reconciliação',
   })
   @ApiResponse({
     status: 200,
@@ -145,7 +146,10 @@ export class NotificationsController {
     }
 
     const notifications =
-      await this.notificationsService.getUserNotificationStream(userId, sinceDate);
+      await this.notificationsService.getUserNotificationStream(
+        userId,
+        sinceDate,
+      );
     return notifications.map((n) => new NotificationEntity(n));
   }
 
@@ -202,7 +206,9 @@ export class NotificationsController {
   }
 
   @Post(':id/ack')
-  @ApiOperation({ summary: 'Confirmar recebimento (ack) de um AppEvent/notification' })
+  @ApiOperation({
+    summary: 'Confirmar recebimento (ack) de um AppEvent/notification',
+  })
   @ApiResponse({
     status: 200,
     description: 'Notificação marcada como lida/ack.',
@@ -257,7 +263,8 @@ export class NotificationsController {
 
   @Post('qa/send')
   @ApiOperation({
-    summary: 'Enviar notificação de QA para o usuário autenticado (dev/painel QA)',
+    summary:
+      'Enviar notificação de QA para o usuário autenticado (dev/painel QA)',
   })
   async sendQaNotification(
     @Req() req: RequestWithUser,
