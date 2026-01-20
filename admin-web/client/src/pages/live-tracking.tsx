@@ -4,13 +4,14 @@ import Sidebar from "@/components/layout/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchAllBookings, fetchProviders } from "@/lib/api";
-import { Booking, BookingStatus, Provider } from "@/lib/types";
+import { fetchLiveStatus } from "@/lib/api";
+import { Booking, BookingStatus, LiveStatusPayload, Provider } from "@/lib/types";
 import { useQuery } from "@tanstack/react-query";
 import { MapContainer, Marker, TileLayer } from "react-leaflet";
 import L, { type LatLngExpression, type Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Activity, MapPin, RefreshCcw } from "lucide-react";
+import { useThrottle } from "@/hooks/use-throttle";
 
 type ActiveProviderEntry = {
   provider: Provider;
@@ -97,39 +98,42 @@ const resolveCoordinates = (
   return { lat, lng };
 };
 
+const EMPTY_LIVE_STATUS: LiveStatusPayload = {
+  providers: [],
+  confirmedBookings: [],
+  activeBookings: [],
+};
+
 export default function LiveTrackingPage() {
   const {
-    data: providers = [],
-    isFetching: isFetchingProviders,
-  } = useQuery({
-    queryKey: ["live-tracking", "providers"],
-    queryFn: fetchProviders,
+    data: liveStatusData,
+    isFetching,
+  } = useQuery<LiveStatusPayload>({
+    queryKey: ["live-tracking", "live-status"],
+    queryFn: fetchLiveStatus,
     refetchInterval: 30000,
     staleTime: 30000,
   });
-  const {
-    data: confirmedBookings = [],
-    isFetching: isFetchingConfirmed,
-  } = useQuery({
-    queryKey: ["live-tracking", "bookings", BookingStatus.CONFIRMED],
-    queryFn: () => fetchAllBookings(BookingStatus.CONFIRMED),
-    refetchInterval: 30000,
-    staleTime: 30000,
-  });
-  const {
-    data: inProgressBookings = [],
-    isFetching: isFetchingInProgress,
-  } = useQuery({
-    queryKey: ["live-tracking", "bookings", BookingStatus.STARTED],
-    queryFn: () => fetchAllBookings(BookingStatus.STARTED),
-    refetchInterval: 30000,
-    staleTime: 30000,
-  });
+
+  const liveStatus = liveStatusData ?? EMPTY_LIVE_STATUS;
+  const providers = liveStatus.providers;
+  const confirmedBookings = liveStatus.confirmedBookings;
+  const inProgressBookings = liveStatus.activeBookings;
 
   const activeBookings = useMemo(
     () => [...inProgressBookings, ...confirmedBookings],
     [confirmedBookings, inProgressBookings],
   );
+
+  const activeBookingsByProvider = useMemo(() => {
+    const map = new Map<string, Booking>();
+    for (const booking of activeBookings) {
+      if (!map.has(booking.providerId)) {
+        map.set(booking.providerId, booking);
+      }
+    }
+    return map;
+  }, [activeBookings]);
 
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
@@ -142,48 +146,43 @@ export default function LiveTrackingPage() {
   }, [providers.length, activeBookings.length]);
 
   const activeProviders = useMemo((): ActiveProviderEntry[] => {
-    if (!providers.length || !activeBookings.length) {
+    if (!providers.length || !activeBookingsByProvider.size) {
       return [];
     }
-    return providers
-      .map((provider) => {
-        const booking = activeBookings.find(
-          (b) => b.providerId === provider.id,
-        );
-        if (!booking) return null;
-        const coords = resolveCoordinates(provider, booking);
-        if (!coords) return null;
-        const engineStarted =
-          booking.status === BookingStatus.STARTED || Boolean(booking.startedAt);
-        const isJoaquim = /\bjoaquim\b/i.test(
-          (provider.fullName ?? provider.name ?? "") as string,
-        );
-        return {
-          provider,
-          booking,
-          lat: coords.lat,
-          lng: coords.lng,
-          engineStarted,
-          isJoaquim,
-        };
-      })
-      .filter(
-        (entry): entry is ActiveProviderEntry => entry !== null,
-      )
-      .sort((a, b) => {
-        if (a.engineStarted !== b.engineStarted) {
-          return a.engineStarted ? -1 : 1;
-        }
-        if (a.isJoaquim !== b.isJoaquim) {
-          return a.isJoaquim ? -1 : 1;
-        }
-        return a.provider.fullName
-          ?.localeCompare(b.provider.fullName ?? "") ?? 0;
+    const entries = providers.reduce<ActiveProviderEntry[]>((acc, provider) => {
+      const booking = activeBookingsByProvider.get(provider.id);
+      if (!booking) return acc;
+      const coords = resolveCoordinates(provider, booking);
+      if (!coords) return acc;
+      const engineStarted =
+        booking.status === BookingStatus.STARTED || Boolean(booking.startedAt);
+      const isJoaquim = /\bjoaquim\b/i.test(
+        (provider.fullName ?? provider.name ?? "") as string,
+      );
+      acc.push({
+        provider,
+        booking,
+        lat: coords.lat,
+        lng: coords.lng,
+        engineStarted,
+        isJoaquim,
       });
-  }, [providers, activeBookings]);
+      return acc;
+    }, []);
+    return entries.sort((a, b) => {
+      if (a.engineStarted !== b.engineStarted) {
+        return a.engineStarted ? -1 : 1;
+      }
+      if (a.isJoaquim !== b.isJoaquim) {
+        return a.isJoaquim ? -1 : 1;
+      }
+      return (
+        a.provider.fullName?.localeCompare(b.provider.fullName ?? "") ?? 0
+      );
+    });
+  }, [providers, activeBookingsByProvider]);
 
-  const isFetching =
-    isFetchingProviders || isFetchingConfirmed || isFetchingInProgress;
+  const throttledActiveProviders = useThrottle(activeProviders, 500);
 
   const handleTrackProvider = useCallback(
     (entry: ActiveProviderEntry) => {
@@ -204,13 +203,13 @@ export default function LiveTrackingPage() {
 
   useEffect(() => {
     if (!mapInstance || !trackingId) return;
-    const entry = activeProviders.find(
+    const entry = throttledActiveProviders.find(
       (provider) => provider.provider.id === trackingId,
     );
     if (entry) {
       mapInstance.flyTo([entry.lat, entry.lng], 14, { duration: 1.2 });
     }
-  }, [activeProviders, mapInstance, trackingId]);
+  }, [throttledActiveProviders, mapInstance, trackingId]);
 
   return (
     <div className="flex h-screen bg-admin-bg">
@@ -273,7 +272,7 @@ export default function LiveTrackingPage() {
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                       />
-                      {activeProviders.map((entry) => {
+                      {throttledActiveProviders.map((entry) => {
                         const icon = entry.engineStarted
                           ? engineMarkerIcon
                           : confirmedMarkerIcon;
