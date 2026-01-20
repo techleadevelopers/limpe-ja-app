@@ -47,7 +47,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = responseObject.message || 'Erro inesperado.';
       error = responseObject.error || HttpStatus[status];
 
-      if (responseObject.message && typeof responseObject.message === 'object' && responseObject.message.key) {
+      if (
+        responseObject.message &&
+        typeof responseObject.message === 'object' &&
+        responseObject.message.key
+      ) {
         i18nKey = responseObject.message.key;
         i18nArgs = responseObject.message.args || {};
       }
@@ -69,10 +73,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
           message = `Violação de chave estrangeira.`;
           i18nKey = 'error.prisma.foreignKeyConstraintFailed';
           break;
-      case 'P2000': // Value too long for column
-        message = `Valor muito longo para um campo.`;
-        i18nKey = 'error.prisma.valueTooLong';
-        break;
+        case 'P2000': // Value too long for column
+          message = `Valor muito longo para um campo.`;
+          i18nKey = 'error.prisma.valueTooLong';
+          break;
         default:
           message = `Erro no banco de dados: ${exception.message}`;
           i18nKey = 'error.prisma.generic';
@@ -101,9 +105,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       : message;
 
     const codeFromBody =
-      typeof responseObject.code === 'string'
-        ? responseObject.code
-        : undefined;
+      typeof responseObject.code === 'string' ? responseObject.code : undefined;
     const code =
       codeFromBody ??
       (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN
@@ -125,7 +127,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       baseResponse.requestId = requestId;
     }
 
-    const unauthorizedStatuses = [HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN];
+    const unauthorizedStatuses = [
+      HttpStatus.UNAUTHORIZED,
+      HttpStatus.FORBIDDEN,
+    ];
     if (unauthorizedStatuses.includes(status)) {
       response.status(status).json(baseResponse);
       return;
