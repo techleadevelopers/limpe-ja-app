@@ -52,5 +52,4 @@ export class PayoutsController {
       idempotencyKey,
     );
   }
-
 }
