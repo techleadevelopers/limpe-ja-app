@@ -12,10 +12,7 @@ import {
   PaymentIntentStatus,
 } from '@prisma/client';
 import { ProvidersService } from '../providers/providers.service';
-import {
-  EarningsResponseDto,
-  WithdrawalResponseDto,
-} from './dto/earnings.dto';
+import { EarningsResponseDto, WithdrawalResponseDto } from './dto/earnings.dto';
 import { PayoutsService } from '../payouts/payouts.service';
 import { RequestWithdrawalDto } from '../payouts/dto/request-withdrawal.dto';
 import { ProviderEarningsViewDto } from './dto/provider-earnings-view.dto';
