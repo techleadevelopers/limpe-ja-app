@@ -94,7 +94,8 @@ export class ComplianceService {
     }
 
     // Lógica simples de comparação de versão (pode ser mais complexa dependendo do formato da versão)
-        const hasConsent = this.compareDocumentVersions(consent.version, requiredVersion) >= 0;
+    const hasConsent =
+      this.compareDocumentVersions(consent.version, requiredVersion) >= 0;
     this.logger.log(
       `[ComplianceService] Consentimento para ${documentType} (versão ${consent.version}) para userId: ${userId} é ${hasConsent ? 'válido' : 'inválido'} para a versão ${requiredVersion}.`,
     );
