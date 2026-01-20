@@ -1,4 +1,7 @@
-import { NotificationScheduleStatus, NotificationScheduleType } from '@prisma/client';
+import {
+  NotificationScheduleStatus,
+  NotificationScheduleType,
+} from '@prisma/client';
 import { SchedulerService } from '../scheduler.service';
 
 describe('SchedulerService rehydrate pending guards', () => {
@@ -24,11 +27,7 @@ describe('SchedulerService rehydrate pending guards', () => {
     i18nMock = {
       translate: jest.fn().mockResolvedValue('translated'),
     };
-    scheduler = new SchedulerService(
-      prismaMock as any,
-      notificationsMock as any,
-      i18nMock as any,
-    );
+    scheduler = new SchedulerService(prismaMock, notificationsMock, i18nMock);
   });
 
   afterEach(() => {
@@ -74,7 +73,10 @@ describe('SchedulerService rehydrate pending guards', () => {
       dateSchedule,
     ]);
 
-    const scheduleTimerSpy = jest.spyOn(scheduler as any, 'scheduleTimer' as any);
+    const scheduleTimerSpy = jest.spyOn(
+      scheduler as any,
+      'scheduleTimer' as any,
+    );
     const debugSpy = jest.spyOn((scheduler as any).logger, 'debug');
 
     await scheduler.onModuleInit();
