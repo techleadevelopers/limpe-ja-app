@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  BookingStatus,
-  PaymentIntentStatus,
-  UserRole,
-} from '@prisma/client';
+import { BookingStatus, PaymentIntentStatus, UserRole } from '@prisma/client';
 import {
   BOOKING_STATUS_LABELS_CLIENT,
   BOOKING_STATUS_LABELS_PROVIDER,
@@ -44,7 +40,9 @@ export class MetaService {
       status,
       labelClient: BOOKING_STATUS_LABELS_CLIENT[status] || status,
       labelProvider:
-        BOOKING_STATUS_LABELS_PROVIDER[status] || BOOKING_STATUS_LABELS_CLIENT[status] || status,
+        BOOKING_STATUS_LABELS_PROVIDER[status] ||
+        BOOKING_STATUS_LABELS_CLIENT[status] ||
+        status,
       severity: BOOKING_STATUS_SEVERITY[status] || 'neutral',
       requiresAction: BOOKING_STATUS_REQUIRES_ACTION[status] || false,
     }));
