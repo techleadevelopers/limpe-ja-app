@@ -11,6 +11,12 @@ export enum VerificationStatus {
     BLOCKED = "BLOCKED",
 }
 
+export enum ProviderVisibilityStatus {
+    VISIBLE = "VISIBLE",
+    VITRINE_IRREGULAR = "VITRINE_IRREGULAR",
+    PENDING_VITRINE_REVIEW = "PENDING_VITRINE_REVIEW",
+}
+
 export enum ActivityType {
     PROVIDER_STATUS_CHANGE = "PROVIDER_STATUS_CHANGE",
     PROVIDER_REGISTRATION = "PROVIDER_REGISTRATION",
@@ -164,6 +170,9 @@ export type Provider = {
     phone?: string | null;
     userPhone?: string | null;
     verificationStatus: VerificationStatus;
+    visibilityStatus?: ProviderVisibilityStatus;
+    visibilityReason?: string | null;
+    visibilityUpdatedAt?: string | null;
     documentPhotoFrontUrl?: string | null;
     documentPhotoBackUrl?: string | null;
     selfieWithDocumentUrl?: string | null;
@@ -186,6 +195,13 @@ export type Provider = {
     pixKey?: string;
     avatarUrl?: string;
     badges?: string[];
+};
+
+export type AdminProviderPage = {
+    items: Provider[];
+    totalCount: number;
+    page: number;
+    limit: number;
 };
 
 export type Client = {
@@ -249,6 +265,70 @@ export type RevenueTrendPoint = {
     revenue: number;
 };
 
+export type ObservabilityLatencyPoint = {
+    timestamp: string;
+    latencyMs: number;
+};
+
+export type ObservabilitySentryIssue = {
+    id: string;
+    title: string;
+    platform: string;
+    lastSeen: string;
+    stackTrace?: string;
+};
+
+export type ObservabilityInsuranceBreakdown = {
+    label: string;
+    count: number;
+    percentageOfCompleted: number;
+};
+
+export type ObservabilityInsuranceConversion = {
+    completedBookings: number;
+    insuredBookings: number;
+    insuredRate: number;
+    breakdown: ObservabilityInsuranceBreakdown[];
+};
+
+export type ObservabilitySentryData = {
+    totalUnresolved: number;
+    crashFreeSessions: number | null;
+    byPlatform: {
+        android: number;
+        ios: number;
+        other: number;
+    };
+    recentIssues: ObservabilitySentryIssue[];
+};
+
+export type ObservabilitySentryError = {
+    error: {
+        message: string;
+        statusCode?: number;
+    };
+};
+
+export type ObservabilityHealthPayload = {
+    status: 'ok' | 'degraded';
+    timestamp: string;
+    db: {
+        status: 'up' | 'down';
+        latencyMs: number;
+    };
+    memory: {
+        rssMb: number;
+        heapUsedMb: number;
+        heapTotalMb: number;
+    };
+    activeSessions: number;
+    insuranceConversion: ObservabilityInsuranceConversion;
+    latencySeries: ObservabilityLatencyPoint[];
+    sentry: ObservabilitySentryData | ObservabilitySentryError;
+    apiLatencyMs: number;
+    sentryLatencyMs: number;
+};
+
 
 export type AuthUser = {
     id: string;
@@ -261,6 +341,21 @@ export type AuthUser = {
 export type AuthResponse = {
     accessToken: string;
     user: AuthUser;
+};
+
+export type UserProfile = {
+    id: string;
+    email: string;
+    role: 'ADMIN' | 'CLIENT' | 'PROVIDER';
+    fullName?: string | null;
+    providerDetails?: {
+        id: string;
+        fullName?: string | null;
+    };
+    clientDetails?: {
+        id: string;
+        fullName?: string | null;
+    };
 };
 
 export type Service = {
@@ -322,6 +417,26 @@ export type Booking = {
     providerFullName?: string | null;
     createdAt: string;
     updatedAt: string;
+};
+
+export type LiveStatusPayload = {
+    providers: Provider[];
+    confirmedBookings: Booking[];
+    activeBookings: Booking[];
+};
+
+export type BookingStatusCounts = {
+    pending: number;
+    confirmed: number;
+    completed: number;
+    canceled: number;
+};
+
+export type BookingPage = {
+    items: Booking[];
+    totalCount: number;
+    nextCursor?: string | null;
+    statusCounts: BookingStatusCounts;
 };
 
 export type Transaction = {
