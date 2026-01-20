@@ -3,7 +3,10 @@ import { InsurancePlanProposal } from '../insurance.service';
 import { InsurancePlanId } from '../insurance.constants';
 
 export class InsurancePlanProposalDto implements InsurancePlanProposal {
-  @ApiProperty({ description: 'Identificador do plano', example: InsurancePlanId.ESSENCIAL })
+  @ApiProperty({
+    description: 'Identificador do plano',
+    example: InsurancePlanId.ESSENCIAL,
+  })
   id: InsurancePlanId;
 
   @ApiProperty({ description: 'Nome exibido do plano', example: 'Essencial' })
