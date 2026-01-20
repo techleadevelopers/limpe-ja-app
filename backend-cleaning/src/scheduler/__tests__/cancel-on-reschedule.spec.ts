@@ -1,4 +1,7 @@
-import { NotificationScheduleStatus, NotificationScheduleType } from '@prisma/client';
+import {
+  NotificationScheduleStatus,
+  NotificationScheduleType,
+} from '@prisma/client';
 import { SchedulerService } from '../scheduler.service';
 
 describe('SchedulerService cancel pending schedules', () => {
@@ -10,7 +13,9 @@ describe('SchedulerService cancel pending schedules', () => {
   beforeEach(async () => {
     prismaMock = {
       notificationSchedule: {
-        findMany: jest.fn().mockResolvedValue([{ id: 'sched-1' }, { id: 'sched-2' }]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: 'sched-1' }, { id: 'sched-2' }]),
         create: jest.fn(),
         findUnique: jest.fn(),
         updateMany: jest.fn().mockResolvedValue({ count: 2 }),
@@ -20,11 +25,7 @@ describe('SchedulerService cancel pending schedules', () => {
     notificationsMock = { createNotification: jest.fn() };
     i18nMock = { translate: jest.fn().mockResolvedValue('translated') };
 
-    scheduler = new SchedulerService(
-      prismaMock as any,
-      notificationsMock as any,
-      i18nMock as any,
-    );
+    scheduler = new SchedulerService(prismaMock, notificationsMock, i18nMock);
     await scheduler.onModuleInit();
   });
 
@@ -46,7 +47,8 @@ describe('SchedulerService cancel pending schedules', () => {
         }),
       }),
     );
-    const updateCall = prismaMock.notificationSchedule.updateMany.mock.calls[0][0];
+    const updateCall =
+      prismaMock.notificationSchedule.updateMany.mock.calls[0][0];
     expect(updateCall.where).toEqual(
       expect.objectContaining({
         bookingId: 'booking-123',
