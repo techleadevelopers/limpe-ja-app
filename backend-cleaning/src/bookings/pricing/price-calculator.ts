@@ -58,15 +58,10 @@ export async function calculateServiceTotalPrice({
 
   const normalizedDuration = Math.max(requestedDuration, minHourlyMinutes);
   const hoursFromDuration = Math.ceil(normalizedDuration / 60);
-  const minimumHours = Math.max(
-    4,
-    Math.ceil(MIN_HOURLY_MINUTES / 60),
-  );
+  const minimumHours = Math.max(4, Math.ceil(MIN_HOURLY_MINUTES / 60));
   const billedHours = Math.max(hoursFromDuration, minimumHours);
 
-  const calculatedTotalPrice = hourlyPrice.mul(
-    new Prisma.Decimal(billedHours),
-  );
+  const calculatedTotalPrice = hourlyPrice.mul(new Prisma.Decimal(billedHours));
 
   if (calculatedTotalPrice.lessThan(0)) {
     const message = await translate('booking.badRequest.negativePrice', locale);
