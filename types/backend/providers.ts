@@ -13,6 +13,12 @@ import { ReviewEntity } from './reviews'; // <-- Importação adicionada/ajustad
 // CORREÇÃO: Re-exportar ProviderServiceOffering para que outros módulos possam importá-lo daqui
 export type { ProviderServiceOffering };
 
+export enum ProviderVisibilityStatus {
+  VISIBLE = 'VISIBLE',
+  VITRINE_IRREGULAR = 'VITRINE_IRREGULAR',
+  PENDING_VITRINE_REVIEW = 'PENDING_VITRINE_REVIEW',
+}
+
 /**
  * NOVO: Tipagem para as métricas de performance do provedor.
  * Adicionado conforme o relatório.
@@ -112,6 +118,9 @@ export interface ProviderDisplayInfo {
   // NOVOS CAMPOS PARA SINAIS PREMIUM (opcionais, sem quebrar compatibilidade, conforme relatório)
   nextAvailable?: { date: string; time: string }; // Ex.: { date: '2025-09-29', time: '09:00' } — para chip de horário
   nextSlot?: { date: string; time: string } | null;
+  visibilityStatus?: ProviderVisibilityStatus;
+  visibilityReason?: string | null;
+  visibilityUpdatedAt?: string | null;
 }
 
 /**
@@ -171,6 +180,9 @@ export type ProviderWithCalculatedRating = {
   // NOVOS CAMPOS PARA SINAIS PREMIUM (opcionais)
   nextAvailable?: { date: string; time: string }; // NOVO: Para chip de horário
   nextSlot?: { date: string; time: string } | null;
+  visibilityStatus?: ProviderVisibilityStatus;
+  visibilityReason?: string | null;
+  visibilityUpdatedAt?: string | null;
 };
 
 /**
@@ -296,6 +308,14 @@ export interface ProviderDashboard {
   reviews?: ReviewEntity[]; // <<-- CORREÇÃO: Alterado para ReviewEntity[]
   userProfile?: UserProfile;
   metrics?: ProviderMetrics; // NOVO: Adicionado métricas ao dashboard
+  provider?: ProviderDisplayInfo | null;
+  avatarUrl?: string | null;
+  profileImageUrl?: string | null;
+  profilePhotoUrl?: string | null;
+  updatedAt?: string;
+  visibilityStatus?: ProviderVisibilityStatus;
+  visibilityReason?: string | null;
+  visibilityUpdatedAt?: string | null;
 }
 
 /**
