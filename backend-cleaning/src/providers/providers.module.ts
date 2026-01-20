@@ -13,6 +13,7 @@ import { LoyaltyModule } from '../loyalty/loyalty.module';
 import { EarningsModule } from '../earnings/earnings.module';
 import { ProviderPromotionsService } from './provider-promotions.service';
 import { AvailabilityModule } from '../availability/availability.module';
+import { ComplianceModule } from '../compliance/compliance.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AvailabilityModule } from '../availability/availability.module';
     CacheModule,
     DocumentProcessingModule,
     SettingsModule,
+    ComplianceModule,
     MissionsModule,
     LoyaltyModule,
     forwardRef(() => EarningsModule),
