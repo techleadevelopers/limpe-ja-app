@@ -24,7 +24,7 @@ const buildDto = (override?: Partial<CreateBookingDto>): CreateBookingDto =>
     totalPrice: 1,
     address: baseAddress as any,
     ...override,
-  } as CreateBookingDto);
+  }) as CreateBookingDto;
 
 describe('calculateServiceTotalPrice', () => {
   it('throws when pricePerHour is missing', async () => {
