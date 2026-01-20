@@ -121,10 +121,10 @@ export class ReviewsService {
     private missionsService: MissionsService,
   ) {}
 
-private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
+  private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
     const baseDate = new Date(booking.scheduledDate);
-    
-    // 1. Pegamos o valor e forçamos o TS a tratá-lo como 'any' temporariamente 
+
+    // 1. Pegamos o valor e forçamos o TS a tratá-lo como 'any' temporariamente
     // para evitar a inferência de 'never'.
     const rawTime: any = booking.scheduledTime;
     let timeStr = '00:00';
@@ -134,8 +134,8 @@ private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
       timeStr = rawTime.toISOString().split('T')[1].substring(0, 5);
     } else if (typeof rawTime === 'string') {
       // Se for string (ISO completa ou HH:mm)
-      timeStr = rawTime.includes('T') 
-        ? rawTime.split('T')[1].substring(0, 5) 
+      timeStr = rawTime.includes('T')
+        ? rawTime.split('T')[1].substring(0, 5)
         : rawTime;
     }
 
@@ -268,12 +268,10 @@ private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
           where: { bookingId },
         });
         if (existingReview) {
-          throw new BadRequestException(
-            {
-              code: 'review.already_exists_for_booking',
-              message: 'Este agendamento já possui uma avaliação registrada.',
-            },
-          );
+          throw new BadRequestException({
+            code: 'review.already_exists_for_booking',
+            message: 'Este agendamento já possui uma avaliação registrada.',
+          });
         }
 
         const rateLimitWindowStart = new Date();
@@ -536,7 +534,10 @@ private buildScheduledStart(booking: BookingWithRelationsForReview): Date {
       where: { id: providerId },
       include: {
         providerServices: { include: { service: true } },
-        reviewsReceived: { orderBy: { createdAt: 'desc' as Prisma.SortOrder }, take: 50 },
+        reviewsReceived: {
+          orderBy: { createdAt: 'desc' as Prisma.SortOrder },
+          take: 50,
+        },
         bookings: {
           where: { status: 'FINISHED' }, // ✅ CORREÇÃO AQUI (trocou BookingStatus.FINISHED por 'FINISHED')
           orderBy: { createdAt: 'desc' as Prisma.SortOrder },
