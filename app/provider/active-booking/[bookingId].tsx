@@ -692,7 +692,7 @@ export default function ActiveBookingDetails() {
       ) : (
         <Animated.View style={[styles.card, { opacity: fade, transform: [{ translateY: slide }] }]}>
           <View style={styles.row}>
-            <Ionicons name="calendar-outline" size={18} color={PRIMARY} style={styles.icon} />
+            <Ionicons name="calendar-outline" size={20} color={PRIMARY} style={styles.icon} />
             <Text style={styles.title}>{booking.serviceName}</Text>
           </View>
           <Text style={styles.muted}>Cliente: {booking.clientFullName}</Text>
@@ -844,8 +844,12 @@ const styles = StyleSheet.create({
     
   },
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  icon: { marginRight: 8 },
-  title: { fontSize: 18, fontWeight: '700', color: TEXT },
+  icon: { marginRight: 4 },
+  title: {
+    fontSize: Platform.OS === 'android' ? 17 : 18,
+    fontWeight: Platform.OS === 'android' ? '700' : '600',
+    color: TEXT,
+  },
   muted: { color: MUTED, marginTop: 2 },
   supportLink: {
     marginTop: 6,
