@@ -36,13 +36,14 @@ export class NotificationsService {
     private readonly i18n: I18nService,
     private readonly configService: ConfigService,
   ) {
-    this.dedupeWindowSeconds =
-      this.configService.get<number>(
-        'notifications.dedupeWindowSeconds',
-        180,
-      );
-    this.defaultAppEventTtl =
-      this.configService.get<number>('notifications.defaultTtlSeconds', 300);
+    this.dedupeWindowSeconds = this.configService.get<number>(
+      'notifications.dedupeWindowSeconds',
+      180,
+    );
+    this.defaultAppEventTtl = this.configService.get<number>(
+      'notifications.defaultTtlSeconds',
+      300,
+    );
   }
 
   /**
@@ -83,7 +84,7 @@ export class NotificationsService {
           dedupeKey,
           createdAt: { gte: since },
         },
-          orderBy: { createdAt: 'desc' as Prisma.SortOrder },
+        orderBy: { createdAt: 'desc' as Prisma.SortOrder },
       });
       if (duplicate) {
         return duplicate;
@@ -107,8 +108,8 @@ export class NotificationsService {
           dedupeKey,
           payload: (dto.payload as any) ?? null,
           ttlSeconds,
-          },
-        });
+        },
+      });
       const appEvent = this.toAppEvent(notification);
       // Optionally, send push notification immediately after creating DB entry
       this.sendPushNotification(userId, title || message, message, {
@@ -289,11 +290,11 @@ export class NotificationsService {
             userId: userId,
             isRead: false,
           },
-        data: {
-          isRead: true,
-          readAt: new Date(),
-          acknowledgedAt: new Date(),
-        },
+          data: {
+            isRead: true,
+            readAt: new Date(),
+            acknowledgedAt: new Date(),
+          },
         });
         return { count: result.count };
       } else {
@@ -302,11 +303,11 @@ export class NotificationsService {
             userId: userId,
             isRead: false,
           },
-        data: {
-          isRead: true,
-          readAt: new Date(),
-          acknowledgedAt: new Date(),
-        },
+          data: {
+            isRead: true,
+            readAt: new Date(),
+            acknowledgedAt: new Date(),
+          },
         });
         return { count: result.count };
       }
@@ -385,15 +386,17 @@ export class NotificationsService {
         where: { id: userId },
         select: { fcmToken: true },
       });
-    if (!user?.fcmToken) {
-      this.logger.warn(`Sem fcmToken para ${userId}; push será simulado com notif DB.`);
-      Sentry.addBreadcrumb({
-        message: 'Token ausente ao enviar push',
-        data: { userId, hasToken: false },
-        level: 'warning' as SeverityLevel,
-      });
-      return;
-    }
+      if (!user?.fcmToken) {
+        this.logger.warn(
+          `Sem fcmToken para ${userId}; push será simulado com notif DB.`,
+        );
+        Sentry.addBreadcrumb({
+          message: 'Token ausente ao enviar push',
+          data: { userId, hasToken: false },
+          level: 'warning' as SeverityLevel,
+        });
+        return;
+      }
       const token = user.fcmToken;
       const serverKey = process.env.FCM_SERVER_KEY;
       const getStringField = (key: string, fallback: string) => {
