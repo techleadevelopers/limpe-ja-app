@@ -34,7 +34,9 @@ export class ContactLeakPolicyService {
     private readonly contactLeakDetector: ContactLeakDetector,
   ) {}
 
-  async evaluatePolicy(options: ContactPolicyOptions): Promise<ContactPolicyResult | null> {
+  async evaluatePolicy(
+    options: ContactPolicyOptions,
+  ): Promise<ContactPolicyResult | null> {
     const detection = this.contactLeakDetector.detect(options.content);
     if (!detection) {
       return null;
@@ -47,7 +49,9 @@ export class ContactLeakPolicyService {
       where: { userId: options.userId },
     });
     const enforcement =
-      previousHits > 0 ? PolicyEnforcement.BLOCKED : PolicyEnforcement.SANITIZED;
+      previousHits > 0
+        ? PolicyEnforcement.BLOCKED
+        : PolicyEnforcement.SANITIZED;
 
     await this.prisma.messagePolicyHit.create({
       data: {
