@@ -391,6 +391,34 @@ export class UsersService {
       )}`,
     );
     try {
+      const user = await this.prisma.user.findUnique({ where: { id } });
+      if (!user) {
+        throw new NotFoundException(`Usuário com ID "${id}" não encontrado.`);
+      }
+
+      const providedFields = Object.entries(updateUserDto)
+        .filter(([, value]) => value !== undefined)
+        .map(([key]) => key);
+      const isOnlyFcmTokenUpdate =
+        providedFields.length === 1 && providedFields[0] === 'fcmToken';
+
+      if (
+        isOnlyFcmTokenUpdate &&
+        updateUserDto.fcmToken !== undefined &&
+        updateUserDto.fcmToken === user.fcmToken
+      ) {
+        this.logger.log(
+          `[UsersService] update: fcmToken para userId ${id} já está sincronizado; abortando escrita.`,
+        );
+        const currentUser = await this.findOne(id);
+        if (!currentUser) {
+          throw new NotFoundException(
+            'Usuário atualizado não encontrado após detectar fcmToken sem mudança.',
+          );
+        }
+        return currentUser;
+      }
+
       const data: Prisma.UserUpdateInput = {};
 
       if (updateUserDto.fullName !== undefined) {
@@ -403,18 +431,19 @@ export class UsersService {
         data.avatarUrl = updateUserDto.avatarUrl;
       }
       if (updateUserDto.fcmToken !== undefined) {
-        data.fcmToken = updateUserDto.fcmToken;
-        this.logger.log(
-          `[UsersService] update: Persistindo fcmToken para userId ${id}.`,
-        );
+        if (updateUserDto.fcmToken === user.fcmToken) {
+          this.logger.log(
+            `[UsersService] update: fcmToken para userId ${id} está inalterado, pulando escrita no banco.`,
+          );
+        } else {
+          data.fcmToken = updateUserDto.fcmToken;
+          this.logger.log(
+            `[UsersService] update: Persistindo fcmToken para userId ${id}.`,
+          );
+        }
       }
 
       // Atualiza Client/Provider se necessário
-      const user = await this.prisma.user.findUnique({ where: { id } });
-      if (!user) {
-        throw new NotFoundException(`Usuário com ID "${id}" não encontrado.`);
-      }
-
       if (
         user.role === UserRole.CLIENT &&
         (updateUserDto.fullName !== undefined ||
@@ -454,16 +483,23 @@ export class UsersService {
         );
       }
 
-      // Atualize User base
-      await this.prisma.user.update({
-        where: { id },
-        data,
-      });
+      const userNeedsUpdate = Object.keys(data).length > 0;
 
-      this.logger.log(
-        `[UsersService] update: Usuário com ID "${id}" atualizado com sucesso.`,
-      );
-      this.logger.log(`[TELEMETRY] user_profile_updated: { userId: ${id} }`);
+      if (userNeedsUpdate) {
+        await this.prisma.user.update({
+          where: { id },
+          data,
+        });
+
+        this.logger.log(
+          `[UsersService] update: Usuário com ID "${id}" atualizado com sucesso.`,
+        );
+        this.logger.log(`[TELEMETRY] user_profile_updated: { userId: ${id} }`);
+      } else {
+        this.logger.log(
+          `[UsersService] update: Nenhum campo base do User mudou para ${id}; escrita evitada.`,
+        );
+      }
 
       // Sempre retorne com includes
       const fullUpdatedUser = await this.findOne(id);
