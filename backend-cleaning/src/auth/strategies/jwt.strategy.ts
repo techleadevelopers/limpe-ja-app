@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserRole } from '../../common/constants/roles.enum';
 import { User } from '@prisma/client';
+import { CacheService } from '../../cache/cache.service';
 import { AuthErrorCode } from '../../common/constants/auth-error-code';
 
 interface RequestUserPayload {
@@ -24,6 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private configService: ConfigService,
     private prisma: PrismaService,
+    private readonly cacheService: CacheService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -47,6 +49,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException({
         message: 'Token inválido: ID do usuário ausente.',
         code: AuthErrorCode.UNAUTHORIZED,
+      });
+    }
+
+    const forceLogoutFlag = await this.cacheService.get<boolean>(
+      this.buildForceLogoutKey(payload.sub),
+    );
+    if (forceLogoutFlag) {
+      this.logger.warn(
+        `[JwtStrategy] validate: ${payload.sub} bloqueado por logout forçado`,
+      );
+      throw new UnauthorizedException({
+        message: 'Sessão encerrada por medidas administrativas.',
+        code: AuthErrorCode.TOKEN_REVOKED,
       });
     }
 
@@ -123,5 +138,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // );
 
     return userPayload;
+  }
+
+  private buildForceLogoutKey(userId: string): string {
+    return `telemetry:force-logout:${userId}`;
   }
 }
