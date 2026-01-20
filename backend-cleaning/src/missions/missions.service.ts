@@ -65,7 +65,9 @@ export class MissionsService {
     const missions = await this.prisma.mission.findMany({
       where: { isActive: true, eventName: name },
     });
-    const missionById = new Map(missions.map((mission) => [mission.id, mission]));
+    const missionById = new Map(
+      missions.map((mission) => [mission.id, mission]),
+    );
 
     const result = await this.missionsProgressService.trackEvent(
       userId,
@@ -119,7 +121,10 @@ export class MissionsService {
     return result;
   }
   /** Lista missões ativas + progresso do usuário */
-  async getMyMissions(userId: string, userRole: UserRole): Promise<MissionViewDto[]> {
+  async getMyMissions(
+    userId: string,
+    userRole: UserRole,
+  ): Promise<MissionViewDto[]> {
     // <<-- CORREÇÃO: Mudar o tipo esperado para MissionWithProgressView[]
     const missionsWithProgress: MissionWithProgressView[] =
       await this.missionsProgressService.getUserMissionsWithProgress(userId);
