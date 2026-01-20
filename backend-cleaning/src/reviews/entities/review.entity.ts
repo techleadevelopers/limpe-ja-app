@@ -23,8 +23,12 @@ class BookingRelationForReview {
   // Se BookingEntity for mais complexo, você terá que ajustar o prisma.include ou este DTO
 
   constructor(data: BookingRelationForReviewPayload) {
-    this.scheduledDate = BookingRelationForReview.normalizeDate(data.scheduledDate);
-    this.scheduledTime = BookingRelationForReview.normalizeTime(data.scheduledTime);
+    this.scheduledDate = BookingRelationForReview.normalizeDate(
+      data.scheduledDate,
+    );
+    this.scheduledTime = BookingRelationForReview.normalizeTime(
+      data.scheduledTime,
+    );
   }
 
   private static normalizeDate(value: Date | string): string {
