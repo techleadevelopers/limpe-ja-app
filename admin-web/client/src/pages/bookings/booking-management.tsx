@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,14 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Calendar, CheckCircle, XCircle, Clock, DollarSign, MoreHorizontal, MessageSquare, LifeBuoy } from "lucide-react";
-import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchAllBookings, fetchBookingDetails, updateBookingStatus } from "@/lib/api";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { fetchBookingDetails, fetchBookingsPage, updateBookingStatus } from "@/lib/api";
 import { cancelBookingWithRefund } from "@/lib/api";
-import { Booking, BookingStatus } from "@/lib/types";
+import { Booking, BookingPage, BookingStatus } from "@/lib/types";
+import { useDebounce } from "@/hooks/use-debounce";
 
 // Helper function for status badge styling
 const getStatusBadgeClass = (status: BookingStatus) => {
@@ -257,36 +257,65 @@ const BookingDetailsModal = ({ isOpen, onClose, bookingId }: BookingDetailsModal
 
 export default function BookingManagement() {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "all">("all");
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
-  const { toast } = useToast();
 
-  const { data: bookings, isLoading, isError, error } = useQuery<Booking[], Error>({
-    queryKey: ['/bookings', statusFilter],
-    queryFn: () => fetchAllBookings(statusFilter !== 'all' ? statusFilter : undefined),
+  const {
+    data,
+    isInitialLoading,
+    isError,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetching,
+  } = useInfiniteQuery<BookingPage, Error>({
+    queryKey: ['admin-bookings', statusFilter, debouncedSearchTerm],
+    queryFn: ({ pageParam }) =>
+      fetchBookingsPage({
+        cursor: pageParam ?? undefined,
+        limit: 20,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        search: debouncedSearchTerm || undefined,
+      }),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    keepPreviousData: false,
   });
 
-  const handleViewDetails = (bookingId: string) => {
-    setSelectedBookingId(bookingId);
-    setIsDetailsModalOpen(true);
+  const bookings = useMemo(
+    () => data?.pages.flatMap((page) => page.items) ?? [],
+    [data],
+  );
+  const totalCount = data?.pages[0]?.totalCount ?? 0;
+  const statusCounts = data?.pages[0]?.statusCounts;
+  const resolvedStatusCounts = {
+    pending: statusCounts?.pending ?? 0,
+    confirmed: statusCounts?.confirmed ?? 0,
+    completed: statusCounts?.completed ?? 0,
+    canceled: statusCounts?.canceled ?? 0,
   };
 
-  const filteredBookings = bookings?.filter(booking => {
-    const matchesSearch = booking.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (booking.client?.fullName ?? booking.client?.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (booking.provider?.fullName ?? booking.provider?.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          booking.service?.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || booking.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  }) || [];
+  const handleViewDetails = useCallback((bookingId: string) => {
+    setSelectedBookingId(bookingId);
+    setIsDetailsModalOpen(true);
+  }, []);
 
-  // Calculate key metrics
-  const totalBookings = bookings?.length || 0;
-  const pendingBookings = bookings?.filter(b => b.status === BookingStatus.PENDING || b.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION).length || 0;
-  const confirmedBookings = bookings?.filter(b => b.status === BookingStatus.CONFIRMED || b.status === BookingStatus.STARTED).length || 0;
-  const completedBookings = bookings?.filter(b => b.status === BookingStatus.FINISHED).length || 0;
-  const canceledBookings = bookings?.filter(b => b.status === BookingStatus.CANCELED || b.status === BookingStatus.REJECTED || b.status === BookingStatus.NO_SHOW).length || 0;
+  const parentRef = useRef<HTMLDivElement | null>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: bookings.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 220,
+    overscan: 4,
+  });
+
+  useEffect(() => {
+    rowVirtualizer.measure();
+  }, [bookings.length, rowVirtualizer]);
+
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const totalHeight = rowVirtualizer.getTotalSize();
 
 
   return (
@@ -302,85 +331,71 @@ export default function BookingManagement() {
         <main className="flex-1 overflow-y-auto p-8">
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-              <Card className="shadow-floating border-0">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Total de Agendamentos</p>
-                      <p className="text-2xl font-bold text-gray-900">{totalBookings}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                      <Calendar className="text-blue-600" size={20} />
-                    </div>
+            <Card className="shadow-floating border-0">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total de Agendamentos</p>
+                    <p className="text-2xl font-bold text-gray-900">{totalCount}</p>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
-              <Card className="shadow-floating border-0">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Pendentes</p>
-                      <p className="text-2xl font-bold text-gray-900">{pendingBookings}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                      <Clock className="text-yellow-600" size={20} />
-                    </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <Calendar className="text-blue-600" size={20} />
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2 }}>
-              <Card className="shadow-floating border-0">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Confirmados</p>
-                      <p className="text-2xl font-bold text-gray-900">{confirmedBookings}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-                      <CheckCircle className="text-indigo-600" size={20} />
-                    </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-floating border-0">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Pendentes</p>
+                    <p className="text-2xl font-bold text-gray-900">{resolvedStatusCounts.pending}</p>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.3 }}>
-              <Card className="shadow-floating border-0">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Concluídos</p>
-                      <p className="text-2xl font-bold text-gray-900">{completedBookings}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                      <DollarSign className="text-green-600" size={20} />
-                    </div>
+                  <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                    <Clock className="text-yellow-600" size={20} />
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.4 }}>
-              <Card className="shadow-floating border-0">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Cancelados/Rejeitados</p>
-                      <p className="text-2xl font-bold text-gray-900">{canceledBookings}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                      <XCircle className="text-red-600" size={20} />
-                    </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-floating border-0">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Confirmados</p>
+                    <p className="text-2xl font-bold text-gray-900">{resolvedStatusCounts.confirmed}</p>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                  <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+                    <CheckCircle className="text-indigo-600" size={20} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-floating border-0">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Concluídos</p>
+                    <p className="text-2xl font-bold text-gray-900">{resolvedStatusCounts.completed}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                    <DollarSign className="text-green-600" size={20} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-floating border-0">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Cancelados/Rejeitados</p>
+                    <p className="text-2xl font-bold text-gray-900">{resolvedStatusCounts.canceled}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                    <XCircle className="text-red-600" size={20} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Filters and Search */}
@@ -420,7 +435,7 @@ export default function BookingManagement() {
           {/* Booking List */}
           <Card className="shadow-floating border-0">
             <CardContent className="pt-6">
-              {isLoading ? (
+              {isInitialLoading ? (
                 <div className="space-y-4">
                   {[...Array(5)].map((_, i) => (
                     <div key={i} className="flex items-center p-4 bg-gray-50 rounded-xl animate-pulse">
@@ -437,73 +452,109 @@ export default function BookingManagement() {
                 <div className="text-center py-12 text-red-600">
                   <p>Erro ao carregar agendamentos: {error?.message}</p>
                 </div>
-              ) : filteredBookings.length === 0 ? (
+              ) : bookings.length === 0 ? (
                 <div className="text-center py-12">
                   <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum agendamento encontrado</h3>
                   <p className="text-gray-500">
-                    {searchTerm ? `Nenhum agendamento corresponde a "${searchTerm}"` : "Nenhum agendamento registrado ainda."}
+                    {debouncedSearchTerm
+                      ? `Nenhum agendamento corresponde a "${debouncedSearchTerm}"`
+                      : "Nenhum agendamento registrado ainda."}
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredBookings.map((booking, index) => {
-                    const statusClass = getStatusBadgeClass(booking.status);
-                    
-                    return (
-                      <motion.div
-                        key={booking.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className="p-4 border border-gray-200 rounded-xl hover:shadow-md transition-all duration-200"
+                  <div className="relative max-h-[70vh] overflow-y-auto" ref={parentRef}>
+                    <div
+                      style={{
+                        height: `${totalHeight}px`,
+                        position: "relative",
+                      }}
+                    >
+                      {virtualItems.map((virtualRow) => {
+                        const booking = bookings[virtualRow.index];
+                        if (!booking) {
+                          return null;
+                        }
+                        const statusClass = getStatusBadgeClass(booking.status);
+                        return (
+                          <div
+                            key={booking.id}
+                            className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm"
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              width: "100%",
+                              transform: `translateY(${virtualRow.start}px)`,
+                            }}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center space-x-4">
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${statusClass}`}>
+                                  <Calendar size={20} />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-1">
+                                    <h3 className="font-semibold text-gray-900">Agendamento #{booking.id.substring(0, 8)}</h3>
+                                    <Badge className={`text-xs px-2 py-1 border-0 ${statusClass}`}>
+                                      {booking.status.replace(/_/g, " ")}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                                    <span>
+                                      Cliente: {booking.client?.fullName || `ID: ${booking.clientId.substring(0, 8)}...`}
+                                    </span>
+                                    <span>
+                                      Provedor: {booking.provider?.fullName || `ID: ${booking.providerId.substring(0, 8)}...`}
+                                    </span>
+                                    <span>
+                                      Serviço: {booking.service?.name || `ID: ${booking.providerServiceId.substring(0, 8)}...`}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                                    <span>
+                                      Data: {new Date(booking.scheduledDate).toLocaleDateString()} às {booking.scheduledTime ?? "—"}
+                                    </span>
+                                    <span>Total: R$ {booking.totalPrice.toFixed(2)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-medium-blue text-medium-blue hover:bg-medium-blue hover:text-white"
+                                  onClick={() => handleViewDetails(booking.id)}
+                                >
+                                  <MoreHorizontal size={14} className="mr-1" />
+                                  Ver Detalhes
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {hasNextPage && (
+                    <div className="flex justify-center">
+                      <Button
+                        variant="outline"
+                        onClick={() => fetchNextPage()}
+                        disabled={!hasNextPage || isFetchingNextPage}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${statusClass}`}>
-                                <Calendar size={20} />
-                            </div>
-                            
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-1">
-                                <h3 className="font-semibold text-gray-900">Agendamento #{booking.id.substring(0, 8)}</h3>
-                                <Badge className={`text-xs px-2 py-1 border-0 ${statusClass}`}>
-                                  {booking.status.replace(/_/g, ' ')}
-                                </Badge>
-                              </div>
-                              
-                              <div className="flex items-center gap-4 text-sm text-gray-600">
-                                <span>Cliente: {booking.client?.fullName || booking.client?.name || `ID: ${booking.clientId.substring(0, 8)}...`}</span>
-                                <span>Provedor: {booking.provider?.fullName || booking.provider?.name || `ID: ${booking.providerId.substring(0, 8)}...`}</span>
-                                <span>Serviço: {booking.service?.name || `ID: ${booking.providerServiceId.substring(0, 8)}...`}</span>
-                              </div>
-                              
-                              <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                                <span>Data: {new Date(booking.scheduledDate).toLocaleDateString()} às {booking.scheduledTime}</span>
-                                <span>Total: R$ {booking.totalPrice.toFixed(2)}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-medium-blue text-medium-blue hover:bg-medium-blue hover:text-white"
-                              onClick={() => handleViewDetails(booking.id)}
-                            >
-                              <MoreHorizontal size={14} className="mr-1" />
-                              Ver Detalhes
-                            </Button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                        {isFetchingNextPage ? "Carregando..." : "Carregar mais"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
           </Card>
+          {isFetching && !isInitialLoading && (
+            <div className="mt-4 text-xs text-gray-500">Atualizando dados...</div>
+          )}
         </main>
       </div>
 
