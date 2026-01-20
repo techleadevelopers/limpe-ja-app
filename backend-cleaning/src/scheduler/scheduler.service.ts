@@ -1,12 +1,6 @@
-import {
-  Injectable,
-  Logger,
-  OnModuleInit,
-} from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  CreateNotificationDto,
-} from '../notifications/dto/create-notification.dto';
+import { CreateNotificationDto } from '../notifications/dto/create-notification.dto';
 import {
   NotificationSchedule,
   NotificationScheduleStatus,
@@ -118,16 +112,12 @@ export class SchedulerService implements OnModuleInit {
 
     const lateRunAt = new Date(scheduledAt.getTime() + 15 * 60 * 1000);
     if (lateRunAt.getTime() > now) {
-      const title = await this.translate(
-        'notification.late.title',
-        locale,
-        { time: hourLabel },
-      );
-      const message = await this.translate(
-        'notification.late.body',
-        locale,
-        { time: hourLabel },
-      );
+      const title = await this.translate('notification.late.title', locale, {
+        time: hourLabel,
+      });
+      const message = await this.translate('notification.late.body', locale, {
+        time: hourLabel,
+      });
       const dedupeKey = `${params.bookingId}:PROVIDER_LATE`;
       promises.push(
         this.scheduleNotification({
@@ -206,7 +196,10 @@ export class SchedulerService implements OnModuleInit {
     if (!params.clientUserId) return;
     await this.ensureReady();
     await this.cancelPendingSchedules(params.bookingId, {
-      types: [NotificationScheduleType.BOOKING_REMINDER, NotificationScheduleType.PROVIDER_LATE],
+      types: [
+        NotificationScheduleType.BOOKING_REMINDER,
+        NotificationScheduleType.PROVIDER_LATE,
+      ],
       runAfter: new Date(),
     });
     await this.scheduleNotification(
@@ -218,13 +211,15 @@ export class SchedulerService implements OnModuleInit {
         payload: {
           userId: params.clientUserId,
           type: 'JOB_STARTED',
-          title: await this.translate('notification.job.started.title', params.locale ?? 'pt-BR'),
+          title: await this.translate(
+            'notification.job.started.title',
+            params.locale ?? 'pt-BR',
+          ),
           message: await this.translate(
             'notification.job.started.body',
             params.locale ?? 'pt-BR',
           ),
-          targetUrl:
-            params.targetUrl ?? `/client/bookings/${params.bookingId}`,
+          targetUrl: params.targetUrl ?? `/client/bookings/${params.bookingId}`,
           category: 'booking',
           payload: {
             bookingId: params.bookingId,
@@ -253,13 +248,15 @@ export class SchedulerService implements OnModuleInit {
         payload: {
           userId: params.clientUserId,
           type: 'JOB_ENDED',
-          title: await this.translate('notification.job.ended.title', params.locale ?? 'pt-BR'),
+          title: await this.translate(
+            'notification.job.ended.title',
+            params.locale ?? 'pt-BR',
+          ),
           message: await this.translate(
             'notification.job.ended.body',
             params.locale ?? 'pt-BR',
           ),
-          targetUrl:
-            params.targetUrl ?? `/client/bookings/${params.bookingId}`,
+          targetUrl: params.targetUrl ?? `/client/bookings/${params.bookingId}`,
           category: 'booking',
           payload: {
             bookingId: params.bookingId,
@@ -322,10 +319,10 @@ export class SchedulerService implements OnModuleInit {
     const record = await this.prisma.notificationSchedule.findUnique({
       where: { id },
     });
-      if (!record || record.status !== NotificationScheduleStatus.PENDING) {
-        return;
-      }
-      await this.deliver(record);
+    if (!record || record.status !== NotificationScheduleStatus.PENDING) {
+      return;
+    }
+    await this.deliver(record);
   }
 
   private async deliver(record: NotificationSchedule) {
