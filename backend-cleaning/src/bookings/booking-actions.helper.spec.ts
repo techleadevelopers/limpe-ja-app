@@ -1,8 +1,4 @@
-import {
-  BookingStatus,
-  PaymentIntentStatus,
-  UserRole,
-} from '@prisma/client';
+import { BookingStatus, PaymentIntentStatus, UserRole } from '@prisma/client';
 import {
   BookingActionContext,
   getAllowedBookingActions,
@@ -18,7 +14,9 @@ describe('booking actions helper', () => {
     };
 
     const actions = getAllowedBookingActions(context, UserRole.CLIENT);
-    expect(actions).toEqual(expect.arrayContaining(['CANCEL', 'CONTACT_SUPPORT']));
+    expect(actions).toEqual(
+      expect.arrayContaining(['CANCEL', 'CONTACT_SUPPORT']),
+    );
     expect(actions).toContain('OPEN_DISPUTE');
   });
 
