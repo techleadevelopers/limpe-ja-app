@@ -23,7 +23,9 @@ import BookingOversight from "@/pages/bookings/booking-oversight";
 import LiveTracking from "@/pages/live-tracking";
 import ReferralManagement from "@/pages/referrals/referral-management";
 import SupportCenter from "@/pages/support-center";
+import ObservabilityPage from "@/pages/observability/observability";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { TelemetryAlertsBridge } from "@/hooks/use-telemetry-alerts";
 import { Skeleton } from "./components/ui/skeleton";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -113,6 +115,11 @@ function AppRouter() {
               <PaymentManagement />
             </PrivateRoute>
           </Route>
+          <Route path="/observability">
+            <PrivateRoute>
+              <ObservabilityPage />
+            </PrivateRoute>
+          </Route>
           <Route path="/safety-alerts">
             <PrivateRoute>
               <SafetyAlerts />
@@ -171,6 +178,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <AuthProvider>
+          <TelemetryAlertsBridge />
           <AppRouter />
           <CommandPalette />
         </AuthProvider>
