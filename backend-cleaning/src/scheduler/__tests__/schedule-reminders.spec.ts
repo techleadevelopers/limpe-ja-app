@@ -30,11 +30,7 @@ describe('SchedulerService reminders scheduling', () => {
       translate: jest.fn().mockImplementation((key) => Promise.resolve(key)),
     };
 
-    scheduler = new SchedulerService(
-      prismaMock as any,
-      notificationsMock as any,
-      i18nMock as any,
-    );
+    scheduler = new SchedulerService(prismaMock, notificationsMock, i18nMock);
     await scheduler.onModuleInit();
   });
 
@@ -89,7 +85,9 @@ describe('SchedulerService reminders scheduling', () => {
     expect(lateRecord.type).toBe(NotificationScheduleType.PROVIDER_LATE);
     expect(lateRecord.dedupeKey).toBe('booking-1:PROVIDER_LATE');
     expect(lateRecord.slot).toBeNull();
-    expect(lateRecord.runAt.getTime()).toBe(scheduledAt.getTime() + 15 * 60 * 1000);
+    expect(lateRecord.runAt.getTime()).toBe(
+      scheduledAt.getTime() + 15 * 60 * 1000,
+    );
     expect(lateRecord.runAt.getTime()).toBeGreaterThan(now);
 
     setTimeoutSpy.mockRestore();
