@@ -10,11 +10,11 @@ import { Search, Filter, MoreHorizontal, MapPin, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import VerificationModal from "@/components/verification/verification-modal"; // Este componente agora gerencia suas próprias chamadas de API
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchProviders, updateProviderStatus as apiUpdateProviderStatus, deleteProvider } from "@/lib/api";
-import { Provider, VerificationStatus } from "@/lib/types";
+import { fetchAdminProvidersPage, fetchServices, updateProviderStatus as apiUpdateProviderStatus, deleteProvider } from "@/lib/api";
+import { Provider, VerificationStatus, Service, AdminProviderPage } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMemo } from "react";
 
 
 // CORREÇÃO: Função para formatar o tempo relativo em português
@@ -54,18 +54,37 @@ const getProviderFullName = (provider?: Provider | null) =>
 
 export default function Providers() {
   const [searchTerm, setSearchTerm] = useState("");
-  // NOVO: Estado para o filtro de status
   const [statusFilter, setStatusFilter] = useState<VerificationStatus | "all">("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [serviceFilter, setServiceFilter] = useState("");
+  const [page, setPage] = useState(1);
   const pageSize = 9;
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const { data: providers, isLoading, isError, error } = useQuery<Provider[], Error>({
-    queryKey: ['/providers'],
-    queryFn: () => fetchProviders(),
+  const { data: services = [] } = useQuery<Service[], Error>({
+    queryKey: ['services'],
+    queryFn: fetchServices,
+  });
+
+  const {
+    data: adminProviderPage,
+    isLoading,
+    isError,
+    error,
+  } = useQuery<AdminProviderPage, Error>({
+    queryKey: ['admin-providers', page, debouncedSearchTerm, statusFilter, serviceFilter],
+    queryFn: () =>
+      fetchAdminProvidersPage({
+        page,
+        limit: pageSize,
+        searchTerm: debouncedSearchTerm || undefined,
+        serviceId: serviceFilter || undefined,
+        verificationStatus: statusFilter === "all" ? undefined : statusFilter,
+      }),
+    keepPreviousData: true,
   });
 
   const searchTermLower = searchTerm.toLowerCase();
