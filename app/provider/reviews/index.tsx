@@ -43,7 +43,6 @@ const BORDER_SUBTLE = Colors.border;
 const SUCCESS_GREEN = Colors.success;
 const SHADOW_COLOR_SECTION = Colors.shadow;
 
-type FilterKey = 'all' | 'positive' | 'neutral' | 'negative';
 
 // Extractors seguros (compatíveis com variações no backend)
 const getClientName = (r: ProviderReview | any) =>
@@ -56,13 +55,6 @@ const getCreatedAt = (r: ProviderReview | any) => r?.createdAt || r?.date || und
 const getRating = (r: ProviderReview | any) => r?.rating ?? 0;
 const getComment = (r: ProviderReview | any) => r?.comment || '';
 
-// Filtros (sentimento)
-const FILTERS: { key: FilterKey; label: string; test: (r: ProviderReview | any) => boolean }[] = [
-  { key: 'all', label: 'Todos', test: () => true },
-  { key: 'positive', label: 'Positivos', test: r => getRating(r) >= 4 },
-  { key: 'neutral', label: 'Neutros', test: r => getRating(r) === 3 },
-  { key: 'negative', label: 'Negativos', test: r => getRating(r) <= 2 },
-];
 
 // micro-hook para toque animado
 const useAnimatedTouch = () => {
@@ -171,7 +163,6 @@ const ReviewsScreen: React.FC = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [filter, setFilter] = useState<FilterKey>('all');
   const [data, setData] = useState<ProviderDashboard | (ProviderDashboard & any) | null>(null);
   const headerAnim = useRef(new Animated.Value(0)).current;
 
@@ -209,10 +200,7 @@ const ReviewsScreen: React.FC = () => {
   const avg: number = (data as any)?.averageRating ?? (data as any)?.avgRating ?? 0;
   const total: number = (data as any)?.totalReviews ?? reviews.length;
 
-  const filtered = useMemo(() => {
-    const f = FILTERS.find(f => f.key === filter)!;
-    return reviews.filter(f.test);
-  }, [reviews, filter]);
+  const filtered = reviews;
 
   const headerTouch = useAnimatedTouch();
 
@@ -278,18 +266,6 @@ const ReviewsScreen: React.FC = () => {
                     </View>
                   </View>
 
-                  <View style={localStyles.filterPillsRow}>
-                    {FILTERS.map(f => (
-                      <TouchableOpacity
-                        key={f.key}
-                        onPress={() => setFilter(f.key)}
-                        style={[localStyles.filterPill, filter === f.key && localStyles.filterPillActive]}
-                        accessibilityLabel={`Filtrar: ${f.label}`}
-                      >
-                        <Text style={[localStyles.filterPillText, filter === f.key && localStyles.filterPillTextActive]}>{f.label}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
                 </View>
               </View>
 
@@ -374,22 +350,6 @@ const localStyles = StyleSheet.create({
   avgRow: { flexDirection: 'row', alignItems: 'center' },
   avgValue: { fontSize: 22, color: TEXT_DARK, fontWeight: '800', marginLeft: 8 },
   avgTotal: { fontSize: 12, color: TEXT_MUTED, marginLeft: 8 },
-
-  filterPillsRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  filterPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: Radii.pill,
-    backgroundColor: WHITE,
-    borderWidth: 1,
-    borderColor: BORDER_SUBTLE,
-  },
-  filterPillActive: {
-    backgroundColor: 'rgba(0,122,255,0.06)',
-    borderColor: Colors.primary,
-  },
-  filterPillText: { color: TEXT_MEDIUM, fontSize: 13, fontWeight: '600' },
-  filterPillTextActive: { color: Colors.primary },
 
   emptyStateContainer: {
     backgroundColor: WHITE,
