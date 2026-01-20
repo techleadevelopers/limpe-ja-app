@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import axios from 'axios';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
@@ -23,7 +22,6 @@ import {
 import Toast from 'react-native-toast-message';
 import { getUserMessage } from '../../../_shared/errors/uiFeedback';
 import ProviderNavBar from '../../../components/provider/navigation/ProviderNavBar';
-import Colors from '../../../constants/Colors';
 import {
     createProviderPromotion,
     listProviderPromotions,
@@ -283,59 +281,6 @@ const resolveErrorMessage = useCallback(
     setModalError(null);
   };
 
-  const renderHistoryCard = (promotion: ProviderPromotionDto) => {
-    const expired = isPromotionExpired(promotion);
-    const isLoadingToggle = togglingId === promotion.id;
-    const statusMeta = getStatusMeta(promotion);
-
-    return (
-      <View key={promotion.id} style={styles.historyCard}>
-        <View style={[styles.statusIndicator, { backgroundColor: statusMeta.color }]} />
-        <View style={styles.historyMainInfo}>
-          <View style={styles.historyCardHeader}>
-            <Text style={styles.historyPercent}>-{promotion.percentOff}% OFF</Text>
-            <View style={[styles.pillBadge, { backgroundColor: statusMeta.background }]}>
-              <Ionicons
-                name={statusMeta.icon}
-                size={14}
-                color={statusMeta.color}
-                style={styles.pillIcon}
-              />
-              <Text style={[styles.pillText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
-            </View>
-          </View>
-          <Text numberOfLines={2} style={styles.historyTitle}>
-            {promotion.title || 'Promoção'}
-          </Text>
-          <Text style={styles.historyDate}>Válida até {formatFullDate(promotion.validUntil)}</Text>
-          {!expired && (
-            <View style={styles.historyToggleRow}>
-              <Text style={styles.historyToggleLabel}>
-                {promotion.isActive ? 'Promoção visível' : 'Ative para destacar'}
-              </Text>
-              <View style={styles.toggleControl}>
-                <Switch
-                  trackColor={{ false: '#dcdcdc', true: Colors.light.primary }}
-                  thumbColor="#fff"
-                  onValueChange={() => handleTogglePromotion(promotion)}
-                  value={promotion.isActive}
-                  disabled={isVerificationPending || isLoadingToggle}
-                />
-                {isLoadingToggle && (
-                  <ActivityIndicator
-                    size="small"
-                    color={Colors.light.primary}
-                    style={styles.toggleLoader}
-                  />
-                )}
-              </View>
-            </View>
-          )}
-        </View>
-      </View>
-    );
-  };
-
   const renderSkeleton = () => (
     <View style={styles.section}>
       <View style={styles.skeletonActiveCard} />
@@ -354,138 +299,98 @@ const resolveErrorMessage = useCallback(
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Central de Cupons' }} />
-      <ScrollView
-        style={styles.container}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => loadPromotions({ refreshing: true })}
-          />
-        }
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityLabel="Voltar"
-          >
-            <Ionicons name="chevron-back" size={24} color={Colors.light.text} />
-          </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Central de Cupons</Text>
-          </View>
-        </View>
-
-        {isVerificationPending && (
-          <View style={styles.verificationBanner}>
-            <Text style={styles.verificationBannerTitle}>Verificação pendente</Text>
-            <Text style={styles.verificationBannerText}>
-              Para criar promoções, finalize sua verificação.
-            </Text>
-          </View>
-        )}
-
-        {globalError && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{globalError}</Text>
-          </View>
-        )}
-
-        {loading && promotions === null ? (
-          renderSkeleton()
-        ) : (
-          <View style={styles.section}>
-            <View style={styles.activeSection}>
-              {activePromotion ? (
-                <LinearGradient
-                  colors={[Colors.light.primary, Colors.light.primaryLight]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[
-                    styles.activeCard,
-                    highlightUpdate && styles.activeCardHighlight,
-                  ]}
-                >
-                  <View style={styles.discountCircle} />
-                  <View style={styles.activeInfoRow}>
-                    <Text style={styles.activeInfoText}>Promoção ativa</Text>
-                    {highlightUpdate && (
-                      <Text style={styles.activeInfoText}>Atualizado agora</Text>
-                    )}
-                  </View>
-                  <Text style={styles.activePercentage}>-{activePromotion.percentOff}%</Text>
-                  <Text style={styles.activeValid}>
-                    Válida até {formatFullDate(activePromotion.validUntil)}
-                  </Text>
-                  <Text style={styles.activeTitle}>
-                    {activePromotion.title || 'Promoção ativa'}
-                  </Text>
-                  <View style={styles.activeActions}>
-                    <TouchableOpacity
-                      style={[
-                        styles.activeActionButton,
-                        (togglingId === activePromotion.id || isVerificationPending) &&
-                          styles.activeActionButtonDisabled,
-                      ]}
-                      onPress={() => handleTogglePromotion(activePromotion)}
-                      disabled={togglingId === activePromotion.id || isVerificationPending}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      {togglingId === activePromotion.id ? (
-                        <ActivityIndicator color="#fff" size="small" />
-                      ) : (
-                        <Text style={styles.activeActionButtonText}>Desativar</Text>
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.activeOutlineButton}
-                      onPress={() =>
-                        Alert.alert('Editar promoção', 'Edição disponível em breve.')
-                      }
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <Text style={styles.activeOutlineButtonText}>Editar</Text>
-                    </TouchableOpacity>
-                  </View>
-                </LinearGradient>
-              ) : (
-                <View style={styles.emptyActiveCard}>
-                  <Text style={styles.emptyActiveTitle}>Nenhuma promoção ativa</Text>
-                  <Text style={styles.emptyActiveSubtitle}>
-                    Crie um novo desconto e destaque seus serviços com mais visibilidade.
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.primaryButton,
-                      (isCreating || isVerificationPending) && styles.primaryButtonDisabled,
-                    ]}
-                    onPress={handleOpenModal}
-                    disabled={isCreating || isVerificationPending}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Text style={styles.primaryButtonText}>Criar promoção</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: 'Central de Cupons' }} />
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadPromotions({ refreshing: true })}
+            />
+          }
+        >
+          {isVerificationPending && (
+            <View style={styles.verificationBanner}>
+              <Text style={styles.verificationBannerTitle}>Verificação pendente</Text>
+              <Text style={styles.verificationBannerText}>
+                Para criar promoções, finalize sua verificação.
+              </Text>
             </View>
+          )}
+          {globalError && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{globalError}</Text>
+            </View>
+          )}
 
-            <View style={styles.historySection}>
-              <View style={styles.historyHeader}>
-                <Text style={styles.sectionTitle}>Histórico de promoções</Text>
-                <Text style={styles.historySubtitle}>Acompanhe cada oferta já criada.</Text>
+          {!activePromotion ? (
+            <View style={styles.mainActionCard}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="pricetag" size={32} color="#2563EB" />
               </View>
-              {sortedPromotions.length === 0 ? (
-                emptyHistory
-              ) : (
-                sortedPromotions.map((promotion) => renderHistoryCard(promotion))
-              )}
+              <Text style={{ fontSize: 22, fontWeight: '800', color: '#1E293B', textAlign: 'center' }}>
+                Aumente seus ganhos
+              </Text>
+              <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginTop: 8, marginBottom: 24 }}>
+                Crie uma promoção para aparecer no topo das buscas dos clientes.
+              </Text>
+              <TouchableOpacity style={styles.primaryButton} onPress={handleOpenModal}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Criar novo cupom</Text>
+                <Ionicons name="add-circle" size={20} color="#fff" />
+              </TouchableOpacity>
             </View>
+          ) : (
+            <View style={styles.activePromotionCard}>
+              <View>
+                <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '600', textTransform: 'uppercase' }}>Promoção Ativa</Text>
+                <Text style={{ fontSize: 28, fontWeight: '800', color: '#2563EB' }}>-{activePromotion.percentOff}% OFF</Text>
+                <Text style={{ color: '#1E293B', fontWeight: '500' }}>{activePromotion.title || 'Desconto Geral'}</Text>
+              </View>
+              <TouchableOpacity
+                style={{ backgroundColor: '#F1F5F9', padding: 12, borderRadius: 12 }}
+                onPress={() => handleTogglePromotion(activePromotion)}
+                disabled={togglingId === activePromotion.id || isVerificationPending}
+              >
+                {togglingId === activePromotion.id ? (
+                  <ActivityIndicator size="small" color="#475569" />
+                ) : (
+                  <Text style={{ color: '#475569', fontWeight: '700' }}>Pausar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Histórico</Text>
+            <Text style={{ color: '#64748B', fontSize: 12 }}>{sortedPromotions.length} criados</Text>
           </View>
-        )}
-      </ScrollView>
+
+          {loading && promotions === null ? (
+            renderSkeleton()
+          ) : sortedPromotions.length === 0 ? (
+            emptyHistory
+          ) : (
+            sortedPromotions.map((promotion) => {
+              const status = getStatusMeta(promotion);
+              return (
+                <View key={promotion.id} style={styles.historyCard}>
+                  <View style={styles.percentBadge}>
+                    <Text style={styles.percentText}>{promotion.percentOff}%</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E293B' }}>{promotion.title || 'Cupom'}</Text>
+                    <Text style={{ fontSize: 12, color: '#64748B' }}>Até {formatFullDate(promotion.validUntil)}</Text>
+                  </View>
+                  <View style={[styles.pillBadge, { backgroundColor: status.background }]}>
+                    <Text style={[styles.pillText, { color: status.color }]}>{status.label}</Text>
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </ScrollView>
+      </View>
 
       <Modal visible={modalVisible} animationType="slide" transparent>
         <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
@@ -566,7 +471,7 @@ const resolveErrorMessage = useCallback(
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>Ativar agora</Text>
                 <Switch
-                  trackColor={{ false: '#dcdcdc', true: Colors.light.primary }}
+                  trackColor={{ false: '#dcdcdc', true: '#2563EB' }}
                   thumbColor="#fff"
                   value={activateNow}
                   onValueChange={setActivateNow}
@@ -601,100 +506,105 @@ const resolveErrorMessage = useCallback(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    paddingBottom: 140,
+    paddingBottom: 100,
+  },
+  mainActionCard: {
+    backgroundColor: '#fff',
+    margin: 20,
+    padding: 24,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  activePromotionCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    padding: 20,
+    borderRadius: 24,
+    borderLeftWidth: 6,
+    borderLeftColor: '#2563EB',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  shrinkWrapper: {
+    transform: [{ scale: 0.95 }],
+    alignSelf: 'stretch',
+    paddingBottom: 20,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 34,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'ios' ? 64 : 52,
+    paddingBottom: 20,
     backgroundColor: '#fff',
   },
   backButton: {
-    width: Platform.OS === 'ios' ? 40 : 32,
-    height: Platform.OS === 'ios' ? 40 : 32,
-    top: Platform.OS === 'ios' ? 0 : 2,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   headerTextContainer: {
-    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: Platform.OS === 'ios' ? 18 : 17,
-    right: Platform.OS === 'ios' ? 0 : 16,
-    top: Platform.OS === 'ios' ? 0 : 2,
-    fontWeight: '700',
-    color: Colors.light.text,
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginTop: 10,
     textAlign: 'center',
   },
-  verificationBanner: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: '#fff4e6',
-    borderColor: '#f5c16a',
-    borderWidth: 1,
-  },
-  verificationBannerTitle: {
-    fontSize: Platform.OS === 'ios' ? 15 : 14,
-    fontWeight: '700',
-    color: '#b35a00',
-  },
-  verificationBannerText: {
-    fontSize: Platform.OS === 'ios' ? 13 : 12,
-    color: '#8a5b00',
-    marginTop: 4,
-  },
-  errorBox: {
-    marginHorizontal: 20,
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: '#ffe5e5',
-  },
-  errorText: {
-    color: '#a00',
-    fontSize: 14,
-  },
   section: {
-    paddingHorizontal: 20,
     paddingTop: 20,
   },
   activeSection: {
-    marginBottom: 24,
+    marginTop: 8,
   },
   activeCard: {
+    backgroundColor: '#fff',
     borderRadius: 24,
-    padding: 24,
-    position: 'relative',
-    overflow: 'hidden',
-    shadowColor: Colors.light.primary,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 8,
+    padding: 20,
+    marginHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   activeCardHighlight: {
-    shadowOpacity: 0.35,
-  },
-  discountCircle: {
-    position: 'absolute',
-    right: -20,
-    top: -20,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#E0E7FF',
+    borderWidth: 2,
   },
   activeInfoRow: {
     flexDirection: 'row',
@@ -705,89 +615,95 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    color: 'rgba(255,255,255,0.85)',
+    color: '#64748B',
     fontWeight: '600',
   },
   activePercentage: {
-    fontSize: 52,
-    fontWeight: '900',
-    color: '#fff',
+    fontSize: 34,
+    fontWeight: '800',
+    color: '#2563EB',
     letterSpacing: -1,
     marginTop: 8,
   },
   activeValid: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
+    color: '#475569',
     marginTop: 6,
   },
   activeTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
-    marginTop: 10,
+    color: '#475569',
+    marginTop: 4,
   },
   activeActions: {
     flexDirection: 'row',
-    marginTop: 18,
+    marginTop: 20,
+    gap: 10,
   },
   activeActionButton: {
     flex: 1,
-    marginRight: 8,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    paddingVertical: 14,
+    borderRadius: 100,
+    backgroundColor: '#2563EB',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   activeActionButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   activeActionButtonText: {
     color: '#fff',
     fontWeight: '700',
+    fontSize: 16,
   },
   activeOutlineButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 14,
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 100,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   activeOutlineButtonText: {
-    color: '#fff',
+    color: '#2563EB',
     fontWeight: '700',
+    fontSize: 16,
   },
   emptyActiveCard: {
     backgroundColor: '#fff',
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 24,
+    marginHorizontal: 20,
     borderWidth: 1,
-    borderColor: '#edeff3',
+    borderColor: '#F1F5F9',
     shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 3,
   },
   emptyActiveTitle: {
-    fontSize: Platform.OS === 'ios' ? 20 : 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#333',
+    color: '#1E293B',
   },
   emptyActiveSubtitle: {
-    fontSize: Platform.OS === 'ios' ? 14 : 13,
-    color: '#555',
-    marginTop: 6,
+    fontSize: 14,
+    color: '#475569',
+    marginTop: 8,
     marginBottom: 16,
   },
   primaryButton: {
     backgroundColor: '#2563EB',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
+    borderRadius: 100,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   primaryButtonDisabled: {
     opacity: 0.6,
@@ -795,44 +711,56 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize:  Platform.OS === 'ios' ? 16 : 16,
+    fontSize: 16,
   },
   historySection: {
-    backgroundColor: '#fff',
+    marginTop: 16,
   },
   historyHeader: {
-    marginBottom: 14,
+    paddingHorizontal: 20,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.light.text,
+    color: '#1E293B',
   },
   historySubtitle: {
-    fontSize:  Platform.OS === 'ios' ? 13 : 14,
-    color: '#666',
+    fontSize: 14,
+    color: '#475569',
     marginTop: 2,
   },
+  percentBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 15,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  percentText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#2563EB',
+  },
   historyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginBottom: 12,
     borderRadius: 20,
     padding: 16,
-    marginBottom: 16,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
   },
   statusIndicator: {
     width: 4,
-    height: '60%',
+    height: '70%',
     borderRadius: 2,
-    marginRight: 12,
-    marginTop: 8,
+    marginRight: 16,
+    backgroundColor: '#2563EB',
   },
   historyMainInfo: {
     flex: 1,
@@ -843,24 +771,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   historyPercent: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: Colors.light.primary,
-  },
-  pillBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  pillIcon: {
-    marginRight: 6,
-  },
-  pillText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2563EB',
+    width: 80,
   },
   historyTitle: {
     fontSize: 16,
@@ -874,14 +788,31 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   historyToggleRow: {
-    marginTop: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 14,
   },
   historyToggleLabel: {
     fontSize: 13,
     color: '#475569',
+  },
+  pillBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: '#2563EB',
+  },
+  pillIcon: {
+    marginRight: 6,
   },
   toggleControl: {
     flexDirection: 'row',
@@ -890,23 +821,6 @@ const styles = StyleSheet.create({
   toggleLoader: {
     marginLeft: 8,
   },
-  skeletonCard: {
-    height: 140,
-    backgroundColor: '#F3F5F8',
-    borderRadius: 20,
-  },
-  skeletonActiveCard: {
-    height: 140,
-    borderRadius: 20,
-    backgroundColor: '#F3F5F8',
-    marginBottom: 16,
-  },
-  skeletonHistoryCard: {
-    height: 120,
-    borderRadius: 20,
-    backgroundColor: '#F3F5F8',
-    marginBottom: 16,
-  },
   emptyState: {
     paddingVertical: 32,
     alignItems: 'center',
@@ -914,13 +828,43 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#1E293B',
   },
   emptyStateSubtitle: {
-    fontSize:  Platform.OS === 'ios' ? 14 : 15,
-    color: '#666',
+    fontSize: 15,
+    color: '#475569',
     marginTop: 6,
     textAlign: 'center',
+  },
+  verificationBanner: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 10,
+    backgroundColor: '#fff4e6',
+    borderWidth: 1,
+    borderColor: '#f5c16a',
+  },
+  verificationBannerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#b35a00',
+  },
+  verificationBannerText: {
+    fontSize: 14,
+    color: '#8a5b00',
+    marginTop: 6,
+  },
+  errorBox: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#ffe5e5',
+  },
+  errorText: {
+    color: '#a00',
+    fontSize: 14,
   },
   modalOverlay: {
     flex: 1,
@@ -935,8 +879,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
     paddingTop: 24,
-    paddingBottom: 120,
-    position: 'relative',
+    paddingBottom: 140,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -947,10 +890,10 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.light.text,
+    color: '#1E293B',
   },
   modalCloseText: {
-    color: Colors.light.primary,
+    color: '#2563EB',
     fontWeight: '700',
   },
   modalBody: {
@@ -989,8 +932,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   chipActive: {
-    backgroundColor: Colors.light.primary,
-    borderColor: Colors.light.primary,
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
   },
   chipInactive: {
     backgroundColor: '#F1F5F9',
@@ -1023,7 +966,7 @@ const styles = StyleSheet.create({
   },
   modalError: {
     marginTop: 10,
-    color: Colors.light.error,
+    color: '#B91C1C',
     fontSize: 13,
   },
   saveButton: {
@@ -1031,12 +974,12 @@ const styles = StyleSheet.create({
     bottom: 24,
     left: 24,
     right: 24,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: '#2563EB',
     borderRadius: 16,
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.light.primary,
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
