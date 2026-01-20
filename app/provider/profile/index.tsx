@@ -340,11 +340,11 @@ export default function ProviderProfileScreen() {
             <Text style={styles.termsModalTitle}>Termos de Serviço</Text>
             <ScrollView style={styles.termsModalBody}>
               <Text style={styles.termsModalParagraph}>
-                Bem-vindo(a) ao LimpeJA!. Estes termos regulam o uso da plataforma; apenas continue após aceitá-los.
+                Bem-vindo(a) ao LimpeJá!. Estes termos regulam o uso da plataforma; apenas continue após aceitá-los.
               </Text>
               <Text style={styles.termsModalSubtitle}>1. Aceitação</Text>
               <Text style={styles.termsModalParagraph}>
-                Ao utilizar o LimpeJA!, você concorda com todos os termos estabelecidos para clientes e provedores.
+                Ao utilizar o LimpeJá!, você concorda com todos os termos estabelecidos para clientes e provedores.
               </Text>
               <Text style={styles.termsModalSubtitle}>2. Serviços oferecidos</Text>
               <Text style={styles.termsModalParagraph}>
