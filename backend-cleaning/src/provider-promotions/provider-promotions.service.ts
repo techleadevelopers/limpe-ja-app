@@ -5,11 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  ProviderPromotion,
-  VerificationStatus,
-  Prisma,
-} from '@prisma/client';
+import { ProviderPromotion, VerificationStatus, Prisma } from '@prisma/client';
 import { CreateProviderPromotionDto } from './dto/create-provider-promotion.dto';
 import { UpdateProviderPromotionDto } from './dto/update-provider-promotion.dto';
 import { ProviderPromotionDto } from './dto/provider-promotion.dto';
@@ -71,7 +67,9 @@ export class ProviderPromotionsService {
     });
 
     if (!promotion || promotion.providerId !== provider.id) {
-      throw new NotFoundException('Promoção não encontrada para este provedor.');
+      throw new NotFoundException(
+        'Promoção não encontrada para este provedor.',
+      );
     }
 
     const updateData: Prisma.ProviderPromotionUncheckedUpdateInput = {};
@@ -90,7 +88,9 @@ export class ProviderPromotionsService {
     }
 
     if (Object.keys(updateData).length === 0 && dto.isActive !== true) {
-      throw new BadRequestException('Nenhum campo válido fornecido para atualização.');
+      throw new BadRequestException(
+        'Nenhum campo válido fornecido para atualização.',
+      );
     }
 
     if (dto.isActive === true) {
@@ -139,7 +139,9 @@ export class ProviderPromotionsService {
     });
 
     if (!provider) {
-      throw new NotFoundException('Provedor vinculado ao token não foi encontrado.');
+      throw new NotFoundException(
+        'Provedor vinculado ao token não foi encontrado.',
+      );
     }
 
     return provider;
@@ -148,9 +150,7 @@ export class ProviderPromotionsService {
   private parseValidUntil(value: string): Date {
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) {
-      throw new BadRequestException(
-        'validUntil deve ser uma data ISO válida.',
-      );
+      throw new BadRequestException('validUntil deve ser uma data ISO válida.');
     }
     this.validateValidUntil(parsed);
     return parsed;
