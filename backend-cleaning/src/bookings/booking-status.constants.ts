@@ -1,8 +1,16 @@
 import { BookingStatus, PaymentIntentStatus, UserRole } from '@prisma/client';
 
-export type StatusSeverity = 'info' | 'success' | 'warning' | 'danger' | 'neutral';
+export type StatusSeverity =
+  | 'info'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'neutral';
 
-export const BOOKING_STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+export const BOOKING_STATUS_TRANSITIONS: Record<
+  BookingStatus,
+  BookingStatus[]
+> = {
   [BookingStatus.PENDING]: [
     BookingStatus.CONFIRMED,
     BookingStatus.REJECTED,
@@ -126,7 +134,10 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentIntentStatus, string> = {
   [PaymentIntentStatus.CHARGEBACK]: 'Chargeback',
 };
 
-export const PAYMENT_STATUS_SEVERITY: Record<PaymentIntentStatus, StatusSeverity> = {
+export const PAYMENT_STATUS_SEVERITY: Record<
+  PaymentIntentStatus,
+  StatusSeverity
+> = {
   [PaymentIntentStatus.PENDING]: 'warning',
   [PaymentIntentStatus.PAID]: 'success',
   [PaymentIntentStatus.EXPIRED]: 'danger',
@@ -175,8 +186,14 @@ export const BOOKING_TRANSITIONS_BY_ROLE: Record<
     [BookingStatus.ON_THE_WAY]: [BookingStatus.ARRIVED, BookingStatus.CANCELED],
     [BookingStatus.ARRIVED]: [BookingStatus.STARTED, BookingStatus.CANCELED],
     [BookingStatus.STARTED]: [BookingStatus.FINISHED, BookingStatus.CANCELED],
-    [BookingStatus.RESCHEDULED]: [BookingStatus.CONFIRMED, BookingStatus.CANCELED],
-    [BookingStatus.PENDING_DISPUTE]: [BookingStatus.FINISHED, BookingStatus.CANCELED],
+    [BookingStatus.RESCHEDULED]: [
+      BookingStatus.CONFIRMED,
+      BookingStatus.CANCELED,
+    ],
+    [BookingStatus.PENDING_DISPUTE]: [
+      BookingStatus.FINISHED,
+      BookingStatus.CANCELED,
+    ],
     [BookingStatus.FINISHED]: [],
     [BookingStatus.CANCELED]: [],
     [BookingStatus.EXPIRED]: [],
