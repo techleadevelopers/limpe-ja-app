@@ -1,11 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  BookingStatus,
-  IncidentStatus,
-  IncidentType,
-} from '@prisma/client';
+import { BookingStatus, IncidentStatus, IncidentType } from '@prisma/client';
 
 @Injectable()
 export class NotificationService {
@@ -154,7 +150,9 @@ export class NotificationService {
     payload?: Record<string, unknown>,
   ) {
     if (!targetToken) {
-      this.logger.warn('[NotificationService] Missing targetToken, skipping push.');
+      this.logger.warn(
+        '[NotificationService] Missing targetToken, skipping push.',
+      );
       return;
     }
     this.ensureInitialized();
