@@ -24,36 +24,7 @@ export class DashboardService {
       `[DashboardService] getDashboardData: Iniciando busca para userId: ${userId}`,
     );
 
-    const providerPromise = this.providersService.findByUserId(userId);
-    const earningsPromise = this.earningsService
-      .getEarnings(userId)
-      .catch((error) => {
-        this.logger.error(
-          `[DashboardService] getDashboardData: Falha ao buscar ganhos para userId ${userId}: ${error?.message || error}`,
-          error?.stack,
-        );
-        return { totalEarnings: 0, pendingWithdrawals: 0 };
-      });
-    const reviewsPromise = providerPromise
-      .then((provider) => {
-        if (!provider) {
-          return [];
-        }
-        return this.reviewsService.findRecentReviewsByProviderId(provider.id);
-      })
-      .catch((error) => {
-        this.logger.error(
-          `[DashboardService] getDashboardData: Falha ao buscar avaliações recentes para userId ${userId}: ${error?.message || error}`,
-          error?.stack,
-        );
-        return [];
-      });
-
-    const [provider, earningsSummary, recentReviews] = await Promise.all([
-      providerPromise,
-      earningsPromise,
-      reviewsPromise,
-    ]);
+    const provider = await this.providersService.findByUserId(userId);
 
     if (!provider) {
       this.logger.error(
@@ -65,28 +36,54 @@ export class DashboardService {
     this.logger.log(
       `[DashboardService] getDashboardData: Provedor encontrado: ${provider.fullName} (ID: ${provider.id}, userId: ${provider.userId})`,
     );
+
+    const earningsPromise = this.earningsService
+      .getEarnings(userId)
+      .catch((error) => {
+        this.logger.error(
+          `[DashboardService] getDashboardData: Falha ao buscar ganhos para userId ${userId}: ${error?.message || error}`,
+          error?.stack,
+        );
+        return { totalEarnings: 0, pendingWithdrawals: 0 };
+      });
+
+    const reviewsPromise = this.reviewsService
+      .findRecentReviewsByProviderId(provider.id)
+      .catch((error) => {
+        this.logger.error(
+          `[DashboardService] getDashboardData: Falha ao buscar avaliações recentes para userId ${userId}: ${error?.message || error}`,
+          error?.stack,
+        );
+        return [];
+      });
+
+    const upcomingBookingsPromise = this.bookingsService
+      .findUpcomingBookings(provider.id)
+      .catch((error) => {
+        this.logger.error(
+          `[DashboardService] getDashboardData: Falha ao buscar agendamentos futuros para providerId ${provider.id}: ${error?.message || error}`,
+          error?.stack,
+        );
+        return [];
+      });
+
+    const [earningsSummary, recentReviews, upcomingBookingsRaw] =
+      await Promise.all([
+        earningsPromise,
+        reviewsPromise,
+        upcomingBookingsPromise,
+      ]);
+
     this.logger.log(
       `[DashboardService] getDashboardData: Sumário de ganhos obtido para userId: ${userId}.`,
     );
 
-    let upcomingBookingsRaw = [];
-    try {
-      upcomingBookingsRaw = await this.bookingsService.findUpcomingBookings(
-        provider.id,
-      );
-    } catch (error) {
-      this.logger.error(
-        `[DashboardService] getDashboardData: Falha ao buscar agendamentos futuros para providerId ${provider.id}: ${error?.message || error}`,
-        error?.stack,
-      );
-      upcomingBookingsRaw = [];
-    }
     this.logger.log(
       `[DashboardService] getDashboardData: Agendamentos futuros encontrados: ${upcomingBookingsRaw.length}`,
     );
 
-    const upcomingBookings = upcomingBookingsRaw.map((booking) =>
-      new BookingViewDto(booking, { userRole: UserRole.PROVIDER }),
+    const upcomingBookings = upcomingBookingsRaw.map(
+      (booking) => new BookingViewDto(booking, { userRole: UserRole.PROVIDER }),
     );
 
     this.logger.log(
