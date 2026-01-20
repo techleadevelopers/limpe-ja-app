@@ -3,9 +3,8 @@ import { PaymentIntent, PaymentIntentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export class PaymentIntentLocker {
-  private static readonly ACTIVE_PAYMENT_INTENT_STATUSES: PaymentIntentStatus[] = [
-    PaymentIntentStatus.PENDING,
-  ];
+  private static readonly ACTIVE_PAYMENT_INTENT_STATUSES: PaymentIntentStatus[] =
+    [PaymentIntentStatus.PENDING];
 
   constructor(private readonly prisma: PrismaService) {}
 
