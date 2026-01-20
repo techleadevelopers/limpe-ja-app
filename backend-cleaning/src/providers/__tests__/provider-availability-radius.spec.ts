@@ -25,11 +25,10 @@ class InMemoryCacheMock {
 describe('Provider availability radius persistence', () => {
   it('saves the radius requested by the provider and persists it in cache', async () => {
     const cache = new InMemoryCacheMock();
-    const configService = { get: jest.fn(() => undefined) } as unknown as ConfigService;
-    const settingsService = new SettingsService(
-      cache as any,
-      configService,
-    );
+    const configService = {
+      get: jest.fn(() => undefined),
+    } as unknown as ConfigService;
+    const settingsService = new SettingsService(cache as any, configService);
 
     const providersService = {
       findByUserId: jest
@@ -49,17 +48,13 @@ describe('Provider availability radius persistence', () => {
     };
     const dto: ProviderSettingsDto = { serviceRadiusKm: 42.3 };
 
-    const response = await controller.saveMySettings(
-      request as any,
-      dto,
-    );
+    const response = await controller.saveMySettings(request as any, dto);
 
     expect(response).toEqual({ ok: true });
     expect(providersService.findByUserId).toHaveBeenCalledWith('user-1');
 
-    const storedRadius = await settingsService.getProviderRadiusKm(
-      'provider-1',
-    );
+    const storedRadius =
+      await settingsService.getProviderRadiusKm('provider-1');
     expect(storedRadius).toBe(42);
 
     const cacheKey = 'settings:provider:radius_km:provider-1';
