@@ -30,11 +30,12 @@ export class IncidentsService {
     }
 
     const isParticipant =
-      booking.client?.userId === userId ||
-      booking.provider?.userId === userId;
+      booking.client?.userId === userId || booking.provider?.userId === userId;
 
     if (!isParticipant) {
-      throw new ForbiddenException('Você não pode abrir sinistro para este agendamento.');
+      throw new ForbiddenException(
+        'Você não pode abrir sinistro para este agendamento.',
+      );
     }
 
     if (!booking.completedAt) {
@@ -43,7 +44,9 @@ export class IncidentsService {
 
     const elapsed = Date.now() - booking.completedAt.getTime();
     if (elapsed > CLAIM_WINDOW_MS) {
-      throw new BadRequestException('Janela de 24h para abrir sinistro expirou.');
+      throw new BadRequestException(
+        'Janela de 24h para abrir sinistro expirou.',
+      );
     }
 
     const insurance = booking.bookingInsurance;
@@ -63,7 +66,9 @@ export class IncidentsService {
       const requiresVideo =
         insurance.planId === 'PREMIUM' || insurance.planId === 'TOTAL';
       if (requiresVideo && !checkoutProof.videoUrl) {
-        throw new BadRequestException('Vídeo é obrigatório para o checkout deste plano.');
+        throw new BadRequestException(
+          'Vídeo é obrigatório para o checkout deste plano.',
+        );
       }
     }
 
