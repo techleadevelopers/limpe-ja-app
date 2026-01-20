@@ -1,14 +1,5 @@
-import {
-  ApiProperty,
-  ApiPropertyOptional,
-} from '@nestjs/swagger';
-import {
-  IsISO8601,
-  IsNumber,
-  IsOptional,
-  Max,
-  Min,
-} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsISO8601, IsNumber, IsOptional, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export interface BookingLocationInput {
