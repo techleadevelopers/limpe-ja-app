@@ -31,7 +31,7 @@ describe('IncidentsService', () => {
       },
     };
 
-    service = new IncidentsService(prismaMock as any);
+    service = new IncidentsService(prismaMock);
   });
 
   it('enforces the 24h window after booking completion', async () => {
