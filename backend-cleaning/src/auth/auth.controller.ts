@@ -35,7 +35,9 @@ const maskEmail = (email?: string) => {
     return '***@hidden';
   }
   const maskedLocal =
-    local.length <= 2 ? `${local[0]}*` : `${local[0]}${'*'.repeat(local.length - 2)}${local.slice(-1)}`;
+    local.length <= 2
+      ? `${local[0]}*`
+      : `${local[0]}${'*'.repeat(local.length - 2)}${local.slice(-1)}`;
   return `${maskedLocal}@${domain}`;
 };
 // import { ThrottlerGuard } from '@nestjs/throttler'; // Importe se estiver usando Throttler
@@ -112,14 +114,16 @@ export class AuthController {
       throw new UnauthorizedException('Usuário não encontrado na requisição.');
     }
     this.logger.log(
-    `[AuthController] login: tentativa recebida para userId=${user.id}`,
+      `[AuthController] login: tentativa recebida para userId=${user.id}`,
     );
     return this.authService.login(user);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('logout-device')
-  @ApiOperation({ summary: 'Deslogar o dispositivo atual e remover o push token' })
+  @ApiOperation({
+    summary: 'Deslogar o dispositivo atual e remover o push token',
+  })
   @ApiResponse({
     status: 200,
     description: 'Push token removido do dispositivo.',
@@ -201,8 +205,8 @@ export class AuthController {
       typeof userAgentHeader === 'string'
         ? userAgentHeader
         : Array.isArray(userAgentHeader)
-        ? userAgentHeader[0]
-        : undefined;
+          ? userAgentHeader[0]
+          : undefined;
 
     return {
       ip: req.ip,
