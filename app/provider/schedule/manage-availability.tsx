@@ -503,52 +503,8 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           <Ionicons name="options-outline" size={14} color={Colors.primary} />
           <Text style={styles.personalizeHeaderText}>{showFullGrid ? 'Concluir' : 'Personalizar'}</Text>
         </TouchableOpacity>
-        <View style={styles.switchWrap}>
-        <Switch
-          trackColor={{ false: Colors.textMuted, true: Colors.primary }}
-          thumbColor={Colors.surface}
-          ios_backgroundColor={Colors.textMuted}
-          onValueChange={(value) => {
-            onToggleDay(dayOfWeek, value);
-            if (Platform.OS === 'ios') Haptics.selectionAsync();
-          }}
-          value={availability.isEnabled}
-          accessibilityLabel={`Ativar ${dayName.toLowerCase()}`}
-          accessibilityHint="Alterna disponibilidade para o dia"
-        />
-        </View>
       </View>
       <View style={styles.periodRow}>
-        <TouchableOpacity
-          style={[styles.periodTile, currentPeriod === 'morning' && styles.periodTileActive]}
-          onPress={() => onApplyPreset(dayOfWeek, 'morning')}
-          accessibilityRole="button"
-          accessibilityLabel={`Definir manhã em ${dayName}`}
-        >
-          <Ionicons name="sunny-outline" size={18} color={currentPeriod === 'morning' ? '#fff' : Colors.primary} />
-          <Text style={[styles.periodTileText, currentPeriod === 'morning' && styles.periodTileTextActive]}>Manhã</Text>
-          <Text style={[styles.periodTileSub, currentPeriod === 'morning' && styles.periodTileTextActive]}>08–12</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.periodTile, currentPeriod === 'afternoon' && styles.periodTileActive]}
-          onPress={() => onApplyPreset(dayOfWeek, 'afternoon')}
-          accessibilityRole="button"
-          accessibilityLabel={`Definir tarde em ${dayName}`}
-        >
-          <Ionicons name="time-outline" size={18} color={currentPeriod === 'afternoon' ? '#fff' : Colors.primary} />
-          <Text style={[styles.periodTileText, currentPeriod === 'afternoon' && styles.periodTileTextActive]}>Tarde</Text>
-          <Text style={[styles.periodTileSub, currentPeriod === 'afternoon' && styles.periodTileTextActive]}>13–17</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.periodTile, currentPeriod === 'evening' && styles.periodTileActive]}
-          onPress={() => onApplyPreset(dayOfWeek, 'evening')}
-          accessibilityRole="button"
-          accessibilityLabel={`Definir noite em ${dayName}`}
-        >
-          <Ionicons name="moon-outline" size={18} color={currentPeriod === 'evening' ? '#fff' : Colors.primary} />
-          <Text style={[styles.periodTileText, currentPeriod === 'evening' && styles.periodTileTextActive]}>Noite</Text>
-          <Text style={[styles.periodTileSub, currentPeriod === 'evening' && styles.periodTileTextActive]}>18–21</Text>
-        </TouchableOpacity>
         <TouchableOpacity
           style={styles.personalizeButton}
           onPress={handlePersonalizeToggle}
@@ -2019,10 +1975,6 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '700',
     fontSize: 12,
-  },
-  switchWrap: {
-    transform: [{ scaleX: 0.92 }, { scaleY: 0.92 }],
-    marginLeft: 6,
   },
   quickActionChip: {
     backgroundColor: Colors.fieldBg,
