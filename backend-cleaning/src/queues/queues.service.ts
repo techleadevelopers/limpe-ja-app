@@ -146,7 +146,10 @@ export class QueuesService {
     }
   }
 
-  private async updateQueueDepth(queueName: string, queue: Queue): Promise<void> {
+  private async updateQueueDepth(
+    queueName: string,
+    queue: Queue,
+  ): Promise<void> {
     try {
       const waiting = await queue.getWaitingCount();
       queueWaitingGauge.set({ queue: queueName }, waiting);
