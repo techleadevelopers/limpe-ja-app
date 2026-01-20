@@ -6,11 +6,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AnalyticsEventDto } from './dto/analytics-event.dto';
 
