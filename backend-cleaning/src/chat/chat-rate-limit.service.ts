@@ -40,17 +40,26 @@ export class ChatRateLimitService {
   }
 
   private async writeEntry(key: string, entry: RateLimitEntry): Promise<void> {
-    const ttlSeconds = Math.max(1, Math.ceil((entry.expiresAt - Date.now()) / 1000));
+    const ttlSeconds = Math.max(
+      1,
+      Math.ceil((entry.expiresAt - Date.now()) / 1000),
+    );
     if (this.cacheService) {
       await this.cacheService.set(key, entry, ttlSeconds);
       return;
     }
 
     this.inMemoryStore.set(key, entry);
-    setTimeout(() => this.inMemoryStore.delete(key), Math.max(entry.expiresAt - Date.now(), 0));
+    setTimeout(
+      () => this.inMemoryStore.delete(key),
+      Math.max(entry.expiresAt - Date.now(), 0),
+    );
   }
 
-  async consume(chatId: string, senderId: string): Promise<{
+  async consume(
+    chatId: string,
+    senderId: string,
+  ): Promise<{
     allowed: boolean;
     retryAfterMs: number;
     limit: number;
@@ -70,9 +79,10 @@ export class ChatRateLimitService {
       };
     }
 
-    const nextEntry: RateLimitEntry = existing && existing.expiresAt > now
-      ? { count: existing.count + 1, expiresAt: existing.expiresAt }
-      : { count: 1, expiresAt: now + this.windowMs };
+    const nextEntry: RateLimitEntry =
+      existing && existing.expiresAt > now
+        ? { count: existing.count + 1, expiresAt: existing.expiresAt }
+        : { count: 1, expiresAt: now + this.windowMs };
 
     await this.writeEntry(key, nextEntry);
     const retryAfterMs = Math.max(nextEntry.expiresAt - now, 0);
