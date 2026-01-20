@@ -169,7 +169,9 @@ export class ChatService {
     const providerUserId = booking.provider?.userId;
 
     if (!clientUserId || !providerUserId) {
-      throw new BadRequestException('Dados do cliente ou provedor incompletos.');
+      throw new BadRequestException(
+        'Dados do cliente ou provedor incompletos.',
+      );
     }
 
     const isClient =
@@ -185,17 +187,19 @@ export class ChatService {
     }
 
     if (!CHAT_ACTIVE_STATUSES.includes(booking.status)) {
-      const reason =
-        CHAT_FINAL_STATUSES.includes(booking.status)
-          ? 'O chat está encerrado porque o agendamento foi concluído, cancelado ou expirado.'
-          : 'O chat só está disponível para agendamentos confirmados ou em andamento.';
+      const reason = CHAT_FINAL_STATUSES.includes(booking.status)
+        ? 'O chat está encerrado porque o agendamento foi concluído, cancelado ou expirado.'
+        : 'O chat só está disponível para agendamentos confirmados ou em andamento.';
       this.logger.warn(
         `[ChatService] getOrCreateConversationForBooking: booking ${bookingId} status ${booking.status} not eligible.`,
       );
       throw new ForbiddenException(reason);
     }
 
-    const chatDetails = await this.findOrCreateChat(clientUserId, providerUserId);
+    const chatDetails = await this.findOrCreateChat(
+      clientUserId,
+      providerUserId,
+    );
 
     return {
       chatId: chatDetails.chatId,
@@ -387,10 +391,9 @@ export class ChatService {
       providerFullName: providerProfile?.fullName,
       providerAvatarUrl: providerProfile?.avatarUrl,
     };
-    const notificationMessage =
-      senderUser?.fullName
-        ? `${senderUser.fullName} enviou uma mensagem no chat.`
-        : 'Você recebeu uma nova mensagem.';
+    const notificationMessage = senderUser?.fullName
+      ? `${senderUser.fullName} enviou uma mensagem no chat.`
+      : 'Você recebeu uma nova mensagem.';
     const targetUrl = receiverIsProvider
       ? `/provider/messages/${chatId}`
       : `/client/messages/${chatId}`;
