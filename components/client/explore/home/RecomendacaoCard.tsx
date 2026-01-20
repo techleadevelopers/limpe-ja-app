@@ -691,8 +691,8 @@ type NextAvailabilitySource =
           activeOpacity={1}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <View style={styles.imageWrapper}>
-            <Image source={avatarSource} style={styles.cardImage} />
+            <View style={styles.imageWrapper}>
+              <Image source={avatarSource} style={styles.cardImage} resizeMode="contain" />
             {/* SEL0 DE SEGURANÇA REFINADO */}
             <AnimatedPlusButtonGradient
               style={[styles.securityBadge, subtleTrembleAnimatedStyle]}
@@ -957,10 +957,11 @@ right: Platform.OS === 'android' ? -4 : -4,
   imageWrapper: {
     width: '100%',
     height: S(62), // Mantido: 75px (sem mudança, espaço extra vem do height total)
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative', // Para overlay do selo (botão agora aqui)
+    padding: 6,
   },
   // NOVO: Estilos para o badge animado do horário (background mais opaco para evitar transparência no card)
   nextAvailableBadge: {
@@ -1087,10 +1088,11 @@ right: Platform.OS === 'android' ? -4 : -4,
   },
   // REMOVIDO: verifiedBadge style (não mais usado)
   cardImage: {
-    width: '100%',
-    height: '97%',
+    width: '90%',
+    height: '90%',
     borderRadius: 12,
-    resizeMode: 'cover',
+    alignSelf: 'center',
+    resizeMode: 'contain',
   },
   infoContainer: {
     padding: 8, // Mantido: 8px (espaço suficiente com height aumentado)
