@@ -185,7 +185,9 @@ export class BookingEntity implements PrismaBooking {
     this.completedLng =
       partial.completedLng !== undefined ? partial.completedLng : null;
     this.completedAccuracyM =
-      partial.completedAccuracyM !== undefined ? partial.completedAccuracyM : null;
+      partial.completedAccuracyM !== undefined
+        ? partial.completedAccuracyM
+        : null;
 
     this.durationMinutes =
       partial.durationMinutes !== undefined && partial.durationMinutes !== null
@@ -205,6 +207,3 @@ export class BookingEntity implements PrismaBooking {
       partial.isReviewed !== undefined ? partial.isReviewed : false;
   }
 }
-
-
-
