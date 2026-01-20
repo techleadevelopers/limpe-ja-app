@@ -50,7 +50,9 @@ describe('AuthService password reset request', () => {
     } as unknown as jest.Mocked<ConfigService>;
 
     const geocodingServiceMock = {} as GeocodingService;
-    const referralsServiceMock = { createReferral: jest.fn() } as unknown as ReferralsService;
+    const referralsServiceMock = {
+      createReferral: jest.fn(),
+    } as unknown as ReferralsService;
 
     authService = new AuthService(
       prismaMock as any,
@@ -92,8 +94,8 @@ describe('AuthService password reset request', () => {
       });
       expect(prismaMock.passwordResetToken.create).toHaveBeenCalledTimes(1);
 
-      const tokenRecord = prismaMock.passwordResetToken.create.mock.calls[0][0]
-        .data;
+      const tokenRecord =
+        prismaMock.passwordResetToken.create.mock.calls[0][0].data;
       expect(tokenRecord).toMatchObject({
         userId: user.id,
         usedAt: null,
@@ -105,7 +107,9 @@ describe('AuthService password reset request', () => {
       expect(emailServiceMock.sendEmail).toHaveBeenCalledWith(
         user.email,
         expect.stringContaining('Redefinição de Senha'),
-        expect.stringContaining(`${baseUrl}/reset-password?token=${resetToken}`),
+        expect.stringContaining(
+          `${baseUrl}/reset-password?token=${resetToken}`,
+        ),
         expect.any(String),
       );
     });
