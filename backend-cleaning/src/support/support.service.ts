@@ -44,7 +44,9 @@ export class SupportService {
       select: { id: true },
     });
     if (!admins.length) {
-      this.logger.warn('[SupportService] Nenhum admin encontrado para notificação.');
+      this.logger.warn(
+        '[SupportService] Nenhum admin encontrado para notificação.',
+      );
       return;
     }
 
@@ -70,9 +72,9 @@ export class SupportService {
     } = createTicketDto;
 
     const sanitizedCategory = Object.values(SupportTicketCategory).includes(
-      requestedCategory as SupportTicketCategory,
+      requestedCategory,
     )
-      ? (requestedCategory as SupportTicketCategory)
+      ? requestedCategory
       : SupportTicketCategory.OTHER;
 
     const severityLabel = (severity ?? 'NORMAL').toUpperCase();
