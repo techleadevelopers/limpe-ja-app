@@ -31,7 +31,9 @@ function isDecimal(value: any): value is Decimal {
 
 const toStringArray = (value: Prisma.JsonValue): string[] => {
   if (Array.isArray(value)) {
-    return value.map((entry) => (typeof entry === 'string' ? entry : String(entry)));
+    return value.map((entry) =>
+      typeof entry === 'string' ? entry : String(entry),
+    );
   }
   return [];
 };
@@ -81,11 +83,11 @@ const normalizeScheduledTime = (
   if (!value) {
     return `${scheduledDate}T00:00:00Z`;
   }
-  
+
   if (value instanceof Date) {
     return value.toISOString();
   }
-  
+
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (!trimmed) {
@@ -182,7 +184,10 @@ class BookingInsuranceSnapshotDto {
 }
 
 class BookingProofSnapshotDto {
-  @ApiProperty({ description: 'Identificador do comprovante', example: 'proof-123' })
+  @ApiProperty({
+    description: 'Identificador do comprovante',
+    example: 'proof-123',
+  })
   @IsString()
   id: string;
 
@@ -198,17 +203,28 @@ class BookingProofSnapshotDto {
   @IsString({ each: true })
   photos: string[];
 
-  @ApiPropertyOptional({ description: 'Vídeo enviado (se houver)', example: 'https://...' })
+  @ApiPropertyOptional({
+    description: 'Vídeo enviado (se houver)',
+    example: 'https://...',
+  })
   @IsOptional()
   @IsString()
   videoUrl?: string | null;
 
-  @ApiPropertyOptional({ description: 'Hashes associados', type: 'object', additionalProperties: true })
+  @ApiPropertyOptional({
+    description: 'Hashes associados',
+    type: 'object',
+    additionalProperties: true,
+  })
   @IsOptional()
   @IsObject()
   hashes?: Record<string, unknown> | null;
 
-  @ApiPropertyOptional({ description: 'Timestamps registrados', type: 'object', additionalProperties: true })
+  @ApiPropertyOptional({
+    description: 'Timestamps registrados',
+    type: 'object',
+    additionalProperties: true,
+  })
   @IsOptional()
   @IsObject()
   timestamps?: Record<string, unknown> | null;
@@ -249,7 +265,10 @@ class BookingProofSnapshotDto {
   @IsString()
   userId: string;
 
-  @ApiProperty({ description: 'Momento da criação', example: '2025-01-01T09:00:00.000Z' })
+  @ApiProperty({
+    description: 'Momento da criação',
+    example: '2025-01-01T09:00:00.000Z',
+  })
   @IsString()
   createdAt: string;
 
@@ -275,15 +294,21 @@ class BookingProofSnapshotDto {
     this.timestamps = toRecord(data.timestamps ?? null);
     this.userId = data.userId;
     this.createdAt =
-      data.createdAt instanceof Date ? data.createdAt.toISOString() : data.createdAt;
+      data.createdAt instanceof Date
+        ? data.createdAt.toISOString()
+        : data.createdAt;
     this.latitude =
-      typeof data.latitude === 'number' ? data.latitude : data.latitude ?? null;
+      typeof data.latitude === 'number'
+        ? data.latitude
+        : (data.latitude ?? null);
     this.longitude =
-      typeof data.longitude === 'number' ? data.longitude : data.longitude ?? null;
+      typeof data.longitude === 'number'
+        ? data.longitude
+        : (data.longitude ?? null);
     this.accuracyMeters =
       typeof data.accuracyMeters === 'number'
         ? data.accuracyMeters
-        : data.accuracyMeters ?? null;
+        : (data.accuracyMeters ?? null);
     this.capturedAt = data.capturedAt
       ? data.capturedAt instanceof Date
         ? data.capturedAt.toISOString()
@@ -677,7 +702,8 @@ export class BookingDetailsDto {
   scheduledEndTime?: string | null;
 
   @ApiPropertyOptional({
-    description: 'Horário em que o prestador aceitou o agendamento (se já aceito).',
+    description:
+      'Horário em que o prestador aceitou o agendamento (se já aceito).',
     example: '2025-07-01T11:00:00.000Z',
   })
   @IsOptional()
@@ -707,7 +733,7 @@ export class BookingDetailsDto {
     providerServiceId: string;
     scheduledDate: Date | string;
     // CORREÇÃO: Aceitando Date ou String no construtor
-    scheduledTime: Date | string; 
+    scheduledTime: Date | string;
     scheduledStart?: Date | string | null;
     durationMinutes?: number | null;
     arrivedAt?: Date | string | null;
@@ -741,16 +767,18 @@ export class BookingDetailsDto {
       proofRequired: boolean;
       createdAt: Date | string;
     } | null;
-    bookingProofs?: {
-      id: string;
-      type: BookingProofType;
-      photos: Prisma.JsonValue;
-      videoUrl?: string | null;
-      hashes?: Prisma.JsonValue | null;
-      timestamps?: Prisma.JsonValue | null;
-      userId: string;
-      createdAt: Date | string;
-    }[] | null;
+    bookingProofs?:
+      | {
+          id: string;
+          type: BookingProofType;
+          photos: Prisma.JsonValue;
+          videoUrl?: string | null;
+          hashes?: Prisma.JsonValue | null;
+          timestamps?: Prisma.JsonValue | null;
+          userId: string;
+          createdAt: Date | string;
+        }[]
+      | null;
     review?: {
       id: string;
       rating: number | Decimal;
@@ -812,7 +840,7 @@ export class BookingDetailsDto {
     this.providerId = data.providerId;
     this.providerServiceId = data.providerServiceId;
     this.scheduledDate = toCalendarDate(data.scheduledDate);
-    
+
     // CORREÇÃO: scheduledTime agora é normalizado com segurança
     this.scheduledTime = normalizeScheduledTime(
       this.scheduledDate,
@@ -918,7 +946,7 @@ export class BookingDetailsDto {
     }
 
     this.scheduledDateTime = this.scheduledStart ?? this.scheduledTime;
-    
+
     const baseEnd =
       parseIsoTimestamp(this.startedAt) ??
       parseIsoTimestamp(this.scheduledStart) ??
