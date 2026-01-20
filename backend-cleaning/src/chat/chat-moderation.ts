@@ -17,7 +17,8 @@ const MODERATION_PATTERNS: Array<{ regex: RegExp; reason: string }> = [
     reason: 'Referência a Pix detectada.',
   },
   {
-    regex: /(?:\+?\d{1,3}[\s .()-]*)?(?:\(?\d{2,3}\)?[\s .()-]*)?(?:\d[\s .()-]*){6,}/,
+    regex:
+      /(?:\+?\d{1,3}[\s .()-]*)?(?:\(?\d{2,3}\)?[\s .()-]*)?(?:\d[\s .()-]*){6,}/,
     reason: 'Número de contato detectado na mensagem.',
   },
   {
@@ -26,7 +27,9 @@ const MODERATION_PATTERNS: Array<{ regex: RegExp; reason: string }> = [
   },
 ];
 
-export function detectPolicyViolation(content: string | undefined): string | undefined {
+export function detectPolicyViolation(
+  content: string | undefined,
+): string | undefined {
   if (!content) {
     return undefined;
   }
