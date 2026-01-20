@@ -53,7 +53,7 @@ export class ProviderServicesService {
     const existingProviderService =
       await this.prisma.providerService.findUnique({
         where: {
-        providerId_serviceId: {
+          providerId_serviceId: {
             providerId,
             serviceId,
           },
@@ -135,7 +135,9 @@ export class ProviderServicesService {
 
       if (pricePerHour !== undefined) {
         if (pricePerHour <= 0) {
-          throw new BadRequestException('pricePerHour deve ser maior que zero.');
+          throw new BadRequestException(
+            'pricePerHour deve ser maior que zero.',
+          );
         }
         updateData.pricePerHour = new Prisma.Decimal(pricePerHour);
         updateData.needsReview = false;
