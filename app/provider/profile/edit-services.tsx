@@ -593,16 +593,6 @@ export default function EditProviderServicesScreen() {
     return (
       <View style={styles.outerContainer}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Animated.View
-          style={[
-            styles.customHeader,
-            { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] as any },
-          ]}
-        >
-          <Text style={styles.headerTitle}>Editar Serviços</Text>
-          <View style={styles.headerActionIconPlaceholder} />
-        </Animated.View>
-
         <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
           <ActivityIndicator size="large" color={Colors.primary} accessibilityLabel="Carregando seus serviços" />
           <Text style={styles.loadingText}>Carregando seus serviços...</Text>
