@@ -100,7 +100,8 @@ export class ChatController {
 
   @Post('conversations/get-or-create')
   @ApiOperation({
-    summary: 'Encontra ou cria uma conversa baseada em um agendamento confirmado',
+    summary:
+      'Encontra ou cria uma conversa baseada em um agendamento confirmado',
   })
   @ApiResponse({
     status: 200,
@@ -155,7 +156,10 @@ export class ChatController {
       );
     }
 
-    const rateLimitResult = await this.chatRateLimiter.consume(chatId, senderId);
+    const rateLimitResult = await this.chatRateLimiter.consume(
+      chatId,
+      senderId,
+    );
     if (!rateLimitResult.allowed) {
       const windowSeconds = Math.ceil(rateLimitResult.windowMs / 1000);
       const retrySeconds = Math.max(
