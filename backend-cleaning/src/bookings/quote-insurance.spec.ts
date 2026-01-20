@@ -1,6 +1,9 @@
 import { BookingQuoteRequestDto } from './dto/quote-request.dto';
 import { InsurancePlanId } from '../insurance/insurance.constants';
-import { createRequest, createServiceWithMocks } from '../../test/unit/helpers/bookings-service.helper';
+import {
+  createRequest,
+  createServiceWithMocks,
+} from '../../test/unit/helpers/bookings-service.helper';
 
 describe('BookingsService quote insurance flow', () => {
   const baseRequest = (): BookingQuoteRequestDto => ({
@@ -30,9 +33,15 @@ describe('BookingsService quote insurance flow', () => {
       providerRating: 5,
     });
 
-    const response = await service.quotePrice('client-user', baseRequest(), createRequest());
+    const response = await service.quotePrice(
+      'client-user',
+      baseRequest(),
+      createRequest(),
+    );
 
-    expect(response.insuranceOptions.map((option) => option.id)).toEqual(INSURANCE_PLAN_ORDER);
+    expect(response.insuranceOptions.map((option) => option.id)).toEqual(
+      INSURANCE_PLAN_ORDER,
+    );
     expect(response.insuranceOptions).toHaveLength(INSURANCE_PLAN_ORDER.length);
     expect(response.insuranceFeeCents).toBe(0);
     expect(response.selectedInsurance).toBeNull();
@@ -60,9 +69,13 @@ describe('BookingsService quote insurance flow', () => {
     expect(response.insuranceFeeCents).toBeGreaterThan(0);
     expect(response.insuranceOptions.length).toBeGreaterThan(0);
     expect(response.totalCents).toBe(Math.round(response.finalPrice * 100));
-    expect(response.breakdown.some((item) => item.type === 'insurance')).toBe(true);
+    expect(response.breakdown.some((item) => item.type === 'insurance')).toBe(
+      true,
+    );
     expect(response.insuranceOptions).toHaveLength(INSURANCE_PLAN_ORDER.length);
-    expect(response.insuranceOptions.map((option) => option.id)).toEqual(INSURANCE_PLAN_ORDER);
+    expect(response.insuranceOptions.map((option) => option.id)).toEqual(
+      INSURANCE_PLAN_ORDER,
+    );
     const selectedPlan = response.insuranceOptions.find(
       (option) => option.id === InsurancePlanId.ESSENCIAL,
     );
