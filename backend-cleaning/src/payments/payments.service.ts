@@ -176,7 +176,7 @@ export class PaymentsService {
   private appBaseUrl: string | undefined;
   private pagseguroHttpsAgent?: https.Agent;
 
-@Inject(forwardRef(() => BookingsService))
+  @Inject(forwardRef(() => BookingsService))
   private bookingsService!: BookingsService;
 
   constructor(
@@ -415,23 +415,15 @@ export class PaymentsService {
           shouldNotifyPaymentConfirmed = true;
           bookingForNotification = intent.booking;
         } else if (intent) {
-
           this.logger.log(
-
             `[PaymentsService] PaymentIntent ${intent.id} j? estava CONFIRMED; ignorando webhook duplicado.`,
-
           );
 
           return { message: 'Webhook processado com sucesso' };
-
         } else {
-
           this.logger.warn(
-
             `[PaymentsService] Webhook para ref ${externalRef} recebido, mas PaymentIntent nao encontrado.`,
-
           );
-
         }
 
         if (bookingIdToConfirm) {
@@ -584,12 +576,17 @@ export class PaymentsService {
     }
 
     if (!data && (typeof rawBody === 'string' || rawBody instanceof Buffer)) {
-      const rawString = typeof rawBody === 'string' ? rawBody : rawBody.toString();
+      const rawString =
+        typeof rawBody === 'string' ? rawBody : rawBody.toString();
       try {
         data = JSON.parse(rawString) as PixWebhookPayload;
-        this.logger.debug('[PaymentsService] parsed PIX webhook payload as JSON');
+        this.logger.debug(
+          '[PaymentsService] parsed PIX webhook payload as JSON',
+        );
       } catch {
-        this.logger.warn('[PaymentsService] invalid PIX webhook JSON; falling back to raw string');
+        this.logger.warn(
+          '[PaymentsService] invalid PIX webhook JSON; falling back to raw string',
+        );
         data = { resource_id: rawString };
       }
     }
@@ -619,11 +616,7 @@ export class PaymentsService {
       null;
     const webhookEvent = data?.event ?? data?.charges?.[0]?.id ?? 'unknown';
     const eventReference =
-      referenceId ??
-      data?.resource_id ??
-      chargeId ??
-      webhookEvent ??
-      'unknown';
+      referenceId ?? data?.resource_id ?? chargeId ?? webhookEvent ?? 'unknown';
     const successStatuses = new Set(['PAID', 'APPROVED', 'COMPLETED']);
     if (!chargeStatus || !successStatuses.has(chargeStatus)) {
       return {
@@ -770,7 +763,9 @@ export class PaymentsService {
         this.logger.warn(
           `[PaymentsService] Booking ${booking.id} expired before confirmation.`,
         );
-        pixWebhookFailureCounter.inc({ reason: 'booking_expired_before_confirmation' });
+        pixWebhookFailureCounter.inc({
+          reason: 'booking_expired_before_confirmation',
+        });
         timer({ outcome: 'failure' });
         throw new BadRequestException('payment-expired');
       }
@@ -918,7 +913,6 @@ export class PaymentsService {
       );
     }
   }
-
 
   // Admin: listar transações com filtros básicos
   async listTransactions(type?: string, status?: string) {
@@ -1178,7 +1172,10 @@ export class PaymentsService {
   ): Promise<PixChargeResponseDto> {
     const { description, bookingId, providerId } = dto; // amount sempre derivado do booking
     if (!this.pagseguroApiToken || !this.appBaseUrl) {
-      throw new HttpException('PSP not configured', HttpStatus.SERVICE_UNAVAILABLE);
+      throw new HttpException(
+        'PSP not configured',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
 
     if (!providerId) throw new BadRequestException('providerId é obrigatório.');
@@ -1371,7 +1368,11 @@ export class PaymentsService {
     });
     // === 7. RESPONDER AO APP NO NOVO FORMATO ===
 
-    return this.mapIntentToPixResponse(paymentIntentRecord, description, providerId);
+    return this.mapIntentToPixResponse(
+      paymentIntentRecord,
+      description,
+      providerId,
+    );
   }
 
   private mapIntentToPixResponse(
@@ -1397,7 +1398,9 @@ export class PaymentsService {
     } as PixChargeResponseDto;
   }
 
-  private getScheduledAtIsoString(booking: BookingWithUsers): string | undefined {
+  private getScheduledAtIsoString(
+    booking: BookingWithUsers,
+  ): string | undefined {
     if (booking.scheduledStart) {
       return booking.scheduledStart.toISOString();
     }
@@ -1473,7 +1476,11 @@ export class PaymentsService {
       await this.notificationsService.createNotification(dto);
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : typeof error === 'string' ? error : 'unknown error';
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'unknown error';
       this.logger.warn(
         `[PaymentsService] Falha ao persistir notificação PAYMENT_CONFIRMED: ${message}`,
       );
@@ -1592,4 +1599,3 @@ export class PaymentsService {
     });
   }
 }
-
