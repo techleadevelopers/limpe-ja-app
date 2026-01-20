@@ -1,4 +1,5 @@
 // src/providers/providers.service.ts
+import { createHash } from 'crypto';
 import {
   BadRequestException,
   forwardRef,
@@ -9,15 +10,16 @@ import {
 } from '@nestjs/common';
 import {
   Address,
-  PricingType,
+  BookingStatus,
+  Offer as PrismaOffer,
+  OfferTarget,
   Prisma,
+  PricingType,
   ProviderService,
+  ProviderVisibilityStatus,
   Service,
   VerificationStatus,
   UserRole,
-  BookingStatus,
-  Offer as PrismaOffer, // IMPORTANTE: Importe o tipo Offer do Prisma aqui
-  OfferTarget, // NOVO: Importe OfferTarget
 } from '@prisma/client';
 import { File } from 'multer';
 import { CacheService } from '../cache/cache.service';
@@ -54,10 +56,10 @@ export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
       };
     };
     bookings: {
-      where: { status: 'FINISHED' },
-      select: { id: true }, // <--- MUDE AQUI (tira o take 100 e traga só o ID)
-    },
-   // availability: true, //
+      where: { status: 'FINISHED' };
+      select: { id: true }; // <--- MUDE AQUI (tira o take 100 e traga só o ID)
+    };
+    // availability: true, //
   };
 }> & {
   fiveStarReviewCount?: number;
@@ -122,6 +124,9 @@ export type ProviderWithCalculatedRating = {
   phone: string | null;
   bio: string | null;
   verificationStatus?: VerificationStatus; // NOVO: Opcional para selo
+  visibilityStatus?: ProviderVisibilityStatus;
+  visibilityReason?: string | null;
+  visibilityUpdatedAt?: string | null;
   address: Address | null;
   providerServices: ProviderServiceForFrontend[];
   averageRating: number;
@@ -161,6 +166,22 @@ export type ProviderWithCalculatedRating = {
   nextAvailable?: { date: string; time: string };
 };
 
+export interface AdminProviderPageParams {
+  page?: number;
+  limit?: number;
+  searchTerm?: string;
+  serviceId?: string;
+  category?: string;
+  verificationStatus?: VerificationStatus;
+}
+
+export interface AdminProvidersPageResult {
+  items: ProviderWithCalculatedRating[];
+  totalCount: number;
+  page: number;
+  limit: number;
+}
+
 // NEW: Backend type for ProviderMetrics to match frontend
 export interface ProviderMetrics {
   acceptanceRate: number;
@@ -177,6 +198,7 @@ export class ProvidersService {
   private readonly MONTHLY_BOOKINGS_COUNT_CACHE_TTL_SECONDS = 5 * 60;
   private readonly RANKING_METRICS_CACHE_TTL_SECONDS = 5 * 60;
   private readonly PUBLIC_PROVIDERS_CACHE_TTL_SECONDS = 60;
+  private readonly SEARCH_RESULTS_CACHE_TTL_SECONDS = 5 * 60;
 
   constructor(
     private prisma: PrismaService,
@@ -186,6 +208,41 @@ export class ProvidersService {
     @Inject(forwardRef(() => AvailabilityService))
     private readonly availabilityService: AvailabilityService,
   ) {}
+
+  private buildSearchCacheKey(searchDto: ProviderSearchDto): string {
+    const normalizeString = (value?: string | null): string | null =>
+      value?.trim().toLowerCase() ?? null;
+
+    const normalized = {
+      searchTerm: normalizeString(searchDto.searchTerm),
+      serviceId: searchDto.serviceId ?? null,
+      location: normalizeString(searchDto.location),
+      minRating: searchDto.minRating ?? null,
+      latitude:
+        typeof searchDto.latitude === 'number'
+          ? Number(searchDto.latitude)
+          : null,
+      longitude:
+        typeof searchDto.longitude === 'number'
+          ? Number(searchDto.longitude)
+          : null,
+      radius:
+        typeof searchDto.radius === 'number'
+          ? Number(searchDto.radius)
+          : null,
+      city: normalizeString(searchDto.city),
+      state: normalizeString(searchDto.state),
+      sortBy: searchDto.sortBy ?? null,
+      limit: searchDto.limit ?? 20,
+      offset: searchDto.offset ?? 0,
+    };
+
+    const hash = createHash('md5')
+      .update(JSON.stringify(normalized))
+      .digest('hex');
+
+    return `${this.PROVIDERS_CACHE_KEY}:search:${hash}`;
+  }
 
   private buildAddressString(address?: Partial<Address>): string | null {
     if (!address) return null;
@@ -329,12 +386,7 @@ export class ProvidersService {
       const lon = provider.address?.longitude;
       if (lat == null || lon == null) return false;
       if (!provider.availability.length) return false;
-      const distance = this.calculateDistanceMeters(
-        safeLat,
-        safeLon,
-        lat,
-        lon,
-      );
+      const distance = this.calculateDistanceMeters(safeLat, safeLon, lat, lon);
       return distance !== undefined && distance <= radiusMeters;
     }).length;
 
@@ -393,6 +445,12 @@ export class ProvidersService {
     return undefined;
   }
 
+  private async invalidateProviderCache(providerId: string, userId: string) {
+    await this.cacheService.del(this.PROVIDERS_CACHE_KEY);
+    await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${providerId}`);
+    await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:user:${userId}`);
+  }
+
   public mapProviderToCalculatedRating(
     provider: ProviderWithIncludes,
     distance?: number,
@@ -405,9 +463,7 @@ export class ProvidersService {
 
     const averageRating =
       provider.reviewsReceived?.length > 0
-        ? parseFloat(
-            (totalRating / provider.reviewsReceived.length).toFixed(1),
-          )
+        ? parseFloat((totalRating / provider.reviewsReceived.length).toFixed(1))
         : 0;
 
     const completedBookingsCount = provider.bookings?.length ?? 0;
@@ -432,7 +488,10 @@ export class ProvidersService {
       phone: provider.phone || provider.user?.phone || null,
       userPhone: provider.user?.phone || null,
       bio: provider.bio || null,
-      verificationStatus: provider.verificationStatus, // NOVO: IncluÃ­do para selo
+      verificationStatus: provider.verificationStatus,
+      visibilityStatus: provider.visibilityStatus ?? ProviderVisibilityStatus.VISIBLE,
+      visibilityReason: provider.visibilityReason ?? null,
+      visibilityUpdatedAt: provider.visibilityUpdatedAt ? provider.visibilityUpdatedAt.toISOString() : null,
       address: provider.address ?? null,
       providerServices: provider.providerServices.map((ps) => ({
         id: ps.id,
@@ -526,18 +585,31 @@ export class ProvidersService {
         `[ProvidersService] updateAvatar: Imagem enviada para GCS. URL: ${fileUrl}`,
       );
 
+      const updateData: Prisma.ProviderUpdateInput = {
+        avatarUrl: fileUrl,
+      };
+      let visibilityTransitioned = false;
+      if (provider.visibilityStatus === ProviderVisibilityStatus.VITRINE_IRREGULAR) {
+        updateData.visibilityStatus = ProviderVisibilityStatus.PENDING_VITRINE_REVIEW;
+        updateData.visibilityReason = null;
+        updateData.visibilityUpdatedAt = new Date();
+        visibilityTransitioned = true;
+      }
+
       await this.prisma.provider.update({
         where: { userId },
-        data: { avatarUrl: fileUrl },
+        data: updateData,
       });
 
-      // Invalida o cache de provedores apÃ³s a atualizaÃ§Ã£o
-      await this.cacheService.del(this.PROVIDERS_CACHE_KEY);
-      await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${provider.id}`);
-      await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:user:${userId}`);
+      await this.invalidateProviderCache(provider.id, userId);
       this.logger.log(
         `[ProvidersService] updateAvatar: Cache de provedores invalidado.`,
       );
+      if (visibilityTransitioned) {
+        this.logger.log(
+          `[ProvidersService] updateAvatar: Vitrine irregular movida para PENDING_VITRINE_REVIEW para provider ${provider.id}.`,
+        );
+      }
 
       this.logger.log(
         `[ProvidersService] updateAvatar: AvatarUrl no banco de dados atualizado com sucesso para userId ${userId}.`,
@@ -556,7 +628,101 @@ export class ProvidersService {
       );
     }
   }
-  // --- FIM DA NOVA FUNÃÃO ---
+  async getVisibilityForUser(
+    userId: string,
+  ): Promise<
+    | {
+        visibilityStatus: ProviderVisibilityStatus;
+        visibilityReason: string | null;
+        visibilityUpdatedAt: Date | null;
+      }
+    | null
+  > {
+    const provider = await this.prisma.provider.findUnique({
+      where: { userId },
+      select: {
+        visibilityStatus: true,
+        visibilityReason: true,
+        visibilityUpdatedAt: true,
+      },
+    });
+    if (!provider) return null;
+    return {
+      visibilityStatus:
+        provider.visibilityStatus ?? ProviderVisibilityStatus.VISIBLE,
+      visibilityReason: provider.visibilityReason ?? null,
+      visibilityUpdatedAt: provider.visibilityUpdatedAt ?? null,
+    };
+  }
+
+  async setProviderVisibility(
+    providerId: string,
+    visibilityStatus: ProviderVisibilityStatus,
+    visibilityReason?: string | null,
+    adminId?: string,
+  ): Promise<ProviderWithCalculatedRating> {
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: providerId },
+    });
+    if (!provider) {
+      this.logger.warn(
+        `[ProvidersService] setProviderVisibility: Provedor ${providerId} nao encontrado.`,
+      );
+      throw new NotFoundException(`Provedor com ID \"${providerId}\" nao encontrado.`);
+    }
+
+    const normalizedReason =
+      visibilityStatus === ProviderVisibilityStatus.VISIBLE
+        ? null
+        : visibilityReason?.trim() || null;
+
+    const updatedProvider = await this.prisma.provider.update({
+      where: { id: providerId },
+      data: {
+        visibilityStatus,
+        visibilityReason: normalizedReason,
+        visibilityUpdatedAt: new Date(),
+      },
+      include: {
+        user: {
+          select: {
+            email: true,
+            role: true,
+            isVerified: true,
+            fullName: true,
+            phone: true,
+          },
+        },
+        address: true,
+        providerServices: { include: { service: true } },
+        reviewsReceived: {
+          include: {
+            client: {
+              include: { user: { select: { id: true, avatarUrl: true } } },
+            },
+          },
+        },
+        bookings: {
+          where: { status: 'FINISHED' },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        },
+      },
+    });
+
+    await this.invalidateProviderCache(updatedProvider.id, updatedProvider.userId);
+    const mapped = this.mapProviderToCalculatedRating(
+      updatedProvider as ProviderWithIncludes,
+    );
+    await this.hydrateProviderExtras(mapped);
+    this.logger.log(
+      `[ProvidersService] setProviderVisibility: status=${visibilityStatus} for provider=${providerId} reason=${normalizedReason ?? 'n/a'} by admin=${adminId ?? 'unknown'}`,
+    );
+    this.logger.log(
+      `[TELEMETRY] provider_visibility_changed: { providerId: ${providerId}, adminId: ${adminId ?? 'system'}, status: ${visibilityStatus}, reason: ${normalizedReason ?? 'none'} }`,
+    );
+    return mapped;
+  }
 
   async getPendingProviders(): Promise<ProviderWithCalculatedRating[]> {
     this.logger.log(
@@ -596,7 +762,7 @@ export class ProvidersService {
           orderBy: { createdAt: 'desc' },
           take: 100,
         },
-       // availability: true, // NOVO: Para nextAvailable
+        // availability: true, // NOVO: Para nextAvailable
       },
     });
 
@@ -606,6 +772,99 @@ export class ProvidersService {
         return this.mapProviderToCalculatedRating(p as ProviderWithIncludes);
       }),
     );
+  }
+
+  async getAdminProvidersPage(
+    params: AdminProviderPageParams,
+  ): Promise<AdminProvidersPageResult> {
+    const page = Math.max(1, params.page ?? 1);
+    const limit = Math.min(Math.max(1, params.limit ?? 9), 50);
+    const skip = (page - 1) * limit;
+    const searchTerm = params.searchTerm?.trim();
+
+    this.logger.log(
+      `[ProvidersService] getAdminProvidersPage: page=${page} limit=${limit} search=${searchTerm ?? 'n/a'} status=${params.verificationStatus ?? 'any'}`,
+    );
+
+    const where: Prisma.ProviderWhereInput = {};
+
+    if (searchTerm) {
+      where.OR = [
+        { fullName: { contains: searchTerm, mode: 'insensitive' } },
+        { user: { email: { contains: searchTerm, mode: 'insensitive' } } },
+        { bio: { contains: searchTerm, mode: 'insensitive' } },
+        {
+          providerServices: {
+            some: {
+              service: { name: { contains: searchTerm, mode: 'insensitive' } },
+            },
+          },
+        },
+      ];
+    }
+
+    if (params.verificationStatus) {
+      where.verificationStatus = params.verificationStatus;
+    }
+
+    const providerServiceFilter: Prisma.ProviderServiceWhereInput = {};
+    if (params.serviceId) {
+      providerServiceFilter.serviceId = params.serviceId;
+    }
+    const categoryFilter = params.category?.trim();
+    if (categoryFilter) {
+      providerServiceFilter.service = {
+        name: { contains: categoryFilter, mode: 'insensitive' },
+      };
+    }
+    if (Object.keys(providerServiceFilter).length) {
+      where.providerServices = { some: providerServiceFilter };
+    }
+
+    const [totalCount, providers] = await Promise.all([
+      this.prisma.provider.count({ where }),
+      this.prisma.provider.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              email: true,
+              role: true,
+              isVerified: true,
+              fullName: true,
+              phone: true,
+            },
+          },
+          address: true,
+          providerServices: { include: { service: true } },
+          reviewsReceived: {
+            include: {
+              client: {
+                include: { user: { select: { id: true, avatarUrl: true } } },
+              },
+            },
+          },
+          bookings: {
+            where: { status: 'FINISHED' },
+            select: { id: true },
+          },
+        },
+      }),
+    ]);
+
+    const mapped = providers.map((provider) =>
+      this.mapProviderToCalculatedRating(provider as ProviderWithIncludes),
+    );
+
+    return {
+      items: mapped,
+      totalCount,
+      page,
+      limit,
+    };
   }
 
   async findOne(id: string): Promise<ProviderWithCalculatedRating | null> {
@@ -623,7 +882,7 @@ export class ProvidersService {
       return provider;
     }
 
- const prismaProvider = await this.prisma.provider.findUnique({
+    const prismaProvider = await this.prisma.provider.findUnique({
       where: { id },
       include: {
         user: {
@@ -674,7 +933,9 @@ export class ProvidersService {
     return null;
   }
 
-  private async resolveMonthlyBookingsCount(providerId: string): Promise<number> {
+  private async resolveMonthlyBookingsCount(
+    providerId: string,
+  ): Promise<number> {
     const cacheKey = `${this.PROVIDERS_CACHE_KEY}:${providerId}:monthlyBookingsCount`;
     const cached = await this.cacheService.get<number>(cacheKey);
     if (typeof cached === 'number') {
@@ -705,7 +966,9 @@ export class ProvidersService {
     return count;
   }
 
-  private async resolveFiveStarReviewCount(providerId: string): Promise<number> {
+  private async resolveFiveStarReviewCount(
+    providerId: string,
+  ): Promise<number> {
     return this.prisma.review.count({
       where: { providerId, rating: 5 },
     });
@@ -757,7 +1020,9 @@ export class ProvidersService {
     return rate;
   }
 
-  private async countCompletedBookingsLast30Days(providerId: string): Promise<number> {
+  private async countCompletedBookingsLast30Days(
+    providerId: string,
+  ): Promise<number> {
     const cacheKey = `${this.PROVIDERS_CACHE_KEY}:${providerId}:completedBookingsLast30Days`;
     const cached = await this.cacheService.get<number>(cacheKey);
     if (typeof cached === 'number') {
@@ -791,7 +1056,7 @@ export class ProvidersService {
     return Math.round((betaBonus + gammaBonus) * 100) / 100;
   }
 
- private async hydrateProviderExtras(
+  private async hydrateProviderExtras(
     provider: ProviderWithCalculatedRating,
     forceFull = false, // <--- ADICIONE ESTE PARÂMETRO COM DEFAULT FALSE
   ): Promise<void> {
@@ -830,10 +1095,11 @@ export class ProvidersService {
       provider.nextAvailable = nextAvailable;
       provider.fiveStarReviewCount = fiveStarReviewCount;
     } catch (error) {
-      this.logger.error(`Erro ao hidratar extras do provedor ${provider.id}: ${error.message}`);
+      this.logger.error(
+        `Erro ao hidratar extras do provedor ${provider.id}: ${error.message}`,
+      );
     }
   }
-
 
   async findByUserId(
     userId: string,
@@ -869,7 +1135,7 @@ export class ProvidersService {
         reviewsReceived: {
           include: {
             client: {
-              include: { user: { select: { id: true, avatarUrl: true } } }
+              include: { user: { select: { id: true, avatarUrl: true } } },
             },
           },
         },
@@ -900,7 +1166,6 @@ export class ProvidersService {
     );
     return provider;
   }
-
 
   async updateByUserId(
     userId: string,
@@ -1248,7 +1513,7 @@ export class ProvidersService {
       state,
     } = searchDto;
 
-    const cacheKey = `${this.PROVIDERS_CACHE_KEY}:search:${JSON.stringify(searchDto)}`;
+    const cacheKey = this.buildSearchCacheKey(searchDto);
     const cachedResult =
       await this.cacheService.get<ProviderWithCalculatedRating[]>(cacheKey);
     if (cachedResult) {
@@ -1260,6 +1525,7 @@ export class ProvidersService {
 
     const where: Prisma.ProviderWhereInput = {
       verificationStatus: VerificationStatus.APPROVED,
+      visibilityStatus: ProviderVisibilityStatus.VISIBLE,
     };
 
     if (searchTerm) {
@@ -1316,22 +1582,27 @@ export class ProvidersService {
 
       try {
         const rawProviders: any[] = await this.prisma.$queryRaw(
-  Prisma.sql`
+          Prisma.sql`
     SELECT 
         p.id, 
         p."userId", 
         p."fullName", 
       p."avatarUrl", 
+      p."verificationStatus",
+      p."visibilityStatus",
+      p."visibilityReason",
+      p."visibilityUpdatedAt",
       ST_Distance(location, ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)) * 111.32 AS distance
     FROM "Provider" p
     JOIN "User" u ON p."userId" = u.id
     WHERE u.status = 'ACTIVE'
       AND p."verificationStatus" = 'APPROVED'
+      AND p."visibilityStatus" = 'VISIBLE'
       AND ST_DWithin(location, ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326), ${radius / 111.32})
     ORDER BY distance ASC
     LIMIT ${limit} OFFSET ${offset}
-  `
-);
+  `,
+        );
 
         if (rawProviders.length === 0) {
           this.logger.warn('Nenhum provedor encontrado na busca geoespacial.');
@@ -1341,75 +1612,82 @@ export class ProvidersService {
         providersWithDistance = await Promise.all(
           rawProviders.map(async (rp: any) => {
             // Mapeamento para ProviderWithIncludes (incluindo novos campos)
-        const toDate = (value: any) => {
-          if (!value) return undefined;
-          const date = new Date(value);
-          return Number.isNaN(date.getTime()) ? undefined : date;
-        };
+            const toDate = (value: any) => {
+              if (!value) return undefined;
+              const date = new Date(value);
+              return Number.isNaN(date.getTime()) ? undefined : date;
+            };
 
-const providerWithIncludes = {
-  ...rp, // Mantém todas as propriedades originais para o frontend não quebrar
-  id: rp.id,
-  userId: rp.userId,
-  fullName: rp.fullName,
-  cpf: rp.cpf,
-  dateOfBirth: toDate(rp.dateOfBirth) ?? null,
-  phone: rp.phone || rp.user_phone || null,
-  yearsOfExperience: rp.yearsOfExperience,
-  avatarUrl: rp.avatarUrl,
-  bio: rp.bio,
-  verificationStatus: rp.verificationStatus,
-  pixKey: rp.pixKey,
-  pixKeyMasked: rp.pixKeyMasked,
-  createdAt: toDate(rp.createdAt) ?? new Date(),
-  updatedAt: toDate(rp.updatedAt) ?? new Date(),
-  documentPhotoFrontUrl: rp.documentPhotoFrontUrl,
-  documentPhotoBackUrl: rp.documentPhotoBackUrl,
-  selfieWithDocumentUrl: rp.selfieWithDocumentUrl,
-  backgroundCheckResult: rp.backgroundCheckResult,
-  rejectionReason: rp.rejectionReason,
-  ocrResult: rp.ocrResult,
-  livenessResult: rp.livenessResult,
-  badges: rp.badges || [],
-  fiveStarReviewCount: rp.fiveStarReviewCount || 0,
-  monthlyBookingsCount: rp.monthlyBookingsCount || 0,
-  acceptanceRate: rp.acceptanceRate || 0,
-  averageResponseTime: rp.averageResponseTime || 0,
-  user: {
-    email: rp.email,
-    role: rp.role,
-    isVerified: rp.isVerified,
-    fullName: rp.user_fullName || rp.fullName,
-    phone: rp.user_phone || rp.phone,
-  },
-  address: rp.addressId ? {
-    id: rp.addressId,
-    cep: rp.cep,
-    street: rp.street,
-    number: rp.number,
-    complement: rp.complement,
-    neighborhood: rp.neighborhood,
-    city: rp.city,
-    state: rp.state,
-    clientId: null,
-    providerId: rp.providerId,
-    latitude: Number(rp.latitude_val) || null,
-    longitude: Number(rp.longitude_val) || null,
-    location: null,
-  } : null,
-  providerServices: rp.providerServicesAgg ? rp.providerServicesAgg.map((ps: any) => ({
-    ...ps,
-    price: new Decimal(ps.price || 0),
-    pricePerHour: new Decimal(ps.pricePerHour || 0),
-    service: ps.service,
-  })) : [],
-  // CAMPOS QUE O TS ESTAVA RECLAMANDO (Obrigatórios no tipo ProviderWithIncludes)
-  reviewsReceived: rp.reviewsReceived || [],
-  bookings: rp.bookings || [],
-  availability: rp.availability || [],
-} as unknown as ProviderWithIncludes; // <-- Isso aqui força o TS a calar a boca
-// Se o TS continuar reclamando, você deve ir no topo do arquivo e 
-// garantir que 'availability' está no 'ProviderWithIncludes'.
+            const providerWithIncludes = {
+              ...rp, // Mantém todas as propriedades originais para o frontend não quebrar
+              id: rp.id,
+              userId: rp.userId,
+              fullName: rp.fullName,
+              cpf: rp.cpf,
+              dateOfBirth: toDate(rp.dateOfBirth) ?? null,
+              phone: rp.phone || rp.user_phone || null,
+              yearsOfExperience: rp.yearsOfExperience,
+              avatarUrl: rp.avatarUrl,
+              bio: rp.bio,
+              verificationStatus: rp.verificationStatus,
+              visibilityStatus: rp.visibilityStatus,
+              visibilityReason: rp.visibilityReason,
+              visibilityUpdatedAt: toDate(rp.visibilityUpdatedAt) ?? null,
+              pixKey: rp.pixKey,
+              pixKeyMasked: rp.pixKeyMasked,
+              createdAt: toDate(rp.createdAt) ?? new Date(),
+              updatedAt: toDate(rp.updatedAt) ?? new Date(),
+              documentPhotoFrontUrl: rp.documentPhotoFrontUrl,
+              documentPhotoBackUrl: rp.documentPhotoBackUrl,
+              selfieWithDocumentUrl: rp.selfieWithDocumentUrl,
+              backgroundCheckResult: rp.backgroundCheckResult,
+              rejectionReason: rp.rejectionReason,
+              ocrResult: rp.ocrResult,
+              livenessResult: rp.livenessResult,
+              badges: rp.badges || [],
+              fiveStarReviewCount: rp.fiveStarReviewCount || 0,
+              monthlyBookingsCount: rp.monthlyBookingsCount || 0,
+              acceptanceRate: rp.acceptanceRate || 0,
+              averageResponseTime: rp.averageResponseTime || 0,
+              user: {
+                email: rp.email,
+                role: rp.role,
+                isVerified: rp.isVerified,
+                fullName: rp.user_fullName || rp.fullName,
+                phone: rp.user_phone || rp.phone,
+              },
+              address: rp.addressId
+                ? {
+                    id: rp.addressId,
+                    cep: rp.cep,
+                    street: rp.street,
+                    number: rp.number,
+                    complement: rp.complement,
+                    neighborhood: rp.neighborhood,
+                    city: rp.city,
+                    state: rp.state,
+                    clientId: null,
+                    providerId: rp.providerId,
+                    latitude: Number(rp.latitude_val) || null,
+                    longitude: Number(rp.longitude_val) || null,
+                    location: null,
+                  }
+                : null,
+              providerServices: rp.providerServicesAgg
+                ? rp.providerServicesAgg.map((ps: any) => ({
+                    ...ps,
+                    price: new Decimal(ps.price || 0),
+                    pricePerHour: new Decimal(ps.pricePerHour || 0),
+                    service: ps.service,
+                  }))
+                : [],
+              // CAMPOS QUE O TS ESTAVA RECLAMANDO (Obrigatórios no tipo ProviderWithIncludes)
+              reviewsReceived: rp.reviewsReceived || [],
+              bookings: rp.bookings || [],
+              availability: rp.availability || [],
+            } as unknown as ProviderWithIncludes; // <-- Isso aqui força o TS a calar a boca
+            // Se o TS continuar reclamando, você deve ir no topo do arquivo e
+            // garantir que 'availability' está no 'ProviderWithIncludes'.
 
             const mappedProvider = this.mapProviderToCalculatedRating(
               providerWithIncludes,
@@ -1465,11 +1743,11 @@ const providerWithIncludes = {
           (a, b) => (a.distance || Infinity) - (b.distance || Infinity),
         );
       }
-      await this.cacheService.set(
-        cacheKey,
-        providersWithDistance,
-        this.PUBLIC_PROVIDERS_CACHE_TTL_SECONDS,
-      );
+    await this.cacheService.set(
+      cacheKey,
+      providersWithDistance,
+      this.SEARCH_RESULTS_CACHE_TTL_SECONDS,
+    );
       this.logger.log(
         `[ProvidersService] search: Resultados da busca complexa adicionados ao cache.`,
       );
@@ -1483,41 +1761,41 @@ const providerWithIncludes = {
     }
 
     const providers = await this.prisma.provider.findMany({
-  where,
-  take: limit,
-  skip: offset,
-  orderBy: orderBy,
-  include: {
-    user: {
-      select: {
-        email: true,
-        role: true,
-        isVerified: true,
-        fullName: true,
-        phone: true,
-      },
-    },
-    address: true,
-    providerServices: { include: { service: true } },
-    reviewsReceived: {
-      take: 5, // Traga apenas as últimas 5 avaliações, não todas!
+      where,
+      take: limit,
+      skip: offset,
+      orderBy: orderBy,
       include: {
-        client: {
-          include: { user: { select: { id: true, avatarUrl: true } } },
+        user: {
+          select: {
+            email: true,
+            role: true,
+            isVerified: true,
+            fullName: true,
+            phone: true,
+          },
         },
+        address: true,
+        providerServices: { include: { service: true } },
+        reviewsReceived: {
+          take: 5, // Traga apenas as últimas 5 avaliações, não todas!
+          include: {
+            client: {
+              include: { user: { select: { id: true, avatarUrl: true } } },
+            },
+          },
+        },
+        // EM VEZ DE TRAZER 100 BOOKINGS, VAMOS APENAS CONTAR
+        _count: {
+          select: {
+            bookings: { where: { status: 'FINISHED' } },
+            reviewsReceived: true,
+          },
+        },
+        // REMOVEMOS o bookings: { take: 100 } daqui
+        // REMOVEMOS o availability: true daqui (Isso mata a performance da busca)
       },
-    },
-    // EM VEZ DE TRAZER 100 BOOKINGS, VAMOS APENAS CONTAR
-    _count: {
-      select: {
-        bookings: { where: { status: 'FINISHED' } },
-        reviewsReceived: true
-      }
-    }
-    // REMOVEMOS o bookings: { take: 100 } daqui
-    // REMOVEMOS o availability: true daqui (Isso mata a performance da busca)
-  },
-});
+    });
 
     this.logger.log(
       `[ProvidersService] search (fallback): Encontrados ${providers.length} provedores apÃ³s filtro.`,
@@ -1538,9 +1816,9 @@ const providerWithIncludes = {
           }
 
           const mapped = this.mapProviderToCalculatedRating(
-  provider as unknown as ProviderWithIncludes, // AQUI: adicionamos unknown para o erro 2352 sumir
-  distance,
-);
+            provider as unknown as ProviderWithIncludes, // AQUI: adicionamos unknown para o erro 2352 sumir
+            distance,
+          );
           await this.hydrateProviderExtras(mapped);
           return mapped;
         }),
@@ -1591,7 +1869,7 @@ const providerWithIncludes = {
     await this.cacheService.set(
       cacheKey,
       filteredProviders,
-      this.PUBLIC_PROVIDERS_CACHE_TTL_SECONDS,
+      this.SEARCH_RESULTS_CACHE_TTL_SECONDS,
     );
     this.logger.log(
       `[ProvidersService] search: Resultados da busca complexa (fallback) adicionados ao cache.`,
@@ -1662,6 +1940,9 @@ const providerWithIncludes = {
           p."dateOfBirth",
           p."avatarUrl",
           p."verificationStatus",
+          p."visibilityStatus",
+          p."visibilityReason",
+          p."visibilityUpdatedAt",
           p."pixKey",
           p."createdAt",
           p."updatedAt",
@@ -1748,8 +2029,9 @@ const providerWithIncludes = {
             "Review" r ON p.id = r."providerId"
         WHERE
             p."verificationStatus"::text = ${Prisma.raw(`'${VerificationStatus.APPROVED}'`)}
+            AND p."visibilityStatus"::text = ${Prisma.raw(`'${ProviderVisibilityStatus.VISIBLE}'`)}
         GROUP BY
-            p.id, u.email, u.role, u."isVerified", u."fullName", u."phone", a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount", p.badges, p."acceptanceRate", p."averageResponseTime", p."verificationStatus"
+            p.id, u.email, u.role, u."isVerified", u."fullName", u."phone", a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount", p.badges, p."acceptanceRate", p."averageResponseTime", p."verificationStatus", p."visibilityStatus", p."visibilityReason", p."visibilityUpdatedAt"
         ORDER BY
             p."yearsOfExperience" DESC,  -- Ordena principal por experiÃªncia (como original)
             distance_m ASC  -- SecundÃ¡rio por distÃ¢ncia se lat/lng fornecidos
@@ -1761,7 +2043,10 @@ const providerWithIncludes = {
           `[ProvidersService] findTopRatedOrExperiencedProviders: Falha no cÃ¡lculo de distÃ¢ncia (PostGIS indisponÃ­vel?). Caindo para consulta padrÃ£o. Erro: ${err?.message || err}`,
         );
         providers = await this.prisma.provider.findMany({
-          where: { verificationStatus: VerificationStatus.APPROVED },
+          where: {
+            verificationStatus: VerificationStatus.APPROVED,
+            visibilityStatus: ProviderVisibilityStatus.VISIBLE,
+          },
           include: {
             user: {
               select: {
@@ -1823,7 +2108,7 @@ const providerWithIncludes = {
             orderBy: { createdAt: 'desc' },
             take: 100,
           },
-         // availability: true, // NOVO: Para nextAvailable
+          // availability: true, // NOVO: Para nextAvailable
         },
         orderBy: {
           yearsOfExperience: 'desc',
@@ -1927,20 +2212,20 @@ const providerWithIncludes = {
               targetLon,
             );
           }
-        const mapped = this.mapProviderToCalculatedRating(
-          provider as ProviderWithIncludes,
-          distance,
-        );
-        try {
-          await this.hydrateProviderExtras(mapped);
-        } catch (innerErr: any) {
-          this.logger.error(
-            `[ProvidersService] findTopRatedOrExperiencedProviders: falha hidrating extras para ${mapped.id}: ${innerErr?.message || innerErr}`,
+          const mapped = this.mapProviderToCalculatedRating(
+            provider as ProviderWithIncludes,
+            distance,
           );
-        }
-        return mapped;
-      }),
-    );
+          try {
+            await this.hydrateProviderExtras(mapped);
+          } catch (innerErr: any) {
+            this.logger.error(
+              `[ProvidersService] findTopRatedOrExperiencedProviders: falha hidrating extras para ${mapped.id}: ${innerErr?.message || innerErr}`,
+            );
+          }
+          return mapped;
+        }),
+      );
 
     // Filtra pelo raio salvo do provedor (serviceRadiusKm) se cliente forneceu lat/lon
     const radiusFiltered = await this.applyRadiusFilter(
@@ -2160,7 +2445,9 @@ const providerWithIncludes = {
     await this.cacheService.del(
       `${this.PROVIDERS_CACHE_KEY}:top_rated_experienced`,
     );
-    await this.cacheService.del(`${this.PROVIDER_METRICS_CACHE_KEY}:${providerId}`);
+    await this.cacheService.del(
+      `${this.PROVIDER_METRICS_CACHE_KEY}:${providerId}`,
+    );
     // Telemetria: provider_metrics_updated
     this.logger.log(
       `[TELEMETRY] provider_metrics_updated: { providerId: ${providerId}, acceptanceRate: ${acceptanceRate.toFixed(2)}, averageResponseTime: ${averageResponseTime} }`,
@@ -2172,7 +2459,8 @@ const providerWithIncludes = {
     providerId: string,
   ): Promise<ProviderMetrics> {
     const cacheKey = `${this.PROVIDER_METRICS_CACHE_KEY}:${providerId}`;
-    const cachedMetrics = await this.cacheService.get<ProviderMetrics>(cacheKey);
+    const cachedMetrics =
+      await this.cacheService.get<ProviderMetrics>(cacheKey);
     if (cachedMetrics) {
       this.logger.debug(
         `[ProvidersService] getProviderPerformanceMetrics: Cache HIT para ${providerId}.`,
