@@ -26,16 +26,22 @@ describe('NotificationsService', () => {
     };
 
     service = new NotificationsService(
-      prismaMock as any,
+      prismaMock,
       i18nMock as any,
       configMock as any,
     );
-    (service as any).sendPushNotification = jest.fn().mockResolvedValue(undefined);
+    (service as any).sendPushNotification = jest
+      .fn()
+      .mockResolvedValue(undefined);
   });
 
   describe('createNotification', () => {
     it('reuses notification when idempotency key already exists', async () => {
-      const existing = { id: 'notif-1', userId: 'client-1', type: 'PAYMENT_CONFIRMED' };
+      const existing = {
+        id: 'notif-1',
+        userId: 'client-1',
+        type: 'PAYMENT_CONFIRMED',
+      };
       prismaMock.notification.findUnique.mockResolvedValue(existing);
       const dto = {
         userId: 'client-1',
@@ -53,7 +59,11 @@ describe('NotificationsService', () => {
     it('creates a new notification when the idempotency key is new', async () => {
       prismaMock.notification.findUnique.mockResolvedValue(null);
       prismaMock.notification.findFirst.mockResolvedValue(null);
-      const created = { id: 'notif-2', userId: 'client-1', message: 'Pagamento confirmado' };
+      const created = {
+        id: 'notif-2',
+        userId: 'client-1',
+        message: 'Pagamento confirmado',
+      };
       prismaMock.notification.create.mockResolvedValue(created);
       const dto = {
         userId: 'client-1',
@@ -77,7 +87,11 @@ describe('NotificationsService', () => {
 
     it('deduplicates events that share the same dedupeKey within the window', async () => {
       prismaMock.notification.findUnique.mockResolvedValue(null);
-      const duplicate = { id: 'notif-dup', userId: 'client-1', type: 'BOOKING_UPDATED' };
+      const duplicate = {
+        id: 'notif-dup',
+        userId: 'client-1',
+        type: 'BOOKING_UPDATED',
+      };
       prismaMock.notification.findFirst.mockResolvedValue(duplicate);
       const dto = {
         userId: 'client-1',
