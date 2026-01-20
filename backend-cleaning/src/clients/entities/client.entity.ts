@@ -80,7 +80,8 @@ export class ClientEntity implements PrismaClient {
   cancellationCount: number;
 
   @ApiPropertyOptional({
-    description: 'Timestamp até o qual o cliente está em cooldown de cancelamento',
+    description:
+      'Timestamp até o qual o cliente está em cooldown de cancelamento',
     example: '2024-12-01T12:00:00.000Z',
   })
   cancellationCooldownUntil: Date | null;
