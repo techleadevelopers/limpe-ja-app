@@ -12,10 +12,11 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Importa a função de API corrigida
-import { updateProviderProfile, updateProviderStatus } from "@/lib/api";
+import { updateProviderProfile, updateProviderStatus, updateProviderVisibility } from "@/lib/api";
 // CORREÇÃO: Importa Provider e VerificationStatus
-import { Provider, VerificationStatus } from "@/lib/types";
+import { Provider, ProviderVisibilityStatus, VerificationStatus } from "@/lib/types";
 import RejectionModal from "./rejection-modal";
+import VisibilityReasonModal from "./visibility-reason-modal";
 
 interface VerificationModalProps {
   provider: Provider | null;
@@ -25,6 +26,7 @@ interface VerificationModalProps {
   onApprove?: (providerId: string) => void;
   onReject?: (providerId: string, reason: string) => void;
   onBlock?: (providerId: string) => void;
+  onProviderUpdated?: (provider: Provider) => void;
 }
 
 function formatRelativeTime(date: Date): string {
@@ -40,11 +42,18 @@ function formatRelativeTime(date: Date): string {
   const diffInDays = Math.floor(diffInHours / 24);
   return `${diffInDays} dias atrás`;
 }
+const VISIBILITY_BADGE_CLASSES: Record<ProviderVisibilityStatus, string> = {
+  [ProviderVisibilityStatus.VISIBLE]: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  [ProviderVisibilityStatus.PENDING_VITRINE_REVIEW]: "bg-amber-100 text-amber-700 border-amber-200",
+  [ProviderVisibilityStatus.VITRINE_IRREGULAR]: "bg-red-100 text-red-700 border-red-200",
+};
+
 
 export default function VerificationModal({ provider, isOpen, onClose }: VerificationModalProps) {
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const [latitudeInput, setLatitudeInput] = useState("");
   const [longitudeInput, setLongitudeInput] = useState("");
+  const [isVisibilityReasonModalOpen, setIsVisibilityReasonModalOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -63,10 +72,11 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
   // Mova as declarações de useMutation para o topo do componente
   const approveMutation = useMutation({
     mutationFn: (providerId: string) => updateProviderStatus(providerId, VerificationStatus.APPROVED),
-    onSuccess: () => {
+    onSuccess: (updatedProvider) => {
       toast({ title: "Sucesso!", description: "Provedor aprovado com sucesso.", variant: "success" });
       queryClient.invalidateQueries({ queryKey: ["/verification/pending-queue"] });
       queryClient.invalidateQueries({ queryKey: ["/providers"] });
+      onProviderUpdated?.(updatedProvider);
       onClose();
     },
     onError: (error: any) => {
@@ -77,10 +87,11 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
   const rejectMutation = useMutation({
     mutationFn: ({ providerId, reason }: { providerId: string; reason: string }) =>
       updateProviderStatus(providerId, VerificationStatus.REJECTED, reason),
-    onSuccess: () => {
+    onSuccess: (updatedProvider) => {
       toast({ title: "Sucesso!", description: "Provedor rejeitado com sucesso.", variant: "success" });
       queryClient.invalidateQueries({ queryKey: ["/verification/pending-queue"] });
       queryClient.invalidateQueries({ queryKey: ["/providers"] });
+      onProviderUpdated?.(updatedProvider);
       onClose();
       setIsRejectionModalOpen(false);
     },
@@ -126,9 +137,52 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
     },
   });
 
+  const updateVisibilityMutation = useMutation({
+    mutationFn: ({ status, reason }: { status: ProviderVisibilityStatus; reason?: string | null }) => {
+      if (!provider) {
+        return Promise.reject(new Error("Provedor indisponível"));
+      }
+      return updateProviderVisibility(provider.id, status, reason);
+    },
+    onSuccess: (updatedProvider) => {
+      toast({
+        title: "Visibilidade atualizada",
+        description: "O status da vitrine foi atualizado com sucesso.",
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/verification/pending-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["/providers"] });
+      setIsVisibilityReasonModalOpen(false);
+      onProviderUpdated?.(updatedProvider);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar vitrine",
+        description: error?.message || "Não foi possível alterar o status da vitrine.",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!provider) return null;
 
   const resolvedName = provider.fullName || provider.name || "Sem nome";
+  const providerVisibilityStatus = provider.visibilityStatus ?? ProviderVisibilityStatus.VISIBLE;
+  const visibilityReasonText = provider.visibilityReason?.trim() || "Nenhum motivo registrado";
+  const visibilityUpdatedText = provider.visibilityUpdatedAt
+    ? formatRelativeTime(new Date(provider.visibilityUpdatedAt))
+    : "Sem atualizações recentes";
+  const visibilityBadgeClass = VISIBILITY_BADGE_CLASSES[providerVisibilityStatus];
+
+  const handleSetVisibilityStatus = (status: ProviderVisibilityStatus, reason?: string | null) => {
+    updateVisibilityMutation.mutate({ status, reason });
+  };
+  const handleVisibilityApprove = () => handleSetVisibilityStatus(ProviderVisibilityStatus.VISIBLE, null);
+  const handleVisibilityPending = () =>
+    handleSetVisibilityStatus(ProviderVisibilityStatus.PENDING_VITRINE_REVIEW);
+  const handleConfirmVisibilityReason = (reason: string) =>
+    handleSetVisibilityStatus(ProviderVisibilityStatus.VITRINE_IRREGULAR, reason);
+  const handleOpenVisibilityModal = () => setIsVisibilityReasonModalOpen(true);
 
   const handleApprove = () => {
     approveMutation.mutate(provider.id);
@@ -369,6 +423,47 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
               </div>
             </div>
 
+            <div className="space-y-3 border border-dashed border-gray-200 rounded-xl p-4 bg-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-md font-semibold text-gray-900">Status de Visibilidade</h4>
+                  <Badge className={`border ${visibilityBadgeClass}`}>
+                    {providerVisibilityStatus.replace(/_/g, " ")}
+                  </Badge>
+                </div>
+                <div className="text-right text-xs text-gray-500 space-y-1">
+                  <p>{visibilityUpdatedText}</p>
+                  <p>{visibilityReasonText}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleOpenVisibilityModal}
+                  className="text-red-600 border-red-200"
+                  disabled={updateVisibilityMutation.isPending}
+                >
+                  Invalidar Vitrine
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleVisibilityPending}
+                  className="text-amber-600 border-amber-200"
+                  disabled={updateVisibilityMutation.isPending}
+                >
+                  {updateVisibilityMutation.isPending ? "Atualizando..." : "Pendente Vitrine"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleVisibilityApprove}
+                  className="text-emerald-600 border-emerald-200"
+                  disabled={updateVisibilityMutation.isPending}
+                >
+                  {updateVisibilityMutation.isPending ? "Atualizando..." : "Aprovar Foto"}
+                </Button>
+              </div>
+            </div>
+
             {/* Manual Location Fix */}
             <div className="space-y-3 border border-dashed border-gray-200 rounded-xl p-4 bg-gray-50">
               <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -464,6 +559,12 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
         onClose={() => setIsRejectionModalOpen(false)}
         onConfirm={handleReject}
         isPending={rejectMutation.isPending}
+      />
+      <VisibilityReasonModal
+        isOpen={isVisibilityReasonModalOpen}
+        onClose={() => setIsVisibilityReasonModalOpen(false)}
+        onConfirm={handleConfirmVisibilityReason}
+        isPending={updateVisibilityMutation.isPending}
       />
     </>
   );
