@@ -273,7 +273,7 @@ export class DisputeService {
     });
     if (!dispute) {
       throw new NotFoundException(
-      `Disputa com ID "${disputeId}" não encontrada.`,
+        `Disputa com ID "${disputeId}" não encontrada.`,
       );
     }
 
