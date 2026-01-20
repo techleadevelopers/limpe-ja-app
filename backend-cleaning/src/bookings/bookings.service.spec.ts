@@ -60,7 +60,7 @@ const createRequest = (idempotencyKey?: string): Request =>
       ? ({ 'idempotency-key': idempotencyKey } as Record<string, string>)
       : {},
     locale: 'pt-BR',
-  } as unknown as Request);
+  }) as unknown as Request;
 
 const createServiceWithMocks = (options?: {
   dynamicPrice?: number;
@@ -85,39 +85,38 @@ const createServiceWithMocks = (options?: {
     calculatedTotalPrice: new Prisma.Decimal(150),
   });
 
-  const createdBooking: BookingWithDetailsRelations =
-    ({
-      id: 'booking-id',
-      clientId: 'client-id',
-      providerId: 'provider-id',
-      providerServiceId: 'provider-service-id',
-      scheduledDate: new Date('2025-12-31'),
-      scheduledTime: '10:00',
-      scheduledStart: new Date('2025-12-31T10:00:00Z'),
-      scheduledEnd: new Date('2025-12-31T11:00:00Z'),
-      durationMinutes: 60,
-      totalPrice: new Prisma.Decimal(100),
-      status: BookingStatus.PENDING_PAYMENT,
-      notes: null,
-      addressId: 'address-id',
-      couponId: null,
-      discountAmount: new Prisma.Decimal(0),
-      couponUsage: null,
-      client: { id: 'client-id', userId: 'client-user' },
-      provider: { id: 'provider-id', userId: 'provider-user' },
-      expiresAt: new Date(Date.now() + 1000),
-      providerService: { id: 'provider-service-id', service: { id: 'service' } },
-      review: null,
-      address: { id: 'address-id' },
-      subscription: null,
-      incidents: [],
-      guaranteeClaims: [],
-      bookingProofs: [],
-      expiresAt: new Date('2025-12-31T10:20:00Z'),
-      coupon: null,
-      paymentIntent: null,
-      bookingInsurance: null,
-    } as unknown as BookingWithDetailsRelations);
+  const createdBooking: BookingWithDetailsRelations = {
+    id: 'booking-id',
+    clientId: 'client-id',
+    providerId: 'provider-id',
+    providerServiceId: 'provider-service-id',
+    scheduledDate: new Date('2025-12-31'),
+    scheduledTime: '10:00',
+    scheduledStart: new Date('2025-12-31T10:00:00Z'),
+    scheduledEnd: new Date('2025-12-31T11:00:00Z'),
+    durationMinutes: 60,
+    totalPrice: new Prisma.Decimal(100),
+    status: BookingStatus.PENDING_PAYMENT,
+    notes: null,
+    addressId: 'address-id',
+    couponId: null,
+    discountAmount: new Prisma.Decimal(0),
+    couponUsage: null,
+    client: { id: 'client-id', userId: 'client-user' },
+    provider: { id: 'provider-id', userId: 'provider-user' },
+    expiresAt: new Date(Date.now() + 1000),
+    providerService: { id: 'provider-service-id', service: { id: 'service' } },
+    review: null,
+    address: { id: 'address-id' },
+    subscription: null,
+    incidents: [],
+    guaranteeClaims: [],
+    bookingProofs: [],
+    expiresAt: new Date('2025-12-31T10:20:00Z'),
+    coupon: null,
+    paymentIntent: null,
+    bookingInsurance: null,
+  } as unknown as BookingWithDetailsRelations;
 
   const bookingCountMock = jest.fn().mockResolvedValue(0);
   const bookingCreateMock = jest.fn().mockResolvedValue(createdBooking);
@@ -172,54 +171,54 @@ const createServiceWithMocks = (options?: {
     ...options?.providerServiceOverrides,
   };
 
-    const clientMock = {
-      id: 'client-id',
-      userId: 'client-user',
-      completedBookingsCount: options?.clientCompletedBookingsCount ?? 0,
-    };
+  const clientMock = {
+    id: 'client-id',
+    userId: 'client-user',
+    completedBookingsCount: options?.clientCompletedBookingsCount ?? 0,
+  };
 
-    const insuranceServiceInstance =
-      options?.insuranceService ?? new InsuranceService();
+  const insuranceServiceInstance =
+    options?.insuranceService ?? new InsuranceService();
 
-    const schedulerService = {
-      scheduleBookingReminders: jest.fn().mockResolvedValue(undefined),
-      cancelPendingSchedules: jest.fn().mockResolvedValue(undefined),
-      notifyJobStarted: jest.fn().mockResolvedValue(undefined),
-      notifyJobEnded: jest.fn().mockResolvedValue(undefined),
-    } as any;
+  const schedulerService = {
+    scheduleBookingReminders: jest.fn().mockResolvedValue(undefined),
+    cancelPendingSchedules: jest.fn().mockResolvedValue(undefined),
+    notifyJobStarted: jest.fn().mockResolvedValue(undefined),
+    notifyJobEnded: jest.fn().mockResolvedValue(undefined),
+  } as any;
 
-    const clientsServiceMock = {
-      findClientByUserId: jest.fn().mockResolvedValue(clientMock),
-    } as any;
+  const clientsServiceMock = {
+    findClientByUserId: jest.fn().mockResolvedValue(clientMock),
+  } as any;
 
-    const providersServiceMock = {
-      findOne: jest.fn().mockResolvedValue(provider),
-      findByUserId: jest.fn().mockResolvedValue(provider),
-    } as any;
+  const providersServiceMock = {
+    findOne: jest.fn().mockResolvedValue(provider),
+    findByUserId: jest.fn().mockResolvedValue(provider),
+  } as any;
 
-    const service = new BookingsService(
-      prismaMock as any,
-      clientsServiceMock,
-      providersServiceMock,
-      { findOne: jest.fn().mockResolvedValue(providerService) } as any,
-      {} as any,
-      {} as any,
-      {
-        calculatePrice: jest
-          .fn()
-          .mockResolvedValue({ finalPrice: options?.dynamicPrice ?? 120 }),
-      } as any,
-      { applyCoupon: jest.fn().mockResolvedValue({ coupon: null }) } as any,
-      insuranceServiceInstance,
-      {} as any,
-      {} as any,
-      { trackEvent: jest.fn().mockResolvedValue(undefined) } as any,
-      {} as any,
-      { translate: jest.fn().mockResolvedValue('translated') } as any,
-      redisLockService as any,
-      cacheService,
-      schedulerService,
-    );
+  const service = new BookingsService(
+    prismaMock as any,
+    clientsServiceMock,
+    providersServiceMock,
+    { findOne: jest.fn().mockResolvedValue(providerService) } as any,
+    {} as any,
+    {} as any,
+    {
+      calculatePrice: jest
+        .fn()
+        .mockResolvedValue({ finalPrice: options?.dynamicPrice ?? 120 }),
+    } as any,
+    { applyCoupon: jest.fn().mockResolvedValue({ coupon: null }) } as any,
+    insuranceServiceInstance,
+    {} as any,
+    {} as any,
+    { trackEvent: jest.fn().mockResolvedValue(undefined) } as any,
+    {} as any,
+    { translate: jest.fn().mockResolvedValue('translated') } as any,
+    redisLockService as any,
+    cacheService,
+    schedulerService,
+  );
 
   return {
     service,
@@ -255,7 +254,9 @@ describe('BookingsService (idempotency cache)', () => {
 
   it('throws when provider is not approved', async () => {
     const { service, prismaMock } = createServiceWithMocks({
-      providerOverrides: { verificationStatus: VerificationStatus.PENDING_MANUAL_REVIEW },
+      providerOverrides: {
+        verificationStatus: VerificationStatus.PENDING_MANUAL_REVIEW,
+      },
     });
 
     await expect(
@@ -267,7 +268,9 @@ describe('BookingsService (idempotency cache)', () => {
 
   it('returns cached booking when idempotency key hits', async () => {
     const { service, cacheService, prismaMock } = createServiceWithMocks();
-    const cachedBooking = { id: 'cached-booking' } as BookingWithDetailsRelations;
+    const cachedBooking = {
+      id: 'cached-booking',
+    } as BookingWithDetailsRelations;
     cacheService.get.mockResolvedValueOnce(cachedBooking);
 
     const booking = await service.create(
@@ -282,8 +285,13 @@ describe('BookingsService (idempotency cache)', () => {
   });
 
   it('creates and caches booking when idempotency key misses', async () => {
-    const { service, cacheService, prismaMock, createdBooking, redisLockService } =
-      createServiceWithMocks();
+    const {
+      service,
+      cacheService,
+      prismaMock,
+      createdBooking,
+      redisLockService,
+    } = createServiceWithMocks();
 
     const booking = await service.create(
       'client-user',
@@ -304,7 +312,11 @@ describe('BookingsService (idempotency cache)', () => {
   it('skips cache when no idempotency key is provided', async () => {
     const { service, cacheService, prismaMock } = createServiceWithMocks();
 
-    await service.create('client-user', buildCreateBookingDto(), createRequest());
+    await service.create(
+      'client-user',
+      buildCreateBookingDto(),
+      createRequest(),
+    );
 
     expect(cacheService.get).not.toHaveBeenCalled();
     expect(cacheService.set).not.toHaveBeenCalled();
@@ -319,14 +331,22 @@ describe('BookingsService weekly frequency guard', () => {
 
   it('allows at most two bookings per week then blocks the third', async () => {
     const { service, prismaMock } = createServiceWithMocks();
-    const bookingCount = prismaMock.booking.count as jest.Mock;
+    const bookingCount = prismaMock.booking.count;
     bookingCount
       .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(1)
       .mockResolvedValueOnce(2);
 
-    await service.create('client-user', buildCreateBookingDto(), createRequest());
-    await service.create('client-user', buildCreateBookingDto(), createRequest());
+    await service.create(
+      'client-user',
+      buildCreateBookingDto(),
+      createRequest(),
+    );
+    await service.create(
+      'client-user',
+      buildCreateBookingDto(),
+      createRequest(),
+    );
     await expect(
       service.create('client-user', buildCreateBookingDto(), createRequest()),
     ).rejects.toBeInstanceOf(BusinessRuleError);
@@ -334,7 +354,7 @@ describe('BookingsService weekly frequency guard', () => {
 
   it('resets the weekly tally when crossing Sunday to Monday', async () => {
     const { service, prismaMock } = createServiceWithMocks();
-    const bookingCount = prismaMock.booking.count as jest.Mock;
+    const bookingCount = prismaMock.booking.count;
     bookingCount.mockResolvedValue(0);
 
     const sundayDto = buildCreateBookingDto();
@@ -351,17 +371,20 @@ describe('BookingsService weekly frequency guard', () => {
     expect(firstStart.getUTCDay()).toBe(1);
     expect(secondStart.getUTCDay()).toBe(1);
     expect(
-      (secondStart.getTime() - firstStart.getTime()) /
-        (24 * 60 * 60 * 1000),
+      (secondStart.getTime() - firstStart.getTime()) / (24 * 60 * 60 * 1000),
     ).toBe(7);
   });
 
   it('only counts confirmed, started and finished statuses', async () => {
     const { service, prismaMock } = createServiceWithMocks();
-    const bookingCount = prismaMock.booking.count as jest.Mock;
+    const bookingCount = prismaMock.booking.count;
     bookingCount.mockResolvedValue(0);
 
-    await service.create('client-user', buildCreateBookingDto(), createRequest());
+    await service.create(
+      'client-user',
+      buildCreateBookingDto(),
+      createRequest(),
+    );
 
     const statuses = bookingCount.mock.calls[0][0].where.status.in;
     expect(statuses).toEqual([
@@ -372,11 +395,8 @@ describe('BookingsService weekly frequency guard', () => {
   });
 
   it('blocks confirming a third booking in the same week', async () => {
-    const {
-      service,
-      prismaMock,
-      providersServiceMock,
-    } = createServiceWithMocks();
+    const { service, prismaMock, providersServiceMock } =
+      createServiceWithMocks();
     const booking = {
       id: 'booking-id',
       clientId: 'client-id',
@@ -388,8 +408,8 @@ describe('BookingsService weekly frequency guard', () => {
       provider: { id: 'provider-id', userId: 'provider-user' },
     } as unknown as BookingWithDetailsRelations;
 
-    (prismaMock.booking.findUnique as jest.Mock).mockResolvedValueOnce(booking);
-    (prismaMock.booking.count as jest.Mock).mockResolvedValue(2);
+    prismaMock.booking.findUnique.mockResolvedValueOnce(booking);
+    prismaMock.booking.count.mockResolvedValue(2);
     providersServiceMock.findByUserId = jest.fn().mockResolvedValue({
       id: 'provider-id',
     });
@@ -400,7 +420,12 @@ describe('BookingsService weekly frequency guard', () => {
     } as Request;
 
     await expect(
-      service.updateStatus('booking-id', BookingStatus.CONFIRMED, UserRole.PROVIDER, request),
+      service.updateStatus(
+        'booking-id',
+        BookingStatus.CONFIRMED,
+        UserRole.PROVIDER,
+        request,
+      ),
     ).rejects.toBeInstanceOf(BusinessRuleError);
   });
 });
@@ -477,7 +502,11 @@ describe('BookingsService quote & mismatch detection', () => {
     };
 
     cacheService.get.mockResolvedValue(undefined);
-    const firstResponse = await service.quotePrice('client-user', quoteRequest, createRequest());
+    const firstResponse = await service.quotePrice(
+      'client-user',
+      quoteRequest,
+      createRequest(),
+    );
     expect(cacheService.set).toHaveBeenCalledWith(
       expect.stringMatching(/^quote:[0-9a-f]{64}$/),
       firstResponse,
@@ -486,7 +515,11 @@ describe('BookingsService quote & mismatch detection', () => {
     expect(calculateServiceTotalPriceMock).toHaveBeenCalledTimes(1);
 
     cacheService.get.mockResolvedValueOnce(firstResponse);
-    const cachedResponse = await service.quotePrice('client-user', quoteRequest, createRequest());
+    const cachedResponse = await service.quotePrice(
+      'client-user',
+      quoteRequest,
+      createRequest(),
+    );
     expect(cachedResponse).toBe(firstResponse);
     expect(calculateServiceTotalPriceMock).toHaveBeenCalledTimes(1);
   });
@@ -508,9 +541,17 @@ describe('BookingsService quote & mismatch detection', () => {
     };
 
     cacheService.get.mockResolvedValue(undefined);
-    const firstResponse = await service.quotePrice('client-user', quoteRequest, createRequest());
+    const firstResponse = await service.quotePrice(
+      'client-user',
+      quoteRequest,
+      createRequest(),
+    );
     cacheService.get.mockResolvedValue(undefined);
-    const secondResponse = await service.quotePrice('client-user', quoteRequest, createRequest());
+    const secondResponse = await service.quotePrice(
+      'client-user',
+      quoteRequest,
+      createRequest(),
+    );
     expect(secondResponse.quoteHash).toBe(firstResponse.quoteHash);
   });
 });
