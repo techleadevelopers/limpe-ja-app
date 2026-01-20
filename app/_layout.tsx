@@ -19,6 +19,7 @@ import {
   Platform,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -66,6 +67,20 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+const GLOBAL_TEXT_STYLE = {
+  includeFontPadding: false,
+
+  textAlignVertical: "center",
+
+  fontFamily: "Montserrat-Regular",
+};
+
+if ((Text as any).defaultProps == null) (Text as any).defaultProps = {};
+(Text as any).defaultProps.allowFontScaling = false;
+
+if ((TextInput as any).defaultProps == null) (TextInput as any).defaultProps = {};
+(TextInput as any).defaultProps.allowFontScaling = false;
 
 function parseDateTime(dateIso: string, timeHHmm: string): Date {
   try {
@@ -1124,36 +1139,34 @@ function RootLayoutContent() {
   }, [t, initializationError]);
 
   useEffect(() => {
-    if (!appReady || Platform.OS !== "android") {
+    if (!appReady) {
       return;
     }
 
+    const normalizeStyle = (style: any) => {
+      if (!style) return [GLOBAL_TEXT_STYLE];
+      if (Array.isArray(style)) return [...style, GLOBAL_TEXT_STYLE];
+      return [style, GLOBAL_TEXT_STYLE];
+    };
+
     const existingDefaultProps = (Text as any).defaultProps || {};
-
-    const existingStyle = existingDefaultProps.style;
-
-    const baseStyleArray = existingStyle
-      ? Array.isArray(existingStyle)
-        ? existingStyle
-        : [existingStyle]
-      : [];
 
     (Text as any).defaultProps = {
       ...existingDefaultProps,
 
       allowFontScaling: false,
 
-      style: [
-        ...baseStyleArray,
+      style: normalizeStyle(existingDefaultProps.style),
+    };
 
-        {
-          includeFontPadding: false,
+    const existingInputDefaultProps = (TextInput as any).defaultProps || {};
 
-          textAlignVertical: "center",
+    (TextInput as any).defaultProps = {
+      ...existingInputDefaultProps,
 
-          fontFamily: "Montserrat-Regular",
-        },
-      ],
+      allowFontScaling: false,
+
+      style: normalizeStyle(existingInputDefaultProps.style),
     };
   }, [appReady]);
 
