@@ -974,7 +974,8 @@ export class PayoutsService {
           e?.response?.data || e.message,
         )}`,
       );
-      const err = e instanceof Error ? e : new Error('PSP payout initiation failed');
+      const err =
+        e instanceof Error ? e : new Error('PSP payout initiation failed');
       await this.markGatewayFailure(err);
       throw err;
     }
@@ -1015,6 +1016,3 @@ export class PayoutsService {
     this.logger.log('Gateway de payouts está saudável; fila retomada.');
   }
 }
-
-
-
