@@ -5,7 +5,8 @@ import { ProviderDetailsDto } from './provider-details.dto';
 
 export class ProviderViewDto extends ProviderDetailsDto {
   @ApiProperty({
-    description: 'Flag que indica se o provedor passou pelo processo de verificação.',
+    description:
+      'Flag que indica se o provedor passou pelo processo de verificação.',
     example: true,
   })
   isVerified: boolean;
