@@ -1592,14 +1592,26 @@ export class ProvidersService {
       p."visibilityStatus",
       p."visibilityReason",
       p."visibilityUpdatedAt",
-      ST_Distance(location, ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)) * 111.32 AS distance
+      a.location AS address_location,
+      a.latitude AS latitude_val,
+      a.longitude AS longitude_val,
+      ST_Distance(
+        a.location,
+        ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
+      ) * 111.32 AS distance_m
     FROM "Provider" p
+    JOIN "Address" a ON a."providerId" = p.id
     JOIN "User" u ON p."userId" = u.id
-    WHERE u.status = 'ACTIVE'
-      AND p."verificationStatus" = 'APPROVED'
-      AND p."visibilityStatus" = 'VISIBLE'
-      AND ST_DWithin(location, ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326), ${radius / 111.32})
-    ORDER BY distance ASC
+        WHERE u.status = 'ACTIVE'
+          AND p."verificationStatus" = 'APPROVED'
+          AND p."visibilityStatus" = 'VISIBLE'
+          AND a.location IS NOT NULL
+          AND ST_DWithin(
+            a.location,
+            ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326),
+            ${radius / 111.32}
+          )
+    ORDER BY distance_m ASC
     LIMIT ${limit} OFFSET ${offset}
   `,
         );
@@ -1670,7 +1682,7 @@ export class ProvidersService {
                     providerId: rp.providerId,
                     latitude: Number(rp.latitude_val) || null,
                     longitude: Number(rp.longitude_val) || null,
-                    location: null,
+                    location: rp.address_location ?? null,
                   }
                 : null,
               providerServices: rp.providerServicesAgg
