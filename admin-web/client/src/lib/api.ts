@@ -228,23 +228,25 @@ const ERROR_MESSAGE_OVERRIDES: Record<string, string> = {
 
 const buildUnifiedError = (error: AxiosError) => {
     const payload: any = error.response?.data ?? {};
+    const requestId = payload.requestId ?? error.response?.headers?.["x-request-id"];
+    const baseMessage = (() => {
+        const overrideKey = payload.messageKey ?? payload.message;
+        const override =
+            overrideKey && ERROR_MESSAGE_OVERRIDES[overrideKey]
+                ? ERROR_MESSAGE_OVERRIDES[overrideKey]
+                : undefined;
+        if (override) return override;
+        if (payload.message) return payload.message;
+        return (
+            ERROR_MESSAGE_OVERRIDES["errors.network.retry_saved"]
+            ?? "We couldn’t complete this now. Your progress is safe; try again."
+        );
+    })();
     return {
         status: error.response?.status,
         messageKey: payload.messageKey ?? "errors.network.retry_saved",
-        message: (() => {
-            const overrideKey = payload.messageKey ?? payload.message;
-            const override =
-                overrideKey && ERROR_MESSAGE_OVERRIDES[overrideKey]
-                    ? ERROR_MESSAGE_OVERRIDES[overrideKey]
-                    : undefined;
-            if (override) return override;
-            if (payload.message) return payload.message;
-            return (
-                ERROR_MESSAGE_OVERRIDES["errors.network.retry_saved"]
-                ?? "We couldnâ€™t complete this now. Your progress is safe; try again."
-            );
-        })(),
-        requestId: payload.requestId ?? error.response?.headers?.["x-request-id"],
+        message: requestId ? `${baseMessage} (ID: ${requestId})` : baseMessage,
+        requestId,
         fieldErrors: payload.fieldErrors ?? null,
     };
 };
@@ -266,6 +268,23 @@ apiClient.interceptors.response.use(
         const isSilent = silentHeader === "1" || silentHeader === 1 || silentHeader === true;
 
         const unified = buildUnifiedError(axiosError);
+        const sentryClient = (globalThis as any).Sentry;
+        if (sentryClient) {
+            const method = (config.method ?? "GET").toUpperCase();
+            const route = `${method} ${String(config.url ?? "")}`.trim();
+            if (unified.requestId) {
+                sentryClient.setTag?.("requestId", unified.requestId);
+            }
+            sentryClient.addBreadcrumb?.({
+                category: "api",
+                message: route,
+                data: {
+                    requestId: unified.requestId,
+                    status: unified.status,
+                },
+            });
+        }
+
         if (!isSilent && !shouldDedupe(`${unified.messageKey}:${unified.status}`)) {
             console.error("[API] Request failed:", unified.messageKey, unified.message, unified.requestId ?? "");
         }
