@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import twilio, { Twilio } from 'twilio';
+import { Twilio } from 'twilio';
 
 @Injectable()
 export class SmsService {
@@ -59,7 +59,7 @@ export class SmsService {
         'Twilio credentials are not configured.',
       );
     }
-    this.twilioClient = twilio(accountSid, authToken);
+    this.twilioClient = new Twilio(accountSid, authToken);
     this.logger.log('[SmsService] Twilio client inicializado com sucesso.');
   }
 
