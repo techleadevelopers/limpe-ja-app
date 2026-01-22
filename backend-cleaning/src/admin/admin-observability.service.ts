@@ -7,6 +7,7 @@ import { CacheService } from '../cache/cache.service';
 import { BookingStatus } from '@prisma/client';
 import { ObservabilityService } from '../observability/observability.service';
 import { ConfigService } from '@nestjs/config';
+import { normalizeRouteKey } from '../observability/route-normalizer';
 import axios, { isAxiosError } from 'axios';
 import type { RedisClientType } from '@redis/client';
 
@@ -95,7 +96,7 @@ export class AdminObservabilityService {
     private readonly configService: ConfigService,
   ) {}
 
-  async getSnapshot(): Promise<AdminHealthSnapshot> {
+  async getSnapshot(routeKey?: string): Promise<AdminHealthSnapshot> {
     try {
       const dbLatencyPromise = this.checkDbLatency()
         .then((value) => ({ ok: true, value }))
@@ -121,10 +122,13 @@ export class AdminObservabilityService {
           breakdown: [],
         })),
         Promise.resolve(
-          this.observabilityService.getLatencySeries('/search', {
-            windowHours: 6,
-            points: 12,
-          }),
+          this.observabilityService.getLatencySeries(
+            normalizeRouteKey(routeKey ?? '/search'),
+            {
+              windowHours: 6,
+              points: 12,
+            },
+          ),
         ).catch(() => []),
       ]);
 
