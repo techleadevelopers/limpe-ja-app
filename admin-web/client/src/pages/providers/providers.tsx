@@ -1,12 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, MoreHorizontal, MapPin, Star } from "lucide-react";
+import { Search, Filter, MoreHorizontal, MapPin, Star, LayoutGrid, List } from "lucide-react";
 import { motion } from "framer-motion";
 import VerificationModal from "@/components/verification/verification-modal"; // Este componente agora gerencia suas próprias chamadas de API
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -56,10 +64,11 @@ export default function Providers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<VerificationStatus | "all">("all");
   const [serviceFilter, setServiceFilter] = useState("");
-  const [page, setPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 9;
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -75,22 +84,21 @@ export default function Providers() {
     isError,
     error,
   } = useQuery<AdminProviderPage, Error>({
-    queryKey: ['admin-providers', page, debouncedSearchTerm, statusFilter, serviceFilter],
+    queryKey: ['admin-providers', currentPage, debouncedSearchTerm, statusFilter, serviceFilter],
     queryFn: () =>
       fetchAdminProvidersPage({
-        page,
+        page: currentPage,
         limit: pageSize,
         searchTerm: debouncedSearchTerm || undefined,
         serviceId: serviceFilter || undefined,
         verificationStatus: statusFilter === "all" ? undefined : statusFilter,
       }),
-    keepPreviousData: true,
   });
 
-  const searchTermLower = searchTerm.toLowerCase();
-  // A mutation para updateProviderStatus não é mais usada diretamente aqui para o modal,
-  // mas pode ser útil para outras operações na página de provedores.
-  // Mantenho-a caso haja outras funcionalidades que a utilizem.
+  const adminProviderPageData = adminProviderPage as AdminProviderPage | undefined;
+  const providers = adminProviderPageData?.items ?? [];
+  const totalCount = adminProviderPageData?.totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const updateProviderStatusMutation = useMutation({
     mutationFn: ({ id, status, rejectionReason }: { id: string; status: VerificationStatus; rejectionReason?: string }) =>
       apiUpdateProviderStatus(id, status, rejectionReason),
@@ -115,30 +123,12 @@ export default function Providers() {
   });
 
   // CORREÇÃO: Lógica de filtro aprimorada para incluir o status
-  const filteredProviders = useMemo(
-    () =>
-      providers?.filter((provider: Provider) => {
-        const matchesSearch =
-          (provider.fullName || provider.name || "").toLowerCase().includes(searchTermLower) ||
-          (provider.email || "").toLowerCase().includes(searchTermLower);
-        const matchesStatus = statusFilter === "all" || provider.verificationStatus === statusFilter;
-        return matchesSearch && matchesStatus;
-      }) || [],
-    [providers, searchTermLower, statusFilter],
-  );
-
-  const totalPages = Math.max(1, Math.ceil(filteredProviders.length / pageSize));
-  const paginatedProviders = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredProviders.slice(start, start + pageSize);
-  }, [filteredProviders, currentPage]);
-
-  const showingStart = paginatedProviders.length ? (currentPage - 1) * pageSize + 1 : 0;
-  const showingEnd = paginatedProviders.length ? showingStart + paginatedProviders.length - 1 : 0;
+  const showingStart = providers.length ? (currentPage - 1) * pageSize + 1 : 0;
+  const showingEnd = providers.length ? showingStart + providers.length - 1 : 0;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, serviceFilter]);
 
   const handlePrevPage = () => {
     setCurrentPage((prev) => Math.max(1, prev - 1));
@@ -223,6 +213,14 @@ export default function Providers() {
                     <Filter className="mr-2" size={16} />
                     Mais Filtros
                   </Button>
+                  <div className="flex items-center gap-1">
+                    <Button variant={viewMode === 'card' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('card')}>
+                      <LayoutGrid size={16} />
+                    </Button>
+                    <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('table')}>
+                      <List size={16} />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -251,88 +249,141 @@ export default function Providers() {
             <div className="text-center py-12 text-red-600">
               <p>Erro ao carregar provedores: {error?.message}</p>
             </div>
-            ) : paginatedProviders.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {paginatedProviders.map((provider: Provider, index: number) => (
-                <motion.div
-                  key={provider.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                >
-                  <Card 
-                    className="shadow-floating hover:shadow-floating-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer border-0"
-                    onClick={() => handleProviderClick(provider)}
-                  >
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center">
-                          {/* Imagem de perfil mockada, idealmente viria do provider.avatarUrl */}
-                          <img 
-                          src={provider.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${getProviderFullName(provider)}`}
-                          alt={`${getProviderFullName(provider)} profile`}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                          <div className="ml-3">
-                            <h3 className="font-semibold text-gray-900">{getProviderFullName(provider)}</h3>
-                            <p className="text-sm text-gray-500">{provider.email}</p>
+          ) : providers.length > 0 ? (
+            <div>
+              {viewMode === 'card' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {providers.map((provider: Provider, index: number) => (
+                    <motion.div
+                      key={provider.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                    >
+                      <Card
+                        className="shadow-floating hover:shadow-floating-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer border-0"
+                        onClick={() => handleProviderClick(provider)}
+                      >
+                        <CardContent className="pt-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center">
+                              {/* Imagem de perfil mockada, idealmente viria do provider.avatarUrl */}
+                              <img
+                                src={provider.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${getProviderFullName(provider)}`}
+                                alt={`${getProviderFullName(provider)} profile`}
+                                className="w-12 h-12 rounded-full object-cover"
+                              />
+                              <div className="ml-3">
+                                <h3 className="font-semibold text-gray-900">{getProviderFullName(provider)}</h3>
+                                <p className="text-sm text-gray-500">{provider.email}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-700"
+                                onClick={(e) => handleDeleteProvider(e, provider.id)}
+                                disabled={deleteProviderMutation.isPending}
+                              >
+                                Excluir
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
+                                <MoreHorizontal size={16} />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700"
-                            onClick={(e) => handleDeleteProvider(e, provider.id)}
-                            disabled={deleteProviderMutation.isPending}
-                          >
-                            Excluir
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
-                            <MoreHorizontal size={16} />
-                          </Button>
-                        </div>
-                      </div>
 
-                      <div className="mb-4">
-                        <Badge className={`border ${getStatusBadge(provider.verificationStatus || "")}`}>
-                          {(provider.verificationStatus || "").replace(/_/g, ' ')}
-                        </Badge>
-                      </div>
+                          <div className="mb-4">
+                            <Badge className={`border ${getStatusBadge(provider.verificationStatus || "")}`}>
+                              {(provider.verificationStatus || "").replace(/_/g, ' ')}
+                            </Badge>
+                          </div>
 
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600 flex items-center">
-                            <Star className="w-4 h-4 text-yellow-400 mr-1" />
-                            Avaliações
-                          </span>
-                          <span className="font-medium">{provider.fiveStarReviewCount}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Agendamentos Mensais</span>
-                          <span className="font-medium">{provider.monthlyBookingsCount}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Ganhos Totais</span>
-                          <span className="font-medium text-green-600">R$ {parseFloat(provider.totalEarnings || "0").toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                      </div>
+                          <div className="space-y-2 mb-4">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600 flex items-center">
+                                <Star className="w-4 h-4 text-yellow-400 mr-1" />
+                                Avaliações
+                              </span>
+                              <span className="font-medium">{provider.fiveStarReviewCount}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">Agendamentos Mensais</span>
+                              <span className="font-medium">{provider.monthlyBookingsCount}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">Ganhos Totais</span>
+                              <span className="font-medium text-green-600">R$ {parseFloat(provider.totalEarnings || "0").toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          </div>
 
-                      {provider.city && ( // Usar city diretamente se disponível
-                        <div className="flex items-center text-sm text-gray-500 mb-4">
-                          <MapPin className="w-4 h-4 mr-1" />
-                          <span>{provider.city}</span>
-                        </div>
-                      )}
+                          {provider.city && ( // Usar city diretamente se disponível
+                            <div className="flex items-center text-sm text-gray-500 mb-4">
+                              <MapPin className="w-4 h-4 mr-1" />
+                              <span>{provider.city}</span>
+                            </div>
+                          )}
 
-                      <div className="text-xs text-gray-500">
-                        Entrou {formatRelativeTime(new Date(provider.createdAt || Date.now()))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-              </div>
+                          <div className="text-xs text-gray-500">
+                            Entrou {formatRelativeTime(new Date(provider.createdAt || Date.now()))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <Card className="border-0 shadow-floating">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Provedor</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Ganhos</TableHead>
+                        <TableHead>Localização</TableHead>
+                        <TableHead>Data de Entrada</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {providers.map((provider) => (
+                        <TableRow key={provider.id} onClick={() => handleProviderClick(provider)} className="cursor-pointer">
+                          <TableCell>
+                            <div className="flex items-center">
+                              <img
+                                src={provider.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${getProviderFullName(provider)}`}
+                                alt={`${getProviderFullName(provider)} profile`}
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                              <div className="ml-3">
+                                <p className="font-medium text-gray-900">{getProviderFullName(provider)}</p>
+                                <p className="text-sm text-gray-500">{provider.email}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`border ${getStatusBadge(provider.verificationStatus || "")}`}>
+                              {(provider.verificationStatus || "").replace(/_/g, ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium text-green-600">R$ {parseFloat(provider.totalEarnings || "0").toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          </TableCell>
+                          <TableCell>{provider.city || 'N/A'}</TableCell>
+                          <TableCell>{formatRelativeTime(new Date(provider.createdAt || Date.now()))}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600" onClick={(e) => { e.stopPropagation(); /* lógica do menu dropdown aqui */ }}>
+                              <MoreHorizontal size={16} />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Card>
+              )}
+            </div>
           ) : (
             <div className="text-center py-12">
             <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -343,10 +394,10 @@ export default function Providers() {
           </div>
         )}
 
-          {!isLoading && filteredProviders.length > 0 && totalPages > 1 && (
+          {!isLoading && providers.length > 0 && totalPages > 1 && (
             <div className="mt-6 flex items-center justify-between text-gray-600">
               <p className="text-sm">
-                Mostrando {showingStart}–{showingEnd} de {filteredProviders.length} provedores
+                Mostrando {showingStart}�{showingEnd} de {totalCount} provedores
               </p>
               <div className="flex items-center space-x-2">
                 <Button
@@ -369,7 +420,7 @@ export default function Providers() {
             </div>
           )}
 
-          {!isLoading && filteredProviders.length === 0 && (
+          {!isLoading && providers.length === 0 && (
             <div className="text-center py-12">
               <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Search className="w-8 h-8 text-gray-400" />
@@ -396,3 +447,4 @@ export default function Providers() {
     </div>
   );
 }
+
