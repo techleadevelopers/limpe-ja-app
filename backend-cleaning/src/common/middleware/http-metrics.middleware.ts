@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
-import { Histogram, Counter, register } from 'prom-client';
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
+import { Counter, Histogram, register } from 'prom-client';
+import { ObservabilityService } from '../../observability/observability.service';
 
 const HTTP_REQUEST_DURATION_NAME = 'http_request_duration_seconds';
 const HTTP_REQUEST_COUNTER_NAME = 'http_requests_total';
@@ -28,6 +29,65 @@ const httpRequestCounter =
 
 @Injectable()
 export class HttpMetricsMiddleware implements NestMiddleware {
+  constructor(private readonly observabilityService: ObservabilityService) {}
+
+  private isCriticalRoute(route: string): boolean {
+    return ['bookings', 'payments', 'auth', 'search', 'providers', 'safety', 'chat', 'verification', 'payouts', 'subscriptions', 'webhooks', 'notifications', 'disputes', 'reviews', 'admin'].some((segment) =>
+      route.startsWith(`/${segment}`),
+    );
+  }
+
+  private normalizeRouteKey(route: string): string {
+    const trimmed = route.split('?')[0];
+    const segments = trimmed.split('/').filter(Boolean);
+    const normalizedSegments = segments.map((segment) => {
+      if (segment.startsWith(':')) {
+        return '{id}';
+      }
+      if (/^[0-9]+$/.test(segment)) {
+        return '{id}';
+      }
+      if (
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          segment,
+        )
+      ) {
+        return '{id}';
+      }
+      if (/^\d+[A-Za-z]+$/.test(segment)) {
+        return '{id}';
+      }
+      return segment;
+    });
+    return `/${normalizedSegments.join('/')}`;
+  }
+
+  private shouldSample(routeKey: string): boolean {
+    const sampleRate = this.isCriticalRoute(routeKey) ? 1 : 0.1;
+    return this.getRandom() < sampleRate;
+  }
+
+  private getRandom(): number {
+    return Math.random();
+  }
+
+  private deriveRouteKey(req: Request): string {
+    const candidate =
+      (req.route?.path as string | undefined) ||
+      req.path ||
+      req.originalUrl?.split('?')[0];
+    if (!candidate) {
+      return '/unknown';
+    }
+    return this.normalizeRouteKey(candidate);
+  }
+
+  private recordLatency(routeKey: string, durationMs: number) {
+    if (durationMs <= 0) {
+      return;
+    }
+  }
+
   use(req: Request, res: Response, next: NextFunction) {
     const start = process.hrtime.bigint();
 
@@ -48,6 +108,10 @@ export class HttpMetricsMiddleware implements NestMiddleware {
         .labels(method, route, String(statusCode))
         .observe(durationSeconds);
       httpRequestCounter.labels(method, route, String(statusCode)).inc();
+
+      const durationMs = durationSeconds * 1000;
+      const routeKey = this.deriveRouteKey(req);
+      this.recordLatency(routeKey, durationMs);
     });
 
     next();
