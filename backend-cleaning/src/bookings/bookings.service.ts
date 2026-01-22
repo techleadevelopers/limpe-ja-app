@@ -1,4 +1,4 @@
-import dayjsModule = require('dayjs');
+﻿import dayjsModule = require('dayjs');
 const dayjs: typeof import('dayjs') =
   (
     (dayjsModule as typeof import('dayjs') & {
@@ -1353,7 +1353,6 @@ export class BookingsService {
         );
 
         if (couponId) {
-          await this.couponsService.markCouponAsUsed(couponId);
           const clientUserIdForCoupon = createdBooking.client?.userId;
           if (clientUserIdForCoupon) {
             const serviceName =
@@ -3131,6 +3130,10 @@ export class BookingsService {
       targetUrl: `/client/bookings/${bookingId}`,
       locale: 'pt-BR',
     });
+
+    if (updated.couponId) {
+      await this.couponsService.markCouponAsUsed(updated.couponId);
+    }
 
     // side-effects: notifications
     try {
