@@ -1,15 +1,14 @@
 // src/queues/queues.service.ts
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue, JobOptions } from 'bull';
 import {
-  queueJobProcessingDuration,
-  queueWaitingGauge,
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
+import { JobOptions, Queue } from 'bull';
+import {
+  queueWaitingGauge
 } from '../metrics/prometheus';
 
 // Interface para estender as opções de tarefa do Bull.js
