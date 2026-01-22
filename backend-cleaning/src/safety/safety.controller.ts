@@ -148,6 +148,16 @@ export class SafetyController {
     return this.safetyService.listPanicAlerts(status);
   }
 
+  @Get('pending-count')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Contagem de alertas críticos pendentes' })
+  @ApiResponse({ status: 200, description: 'Quantidade de alertas pendentes.' })
+  @UseGuards(RolesGuard)
+  async getPendingCount() {
+    const count = await this.safetyService.countPendingSafetyAlerts();
+    return { count };
+  }
+
   // NOVO: Atualizar status de alerta de pânico (admin)
   @Patch('panic-alerts/:id/status')
   @Roles(UserRole.ADMIN)
