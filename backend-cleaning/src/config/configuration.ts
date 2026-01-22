@@ -10,6 +10,19 @@ const toInt = (v: string | undefined, fallback: number): number => {
   return Number.isFinite(n) ? n : fallback;
 };
 
+const toFloat = (v: string | undefined, fallback: number): number => {
+  const n = parseFloat(String(v ?? ''));
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const toBoolean = (v: string | undefined, fallback: boolean): boolean => {
+  if (v === undefined) return fallback;
+  const normalized = v.trim().toLowerCase();
+  if (['false', '0', 'no'].includes(normalized)) return false;
+  if (['true', '1', 'yes'].includes(normalized)) return true;
+  return fallback;
+};
+
 const pickRedisUrl = (): string => {
   const primary = (process.env.REDIS_URL || '').trim();
   const fallback = (process.env.REDIS_URL_PUBLIC || '').trim();
@@ -147,5 +160,18 @@ export default () => ({
 
   psp: {
     webhookSecret: process.env.PSP_WEBHOOK_SECRET,
+  },
+  observability: {
+    latency: {
+      enabled: toBoolean(process.env.OBS_LATENCY_ENABLED, true),
+      sampleRateDefault: toFloat(
+        process.env.OBS_LATENCY_SAMPLE_RATE_DEFAULT,
+        0.1,
+      ),
+      sampleRateCritical: toFloat(
+        process.env.OBS_LATENCY_SAMPLE_RATE_CRITICAL,
+        1,
+      ),
+    },
   },
 });
