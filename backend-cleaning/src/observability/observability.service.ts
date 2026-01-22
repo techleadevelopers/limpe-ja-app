@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { normalizeRouteKey } from './route-normalizer';
 
 interface LatencyEntry {
   timestamp: number;
@@ -24,7 +25,7 @@ export class ObservabilityService {
 
   recordLatency(route: string, latencyMs: number) {
     const now = Date.now();
-    const normalized = this.normalizeRoute(route);
+    const normalized = normalizeRouteKey(route);
     const buffer = this.latencyBuffers.get(normalized) ?? [];
 
     const sanitizedLatency = Number(latencyMs?.toFixed(2)) || 0;
@@ -43,7 +44,7 @@ export class ObservabilityService {
     route: string,
     options: LatencySeriesOptions = {},
   ): LatencyPoint[] {
-    const normalized = this.normalizeRoute(route);
+    const normalized = normalizeRouteKey(route);
     const buffer = this.latencyBuffers.get(normalized) ?? [];
     if (buffer.length === 0) {
       return [];
@@ -68,14 +69,6 @@ export class ObservabilityService {
     }
 
     return sampled.slice(-points).map((entry) => this.toPoint(entry));
-  }
-
-  private normalizeRoute(route: string): string {
-    if (!route) return '/';
-    if (route.startsWith('/')) {
-      return route.toLowerCase();
-    }
-    return `/${route.toLowerCase()}`;
   }
 
   private toPoint(entry: LatencyEntry): LatencyPoint {
