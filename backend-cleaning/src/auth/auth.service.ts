@@ -1,48 +1,38 @@
 // src/auth/auth.service.ts
 import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-  BadRequestException,
-  NotFoundException,
-  Logger,
-  InternalServerErrorException,
-  forwardRef,
-  Inject,
+    BadRequestException,
+    ConflictException,
+    forwardRef,
+    Inject,
+    Injectable,
+    Logger,
+    NotFoundException,
+    UnauthorizedException
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../prisma/prisma.service';
-import * as bcrypt from 'bcrypt';
-import { RegisterClientDto } from './dto/register-client.dto';
-import { RegisterProviderDto } from './dto/register-provider.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
-import { UserProfileDto } from '../users/dto/user-profile.dto';
 import {
-  Prisma,
-  UserRole,
-  User,
-  Client,
-  Provider,
-  Address,
-  ProviderService,
-  Service,
-  Review,
-  VerificationStatus,
-  Booking,
-  BookingStatus,
+    BookingStatus,
+    Prisma,
+    User,
+    UserRole,
+    VerificationStatus
 } from '@prisma/client';
-import { ClientWithIncludes as ImportedClientWithIncludes } from '../clients/clients.service';
+import * as bcrypt from 'bcrypt';
 import { EmailService } from '../common/services/email.service';
 import { GeocodingService } from '../common/services/geocoding.service';
-import { ConfigService } from '@nestjs/config';
-import { ReferralsService } from '../referrals/referrals.service'; // NOVO: Importar ReferralsService
-import { UserWithIncludes } from '../users/users.service';
-import { ComplianceService } from '../compliance/compliance.service';
 import {
-  ConsentDocumentType,
-  DEFAULT_CONSENT_VERSIONS,
+    ConsentDocumentType,
+    DEFAULT_CONSENT_VERSIONS,
 } from '../compliance/compliance.constants';
+import { ComplianceService } from '../compliance/compliance.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { ReferralsService } from '../referrals/referrals.service'; // NOVO: Importar ReferralsService
+import { UserProfileDto } from '../users/dto/user-profile.dto';
+import { UserWithIncludes } from '../users/users.service';
+import { AuthResponseDto } from './dto/auth-response.dto';
+import { RegisterClientDto } from './dto/register-client.dto';
+import { RegisterProviderDto } from './dto/register-provider.dto';
 
 // --- INÍCIO DAS CORREÇÕES DE TIPAGEM E ESTRUTURA ---
 const loginProviderInclude = {
@@ -199,6 +189,8 @@ export class AuthService {
       email: fullUser.email,
       sub: fullUser.id,
       role: fullUser.role,
+      // Expor status para que o Frontend possa redirecionar VITRINE_IRREGULAR
+      status: fullUser.provider?.verificationStatus,
     };
     const expiresIn = this.configService.get<string>('jwt.expirationTime');
     const accessToken = this.jwtService.sign(payload, { expiresIn });
