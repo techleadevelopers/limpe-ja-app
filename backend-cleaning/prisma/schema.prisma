@@ -49,6 +49,21 @@ enum PricingType {
   CUSTOM_QUOTE
 }
 
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// E no model User, adicione:
+// auditLogs AuditLog[]
+
 enum TransactionStatus {
   PENDING
   PAID
@@ -349,6 +364,7 @@ model User {
   couponUsages          CouponUsage[]
   issuedCoupons         Coupon[]           @relation("IssuedCoupons")
   passwordResetTokens   PasswordResetToken[]
+  auditLogs AuditLog[]
 
   // MISSIONS
   missionProgress       MissionProgress[]
