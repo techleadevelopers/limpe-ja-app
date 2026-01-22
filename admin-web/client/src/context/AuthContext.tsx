@@ -1,9 +1,9 @@
 // admin-web/client/src/context/AuthContext.tsx
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useLocation } from 'wouter'; // CORREÇÃO: useLocation no lugar de useNavigate
 import { login as apiLogin, logout as apiLogout, setUnauthorizedHandler } from '@/lib/api'; // Importa as funções de login/logout da API
 import { AuthUser } from '@/lib/types'; // Importa AuthUser do types.ts
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { useLocation } from 'wouter'; // CORREÇÃO: useLocation no lugar de useNavigate
 
 // 1. Definição dos Tipos
 // Interface para o objeto de usuário que será armazenado e usado no contexto.
@@ -87,7 +87,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('userData', JSON.stringify(userData));
       setUser(userData);
       setIsAuthenticated(true);
-      navigate('/dashboard'); // Redireciona o usuário para o dashboard após o login.
+
+      // Verifica se o status do usuário é VITRINE_IRREGULAR para redirecionamento
+      if ((userData as any).status === 'VITRINE_IRREGULAR' || (userData as any).provider?.verificationStatus === 'VITRINE_IRREGULAR') {
+        navigate('/profile/correction');
+      } else {
+        navigate('/dashboard'); // Redireciona o usuário para o dashboard após o login.
+      }
     } catch (error) {
       console.error("Login failed:", error);
       // Aqui você pode adicionar lógica para mostrar uma mensagem de erro ao usuário (ex: toast)
@@ -147,5 +153,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-
