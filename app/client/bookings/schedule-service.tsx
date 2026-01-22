@@ -537,20 +537,13 @@ const BookingSummaryPreview = ({
   return (
     <Animated.View
       style={[
-        styles.card,
-        styles.reviewCard,
+        { marginHorizontal: 16, marginBottom: 20 },
         rCard,
         reviewCardAnim,
       ]}
     >
-      <View
-        style={[
-          styles.sectionHeaderRow,
-          styles.reviewSectionHeaderRow,
-          { justifyContent: 'center' },
-        ]}
-      >
-        <Text style={[styles.sectionTitlePlain, styles.reviewSectionTitle]}>
+      <View style={{ alignItems: 'center', marginBottom: 16, marginTop: 4 }}>
+        <Text style={styles.premiumReviewTitle}>
           {t('schedule_service.review_booking_title', { defaultValue: 'Revise seu agendamento' })}
         </Text>
       </View>
@@ -3724,5 +3717,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textDecorationLine: 'underline',
+  },
+  premiumReviewTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: AppColors.textBody,
+    textAlign: 'center',
+    letterSpacing: -0.5,
   },
 });
