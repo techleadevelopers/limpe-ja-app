@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   AdminHealthSnapshot,
@@ -18,7 +18,9 @@ export class AdminHealthController {
     status: 200,
     description: 'Indica que o serviço administrativo está operacional.',
   })
-  async getHealth(): Promise<AdminHealthSnapshot> {
-    return this.observabilityService.getSnapshot();
+  async getHealth(
+    @Query('routeKey') routeKey?: string,
+  ): Promise<AdminHealthSnapshot> {
+    return this.observabilityService.getSnapshot(routeKey);
   }
 }
