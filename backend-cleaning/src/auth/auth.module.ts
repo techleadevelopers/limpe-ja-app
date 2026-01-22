@@ -16,6 +16,7 @@ import { GeocodingModule } from '../common/modules/geocoding.module';
 import { ReferralsModule } from '../referrals/referrals.module'; // NOVO: Importar ReferralsModule
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ComplianceModule } from '../compliance/compliance.module';
+import { CacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ComplianceModule } from '../compliance/compliance.module';
     EmailModule,
     GeocodingModule,
     ComplianceModule,
+    CacheModule,
     forwardRef(() => ReferralsModule), // NOVO: Adicionar forwardRef para ReferralsModule
     forwardRef(() => NotificationsModule),
   ],
