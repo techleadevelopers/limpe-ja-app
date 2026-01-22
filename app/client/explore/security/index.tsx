@@ -3,6 +3,66 @@ import { Stack, useRouter } from 'expo-router';
 import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const SECURITY_SECTIONS = [
+  {
+    badge: '🛡️ 1',
+    title: 'Rigor na Seleção (KYC & Antecedentes)',
+    overview: 'Não aceitamos qualquer um. Nossa barra é alta.',
+    points: [
+      {
+        title: 'Verificação de Identidade',
+        text: 'Validamos selfie com o documento em mãos (Liveness Check) para garantir que a pessoa é quem diz ser.',
+      },
+      {
+        title: 'Scanner Anti-Fraude',
+        text: 'OCR cruza os dados do documento e bloqueia qualquer tentativa de falsificação.',
+      },
+      {
+        title: 'Filtro Criminal',
+        text: 'Consultamos bases oficiais de antecedentes criminais em tempo real. Se não for ficha limpa, não entra.',
+      },
+    ],
+  },
+  {
+    badge: '📍 2',
+    title: 'Monitoramento em Tempo Real (Live Tracking)',
+    overview: 'Você acompanha tudo, do portão ao fim da faxina.',
+    points: [
+      {
+        title: 'Rastreio de Trajeto',
+        text: 'Veja no mapa quando a profissional sai de casa e receba o alerta: "Já estou a caminho".',
+      },
+      {
+        title: 'Cerca Digital (Geofencing)',
+        text: 'O serviço só começa quando o GPS confirma que a profissional está na sua porta. Sem fraudes de horário.',
+      },
+      {
+        title: 'Auditoria de Sessão',
+        text: 'Monitoramos o status da faxina minuto a minuto. Qualquer interrupção abrupta dispara um alerta no nosso suporte.',
+      },
+    ],
+  },
+  {
+    badge: '🏦 3',
+    title: 'Proteção Financeira e Patrimonial (Insurance Tech)',
+    overview: 'Sua casa protegida por quem entende.',
+    points: [
+      {
+        title: 'Seguro Real',
+        text: 'Parceria com banco físico para cobertura de Responsabilidade Civil.',
+      },
+      {
+        title: 'Cobertura de Danos',
+        text: 'Quebrou algo? O seguro cobre sinistros em serviços finalizados (conforme apólice).',
+      },
+      {
+        title: 'Pagamento Blindado',
+        text: 'O dinheiro só sai da sua conta após a confirmação mútua do término do serviço.',
+      },
+    ],
+  },
+];
+
 export default function SecurityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -11,8 +71,7 @@ export default function SecurityScreen() {
     <View style={{ flex: 1, backgroundColor: '#F2F2F2' }}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* HEADER SAFE AREA */}
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}> 
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color="#1A2538" />
         </TouchableOpacity>
@@ -21,7 +80,6 @@ export default function SecurityScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* HERO CARD */}
         <View style={styles.heroCard}>
           <View style={styles.heroIconWrap}>
             <Image
@@ -30,58 +88,29 @@ export default function SecurityScreen() {
             />
           </View>
 
-          <Text style={styles.heroTitle}>Segurança em primeiro lugar</Text>
-
-          <Text style={styles.heroSubtitle}>
-            Todos os prestadores passam por verificação de identidade, análise documental,
-            selfie com reconhecimento facial e checagem de antecedentes. Suas reservas e dados
-            são protegidos com criptografia e políticas rígidas de segurança.
-          </Text>
+          <Text style={styles.heroTitle}>Sua segurança é nossa tecnologia</Text>
+          <Text style={styles.heroSubtitle}>Conheça os 3 pilares que protegem você e sua casa</Text>
         </View>
 
-        {/* TRUST BANNER */}
-        <View style={styles.trustBanner}>
-          <Ionicons name="shield-checkmark" size={18} color="#0A84FF" />
-          <Text style={styles.trustBannerText}>
-            Garantia LimpeJA!: segurança, verificação e transparência.
-          </Text>
+        <View style={styles.sectionList}>
+          {SECURITY_SECTIONS.map((section) => (
+            <View key={section.title} style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionBadge}>{section.badge}</Text>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
+              </View>
+              <Text style={styles.sectionOverview}>{section.overview}</Text>
+              <View style={styles.pointList}>
+                {section.points.map((point) => (
+                  <View key={point.title} style={styles.pointItem}>
+                    <Text style={styles.pointTitle}>{point.title}</Text>
+                    <Text style={styles.pointText}>{point.text}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ))}
         </View>
-
-        {/* SAFETY GRID */}
-        <View style={styles.grid}>
-          <View style={styles.infoCard}>
-            <Ionicons name="lock-closed" size={20} color="#0A84FF" />
-            <Text style={styles.infoTitle}>Proteção de dados</Text>
-            <Text style={styles.infoText}>
-              Criptografia de ponta a ponta e controles rígidos de acesso.
-            </Text>
-          </View>
-
-          <View style={styles.infoCard}>
-            <Ionicons name="id-card" size={20} color="#0A84FF" />
-            <Text style={styles.infoTitle}>Verificação completa</Text>
-            <Text style={styles.infoText}>
-              Documentos validados, selfie, OCR e checagem de antecedentes.
-            </Text>
-          </View>
-
-          <View style={styles.infoCard}>
-            <Ionicons name="star" size={20} color="#0A84FF" />
-            <Text style={styles.infoTitle}>Avaliações reais</Text>
-            <Text style={styles.infoText}>
-              Feedbacks autênticos e transparência total nas notas.
-            </Text>
-          </View>
-        </View>
-
-        {/* CTA */}
-        <TouchableOpacity
-          style={styles.ctaBtn}
-          onPress={() => router.push('/common/safety' as any)}
-        >
-          <Text style={styles.ctaBtnText}>Conheça nossa Central de Segurança</Text>
-          <Ionicons name="chevron-forward" size={18} color="#0A84FF" />
-        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -103,7 +132,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 44,
   },
   heroCard: {
     backgroundColor: '#FFFFFF',
@@ -144,91 +173,68 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   heroSubtitle: {
-    marginTop: 10,
+    marginTop: 6,
     fontSize: 14,
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 20,
   },
-  trustBanner: {
-    marginTop: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-      },
-      android: { elevation: 0 },
-    }),
-  },
-  trustBannerText: {
-    color: '#1A2538',
-    fontWeight: '700',
-    fontSize: 14,
-    flex: 1,
-  },
-  grid: {
-    marginTop: 16,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  infoCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    alignItems: 'flex-start',
-    gap: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-      },
-      android: { elevation: 0 },
-    }),
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1A2538',
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#6B7280',
-    lineHeight: 17,
-  },
-  ctaBtn: {
+  sectionList: {
     marginTop: 20,
+    gap: 16,
+  },
+  sectionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    borderRadius: 18,
+    padding: 18,
+    gap: 12,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
       },
-      android: { elevation: 0 },
+      android: { elevation: 2 },
     }),
   },
-  ctaBtnText: {
-    color: '#0A84FF',
-    fontWeight: '800',
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionBadge: {
     fontSize: 14,
+    lineHeight: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1A2538',
+    flex: 1,
+  },
+  sectionOverview: {
+    fontSize: 13,
+    color: '#4B5563',
+  },
+  pointList: {
+    marginTop: 8,
+    gap: 10,
+  },
+  pointItem: {
+    borderTopWidth: 1,
+    borderTopColor: '#EDF2F7',
+    paddingTop: 10,
+  },
+  pointTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0A1F44',
+  },
+  pointText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#4B5563',
+    lineHeight: 18,
   },
 });
