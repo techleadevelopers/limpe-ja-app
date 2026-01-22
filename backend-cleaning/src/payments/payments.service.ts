@@ -1165,39 +1165,55 @@ export class PaymentsService {
    * Cria um PIX real usando PagBank ORDER API (fluxo oficial).
    * Substitui totalmente o fluxo legado /pix/charges.
    */
-  async createPixCharge(
-    clientUserId: string,
-    dto: CreatePixChargeDto,
-    idempotencyKey?: string,
-  ): Promise<PixChargeResponseDto> {
-    const { description, bookingId, providerId } = dto; // amount sempre derivado do booking
-    if (!this.pagseguroApiToken || !this.appBaseUrl) {
-      throw new HttpException(
-        'PSP not configured',
-        HttpStatus.SERVICE_UNAVAILABLE,
-      );
-    }
+  async createPixCharge(clientUserId: string, dto: CreatePixChargeDto, idempotencyKey?: string): Promise<PixChargeResponseDto> {
+    const { description, bookingId, providerId } = dto;
 
     if (!providerId) throw new BadRequestException('providerId é obrigatório.');
     if (!bookingId) throw new BadRequestException('bookingId é obrigatório.');
 
+    // 1. Validação de Propriedade (Segurança)
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       include: { client: { include: { user: true } }, provider: true },
     });
 
     if (!booking) throw new NotFoundException('Booking não encontrado.');
+
     if (booking.client?.userId !== clientUserId)
       throw new ForbiddenException('Você não pode pagar por este booking.');
     if (booking.providerId !== providerId)
       throw new BadRequestException('Booking não pertence a este provider.');
-    if (
-      booking.status !== BookingStatus.PENDING &&
-      booking.status !== BookingStatus.PENDING_PAYMENT
-    ) {
-      throw new BadRequestException(
-        'Booking não está pendente para pagamento.',
+
+    const pendingStatuses = new Set<BookingStatus>([
+      BookingStatus.PENDING,
+      BookingStatus.PENDING_PAYMENT,
+    ]);
+    if (!pendingStatuses.has(booking.status)) {
+      throw new BadRequestException('Booking não está pendente para pagamento.');
+    }
+
+    // 2. Idempotência (Evita cobrança duplicada)
+    const existingIntent = await this.prisma.paymentIntent.findFirst({
+      where: {
+        bookingId,
+        status: PaymentIntentStatus.PENDING,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (existingIntent) {
+      this.logger.log(
+        `[createPixCharge] Retornando intent pendente ${existingIntent.id} para booking ${bookingId}`,
       );
+      return this.mapIntentToPixResponse(
+        existingIntent,
+        description,
+        providerId,
+      );
+    }
+
+    if (!this.pagseguroApiToken || !this.appBaseUrl) {
+      throw new HttpException('PSP not configured', HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     const amountCents = Math.round(Number(booking.totalPrice) * 100);
