@@ -181,6 +181,7 @@ export class SafetyService {
   }
 
   // Admin: listar alertas de pânico (opcionalmente por status)
+
   async listPanicAlerts(status?: string) {
     return this.prisma.panicAlert.findMany({
       where: status ? { status } : {},
@@ -188,7 +189,16 @@ export class SafetyService {
     });
   }
 
-  // Admin: atualizar status de alerta de pânico
+  async countPendingSafetyAlerts(): Promise<number> {
+    const [panicCount, incidentCount] = await Promise.all([
+      this.prisma.panicAlert.count({ where: { status: 'ACTIVE' } }),
+      this.prisma.incident.count({
+        where: { status: IncidentStatus.PENDING_REVIEW },
+      }),
+    ]);
+    return panicCount + incidentCount;
+  }
+
   async updatePanicAlertStatus(id: string, status: string) {
     const alert = await this.prisma.panicAlert.findUnique({ where: { id } });
     if (!alert)
