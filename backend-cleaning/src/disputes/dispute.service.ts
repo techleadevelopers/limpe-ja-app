@@ -255,6 +255,16 @@ export class DisputeService {
     });
   }
 
+  async countPendingDisputes(): Promise<number> {
+    return this.prisma.dispute.count({
+      where: {
+        status: {
+          in: [DisputeStatus.PENDING, DisputeStatus.IN_REVIEW],
+        },
+      },
+    });
+  }
+
   /**
    * Adiciona uma mensagem a uma disputa.
    * @param disputeId ID da disputa.
