@@ -6,6 +6,24 @@ export const validationSchema = Joi.object({
     .valid('development', 'production', 'test')
     .default('development'),
 
+  OBS_LATENCY_ENABLED: Joi.boolean()
+    .truthy('true', '1', 'yes')
+    .falsy('false', '0', 'no')
+    .default(true)
+    .description('Habilita/desabilita instrumentação de latência do observability.'),
+
+  OBS_LATENCY_SAMPLE_RATE_DEFAULT: Joi.number()
+    .min(0)
+    .max(1)
+    .default(0.1)
+    .description('Sampling default (rotas não críticas) para latência.'),
+
+  OBS_LATENCY_SAMPLE_RATE_CRITICAL: Joi.number()
+    .min(0)
+    .max(1)
+    .default(1)
+    .description('Sampling para rotas críticas de latência.'),
+
   PORT: Joi.number().default(3000),
 
   DATABASE_URL: Joi.string().required(),
