@@ -253,6 +253,29 @@ export type Activity = {
     createdAt: string;
 };
 
+export type AuditLogUser = {
+    id: string;
+    email: string;
+    fullName?: string | null;
+    role?: string | null;
+};
+
+export type AuditActivityDetails = Record<string, unknown> & {
+    request?: Record<string, unknown> | null;
+    response?: Record<string, unknown> | null;
+};
+
+export type AuditActivity = {
+    id: string;
+    action: string;
+    userId: string;
+    details?: AuditActivityDetails | null;
+    ipAddress?: string | null;
+    userAgent?: string | null;
+    createdAt: string;
+    user?: AuditLogUser | null;
+};
+
 export type DashboardMetrics = {
     activeUsers: number;
     approvedProviders: number;
@@ -324,6 +347,7 @@ export type ObservabilityHealthPayload = {
     activeSessions: number;
     insuranceConversion: ObservabilityInsuranceConversion;
     latencySeries: ObservabilityLatencyPoint[];
+    latencySeriesByRoute: Record<string, ObservabilityLatencyPoint[]>;
     sentry: ObservabilitySentryData | ObservabilitySentryError;
     apiLatencyMs: number;
     sentryLatencyMs: number;
