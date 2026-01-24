@@ -397,7 +397,7 @@ export default function Providers() {
           {!isLoading && providers.length > 0 && totalPages > 1 && (
             <div className="mt-6 flex items-center justify-between text-gray-600">
               <p className="text-sm">
-                Mostrando {showingStart}�{showingEnd} de {totalCount} provedores
+                Mostrando {showingStart}{showingEnd} de {totalCount} provedores
               </p>
               <div className="flex items-center space-x-2">
                 <Button
