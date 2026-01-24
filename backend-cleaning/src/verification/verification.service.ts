@@ -4,9 +4,12 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { File } from 'multer';
+import axios from 'axios';
+import FormData from 'form-data';
 import { DocumentProcessingService } from '../document-processing/document-processing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -14,6 +17,7 @@ import {
   ProviderWithCalculatedRating,
 } from '../providers/providers.service';
 import { VerificationStatus } from '../shared/enums/verification-status.enum';
+import { CacheService } from '../cache/cache.service';
 
 interface OcrResult {
   extractedText: string;
@@ -41,48 +45,92 @@ export class VerificationService {
     private readonly prisma: PrismaService,
     private readonly documentProcessingService: DocumentProcessingService,
     private readonly providersService: ProvidersService,
+    private readonly cacheService: CacheService,
   ) {}
 
   async getPendingProviders(): Promise<ProviderWithCalculatedRating[]> {
     this.logger.log(
       `[VerificationService] getPendingProviders: Buscando provedores pendentes.`,
     );
+    const cacheKey = 'verification:pending-queue';
+    const cached =
+      await this.cacheService.get<ProviderWithCalculatedRating[]>(cacheKey);
+    if (cached?.length) {
+      this.logger.log(
+        `[VerificationService] getPendingProviders: Retornando ${cached.length} itens do cache.`,
+      );
+      return cached;
+    }
     const providers = await this.providersService.getPendingProviders();
+    const normalized = providers || [];
+    await this.cacheService.set(cacheKey, normalized, 10);
     return providers || [];
   }
 
-  async uploadAvatar(providerId: string, file: File): Promise<string> {
+  async uploadAvatar(
+    providerId: string,
+    file: File,
+    options?: { premiumAvatar?: boolean },
+  ): Promise<string> {
     this.logger.log(
       `[VerificationService] uploadAvatar: Iniciando para providerId: ${providerId}`,
     );
-    const provider = await this.providersService.findOne(providerId);
-    if (!provider) {
-      this.logger.warn(
-        `[VerificationService] uploadAvatar: Provedor ${providerId} não encontrado.`,
+    if (options?.premiumAvatar) {
+      this.logger.log(
+        `[VerificationService] uploadAvatar: Pipeline premium solicitado para providerId: ${providerId}.`,
       );
-      throw new NotFoundException('Provedor não encontrado.');
     }
 
-    const fileExtension = file.originalname?.split('.').pop() || 'jpg';
-    const destinationPath = `provider-documents/${providerId}/avatar-${Date.now()}.${fileExtension}`;
+    const visionUrl = process.env.VISION_IA_URL;
+    if (!visionUrl) {
+      this.logger.error(
+        '[VerificationService] uploadAvatar: VISION_IA_URL não configurada.',
+      );
+      throw new InternalServerErrorException('Visão IA ausente.');
+    }
 
-    const fileUrl = await this.documentProcessingService.uploadImage(
-      file,
-      destinationPath,
-    );
-    this.logger.log(
-      `[VerificationService] uploadAvatar: Avatar enviado para ${fileUrl}`,
-    );
+    const form = new FormData();
+    const filename = file.originalname || `avatar-${Date.now()}.jpg`;
+    form.append('file', file.buffer, {
+      filename,
+      contentType: file.mimetype || 'image/jpeg',
+    } as any);
 
+    let responseUrl: string | undefined;
+    try {
+      const response = await axios.post(
+        `${visionUrl}/vision/process-avatar`,
+        form,
+        {
+          headers: form.getHeaders(),
+          timeout: 20000,
+        },
+      );
+      responseUrl = response.data?.url;
+    } catch (error: any) {
+      this.logger.error(
+        `[VerificationService] uploadAvatar: Falha ao chamar Vision IA: ${error?.message || error}`,
+      );
+      throw new InternalServerErrorException('Falha ao processar avatar.');
+    }
+
+    if (!responseUrl) {
+      this.logger.error(
+        '[VerificationService] uploadAvatar: Vision IA não retornou URL.',
+      );
+      throw new InternalServerErrorException('Vision IA não retornou URL.');
+    }
+
+    // Atualiza o banco com a foto TRATADA pela IA
     await this.prisma.provider.update({
       where: { id: providerId },
-      data: { avatarUrl: fileUrl },
+      data: { avatarUrl: responseUrl },
     });
-    this.logger.log(
-      `[VerificationService] URL do avatar salva para provider ${providerId}.`,
-    );
 
-    return fileUrl;
+    this.logger.log(`[VerificationService] Avatar processado com sucesso: ${responseUrl}`);
+
+    // RETORNO ÚNICO: A URL da foto com fundo cinza
+    return responseUrl;
   }
 
   async uploadDocumentPhoto(
@@ -94,43 +142,25 @@ export class VerificationService {
     this.logger.log(
       `[VerificationService] uploadDocumentPhoto: Iniciando para providerId: ${providerId}, tipo: ${type}`,
     );
-    const provider = await this.providersService.findOne(providerId);
-    if (!provider) {
-      this.logger.warn(
-        `[VerificationService] uploadDocumentPhoto: Provedor ${providerId} não encontrado.`,
-      );
-      throw new NotFoundException('Provedor não encontrado.');
-    }
-
-    const fileExtension = file.originalname?.split('.').pop() || 'jpg';
-    const destinationPath = `provider-documents/${providerId}/${type.toLowerCase()}-${Date.now()}.${fileExtension}`;
-
-    const fileUrl = await this.documentProcessingService.uploadImage(
+    const fileUrl = await this.handleDocumentUpload(
+      providerId,
       file,
-      destinationPath,
+      'uploadDocumentPhoto',
+      (extension) =>
+        `provider-documents/${providerId}/${type.toLowerCase()}-${Date.now()}.${extension}`,
+      (fileUrl) => ({
+        ...(type === 'FRONT'
+          ? { documentPhotoFrontUrl: fileUrl }
+          : { documentPhotoBackUrl: fileUrl }),
+      }),
+      true,
     );
     this.logger.log(
       `[VerificationService] uploadDocumentPhoto: Imagem enviada para ${fileUrl}`,
     );
-
-    const updateData: Prisma.ProviderUpdateInput = {};
-    if (type === 'FRONT') {
-      updateData.documentPhotoFrontUrl = fileUrl;
-    } else {
-      updateData.documentPhotoBackUrl = fileUrl;
-    }
-
-    await this.prisma.provider.update({
-      where: { id: providerId },
-      data: updateData,
-    });
     this.logger.log(
-      `[VerificationService] URL do documento (${type}) salva para provider ${providerId}.`,
+      `[VerificationService] uploadDocumentPhoto: URL do documento (${type}) salva para provider ${providerId}.`,
     );
-
-    // Após o upload, checar e atualizar o status para revisão manual.
-    await this.updateStatusForManualReview(providerId);
-
     return fileUrl; // Adicionando o retorno da URL aqui
   }
 
@@ -141,35 +171,58 @@ export class VerificationService {
     this.logger.log(
       `[VerificationService] uploadSelfieWithDocument: Iniciando para providerId: ${providerId}`,
     );
+    const fileUrl = await this.handleDocumentUpload(
+      providerId,
+      file,
+      'uploadSelfieWithDocument',
+      (extension) =>
+        `provider-documents/${providerId}/selfie-${Date.now()}.${extension}`,
+      (fileUrl) => ({ selfieWithDocumentUrl: fileUrl }),
+      true,
+    );
+    this.logger.log(
+      `[VerificationService] uploadSelfieWithDocument: Selfie enviada para ${fileUrl}`,
+    );
+    this.logger.log(
+      `[VerificationService] URL da selfie salva para provider ${providerId}.`,
+    );
+    return fileUrl;
+  }
+
+  private async handleDocumentUpload(
+    providerId: string,
+    file: File,
+    actionName: string,
+    destinationPathBuilder: (extension: string) => string,
+    updateDataBuilder: (fileUrl: string) => Prisma.ProviderUpdateInput,
+    shouldRefreshStatus = false,
+  ): Promise<string> {
     const provider = await this.providersService.findOne(providerId);
     if (!provider) {
       this.logger.warn(
-        `[VerificationService] uploadSelfieWithDocument: Provedor ${providerId} não encontrado.`,
+        `[VerificationService] ${actionName}: Provedor ${providerId} não encontrado.`,
       );
       throw new NotFoundException('Provedor não encontrado.');
     }
 
     const fileExtension = file.originalname?.split('.').pop() || 'jpg';
-    const destinationPath = `provider-documents/${providerId}/selfie-${Date.now()}.${fileExtension}`;
+    const destinationPath = destinationPathBuilder(fileExtension);
 
     const fileUrl = await this.documentProcessingService.uploadImage(
       file,
       destinationPath,
-    );
-    this.logger.log(
-      `[VerificationService] uploadSelfieWithDocument: Selfie enviada para ${fileUrl}`,
+      undefined,
     );
 
     await this.prisma.provider.update({
       where: { id: providerId },
-      data: { selfieWithDocumentUrl: fileUrl },
+      data: updateDataBuilder(fileUrl),
     });
-    this.logger.log(
-      `[VerificationService] URL da selfie salva para provider ${providerId}.`,
-    );
 
-    // Após o upload, checar e atualizar o status para revisão manual.
-    await this.updateStatusForManualReview(providerId);
+    if (shouldRefreshStatus) {
+      await this.updateStatusForManualReview(providerId);
+    }
+
     return fileUrl;
   }
 
@@ -239,14 +292,15 @@ export class VerificationService {
     const provider = await this.providersService.findOne(providerId);
     if (!provider) {
       this.logger.warn(
-        `[VerificationService] updateProviderVerificationStatusManually: Provedor ${providerId} não encontrado.`,
+        `[VerificationService] updateProviderVerificationStatusManually: Provedor ${providerId} n�o encontrado.`,
       );
-      throw new NotFoundException('Provedor não encontrado.');
+      throw new NotFoundException('Provedor n�o encontrado.');
     }
+    const previousStatus = provider.verificationStatus;
 
     if (newStatus === VerificationStatus.REJECTED && !reason) {
       throw new BadRequestException(
-        'O motivo da rejeição é obrigatório ao definir o status como REJECTED.',
+        'O motivo da rejei��o � obrigat�rio ao definir o status como REJECTED.',
       );
     }
 
@@ -259,8 +313,15 @@ export class VerificationService {
       },
     });
     this.logger.log(
-      `[VerificationService] updateProviderVerificationStatusManually: Status de verificação do provedor ${providerId} atualizado para ${newStatus}.`,
+      `[VerificationService] updateProviderVerificationStatusManually: Status de verifica��o do provedor ${providerId} atualizado para ${newStatus}.`,
     );
+    if (
+      previousStatus !== newStatus &&
+      (previousStatus === VerificationStatus.APPROVED ||
+        newStatus === VerificationStatus.APPROVED)
+    ) {
+      void this.providersService.refreshDefaultSearchCache();
+    }
   }
 
   // Métodos de atualização de resultado de OCR e Liveness agora não são usados no fluxo síncrono.
@@ -329,8 +390,10 @@ export class VerificationService {
     );
     const provider = await this.providersService.findOne(providerId);
     if (!provider) {
-      throw new NotFoundException('Provedor não encontrado.');
+      throw new NotFoundException('Provedor n�o encontrado.');
     }
+    const wasApproved =
+      provider.verificationStatus === VerificationStatus.APPROVED;
 
     await this.prisma.provider.update({
       where: { id: providerId },
@@ -342,6 +405,9 @@ export class VerificationService {
     this.logger.log(
       `[VerificationService] rejectProvider: Provedor ${providerId} rejeitado.`,
     );
+    if (wasApproved) {
+      void this.providersService.refreshDefaultSearchCache();
+    }
   }
 
   // NOVO MÉTODO: Avança o status de verificação.
