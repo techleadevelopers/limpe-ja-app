@@ -1,4 +1,11 @@
-import { CallHandler, ExecutionContext, HttpException, Injectable, Logger, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  HttpException,
+  Injectable,
+  Logger,
+  NestInterceptor,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AuditLogService } from './audit-log.service';
@@ -29,12 +36,14 @@ export class AuditInterceptor implements NestInterceptor {
     const response = context.switchToHttp().getResponse();
     const { method, url, user, body, ip } = request;
     const userAgent = request.get('user-agent');
-    
+
     if (!user?.userId) return; // Mantém a exigência rigorosa do token
 
     const isError = dataOrError instanceof Error;
-    const statusCode = isError 
-      ? (dataOrError instanceof HttpException ? dataOrError.getStatus() : 500)
+    const statusCode = isError
+      ? dataOrError instanceof HttpException
+        ? dataOrError.getStatus()
+        : 500
       : (response?.statusCode ?? 200);
 
     const sanitizedRequest = {
@@ -53,16 +62,57 @@ export class AuditInterceptor implements NestInterceptor {
 
     const responsePreview = {
       statusCode,
-      body: isError ? (dataOrError as any).response : (method === 'GET' ? undefined : dataOrError),
+      body: isError
+        ? (dataOrError as any).response
+        : method === 'GET'
+          ? undefined
+          : dataOrError,
     };
+
+    const locationAudit = this.extractLocationAuditDetails(
+      sanitizedRequest.body ?? body,
+    );
+    const auditDetails: Record<string, any> = {
+      request: sanitizedRequest,
+      response: responsePreview,
+    };
+    if (locationAudit) {
+      auditDetails.locationChange = locationAudit;
+    }
 
     this.auditLogService
       .log(
         user.userId,
         `${method} ${url}`,
-        { request: sanitizedRequest, response: responsePreview },
+        auditDetails,
         { ip, userAgent },
       )
       .catch((err) => this.logger.error('Failed to save audit log', err));
+  }
+
+  private extractLocationAuditDetails(body: any): Record<string, string> | undefined {
+    const address = body?.address;
+    if (!address || typeof address !== 'object') {
+      return undefined;
+    }
+
+    const normalizedFields = ['cep', 'city', 'state', 'street', 'number', 'neighborhood', 'complement'];
+    const auditPayload: Record<string, string> = {};
+    normalizedFields.forEach((field) => {
+      const value = address[field];
+      if (value) {
+        auditPayload[field] = String(value);
+      }
+    });
+
+    if (!Object.keys(auditPayload).length) {
+      return undefined;
+    }
+
+    if (auditPayload.city) {
+      auditPayload.cityNormalized = auditPayload.city.trim().toUpperCase();
+    }
+
+    return auditPayload;
   }
 }
