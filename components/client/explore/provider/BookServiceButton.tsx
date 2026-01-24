@@ -15,17 +15,30 @@ import { AppColors } from '../../../../constants/appStyles';
 import { VerificationStatus } from '../../../../types/backend/auth';
 import VerificationNotice from './VerificationNotice';
 
+const MINIMUM_HOURLY_MINUTES = 240;
+const MINIMUM_BILLABLE_HOURS = 4;
+
+const computeBillableHours = (durationMinutes?: number) =>
+  Math.max(
+    MINIMUM_BILLABLE_HOURS,
+    Math.ceil((durationMinutes ?? MINIMUM_HOURLY_MINUTES) / 60),
+  );
+
+const formatBRL = (value: number) => `R$ ${value.toFixed(2).replace('.', ',')}`;
+
 interface BookServiceButtonProps {
   providerId: string;
   serviceId?: string;
   router: Router;
   bookNowButtonAnim: Animated.Value;
   servicePrice?: number;
+  serviceDurationMinutes?: number;
   sticky?: boolean;
   safeBottomInset?: number;
   isAuthenticated: boolean;
   requireAuthOrRedirect?: (actionName?: string) => boolean;
   verificationStatus?: VerificationStatus;
+  bookingTotalLabel?: string | null;
 }
 
 const BookServiceButton: React.FC<BookServiceButtonProps> = ({
@@ -39,6 +52,8 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
   isAuthenticated,
   requireAuthOrRedirect,
   verificationStatus,
+  bookingTotalLabel,
+  serviceDurationMinutes,
 }) => {
   const baseBottomPadding = Platform.OS === 'ios' ? 34 : 20;
 
@@ -100,10 +115,15 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
       },
     });
   };
-  const label =
-    servicePrice != null && typeof servicePrice === 'number' && Number.isFinite(servicePrice)
-      ? `Agendar à R$ ${servicePrice.toFixed(2).replace('.', ',')}/h`
-      : 'Agendar serviço';
+  const totalPriceLabel =
+    servicePrice != null
+      ? formatBRL(servicePrice * computeBillableHours(serviceDurationMinutes))
+      : null;
+  const label = bookingTotalLabel
+    ? `Agendar por ${bookingTotalLabel}`
+    : totalPriceLabel
+    ? `Agendar por ${totalPriceLabel}`
+    : 'Agendar';
 
   const buttonBlock = (
     <View style={styles.buttonBlock}>
