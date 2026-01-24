@@ -2,10 +2,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Animated, Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AppColors } from '../../../../constants/appStyles'; // Removido AppShadows se não usado
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window'); // Removido height se não necessário
 
 interface ScheduleHeaderProps {
     onBackPress: () => void;
