@@ -1,0 +1,2730 @@
+{
+  "root": "C:/Users/Paulo/Desktop/relax-app/services",
+  "files_scanned": 62,
+  "http_calls": [
+    {
+      "file": "aiSuggestionsService.ts",
+      "line": 27,
+      "method": "GET",
+      "path": "/suggestions/provider/${providerId}"
+    },
+    {
+      "file": "aiSuggestionsService.ts",
+      "line": 39,
+      "method": "GET",
+      "path": "/insights/customer/${providerId}"
+    },
+    {
+      "file": "aiSuggestionsService.ts",
+      "line": 51,
+      "method": "GET",
+      "path": "/insights/market-trends"
+    },
+    {
+      "file": "analyticsService.ts",
+      "line": 31,
+      "method": "GET",
+      "path": "/analytics/performance/${providerId}"
+    },
+    {
+      "file": "analyticsService.ts",
+      "line": 43,
+      "method": "GET",
+      "path": "/analytics/business/${providerId}?period=${period}"
+    },
+    {
+      "file": "analyticsService.ts",
+      "line": 55,
+      "method": "POST",
+      "path": "/analytics/events"
+    },
+    {
+      "file": "analyticsService.ts",
+      "line": 73,
+      "method": "GET",
+      "path": "/analytics/competitors?location=${location}"
+    },
+    {
+      "file": "analyticsService.ts",
+      "line": 85,
+      "method": "GET",
+      "path": "/analytics/reports/${type}/${providerId}"
+    },
+    {
+      "file": "api.ts",
+      "line": 383,
+      "method": "REQUEST",
+      "path": null
+    },
+    {
+      "file": "auditService.ts",
+      "line": 23,
+      "method": "GET",
+      "path": "/admin/activities"
+    },
+    {
+      "file": "authService.ts",
+      "line": 32,
+      "method": "POST",
+      "path": "/auth/login"
+    },
+    {
+      "file": "authService.ts",
+      "line": 63,
+      "method": "POST",
+      "path": "/auth/refresh"
+    },
+    {
+      "file": "authService.ts",
+      "line": 91,
+      "method": "POST",
+      "path": "/auth/register/client"
+    },
+    {
+      "file": "authService.ts",
+      "line": 119,
+      "method": "POST",
+      "path": "/auth/register/provider"
+    },
+    {
+      "file": "authService.ts",
+      "line": 148,
+      "method": "POST",
+      "path": "/auth/forgot-password"
+    },
+    {
+      "file": "authService.ts",
+      "line": 162,
+      "method": "POST",
+      "path": "/auth/password/reset/confirm"
+    },
+    {
+      "file": "authService.ts",
+      "line": 239,
+      "method": "PATCH",
+      "path": "/users/me"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 57,
+      "method": "POST",
+      "path": "/bookings"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 97,
+      "method": "GET",
+      "path": "/bookings/me"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 130,
+      "method": "GET",
+      "path": "/bookings/${bookingId}"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 154,
+      "method": "PATCH",
+      "path": "/bookings/${bookingId}/status"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 177,
+      "method": "POST",
+      "path": "/bookings/${bookingId}/start"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 178,
+      "method": "POST",
+      "path": "/bookings/${bookingId}/start"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 203,
+      "method": "POST",
+      "path": "/bookings/${bookingId}/on-the-way"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 225,
+      "method": "POST",
+      "path": "/bookings/${bookingId}/arrived"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 244,
+      "method": "POST",
+      "path": "/bookings/${bookingId}/complete"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 267,
+      "method": "POST",
+      "path": "/bookings/${bookingId}/start/manual"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 283,
+      "method": "POST",
+      "path": "/bookings/${bookingId}/accept"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 305,
+      "method": "PATCH",
+      "path": "/bookings/${bookingId}/cancel"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 336,
+      "method": "GET",
+      "path": "/bookings/check-active-chat/${clientId}/${providerId}"
+    },
+    {
+      "file": "bookingService.ts",
+      "line": 358,
+      "method": "GET",
+      "path": "/bookings/check-confirmed/${clientId}/${providerId}"
+    },
+    {
+      "file": "categoryService.ts",
+      "line": 14,
+      "method": "GET",
+      "path": "/services"
+    },
+    {
+      "file": "categoryService.ts",
+      "line": 22,
+      "method": "GET",
+      "path": "/services?categoryId=${categoryId}"
+    },
+    {
+      "file": "chatService.ts",
+      "line": 47,
+      "method": "GET",
+      "path": "/chat/find-or-create/provider/${providerId}/client/${clientId}"
+    },
+    {
+      "file": "chatService.ts",
+      "line": 65,
+      "method": "GET",
+      "path": "/chat/${chatId}/messages"
+    },
+    {
+      "file": "chatService.ts",
+      "line": 77,
+      "method": "POST",
+      "path": "/chat/conversations/get-or-create"
+    },
+    {
+      "file": "chatService.ts",
+      "line": 104,
+      "method": "POST",
+      "path": "/chat/${messageData.chatId}/messages"
+    },
+    {
+      "file": "chatService.ts",
+      "line": 122,
+      "method": "GET",
+      "path": "/chat/me/conversations"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 57,
+      "method": "GET",
+      "path": "/services"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 92,
+      "method": "GET",
+      "path": "/providers?${params}"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 123,
+      "method": "GET",
+      "path": "/providers"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 145,
+      "method": "GET",
+      "path": "/users/me"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 164,
+      "method": "GET",
+      "path": "/offers"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 183,
+      "method": "GET",
+      "path": "/providers/${providerId}/offers"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 203,
+      "method": "POST",
+      "path": "/bookings/${bookingId}/apply-coupon"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 223,
+      "method": "GET",
+      "path": "/providers/${providerId}"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 242,
+      "method": "GET",
+      "path": "/providers/${providerId}/metrics"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 262,
+      "method": "PATCH",
+      "path": "/clients/me"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 280,
+      "method": "GET",
+      "path": "/missions/my"
+    },
+    {
+      "file": "clientService.ts",
+      "line": 299,
+      "method": "POST",
+      "path": "/missions/claim"
+    },
+    {
+      "file": "commonServiceCatalog.ts",
+      "line": 16,
+      "method": "GET",
+      "path": "/services"
+    },
+    {
+      "file": "complianceService.ts",
+      "line": 26,
+      "method": "GET",
+      "path": "/compliance/status/${providerId}"
+    },
+    {
+      "file": "complianceService.ts",
+      "line": 38,
+      "method": "GET",
+      "path": "/compliance/requirements"
+    },
+    {
+      "file": "complianceService.ts",
+      "line": 57,
+      "method": "POST",
+      "path": "/compliance/upload"
+    },
+    {
+      "file": "complianceService.ts",
+      "line": 70,
+      "method": "GET",
+      "path": "/compliance/privacy-info"
+    },
+    {
+      "file": "complianceService.ts",
+      "line": 82,
+      "method": "POST",
+      "path": "/compliance/export-data"
+    },
+    {
+      "file": "complianceService.ts",
+      "line": 91,
+      "method": "POST",
+      "path": "/compliance/delete-account"
+    },
+    {
+      "file": "configService.ts",
+      "line": 19,
+      "method": "GET",
+      "path": "/config/pricing"
+    },
+    {
+      "file": "couponService.ts",
+      "line": 25,
+      "method": "GET",
+      "path": "/coupons/me"
+    },
+    {
+      "file": "couponService.ts",
+      "line": 49,
+      "method": "POST",
+      "path": "/coupons/apply"
+    },
+    {
+      "file": "couponService.ts",
+      "line": 71,
+      "method": "GET",
+      "path": "/coupons/resolve/${encodeURIComponent(code)}"
+    },
+    {
+      "file": "dashboardService.ts",
+      "line": 18,
+      "method": "GET",
+      "path": "/providers/me/dashboard"
+    },
+    {
+      "file": "disputeService.ts",
+      "line": 29,
+      "method": "POST",
+      "path": "${BASE_URL}/${bookingId}/dispute"
+    },
+    {
+      "file": "disputeService.ts",
+      "line": 51,
+      "method": "GET",
+      "path": "${BASE_URL}/${bookingId}/dispute"
+    },
+    {
+      "file": "earningService.ts",
+      "line": 23,
+      "method": "GET",
+      "path": "/providers/me/earnings"
+    },
+    {
+      "file": "earningService.ts",
+      "line": 47,
+      "method": "POST",
+      "path": "/providers/me/earnings/withdrawal"
+    },
+    {
+      "file": "faqService.ts",
+      "line": 18,
+      "method": "GET",
+      "path": "/faqs"
+    },
+    {
+      "file": "guaranteeService.ts",
+      "line": 6,
+      "method": "POST",
+      "path": "/guarantee/claims"
+    },
+    {
+      "file": "guaranteeService.ts",
+      "line": 11,
+      "method": "GET",
+      "path": "/guarantee/claims/me"
+    },
+    {
+      "file": "incidentService.ts",
+      "line": 10,
+      "method": "POST",
+      "path": "/incidents"
+    },
+    {
+      "file": "incidentService.ts",
+      "line": 17,
+      "method": "GET",
+      "path": "/incidents/${claimId}"
+    },
+    {
+      "file": "insuranceService.ts",
+      "line": 17,
+      "method": "GET",
+      "path": "/insurance/plans"
+    },
+    {
+      "file": "loyaltyService.ts",
+      "line": 22,
+      "method": "GET",
+      "path": "/loyalty/me"
+    },
+    {
+      "file": "loyaltyService.ts",
+      "line": 27,
+      "method": "GET",
+      "path": "/loyalty/me/history"
+    },
+    {
+      "file": "loyaltyService.ts",
+      "line": 43,
+      "method": "GET",
+      "path": "/loyalty/rewards"
+    },
+    {
+      "file": "loyaltyService.ts",
+      "line": 58,
+      "method": "POST",
+      "path": "/loyalty/redeem"
+    },
+    {
+      "file": "metricsService.ts",
+      "line": 33,
+      "method": "GET",
+      "path": "/v1/metrics/me/summary"
+    },
+    {
+      "file": "metricsService.ts",
+      "line": 51,
+      "method": "GET",
+      "path": "/v1/metrics/me/timeseries"
+    },
+    {
+      "file": "metricsService.ts",
+      "line": 70,
+      "method": "GET",
+      "path": "/v1/metrics/me/funnel"
+    },
+    {
+      "file": "missionService.ts",
+      "line": 135,
+      "method": "GET",
+      "path": "/missions/my"
+    },
+    {
+      "file": "missionService.ts",
+      "line": 176,
+      "method": "POST",
+      "path": "/missions/claim"
+    },
+    {
+      "file": "missionService.ts",
+      "line": 204,
+      "method": "POST",
+      "path": "/missions/track"
+    },
+    {
+      "file": "missionService.ts",
+      "line": 217,
+      "method": "GET",
+      "path": "/coupons/my"
+    },
+    {
+      "file": "notificationService.ts",
+      "line": 24,
+      "method": "GET",
+      "path": "/notifications/me"
+    },
+    {
+      "file": "notificationService.ts",
+      "line": 121,
+      "method": "PATCH",
+      "path": "/notifications/me/mark-as-read"
+    },
+    {
+      "file": "notificationService.ts",
+      "line": 126,
+      "method": "PATCH",
+      "path": "/notifications/${id}/mark-as-read"
+    },
+    {
+      "file": "notificationService.ts",
+      "line": 133,
+      "method": "GET",
+      "path": "/notifications/stream"
+    },
+    {
+      "file": "notificationService.ts",
+      "line": 139,
+      "method": "POST",
+      "path": "/notifications/${id}/ack"
+    },
+    {
+      "file": "offerService.ts",
+      "line": 18,
+      "method": "GET",
+      "path": "/offers"
+    },
+    {
+      "file": "offerService.ts",
+      "line": 38,
+      "method": "GET",
+      "path": "/offers/${offerId}"
+    },
+    {
+      "file": "paymentService.ts",
+      "line": 14,
+      "method": "POST",
+      "path": "/payments/pix-charge"
+    },
+    {
+      "file": "paymentService.ts",
+      "line": 40,
+      "method": "POST",
+      "path": "/payouts/withdrawals"
+    },
+    {
+      "file": "paymentService.ts",
+      "line": 55,
+      "method": "GET",
+      "path": "/payments/intent/${bookingId}"
+    },
+    {
+      "file": "proofService.ts",
+      "line": 11,
+      "method": "POST",
+      "path": "checkin"
+    },
+    {
+      "file": "proofService.ts",
+      "line": 22,
+      "method": "POST",
+      "path": "checkout"
+    },
+    {
+      "file": "providerPromotionsService.ts",
+      "line": 13,
+      "method": "GET",
+      "path": "Erro ao buscar promoções do provedor:"
+    },
+    {
+      "file": "providerPromotionsService.ts",
+      "line": 25,
+      "method": "POST",
+      "path": "Erro ao criar promoção do provedor:"
+    },
+    {
+      "file": "providerPromotionsService.ts",
+      "line": 38,
+      "method": "PATCH",
+      "path": "${BASE_PATH}/${id}"
+    },
+    {
+      "file": "providerScheduleService.ts",
+      "line": 14,
+      "method": "GET",
+      "path": "/bookings/me"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 266,
+      "method": "GET",
+      "path": "/providers/${providerId}"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 334,
+      "method": "GET",
+      "path": "/providers/${providerId}/availability"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 377,
+      "method": "GET",
+      "path": "/providers/me/availability"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 397,
+      "method": "PATCH",
+      "path": "/providers/me/availability"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 417,
+      "method": "POST",
+      "path": "/providers/me/availability"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 437,
+      "method": "DELETE",
+      "path": "/providers/me/availability/${availabilityId}"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 455,
+      "method": "PATCH",
+      "path": "/providers/me"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 473,
+      "method": "GET",
+      "path": "/providers/me/dashboard"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 491,
+      "method": "GET",
+      "path": "/providers/me/earnings"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 511,
+      "method": "PATCH",
+      "path": "/providers/${providerId}/availability"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 531,
+      "method": "POST",
+      "path": "/providers/${providerId}/availability"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 551,
+      "method": "DELETE",
+      "path": "/providers/${providerId}/availability/${availabilityId}"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 578,
+      "method": "GET",
+      "path": "/providers/${providerId}/services"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 605,
+      "method": "POST",
+      "path": "/providers/${providerId}/services"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 630,
+      "method": "PATCH",
+      "path": "/providers/${providerId}/services/${serviceOfferingId}"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 650,
+      "method": "DELETE",
+      "path": "/providers/${providerId}/services/${serviceOfferingId}"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 691,
+      "method": "GET",
+      "path": "/providers"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 711,
+      "method": "GET",
+      "path": "/providers/availability-summary"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 749,
+      "method": "GET",
+      "path": "/providers/recommended"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 774,
+      "method": "GET",
+      "path": "/providers"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 797,
+      "method": "GET",
+      "path": "/services"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 824,
+      "method": "GET",
+      "path": "/providers?${params}"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 846,
+      "method": "GET",
+      "path": "/providers/${providerId}/metrics"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 872,
+      "method": "GET",
+      "path": "/providers/${providerId}/offers"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 887,
+      "method": "GET",
+      "path": "/services"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 929,
+      "method": "POST",
+      "path": "/providers/me/avatar"
+    },
+    {
+      "file": "providerService.ts",
+      "line": 949,
+      "method": "POST",
+      "path": "/providers/me/accept-terms"
+    },
+    {
+      "file": "pushService.ts",
+      "line": 53,
+      "method": "POST",
+      "path": "/notifications/register-token"
+    },
+    {
+      "file": "pushService.ts",
+      "line": 65,
+      "method": "POST",
+      "path": "/auth/logout-device"
+    },
+    {
+      "file": "quoteService.ts",
+      "line": 9,
+      "method": "POST",
+      "path": "/bookings/quote"
+    },
+    {
+      "file": "rankingService.ts",
+      "line": 14,
+      "method": "GET",
+      "path": "/ranking/leaderboard"
+    },
+    {
+      "file": "rankingService.ts",
+      "line": 40,
+      "method": "GET",
+      "path": "/ranking/me"
+    },
+    {
+      "file": "referralService.ts",
+      "line": 17,
+      "method": "GET",
+      "path": "/referrals/me/code"
+    },
+    {
+      "file": "referralService.ts",
+      "line": 38,
+      "method": "GET",
+      "path": "/referrals/me"
+    },
+    {
+      "file": "reviewService.ts",
+      "line": 45,
+      "method": "POST",
+      "path": "/reviews"
+    },
+    {
+      "file": "reviewService.ts",
+      "line": 62,
+      "method": "GET",
+      "path": "/reviews/can-review/${bookingId}"
+    },
+    {
+      "file": "reviewService.ts",
+      "line": 81,
+      "method": "GET",
+      "path": "/reviews/provider/${providerId}/breakdown"
+    },
+    {
+      "file": "reviewService.ts",
+      "line": 101,
+      "method": "GET",
+      "path": "/reviews/provider/${providerId}/suggestions"
+    },
+    {
+      "file": "reviewService.ts",
+      "line": 116,
+      "method": "GET",
+      "path": "/reviews/provider/${providerId}"
+    },
+    {
+      "file": "reviewService.ts",
+      "line": 126,
+      "method": "POST",
+      "path": "/reviews"
+    },
+    {
+      "file": "reviewService.ts",
+      "line": 144,
+      "method": "GET",
+      "path": "/reviews/suggested-response/${reviewId}"
+    },
+    {
+      "file": "reviewService.ts",
+      "line": 157,
+      "method": "POST",
+      "path": "/reviews/${reviewId}/respond"
+    },
+    {
+      "file": "reviewService.ts",
+      "line": 166,
+      "method": "POST",
+      "path": "/reviews/${reviewId}/flag"
+    },
+    {
+      "file": "reviewService.ts",
+      "line": 175,
+      "method": "GET",
+      "path": "/reviews/trends/${providerId}?period=${period}"
+    },
+    {
+      "file": "safetyService.ts",
+      "line": 13,
+      "method": "POST",
+      "path": "/safety/panic"
+    },
+    {
+      "file": "safetyService.ts",
+      "line": 19,
+      "method": "POST",
+      "path": "/safety/incident"
+    },
+    {
+      "file": "safetyService.ts",
+      "line": 24,
+      "method": "GET",
+      "path": "/safety/me/incidents"
+    },
+    {
+      "file": "safetyService.ts",
+      "line": 36,
+      "method": "POST",
+      "path": "/safety/panic/trigger"
+    },
+    {
+      "file": "safetyService.ts",
+      "line": 53,
+      "method": "PATCH",
+      "path": "/safety/panic/${panicId}/update-location"
+    },
+    {
+      "file": "safetyService.ts",
+      "line": 68,
+      "method": "PATCH",
+      "path": "/safety/panic/${panicId}/end"
+    },
+    {
+      "file": "safetyService.ts",
+      "line": 84,
+      "method": "POST",
+      "path": "/safety/panic/${panicId}/incident"
+    },
+    {
+      "file": "securityService.ts",
+      "line": 99,
+      "method": "GET",
+      "path": "/auth/validate-session"
+    },
+    {
+      "file": "securityService.ts",
+      "line": 109,
+      "method": "GET",
+      "path": "/security/alerts"
+    },
+    {
+      "file": "securityService.ts",
+      "line": 119,
+      "method": "POST",
+      "path": "/security/report"
+    },
+    {
+      "file": "subscriptionService.ts",
+      "line": 10,
+      "method": "POST",
+      "path": "/subscriptions"
+    },
+    {
+      "file": "subscriptionService.ts",
+      "line": 15,
+      "method": "GET",
+      "path": "/subscriptions/me"
+    },
+    {
+      "file": "subscriptionService.ts",
+      "line": 20,
+      "method": "GET",
+      "path": "/subscriptions/${id}"
+    },
+    {
+      "file": "subscriptionService.ts",
+      "line": 25,
+      "method": "PATCH",
+      "path": "/subscriptions/${id}"
+    },
+    {
+      "file": "supportService.ts",
+      "line": 15,
+      "method": "POST",
+      "path": "/v1/support/tickets"
+    },
+    {
+      "file": "supportService.ts",
+      "line": 28,
+      "method": "GET",
+      "path": "/v1/support/meta"
+    },
+    {
+      "file": "supportService.ts",
+      "line": 42,
+      "method": "GET",
+      "path": "/v1/support/tickets"
+    },
+    {
+      "file": "supportService.ts",
+      "line": 58,
+      "method": "GET",
+      "path": "/v1/support/tickets/${ticketId}"
+    },
+    {
+      "file": "supportService.ts",
+      "line": 75,
+      "method": "POST",
+      "path": "/v1/support/tickets/${ticketId}/messages"
+    },
+    {
+      "file": "supportService.ts",
+      "line": 92,
+      "method": "PATCH",
+      "path": "/v1/support/tickets/${ticketId}/status"
+    },
+    {
+      "file": "uploadService.ts",
+      "line": 43,
+      "method": "POST",
+      "path": "Content-Type"
+    },
+    {
+      "file": "userService.ts",
+      "line": 14,
+      "method": "GET",
+      "path": "${this.BASE_URL}/me"
+    },
+    {
+      "file": "userService.ts",
+      "line": 29,
+      "method": "DELETE",
+      "path": "${this.BASE_URL}/me"
+    },
+    {
+      "file": "verificationService.ts",
+      "line": 22,
+      "method": "POST",
+      "path": "${this.BASE_URL}/submit-cpf"
+    },
+    {
+      "file": "verificationService.ts",
+      "line": 76,
+      "method": "POST",
+      "path": "${this.BASE_URL}/advance-status"
+    },
+    {
+      "file": "verificationService.ts",
+      "line": 86,
+      "method": "GET",
+      "path": "${this.BASE_URL}/status/${providerId}"
+    }
+  ],
+  "unique_endpoints": [
+    {
+      "method": "DELETE",
+      "path": "${this.BASE_URL}/me",
+      "count": 1
+    },
+    {
+      "method": "DELETE",
+      "path": "/providers/${providerId}/availability/${availabilityId}",
+      "count": 1
+    },
+    {
+      "method": "DELETE",
+      "path": "/providers/${providerId}/services/${serviceOfferingId}",
+      "count": 1
+    },
+    {
+      "method": "DELETE",
+      "path": "/providers/me/availability/${availabilityId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "${BASE_URL}/${bookingId}/dispute",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "${this.BASE_URL}/me",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "${this.BASE_URL}/status/${providerId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/admin/activities",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/business/${providerId}?period=${period}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/competitors?location=${location}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/performance/${providerId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/reports/${type}/${providerId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/auth/validate-session",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/bookings/${bookingId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/bookings/check-active-chat/${clientId}/${providerId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/bookings/check-confirmed/${clientId}/${providerId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/bookings/me",
+      "count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/chat/${chatId}/messages",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/chat/find-or-create/provider/${providerId}/client/${clientId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/chat/me/conversations",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/privacy-info",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/requirements",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/status/${providerId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/config/pricing",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/coupons/me",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/coupons/my",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/coupons/resolve/${encodeURIComponent(code)}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/faqs",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/guarantee/claims/me",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/incidents/${claimId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/insights/customer/${providerId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/insights/market-trends",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/insurance/plans",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/loyalty/me",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/loyalty/me/history",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/loyalty/rewards",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/missions/my",
+      "count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/me",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/stream",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/offers",
+      "count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/offers/${offerId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/payments/intent/${bookingId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/providers",
+      "count": 3
+    },
+    {
+      "method": "GET",
+      "path": "/providers/${providerId}",
+      "count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/providers/${providerId}/availability",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/providers/${providerId}/metrics",
+      "count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/providers/${providerId}/offers",
+      "count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/providers/${providerId}/services",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/providers/availability-summary",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/providers/me/availability",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/providers/me/dashboard",
+      "count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/providers/me/earnings",
+      "count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/providers/recommended",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/providers?${params}",
+      "count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/ranking/leaderboard",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/ranking/me",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/referrals/me",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/referrals/me/code",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/reviews/can-review/${bookingId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/reviews/provider/${providerId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/reviews/provider/${providerId}/breakdown",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/reviews/provider/${providerId}/suggestions",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/reviews/suggested-response/${reviewId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/reviews/trends/${providerId}?period=${period}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/safety/me/incidents",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/security/alerts",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/services",
+      "count": 5
+    },
+    {
+      "method": "GET",
+      "path": "/services?categoryId=${categoryId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/${id}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/me",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/suggestions/provider/${providerId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/users/me",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/v1/metrics/me/funnel",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/v1/metrics/me/summary",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/v1/metrics/me/timeseries",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/v1/support/meta",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/v1/support/tickets",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/v1/support/tickets/${ticketId}",
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "path": "Erro ao buscar promoções do provedor:",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "${BASE_PATH}/${id}",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/bookings/${bookingId}/cancel",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/bookings/${bookingId}/status",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/clients/me",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/notifications/${id}/mark-as-read",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/notifications/me/mark-as-read",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/providers/${providerId}/availability",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/providers/${providerId}/services/${serviceOfferingId}",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/providers/me",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/providers/me/availability",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/safety/panic/${panicId}/end",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/safety/panic/${panicId}/update-location",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/subscriptions/${id}",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/users/me",
+      "count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/support/tickets/${ticketId}/status",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "${BASE_URL}/${bookingId}/dispute",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "${this.BASE_URL}/advance-status",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "${this.BASE_URL}/submit-cpf",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/analytics/events",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/auth/forgot-password",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout-device",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/auth/password/reset/confirm",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/auth/refresh",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/auth/register/client",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/auth/register/provider",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/bookings",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/bookings/${bookingId}/accept",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/bookings/${bookingId}/apply-coupon",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/bookings/${bookingId}/arrived",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/bookings/${bookingId}/complete",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/bookings/${bookingId}/on-the-way",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/bookings/${bookingId}/start",
+      "count": 2
+    },
+    {
+      "method": "POST",
+      "path": "/bookings/${bookingId}/start/manual",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/bookings/quote",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/chat/${messageData.chatId}/messages",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/chat/conversations/get-or-create",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/compliance/delete-account",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/compliance/export-data",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/compliance/upload",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/coupons/apply",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/guarantee/claims",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/incidents",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/loyalty/redeem",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/missions/claim",
+      "count": 2
+    },
+    {
+      "method": "POST",
+      "path": "/missions/track",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/notifications/${id}/ack",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/notifications/register-token",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/payments/pix-charge",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/payouts/withdrawals",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/providers/${providerId}/availability",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/providers/${providerId}/services",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/providers/me/accept-terms",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/providers/me/availability",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/providers/me/avatar",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/providers/me/earnings/withdrawal",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/reviews",
+      "count": 2
+    },
+    {
+      "method": "POST",
+      "path": "/reviews/${reviewId}/flag",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/reviews/${reviewId}/respond",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/safety/incident",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/safety/panic",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/safety/panic/${panicId}/incident",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/safety/panic/trigger",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/security/report",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/v1/support/tickets",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/v1/support/tickets/${ticketId}/messages",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "Content-Type",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "Erro ao criar promoção do provedor:",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "checkin",
+      "count": 1
+    },
+    {
+      "method": "POST",
+      "path": "checkout",
+      "count": 1
+    },
+    {
+      "method": "REQUEST",
+      "path": "<dynamic>",
+      "count": 1
+    }
+  ],
+  "files_without_http_calls": [
+    "__tests__/api.test.ts",
+    "__tests__/notificationService.deepLink.test.ts",
+    "adapters/bookingStatus.ts",
+    "authEvents.ts",
+    "bookingEventBus.ts",
+    "fileService.ts",
+    "incentiveService.ts",
+    "localNotificationService.ts",
+    "locationService.ts",
+    "logging.ts",
+    "metaService.ts",
+    "notificationBus.ts",
+    "notificationUIService.test.ts",
+    "notificationUIService.ts",
+    "observability.ts",
+    "providerSettingsService.ts",
+    "queuesService.ts",
+    "quoteService.test.ts",
+    "searchService.ts",
+    "smsService.ts"
+  ],
+  "calls_by_file": {
+    "aiSuggestionsService.ts": [
+      {
+        "line": 27,
+        "method": "GET",
+        "path": "/suggestions/provider/${providerId}"
+      },
+      {
+        "line": 39,
+        "method": "GET",
+        "path": "/insights/customer/${providerId}"
+      },
+      {
+        "line": 51,
+        "method": "GET",
+        "path": "/insights/market-trends"
+      }
+    ],
+    "analyticsService.ts": [
+      {
+        "line": 31,
+        "method": "GET",
+        "path": "/analytics/performance/${providerId}"
+      },
+      {
+        "line": 43,
+        "method": "GET",
+        "path": "/analytics/business/${providerId}?period=${period}"
+      },
+      {
+        "line": 55,
+        "method": "POST",
+        "path": "/analytics/events"
+      },
+      {
+        "line": 73,
+        "method": "GET",
+        "path": "/analytics/competitors?location=${location}"
+      },
+      {
+        "line": 85,
+        "method": "GET",
+        "path": "/analytics/reports/${type}/${providerId}"
+      }
+    ],
+    "api.ts": [
+      {
+        "line": 383,
+        "method": "REQUEST",
+        "path": null
+      }
+    ],
+    "auditService.ts": [
+      {
+        "line": 23,
+        "method": "GET",
+        "path": "/admin/activities"
+      }
+    ],
+    "authService.ts": [
+      {
+        "line": 32,
+        "method": "POST",
+        "path": "/auth/login"
+      },
+      {
+        "line": 63,
+        "method": "POST",
+        "path": "/auth/refresh"
+      },
+      {
+        "line": 91,
+        "method": "POST",
+        "path": "/auth/register/client"
+      },
+      {
+        "line": 119,
+        "method": "POST",
+        "path": "/auth/register/provider"
+      },
+      {
+        "line": 148,
+        "method": "POST",
+        "path": "/auth/forgot-password"
+      },
+      {
+        "line": 162,
+        "method": "POST",
+        "path": "/auth/password/reset/confirm"
+      },
+      {
+        "line": 239,
+        "method": "PATCH",
+        "path": "/users/me"
+      }
+    ],
+    "bookingService.ts": [
+      {
+        "line": 57,
+        "method": "POST",
+        "path": "/bookings"
+      },
+      {
+        "line": 97,
+        "method": "GET",
+        "path": "/bookings/me"
+      },
+      {
+        "line": 130,
+        "method": "GET",
+        "path": "/bookings/${bookingId}"
+      },
+      {
+        "line": 154,
+        "method": "PATCH",
+        "path": "/bookings/${bookingId}/status"
+      },
+      {
+        "line": 177,
+        "method": "POST",
+        "path": "/bookings/${bookingId}/start"
+      },
+      {
+        "line": 178,
+        "method": "POST",
+        "path": "/bookings/${bookingId}/start"
+      },
+      {
+        "line": 203,
+        "method": "POST",
+        "path": "/bookings/${bookingId}/on-the-way"
+      },
+      {
+        "line": 225,
+        "method": "POST",
+        "path": "/bookings/${bookingId}/arrived"
+      },
+      {
+        "line": 244,
+        "method": "POST",
+        "path": "/bookings/${bookingId}/complete"
+      },
+      {
+        "line": 267,
+        "method": "POST",
+        "path": "/bookings/${bookingId}/start/manual"
+      },
+      {
+        "line": 283,
+        "method": "POST",
+        "path": "/bookings/${bookingId}/accept"
+      },
+      {
+        "line": 305,
+        "method": "PATCH",
+        "path": "/bookings/${bookingId}/cancel"
+      },
+      {
+        "line": 336,
+        "method": "GET",
+        "path": "/bookings/check-active-chat/${clientId}/${providerId}"
+      },
+      {
+        "line": 358,
+        "method": "GET",
+        "path": "/bookings/check-confirmed/${clientId}/${providerId}"
+      }
+    ],
+    "categoryService.ts": [
+      {
+        "line": 14,
+        "method": "GET",
+        "path": "/services"
+      },
+      {
+        "line": 22,
+        "method": "GET",
+        "path": "/services?categoryId=${categoryId}"
+      }
+    ],
+    "chatService.ts": [
+      {
+        "line": 47,
+        "method": "GET",
+        "path": "/chat/find-or-create/provider/${providerId}/client/${clientId}"
+      },
+      {
+        "line": 65,
+        "method": "GET",
+        "path": "/chat/${chatId}/messages"
+      },
+      {
+        "line": 77,
+        "method": "POST",
+        "path": "/chat/conversations/get-or-create"
+      },
+      {
+        "line": 104,
+        "method": "POST",
+        "path": "/chat/${messageData.chatId}/messages"
+      },
+      {
+        "line": 122,
+        "method": "GET",
+        "path": "/chat/me/conversations"
+      }
+    ],
+    "clientService.ts": [
+      {
+        "line": 57,
+        "method": "GET",
+        "path": "/services"
+      },
+      {
+        "line": 92,
+        "method": "GET",
+        "path": "/providers?${params}"
+      },
+      {
+        "line": 123,
+        "method": "GET",
+        "path": "/providers"
+      },
+      {
+        "line": 145,
+        "method": "GET",
+        "path": "/users/me"
+      },
+      {
+        "line": 164,
+        "method": "GET",
+        "path": "/offers"
+      },
+      {
+        "line": 183,
+        "method": "GET",
+        "path": "/providers/${providerId}/offers"
+      },
+      {
+        "line": 203,
+        "method": "POST",
+        "path": "/bookings/${bookingId}/apply-coupon"
+      },
+      {
+        "line": 223,
+        "method": "GET",
+        "path": "/providers/${providerId}"
+      },
+      {
+        "line": 242,
+        "method": "GET",
+        "path": "/providers/${providerId}/metrics"
+      },
+      {
+        "line": 262,
+        "method": "PATCH",
+        "path": "/clients/me"
+      },
+      {
+        "line": 280,
+        "method": "GET",
+        "path": "/missions/my"
+      },
+      {
+        "line": 299,
+        "method": "POST",
+        "path": "/missions/claim"
+      }
+    ],
+    "commonServiceCatalog.ts": [
+      {
+        "line": 16,
+        "method": "GET",
+        "path": "/services"
+      }
+    ],
+    "complianceService.ts": [
+      {
+        "line": 26,
+        "method": "GET",
+        "path": "/compliance/status/${providerId}"
+      },
+      {
+        "line": 38,
+        "method": "GET",
+        "path": "/compliance/requirements"
+      },
+      {
+        "line": 57,
+        "method": "POST",
+        "path": "/compliance/upload"
+      },
+      {
+        "line": 70,
+        "method": "GET",
+        "path": "/compliance/privacy-info"
+      },
+      {
+        "line": 82,
+        "method": "POST",
+        "path": "/compliance/export-data"
+      },
+      {
+        "line": 91,
+        "method": "POST",
+        "path": "/compliance/delete-account"
+      }
+    ],
+    "configService.ts": [
+      {
+        "line": 19,
+        "method": "GET",
+        "path": "/config/pricing"
+      }
+    ],
+    "couponService.ts": [
+      {
+        "line": 25,
+        "method": "GET",
+        "path": "/coupons/me"
+      },
+      {
+        "line": 49,
+        "method": "POST",
+        "path": "/coupons/apply"
+      },
+      {
+        "line": 71,
+        "method": "GET",
+        "path": "/coupons/resolve/${encodeURIComponent(code)}"
+      }
+    ],
+    "dashboardService.ts": [
+      {
+        "line": 18,
+        "method": "GET",
+        "path": "/providers/me/dashboard"
+      }
+    ],
+    "disputeService.ts": [
+      {
+        "line": 29,
+        "method": "POST",
+        "path": "${BASE_URL}/${bookingId}/dispute"
+      },
+      {
+        "line": 51,
+        "method": "GET",
+        "path": "${BASE_URL}/${bookingId}/dispute"
+      }
+    ],
+    "earningService.ts": [
+      {
+        "line": 23,
+        "method": "GET",
+        "path": "/providers/me/earnings"
+      },
+      {
+        "line": 47,
+        "method": "POST",
+        "path": "/providers/me/earnings/withdrawal"
+      }
+    ],
+    "faqService.ts": [
+      {
+        "line": 18,
+        "method": "GET",
+        "path": "/faqs"
+      }
+    ],
+    "guaranteeService.ts": [
+      {
+        "line": 6,
+        "method": "POST",
+        "path": "/guarantee/claims"
+      },
+      {
+        "line": 11,
+        "method": "GET",
+        "path": "/guarantee/claims/me"
+      }
+    ],
+    "incidentService.ts": [
+      {
+        "line": 10,
+        "method": "POST",
+        "path": "/incidents"
+      },
+      {
+        "line": 17,
+        "method": "GET",
+        "path": "/incidents/${claimId}"
+      }
+    ],
+    "insuranceService.ts": [
+      {
+        "line": 17,
+        "method": "GET",
+        "path": "/insurance/plans"
+      }
+    ],
+    "loyaltyService.ts": [
+      {
+        "line": 22,
+        "method": "GET",
+        "path": "/loyalty/me"
+      },
+      {
+        "line": 27,
+        "method": "GET",
+        "path": "/loyalty/me/history"
+      },
+      {
+        "line": 43,
+        "method": "GET",
+        "path": "/loyalty/rewards"
+      },
+      {
+        "line": 58,
+        "method": "POST",
+        "path": "/loyalty/redeem"
+      }
+    ],
+    "metricsService.ts": [
+      {
+        "line": 33,
+        "method": "GET",
+        "path": "/v1/metrics/me/summary"
+      },
+      {
+        "line": 51,
+        "method": "GET",
+        "path": "/v1/metrics/me/timeseries"
+      },
+      {
+        "line": 70,
+        "method": "GET",
+        "path": "/v1/metrics/me/funnel"
+      }
+    ],
+    "missionService.ts": [
+      {
+        "line": 135,
+        "method": "GET",
+        "path": "/missions/my"
+      },
+      {
+        "line": 176,
+        "method": "POST",
+        "path": "/missions/claim"
+      },
+      {
+        "line": 204,
+        "method": "POST",
+        "path": "/missions/track"
+      },
+      {
+        "line": 217,
+        "method": "GET",
+        "path": "/coupons/my"
+      }
+    ],
+    "notificationService.ts": [
+      {
+        "line": 24,
+        "method": "GET",
+        "path": "/notifications/me"
+      },
+      {
+        "line": 121,
+        "method": "PATCH",
+        "path": "/notifications/me/mark-as-read"
+      },
+      {
+        "line": 126,
+        "method": "PATCH",
+        "path": "/notifications/${id}/mark-as-read"
+      },
+      {
+        "line": 133,
+        "method": "GET",
+        "path": "/notifications/stream"
+      },
+      {
+        "line": 139,
+        "method": "POST",
+        "path": "/notifications/${id}/ack"
+      }
+    ],
+    "offerService.ts": [
+      {
+        "line": 18,
+        "method": "GET",
+        "path": "/offers"
+      },
+      {
+        "line": 38,
+        "method": "GET",
+        "path": "/offers/${offerId}"
+      }
+    ],
+    "paymentService.ts": [
+      {
+        "line": 14,
+        "method": "POST",
+        "path": "/payments/pix-charge"
+      },
+      {
+        "line": 40,
+        "method": "POST",
+        "path": "/payouts/withdrawals"
+      },
+      {
+        "line": 55,
+        "method": "GET",
+        "path": "/payments/intent/${bookingId}"
+      }
+    ],
+    "proofService.ts": [
+      {
+        "line": 11,
+        "method": "POST",
+        "path": "checkin"
+      },
+      {
+        "line": 22,
+        "method": "POST",
+        "path": "checkout"
+      }
+    ],
+    "providerPromotionsService.ts": [
+      {
+        "line": 13,
+        "method": "GET",
+        "path": "Erro ao buscar promoções do provedor:"
+      },
+      {
+        "line": 25,
+        "method": "POST",
+        "path": "Erro ao criar promoção do provedor:"
+      },
+      {
+        "line": 38,
+        "method": "PATCH",
+        "path": "${BASE_PATH}/${id}"
+      }
+    ],
+    "providerScheduleService.ts": [
+      {
+        "line": 14,
+        "method": "GET",
+        "path": "/bookings/me"
+      }
+    ],
+    "providerService.ts": [
+      {
+        "line": 266,
+        "method": "GET",
+        "path": "/providers/${providerId}"
+      },
+      {
+        "line": 334,
+        "method": "GET",
+        "path": "/providers/${providerId}/availability"
+      },
+      {
+        "line": 377,
+        "method": "GET",
+        "path": "/providers/me/availability"
+      },
+      {
+        "line": 397,
+        "method": "PATCH",
+        "path": "/providers/me/availability"
+      },
+      {
+        "line": 417,
+        "method": "POST",
+        "path": "/providers/me/availability"
+      },
+      {
+        "line": 437,
+        "method": "DELETE",
+        "path": "/providers/me/availability/${availabilityId}"
+      },
+      {
+        "line": 455,
+        "method": "PATCH",
+        "path": "/providers/me"
+      },
+      {
+        "line": 473,
+        "method": "GET",
+        "path": "/providers/me/dashboard"
+      },
+      {
+        "line": 491,
+        "method": "GET",
+        "path": "/providers/me/earnings"
+      },
+      {
+        "line": 511,
+        "method": "PATCH",
+        "path": "/providers/${providerId}/availability"
+      },
+      {
+        "line": 531,
+        "method": "POST",
+        "path": "/providers/${providerId}/availability"
+      },
+      {
+        "line": 551,
+        "method": "DELETE",
+        "path": "/providers/${providerId}/availability/${availabilityId}"
+      },
+      {
+        "line": 578,
+        "method": "GET",
+        "path": "/providers/${providerId}/services"
+      },
+      {
+        "line": 605,
+        "method": "POST",
+        "path": "/providers/${providerId}/services"
+      },
+      {
+        "line": 630,
+        "method": "PATCH",
+        "path": "/providers/${providerId}/services/${serviceOfferingId}"
+      },
+      {
+        "line": 650,
+        "method": "DELETE",
+        "path": "/providers/${providerId}/services/${serviceOfferingId}"
+      },
+      {
+        "line": 691,
+        "method": "GET",
+        "path": "/providers"
+      },
+      {
+        "line": 711,
+        "method": "GET",
+        "path": "/providers/availability-summary"
+      },
+      {
+        "line": 749,
+        "method": "GET",
+        "path": "/providers/recommended"
+      },
+      {
+        "line": 774,
+        "method": "GET",
+        "path": "/providers"
+      },
+      {
+        "line": 797,
+        "method": "GET",
+        "path": "/services"
+      },
+      {
+        "line": 824,
+        "method": "GET",
+        "path": "/providers?${params}"
+      },
+      {
+        "line": 846,
+        "method": "GET",
+        "path": "/providers/${providerId}/metrics"
+      },
+      {
+        "line": 872,
+        "method": "GET",
+        "path": "/providers/${providerId}/offers"
+      },
+      {
+        "line": 887,
+        "method": "GET",
+        "path": "/services"
+      },
+      {
+        "line": 929,
+        "method": "POST",
+        "path": "/providers/me/avatar"
+      },
+      {
+        "line": 949,
+        "method": "POST",
+        "path": "/providers/me/accept-terms"
+      }
+    ],
+    "pushService.ts": [
+      {
+        "line": 53,
+        "method": "POST",
+        "path": "/notifications/register-token"
+      },
+      {
+        "line": 65,
+        "method": "POST",
+        "path": "/auth/logout-device"
+      }
+    ],
+    "quoteService.ts": [
+      {
+        "line": 9,
+        "method": "POST",
+        "path": "/bookings/quote"
+      }
+    ],
+    "rankingService.ts": [
+      {
+        "line": 14,
+        "method": "GET",
+        "path": "/ranking/leaderboard"
+      },
+      {
+        "line": 40,
+        "method": "GET",
+        "path": "/ranking/me"
+      }
+    ],
+    "referralService.ts": [
+      {
+        "line": 17,
+        "method": "GET",
+        "path": "/referrals/me/code"
+      },
+      {
+        "line": 38,
+        "method": "GET",
+        "path": "/referrals/me"
+      }
+    ],
+    "reviewService.ts": [
+      {
+        "line": 45,
+        "method": "POST",
+        "path": "/reviews"
+      },
+      {
+        "line": 62,
+        "method": "GET",
+        "path": "/reviews/can-review/${bookingId}"
+      },
+      {
+        "line": 81,
+        "method": "GET",
+        "path": "/reviews/provider/${providerId}/breakdown"
+      },
+      {
+        "line": 101,
+        "method": "GET",
+        "path": "/reviews/provider/${providerId}/suggestions"
+      },
+      {
+        "line": 116,
+        "method": "GET",
+        "path": "/reviews/provider/${providerId}"
+      },
+      {
+        "line": 126,
+        "method": "POST",
+        "path": "/reviews"
+      },
+      {
+        "line": 144,
+        "method": "GET",
+        "path": "/reviews/suggested-response/${reviewId}"
+      },
+      {
+        "line": 157,
+        "method": "POST",
+        "path": "/reviews/${reviewId}/respond"
+      },
+      {
+        "line": 166,
+        "method": "POST",
+        "path": "/reviews/${reviewId}/flag"
+      },
+      {
+        "line": 175,
+        "method": "GET",
+        "path": "/reviews/trends/${providerId}?period=${period}"
+      }
+    ],
+    "safetyService.ts": [
+      {
+        "line": 13,
+        "method": "POST",
+        "path": "/safety/panic"
+      },
+      {
+        "line": 19,
+        "method": "POST",
+        "path": "/safety/incident"
+      },
+      {
+        "line": 24,
+        "method": "GET",
+        "path": "/safety/me/incidents"
+      },
+      {
+        "line": 36,
+        "method": "POST",
+        "path": "/safety/panic/trigger"
+      },
+      {
+        "line": 53,
+        "method": "PATCH",
+        "path": "/safety/panic/${panicId}/update-location"
+      },
+      {
+        "line": 68,
+        "method": "PATCH",
+        "path": "/safety/panic/${panicId}/end"
+      },
+      {
+        "line": 84,
+        "method": "POST",
+        "path": "/safety/panic/${panicId}/incident"
+      }
+    ],
+    "securityService.ts": [
+      {
+        "line": 99,
+        "method": "GET",
+        "path": "/auth/validate-session"
+      },
+      {
+        "line": 109,
+        "method": "GET",
+        "path": "/security/alerts"
+      },
+      {
+        "line": 119,
+        "method": "POST",
+        "path": "/security/report"
+      }
+    ],
+    "subscriptionService.ts": [
+      {
+        "line": 10,
+        "method": "POST",
+        "path": "/subscriptions"
+      },
+      {
+        "line": 15,
+        "method": "GET",
+        "path": "/subscriptions/me"
+      },
+      {
+        "line": 20,
+        "method": "GET",
+        "path": "/subscriptions/${id}"
+      },
+      {
+        "line": 25,
+        "method": "PATCH",
+        "path": "/subscriptions/${id}"
+      }
+    ],
+    "supportService.ts": [
+      {
+        "line": 15,
+        "method": "POST",
+        "path": "/v1/support/tickets"
+      },
+      {
+        "line": 28,
+        "method": "GET",
+        "path": "/v1/support/meta"
+      },
+      {
+        "line": 42,
+        "method": "GET",
+        "path": "/v1/support/tickets"
+      },
+      {
+        "line": 58,
+        "method": "GET",
+        "path": "/v1/support/tickets/${ticketId}"
+      },
+      {
+        "line": 75,
+        "method": "POST",
+        "path": "/v1/support/tickets/${ticketId}/messages"
+      },
+      {
+        "line": 92,
+        "method": "PATCH",
+        "path": "/v1/support/tickets/${ticketId}/status"
+      }
+    ],
+    "uploadService.ts": [
+      {
+        "line": 43,
+        "method": "POST",
+        "path": "Content-Type"
+      }
+    ],
+    "userService.ts": [
+      {
+        "line": 14,
+        "method": "GET",
+        "path": "${this.BASE_URL}/me"
+      },
+      {
+        "line": 29,
+        "method": "DELETE",
+        "path": "${this.BASE_URL}/me"
+      }
+    ],
+    "verificationService.ts": [
+      {
+        "line": 22,
+        "method": "POST",
+        "path": "${this.BASE_URL}/submit-cpf"
+      },
+      {
+        "line": 76,
+        "method": "POST",
+        "path": "${this.BASE_URL}/advance-status"
+      },
+      {
+        "line": 86,
+        "method": "GET",
+        "path": "${this.BASE_URL}/status/${providerId}"
+      }
+    ]
+  }
+}
