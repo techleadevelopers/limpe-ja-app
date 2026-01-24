@@ -1,4 +1,4 @@
-﻿// LimpeJaApp/app/client/messages/[chatId].tsx
+// LimpeJaApp/app/client/messages/[chatId].tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -26,11 +26,17 @@ import NotificationUIService from '../../../services/notificationUIService';
 import { BookingStatus } from '../../../types/backend/bookings';
 import { Message, SendMessageDto } from '../../../types/backend/chat';
 import { alertUserError, getUserMessage } from '../../../_shared/errors/uiFeedback';
-import { normalizeApiError } from '../../_shared/utils/errors';
 import { shadow, textFix, inputFix, pressableFix } from '../../../_shared/ui/parity';
 
 
 const SOCKET_URL = appConfig.apiUrl.replace('http', 'ws');
+const SOCKET_HEARTBEAT_INTERVAL_MS = 25000;
+const SOCKET_PING_TIMEOUT_MS = 60000;
+const SOCKET_RECONNECT_DELAY_MS = 2000;
+const SOCKET_RECONNECT_DELAY_MAX_MS = 10000;
+const MESSAGE_RECOVERY_LIMIT = 50;
+const CONNECTION_OFFLINE_MESSAGE = 'Conexão com o chat perdida.';
+const CONNECTION_RECONNECTING_MESSAGE = 'Reconectando o chat...';
 
 const CustomChatHeader: React.FC<{
   recipientName?: string;
@@ -82,6 +88,83 @@ export default function ChatScreen() {
   const socketRef = useRef<Socket | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const userId = user?.id;
+  const messageIdsRef = useRef(new Set<string>());
+  const lastMessageTimestampRef = useRef<number | null>(null);
+
+  const scheduleScrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, []);
+
+  const setConnectionStatus = useCallback((message: string | null) => {
+    setChatBlockedMessage((previous) => {
+      if (
+        previous &&
+        previous !== CONNECTION_OFFLINE_MESSAGE &&
+        previous !== CONNECTION_RECONNECTING_MESSAGE
+      ) {
+        return previous;
+      }
+      return message;
+    });
+  }, []);
+
+  const mergeMessages = useCallback(
+    (incoming: Message[]): boolean => {
+      const uniqueMessages = incoming.filter((message) => !messageIdsRef.current.has(message.id));
+      if (!uniqueMessages.length) {
+        return false;
+      }
+
+      uniqueMessages.forEach((message) => {
+        messageIdsRef.current.add(message.id);
+      });
+
+      setMessages((prev) => {
+        const merged = [...prev, ...uniqueMessages];
+        merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        return merged;
+      });
+
+      const latestTimestamp = uniqueMessages.reduce(
+        (acc, message) =>
+          Math.max(acc, new Date(message.createdAt).getTime()),
+        lastMessageTimestampRef.current ?? 0,
+      );
+      lastMessageTimestampRef.current = latestTimestamp;
+
+      return true;
+    },
+    [setMessages],
+  );
+
+  const resetMessageTracking = useCallback((orderedMessages: Message[]) => {
+    messageIdsRef.current.clear();
+    orderedMessages.forEach((message) => messageIdsRef.current.add(message.id));
+    lastMessageTimestampRef.current = orderedMessages.length
+      ? new Date(orderedMessages[orderedMessages.length - 1].createdAt).getTime()
+      : null;
+  }, []);
+
+  const recoverMissedMessages = useCallback(async () => {
+    if (!chatId) {
+      return;
+    }
+
+    try {
+      const recovered = await getChatMessages(chatId, {
+        limit: MESSAGE_RECOVERY_LIMIT,
+        offset: 0,
+      });
+      const appended = mergeMessages(recovered);
+      if (appended) {
+        scheduleScrollToBottom();
+      }
+    } catch (error) {
+      console.warn('[chat] Falha ao recuperar mensagens após reconexão', error);
+    }
+  }, [chatId, mergeMessages, scheduleScrollToBottom]);
 
   const chatBlockedAnim = useRef(new Animated.Value(0)).current;
   const inputContainerAnim = useRef(new Animated.Value(0)).current;
@@ -100,7 +183,12 @@ export default function ChatScreen() {
 
       try {
         const fetchedMessages = await getChatMessages(chatId, { limit: 50, offset: 0 });
-        setMessages(fetchedMessages.reverse());
+        const orderedMessages = [...fetchedMessages].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        );
+        resetMessageTracking(orderedMessages);
+        setMessages(orderedMessages);
+        scheduleScrollToBottom();
 
         // đź‘‡ CorreĂ§ĂŁo: Limpe o estado de erro apĂłs o sucesso da requisiĂ§ĂŁo
         setChatBlockedMessage(null);
@@ -145,17 +233,32 @@ export default function ChatScreen() {
     const socket = io(SOCKET_URL, {
       transports: ['websocket'],
       auth: { token },
+      pingInterval: SOCKET_HEARTBEAT_INTERVAL_MS,
+      pingTimeout: SOCKET_PING_TIMEOUT_MS,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: SOCKET_RECONNECT_DELAY_MS,
+      reconnectionDelayMax: SOCKET_RECONNECT_DELAY_MAX_MS,
     });
 
     socketRef.current = socket;
 
     socket.on('connect', () => {
+      setConnectionStatus(null);
       socket.emit('joinChat', chatId);
     });
 
+    socket.on('heartbeat', (payload) => {
+      socket.emit('heartbeatAck', {
+        timestamp: payload?.timestamp ?? Date.now(),
+        receivedAt: Date.now(),
+      });
+    });
+
     socket.on('newMessage', (newMessage: Message) => {
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      if (mergeMessages([newMessage])) {
+        scheduleScrollToBottom();
+      }
     });
 
     socket.on('errorMessage', (data: { event: string; message: string }) => {
@@ -171,13 +274,44 @@ export default function ChatScreen() {
     });
 
     socket.on('disconnect', () => {
-      setChatBlockedMessage('Conexão com o chat perdida.');
+      setConnectionStatus(CONNECTION_OFFLINE_MESSAGE);
+    });
+
+    socket.on('reconnect_attempt', () => {
+      setConnectionStatus(CONNECTION_RECONNECTING_MESSAGE);
+    });
+
+    socket.on('reconnect', () => {
+      setConnectionStatus(null);
+      recoverMissedMessages();
+    });
+
+    socket.on('connect_error', (error) => {
+      console.warn('[chat] socket connect_error', error);
+      setConnectionStatus(CONNECTION_OFFLINE_MESSAGE);
+    });
+
+    socket.on('reconnect_failed', () => {
+      setConnectionStatus(CONNECTION_OFFLINE_MESSAGE);
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [isAuthenticated, token, chatId, userId, bookingId, inputContainerAnim, recipientName]);
+  }, [
+    isAuthenticated,
+    token,
+    chatId,
+    userId,
+    bookingId,
+    inputContainerAnim,
+    recipientName,
+    mergeMessages,
+    recoverMissedMessages,
+    resetMessageTracking,
+    scheduleScrollToBottom,
+    setConnectionStatus,
+  ]);
 
   useEffect(() => {
     if (chatBlockedMessage) {
@@ -216,16 +350,23 @@ export default function ChatScreen() {
         await sendChatMessage(newMessageData);
       }
       setInputText('');
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      scheduleScrollToBottom();
     } catch (error: any) {
       const normalized = getUserMessage(error);
-      if (error.message.includes('Não é possível enviar mensagens')) {
+      if (error.message.includes('NÃ£o Ã© possÃ­vel enviar mensagens')) {
         setChatBlockedMessage(normalized);
       } else {
         alertUserError(error, 'Erro ao enviar mensagem');
       }
     }
-  }, [inputText, user, chatId, recipientId, chatBlockedMessage]);
+  }, [
+    inputText,
+    user,
+    chatId,
+    recipientId,
+    chatBlockedMessage,
+    scheduleScrollToBottom,
+  ]);
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isMyMessage = item.senderId === userId;
