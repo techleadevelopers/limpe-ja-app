@@ -1,5 +1,4 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -11,7 +10,6 @@ import {
     Easing,
     Platform,
     StyleSheet,
-    Switch,
     Text,
     TouchableOpacity,
     View,
@@ -21,21 +19,25 @@ import { alertUserError } from '../../../_shared/errors/uiFeedback';
 import { useAuth } from '../../../hooks/useAuth';
 import { getPricingConfig } from '../../../services/configService';
 import NotificationUIService from '../../../services/notificationUIService';
-import { buildDateTimeForSlot, isSameDayInBrazil } from '../../../utils/time';
+import { isSameDayInBrazil } from '../../../utils/time';
 
 // Importações de serviços e tipos do backend
 import { getBookingsForUser } from '../../../services/bookingService';
 import {
+    getProviderAvailability,
     getMyProviderAvailability,
     updateMyProviderAvailability,
-    deleteMyProviderAvailability,
 } from '../../../services/providerService';
-import { invalidateAvailabilityCache } from '../../client/bookings/availabilityCache';
+import {
+    fetchAvailabilityWithCooldown,
+    availabilityCache,
+    registerAvailabilityFetcher,
+    invalidateAvailabilityCache,
+} from '../../client/bookings/availabilityCache';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { ProviderAvailability, UpdateAvailabilityData } from '../../../types/backend/providers';
 
-import { getProviderSettings, saveProviderSettings } from '../../../services/providerSettingsService';
-
+registerAvailabilityFetcher(getProviderAvailability);
 // Definição manual da interface Theme (baseada na doc oficial da lib)
 interface Theme {
   backgroundColor?: string;
@@ -437,21 +439,6 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const [showFullGrid, setShowFullGrid] = useState(false);
 
-  const currentPeriod = useMemo<PresetKey | 'custom' | 'off'>(() => {
-    if (!availability.isEnabled || availability.selectedSlots.length === 0) return 'off';
-    const s = availability.selectedSlots;
-    const eq = (a: string[], b: string[]) => a.length === b.length && a.every((v, i) => v === b[i]);
-    const m = generateTimeSlots(8, 12, 60);
-    const a = generateTimeSlots(13, 17, 60);
-    const e = generateTimeSlots(18, 21, 60);
-    const f = generateTimeSlots(8, 18, 60);
-    if (eq(s, m)) return 'morning';
-    if (eq(s, a)) return 'afternoon';
-    if (eq(s, e)) return 'evening';
-    if (eq(s, f)) return 'fullday';
-    return 'custom';
-  }, [availability.isEnabled, availability.selectedSlots]);
-
   useEffect(() => {
     Animated.timing(cardAnim, { toValue: 1, duration: 500, easing: easeOut, useNativeDriver: true }).start();
   }, [cardAnim]);
@@ -471,7 +458,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
       });
       return acc;
     }, []);
-  }, [selectedSlotsSet, bookedSlotsSet, dayOfWeek, todayDow, currentMinutes, isToday]);
+  }, [selectedSlotsSet, bookedSlotsSet, currentMinutes, isToday]);
   const handleSlotToggle = useCallback((slot: string) => {
     if (bookedSlotsSet.has(slot)) return;
     onToggleSlot(dayOfWeek, slot);
@@ -636,23 +623,8 @@ export default function ManageAvailabilityScreen() {
   const [smartOverrideType, setSmartOverrideType] = useState<'blocked' | 'custom'>('blocked');
 
   // Coverage radius state (moved inside component)
-  const [radiusKm, setRadiusKm] = useState<number>(15);
-  const [showRadiusEditor, setShowRadiusEditor] = useState<boolean>(false);
   const [minHourlyMinutes, setMinHourlyMinutes] = useState(DEFAULT_MIN_HOURLY_MINUTES);
   const minHourlySlots = Math.max(1, Math.ceil(minHourlyMinutes / SLOT_STEP_MINUTES));
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const s = await getProviderSettings();
-        if (mounted && typeof s?.serviceRadiusKm === 'number') {
-          setRadiusKm(s.serviceRadiusKm);
-        }
-      } catch {}
-    })();
-    return () => { mounted = false; };
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -671,16 +643,6 @@ export default function ManageAvailabilityScreen() {
       active = false;
     };
   }, []);
-
-  const saveRadius = useCallback(async () => {
-    try {
-      await saveProviderSettings({ serviceRadiusKm: radiusKm });
-      // sinaliza para a tela Explore recarregar recomendações
-      await AsyncStorage.setItem('@settings:radius:changed', '1');
-    } catch (e) {
-      console.warn('[ManageAvailability] Falha ao salvar raio de atendimento:', (e as any)?.message || e);
-    }
-  }, [radiusKm]);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const contentAnim = useRef(new Animated.Value(0)).current;
@@ -1025,7 +987,7 @@ export default function ManageAvailabilityScreen() {
         return day;
       })
     );
-  }, []);
+  }, [buildForwardMinBlock, minHourlyMinutes]);
 
   const handleSelectAllSlots = useCallback((dayOfWeek: number) => {
     const now = new Date();
@@ -1104,8 +1066,6 @@ export default function ManageAvailabilityScreen() {
         const isToday = daysUntil === 0;
 
         const availabilityDate = dateForDayOfWeek(day.dayOfWeek);
-        const baseDateForDay = calendarDateStringToLocalDate(availabilityDate) ?? new Date(availabilityDate);
-
         const validSlots = day.selectedSlots.filter((slot) => {
           if (!isToday) return true;
           const [h, m] = slot.split(':').map((n) => parseInt(n, 10));
@@ -1184,7 +1144,7 @@ export default function ManageAvailabilityScreen() {
       setIsSaving(false);
       loadData();
     }
-  }, [user?.id, weeklyAvailability, specificDateOverrides, convertSlotsToBlocks, router, loadData]);
+  }, [user?.id, weeklyAvailability, specificDateOverrides, convertSlotsToBlocks, router, loadData, selectedDateForOverride]);
 
   const getBookedSlotsForSpecificDate = useCallback((date: string): string[] => {
     const bookedTimes = new Set<string>();
@@ -1248,8 +1208,6 @@ export default function ManageAvailabilityScreen() {
     }
     return dates;
   }, [specificDateOverrides, selectedDateForOverride]);
-
-  const todayDow = new Date().getDay();
 
   // Apply preset actions when navigated with preset query param
   const didRunPresetRef = useRef(false);
