@@ -92,7 +92,10 @@ export class DisputeController {
   @Roles(UserRole.ADMIN)
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Contagem de disputas pendentes (ADMIN)' })
-  @ApiResponse({ status: 200, description: 'Quantidade de disputas pendentes.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Quantidade de disputas pendentes.',
+  })
   async getPendingCount(): Promise<{ count: number }> {
     const count = await this.disputeService.countPendingDisputes();
     return { count };
