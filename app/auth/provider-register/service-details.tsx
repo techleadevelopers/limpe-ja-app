@@ -22,7 +22,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { bulkSetAvailability, saveProviderSettings, TimeRange } from '../../../services/providerSettingsService';
 import { buildDateTimeForSlot } from '../../../utils/time';
-
 // IMPORTAÇÃO DO COMPONENTE PREMIUM SERVICE CHIP (Assumindo o caminho fornecido)
 import { PremiumServiceChip } from '../../../components/auth/PremiumServiceChip';
 
@@ -282,7 +281,7 @@ export default function ServiceDetailsScreen() {
   }, []);
 
 
-  const handleImagePicker = async () => {
+  const handleOpenGallery = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permissionResult.granted === false) {
@@ -307,6 +306,32 @@ export default function ServiceDetailsScreen() {
       Alert.alert('Erro', 'Não foi possível selecionar a imagem.');
     }
   
+  };
+
+  const handleOpenCamera = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (permissionResult.granted === false) {
+        Alert.alert('Permissão necessária', 'É preciso permitir acesso à câmera para continuar.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          profilePhoto: result.assets[0].uri
+        }));
+        setProfilePhotoError(null);
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível capturar a imagem.');
+    }
   };
 
   // Validation functions
@@ -685,7 +710,7 @@ const getMicrocopyText = () => {
                 <Text style={styles.sectionTitle}>Foto do Perfil</Text>
                 <TouchableOpacity
                   style={[styles.imageUploadButton, {transform: [{scale: avatarScaleAnim}]}, profilePhotoError ? styles.imageUploadButtonError : {}]}
-                  onPress={handleImagePicker}
+                  onPress={handleOpenGallery}
                   onPressIn={onPressInAvatar}
                   onPressOut={onPressOutAvatar}
                   activeOpacity={0.8}
@@ -703,6 +728,14 @@ const getMicrocopyText = () => {
                     style={styles.imageOverlay}
                   />
                 </TouchableOpacity>
+                <View style={styles.photoActionsRow}>
+                  <TouchableOpacity style={styles.photoActionButton} onPress={handleOpenGallery}>
+                    <Text style={styles.photoActionButtonText}>Escolher da galeria</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.photoActionButton} onPress={handleOpenCamera}>
+                    <Text style={styles.photoActionButtonText}>Usar câmera básica</Text>
+                  </TouchableOpacity>
+                </View>
                 <View style={styles.photoHintContainer}>
                   <Text style={styles.photoHintTitle}>Foto de vitrine profissional</Text>
                   <Text style={styles.photoHintText}>
@@ -1160,6 +1193,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     lineHeight: 16,
+  },
+  photoActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 10,
+  },
+  photoActionButton: {
+    flex: 1,
+    marginHorizontal: 4,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#A0D2EB',
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+  },
+  photoActionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
   },
   formContainer: {
     marginBottom: 30,
