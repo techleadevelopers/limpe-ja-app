@@ -1,6 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { ShieldCheck, Lock, Check } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
@@ -131,7 +130,6 @@ export default function ProviderProfileScreen() {
   const [savingName, setSavingName] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
   const [isTermsModalVisible, setTermsModalVisible] = useState(false);
-  const [acceptingTerms, setAcceptingTerms] = useState(false);
   const TERMS_KEY = '@LimpeJa:providerTermsAccepted';
 
   useEffect(() => {
