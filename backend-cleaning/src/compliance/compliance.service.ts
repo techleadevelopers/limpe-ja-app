@@ -7,12 +7,16 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { User, Prisma } from '@prisma/client';
 import { formatScheduledTime } from '../bookings/booking-time.utils';
+import { ObservabilityService } from '../observability/observability.service';
 
 @Injectable()
 export class ComplianceService {
   private readonly logger = new Logger(ComplianceService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly observabilityService: ObservabilityService,
+  ) {}
 
   /**
    * Registra o consentimento do usuário para termos de serviço ou política de privacidade.
@@ -309,6 +313,7 @@ export class ComplianceService {
    * @param userId ID do usuário a ser anonimizado/excluído.
    */
   async processErasureRequest(userId: string) {
+    const start = Date.now();
     this.logger.warn(
       `[ComplianceService] Processando solicitação de exclusão de dados (Right to Erasure) para userId: ${userId}.`,
     );
@@ -408,6 +413,11 @@ export class ComplianceService {
 
     this.logger.log(
       `[ComplianceService] Dados do userId: ${userId} foram anonimizados.`,
+    );
+    this.observabilityService.recordJobExecution(
+      'compliance-erasure',
+      Date.now() - start,
+      1,
     );
     return {
       message: `Dados do usuário ${userId} foram anonimizados com sucesso.`,
