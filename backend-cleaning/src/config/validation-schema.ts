@@ -10,7 +10,9 @@ export const validationSchema = Joi.object({
     .truthy('true', '1', 'yes')
     .falsy('false', '0', 'no')
     .default(true)
-    .description('Habilita/desabilita instrumentação de latência do observability.'),
+    .description(
+      'Habilita/desabilita instrumentação de latência do observability.',
+    ),
 
   OBS_LATENCY_SAMPLE_RATE_DEFAULT: Joi.number()
     .min(0)
