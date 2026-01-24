@@ -53,6 +53,9 @@ export default function VerificationQueueWidget() {
   const { data: queue, isLoading, isError } = useQuery<Provider[], Error>({
     queryKey: ['/verification/pending-queue'],
     queryFn: () => fetchVerificationQueue(),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const displayQueue = queue?.slice(0, 3) || []; // Show only first 3 items
