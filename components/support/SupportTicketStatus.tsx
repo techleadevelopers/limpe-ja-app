@@ -1,7 +1,7 @@
 // components/support/SupportTicketStatus.tsx
 // ================================================
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native'; // Adicionado useColorScheme
+import { View, Text, useColorScheme } from 'react-native'; // Adicionado useColorScheme
 import Card from '../common/Card'; // Alterado para importação padrão
 import Chip from '../common/Chip'; // Alterado para importação padrão
 import Button from '../common/Button'; // Alterado para importação padrão
