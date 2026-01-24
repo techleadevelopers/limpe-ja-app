@@ -267,281 +267,291 @@ export class PaymentsService {
     signature: string,
     payload: PagSeguroWebhookPayload,
   ): Promise<void | MessageResponseDto> {
-    this.logger.log(
-      `[PaymentsService] Webhook recebido. Evento: ${payload?.event}`,
-    );
-
-    // 1. Validação da Assinatura (HMAC)
-    const secret = this.configService.get<string>('PIX_WEBHOOK_SECRET');
-    if (!secret || !this.validateHmac(signature, payload)) {
-      this.logger.warn(
-        'Webhook com assinatura inválida recebido ou secret não configurado.',
+    try {
+      this.logger.log(
+        `[PaymentsService] Webhook recebido. Evento: ${payload?.event}`,
       );
-      throw new ForbiddenException('Assinatura de Webhook Inválida.');
-    }
-    // 2. Processamento do Evento (CORRIGIDO)
-    const status = payload?.transaction?.status
-      ? String(payload.transaction.status).toUpperCase()
-      : '';
-    const failedStatuses = [
-      'FAILED',
-      'CANCELED',
-      'CANCELLED',
-      'DECLINED',
-      'DENIED',
-      'REFUSED',
-      'EXPIRED',
-      'TIMEOUT',
-    ];
-    let shouldNotifyPaymentConfirmed = false;
-    let bookingForNotification: BookingWithUsers | null = null;
-    let bookingIdToConfirm: string | null = null;
 
-    if (
-      payload.event === 'charge.paid' ||
-      status === 'PAID' ||
-      status === 'COMPLETED' ||
-      status === 'APPROVED'
-    ) {
-      const externalRef =
-        payload?.data?.id || payload?.resource_id || payload?.transaction?.id;
+      // 1. Validação da Assinatura (HMAC)
+      const secret = this.configService.get<string>('PIX_WEBHOOK_SECRET');
+      if (!secret || !this.validateHmac(signature, payload)) {
+        this.logger.warn(
+          'Webhook com assinatura inválida recebido ou secret não configurado.',
+        );
+        throw new ForbiddenException('Assinatura de Webhook Inválida.');
+      }
+      // 2. Processamento do Evento (CORRIGIDO)
+      const status = payload?.transaction?.status
+        ? String(payload.transaction.status).toUpperCase()
+        : '';
+      const failedStatuses = [
+        'FAILED',
+        'CANCELED',
+        'CANCELLED',
+        'DECLINED',
+        'DENIED',
+        'REFUSED',
+        'EXPIRED',
+        'TIMEOUT',
+      ];
+      let shouldNotifyPaymentConfirmed = false;
+      let bookingForNotification: BookingWithUsers | null = null;
+      let bookingIdToConfirm: string | null = null;
 
-      const bookingId =
-        payload?.reference_id ||
-        payload?.transaction?.reference_id ||
-        externalRef;
+      if (
+        payload.event === 'charge.paid' ||
+        status === 'PAID' ||
+        status === 'COMPLETED' ||
+        status === 'APPROVED'
+      ) {
+        const externalRef =
+          payload?.data?.id || payload?.resource_id || payload?.transaction?.id;
 
-      if (bookingId) {
+        const bookingId =
+          payload?.reference_id ||
+          payload?.transaction?.reference_id ||
+          externalRef;
+
+        if (bookingId) {
+          const intent = await this.prisma.paymentIntent.findFirst({
+            where: { externalRef },
+            // MODIFICAÇÃO: Incluir o booking e o provider para acessar totalPrice e userId
+            include: {
+              booking: {
+                include: {
+                  provider: { include: { user: true } },
+                  client: { include: { user: true } },
+                },
+              },
+            },
+          });
+
+          if (intent && intent.status !== PaymentIntentStatus.PAID) {
+            const currentState = mapPaymentIntentStatusToState(intent.status);
+            const desiredState: PaymentIntentState = 'CONFIRMED';
+
+            if (!canTransition(currentState, desiredState)) {
+              this.logger.warn(
+                `[PaymentsService] PaymentIntent ${intent.id} não pode transitar de ${currentState} para ${desiredState}; ignorando.`,
+              );
+              return { message: 'Webhook processado com sucesso' };
+            }
+            // Inicia uma transação para garantir atomicidade das atualizações
+            await this.prisma.$transaction(async (tx) => {
+              await tx.paymentIntent.update({
+                where: { id: intent.id },
+                data: { status: PaymentIntentStatus.PAID },
+              });
+
+              // O booking já está incluído no `intent`
+              const booking = intent.booking;
+
+              if (!booking) {
+                this.logger.error(
+                  `[PaymentsService] Booking not found for PaymentIntent ${intent.id}. Cannot process ledger.`,
+                );
+                // Se o booking não for encontrado, loga o erro e sai da transação.
+                // Dependendo da lógica de negócio, pode-se lançar uma exceção ou apenas logar.
+                return;
+              }
+
+              // Agendar confirmation via BookingsService após a transação
+              bookingIdToConfirm ??= booking.id;
+
+              this.logger.log(
+                `[PaymentsService] Pagamento ${externalRef} para o agendamento ${booking.id} CONFIRMADO.`,
+              );
+
+              // --- INÍCIO DA IMPLEMENTAÇÃO SEGURA (IDEMPOTENTE) DO LEDGER ---
+              this.logger.log(
+                `[PaymentsService] Processando ledger para booking ${booking.id}...`,
+              );
+
+              // 1. Proteção contra duplicação: Verifica se já existe uma entrada HOLD para este booking
+              const alreadyExists = await tx.ledgerEntry.findFirst({
+                where: {
+                  bookingId: booking.id,
+                  type: LedgerEntryType.HOLD,
+                  amount: { gt: 0 }, // Assume que HOLD sempre tem valor positivo
+                },
+              });
+
+              if (alreadyExists) {
+                this.logger.warn(
+                  `[PaymentsService] Entrada de ledger tipo HOLD para o booking ${booking.id} já existe. Ignorando duplicação.`,
+                );
+                return; // Webhook duplicado ou reprocessamento, não cria novas entradas no ledger
+              }
+
+              // 2. Valores: Calcula os valores brutos e de taxa
+              // booking.totalPrice é esperado ser um Prisma.Decimal ou um tipo numérico compatível
+              const grossAmount = new Prisma.Decimal(booking.totalPrice);
+              const feeAmount = grossAmount.mul(0.1); // Calcula 10% de taxa
+              const providerId = booking.provider.userId; // Acessa o userId do provider incluído
+
+              // 3. Ledger: Cria as entradas no ledger
+              await tx.ledgerEntry.createMany({
+                data: [
+                  {
+                    userId: providerId,
+                    bookingId: booking.id,
+                    amount: grossAmount,
+                    type: LedgerEntryType.HOLD,
+                    note: `Pagamento bruto recebido (retido)`,
+                  },
+                  {
+                    userId: providerId,
+                    bookingId: booking.id,
+                    amount: feeAmount.neg(), // A taxa é um débito, então é negativa
+                    type: LedgerEntryType.FEE,
+                    note: `Taxa da plataforma`,
+                  },
+                ],
+              });
+              this.logger.log(
+                `[PaymentsService] Entradas de ledger criadas para o booking ${booking.id}.`,
+              );
+              // --- FIM DA IMPLEMENTAÇÃO SEGURA (IDEMPOTENTE) DO LEDGER ---
+            });
+            shouldNotifyPaymentConfirmed = true;
+            bookingForNotification = intent.booking;
+          } else if (intent) {
+            this.logger.log(
+              `[PaymentsService] PaymentIntent ${intent.id} j? estava CONFIRMED; ignorando webhook duplicado.`,
+            );
+
+            return { message: 'Webhook processado com sucesso' };
+          } else {
+            this.logger.warn(
+              `[PaymentsService] Webhook para ref ${externalRef} recebido, mas PaymentIntent nao encontrado.`,
+            );
+          }
+
+          if (bookingIdToConfirm) {
+            try {
+              await this.bookingsService.systemChangeStatus(
+                bookingIdToConfirm,
+                BookingStatus.CONFIRMED,
+              );
+            } catch (err) {
+              this.logger.warn(
+                `[PaymentsService] Falha ao confirmar booking ${bookingIdToConfirm} via BookingsService: ${err?.message || err}`,
+              );
+            } finally {
+              bookingIdToConfirm = null;
+            }
+          }
+        }
+      }
+
+      // Dispara push físico após confirmação de pagamento (cliente e prestador)
+      if (shouldNotifyPaymentConfirmed && bookingForNotification) {
+        const b = bookingForNotification;
+        const hora = formatScheduledTime(b.scheduledTime);
+        const providerName = b.provider?.user?.fullName || 'Prestador';
+        const clientName = b.client?.user?.fullName || 'Cliente';
+        if (b.client?.userId) {
+          await this.queues.addNotificationJob('send-notification', {
+            userId: b.client.userId,
+            kind: 'payment_confirmed',
+            title: 'Pagamento confirmado',
+            body: `Seu serviço com ${providerName} está confirmado para ${hora}.`,
+            deeplink: `/agendamento/${b.id}`,
+            priority: 1,
+            idempotencyKey: `notif:payment_confirmed:client:${b.id}`,
+          });
+        }
+        if (b.provider?.userId) {
+          await this.queues.addNotificationJob('send-notification', {
+            userId: b.provider.userId,
+            kind: 'payment_confirmed',
+            title: 'Novo atendimento confirmado',
+            body: `${clientName || 'Cliente'} confirmou pagamento para ${hora}.`,
+            deeplink: `/agendamento/${b.id}`,
+            priority: 1,
+            idempotencyKey: `notif:payment_confirmed:provider:${b.id}`,
+          });
+        }
+        const clientPhone = b.client?.user?.phone ?? b.client?.phone;
+        if (clientPhone) {
+          const scheduledDate = b.scheduledDate
+            ? new Intl.DateTimeFormat('pt-BR', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+              }).format(new Date(b.scheduledDate))
+            : '';
+          const scheduledTime = formatScheduledTime(b.scheduledTime);
+          const scheduleLabel =
+            [scheduledDate, scheduledTime].filter(Boolean).join(' às ') ||
+            'horário agendado';
+          void this.whatsappService.notifyPaymentConfirmed(
+            clientName,
+            scheduleLabel,
+            clientPhone,
+            {
+              bookingId: b.id,
+              status: BookingStatus.CONFIRMED,
+            },
+          );
+        }
+        await this.persistPaymentConfirmedNotification(b);
+      }
+
+      // Falha de pagamento: marca intent como FAILED e notifica cliente
+      if (failedStatuses.includes(status)) {
+        const externalRef =
+          payload?.data?.id || payload?.resource_id || payload?.transaction?.id;
         const intent = await this.prisma.paymentIntent.findFirst({
           where: { externalRef },
-          // MODIFICAÇÃO: Incluir o booking e o provider para acessar totalPrice e userId
           include: {
             booking: {
               include: {
-                provider: { include: { user: true } },
                 client: { include: { user: true } },
               },
             },
           },
         });
-
-        if (intent && intent.status !== PaymentIntentStatus.PAID) {
-          const currentState = mapPaymentIntentStatusToState(intent.status);
-          const desiredState: PaymentIntentState = 'CONFIRMED';
-
-          if (!canTransition(currentState, desiredState)) {
-            this.logger.warn(
-              `[PaymentsService] PaymentIntent ${intent.id} não pode transitar de ${currentState} para ${desiredState}; ignorando.`,
-            );
-            return { message: 'Webhook processado com sucesso' };
-          }
-          // Inicia uma transação para garantir atomicidade das atualizações
-          await this.prisma.$transaction(async (tx) => {
-            await tx.paymentIntent.update({
+        if (intent) {
+          if (intent.status !== PaymentIntentStatus.EXPIRED) {
+            await this.prisma.paymentIntent.update({
               where: { id: intent.id },
-              data: { status: PaymentIntentStatus.PAID },
+              data: { status: PaymentIntentStatus.EXPIRED },
             });
-
-            // O booking já está incluído no `intent`
-            const booking = intent.booking;
-
-            if (!booking) {
-              this.logger.error(
-                `[PaymentsService] Booking not found for PaymentIntent ${intent.id}. Cannot process ledger.`,
-              );
-              // Se o booking não for encontrado, loga o erro e sai da transação.
-              // Dependendo da lógica de negócio, pode-se lançar uma exceção ou apenas logar.
-              return;
+            if (intent.bookingId) {
+              await this.prisma.booking.update({
+                where: { id: intent.bookingId },
+                data: { status: BookingStatus.PENDING },
+              });
             }
-
-            // Agendar confirmation via BookingsService após a transação
-            bookingIdToConfirm ??= booking.id;
-
-            this.logger.log(
-              `[PaymentsService] Pagamento ${externalRef} para o agendamento ${booking.id} CONFIRMADO.`,
-            );
-
-            // --- INÍCIO DA IMPLEMENTAÇÃO SEGURA (IDEMPOTENTE) DO LEDGER ---
-            this.logger.log(
-              `[PaymentsService] Processando ledger para booking ${booking.id}...`,
-            );
-
-            // 1. Proteção contra duplicação: Verifica se já existe uma entrada HOLD para este booking
-            const alreadyExists = await tx.ledgerEntry.findFirst({
-              where: {
-                bookingId: booking.id,
-                type: LedgerEntryType.HOLD,
-                amount: { gt: 0 }, // Assume que HOLD sempre tem valor positivo
-              },
+          }
+          const b = intent.booking;
+          if (b?.client?.userId) {
+            const hora = formatScheduledTime(b.scheduledTime);
+            await this.queues.addNotificationJob('send-notification', {
+              userId: b.client.userId,
+              kind: 'payment_failed',
+              title: 'Pagamento não aprovado',
+              body: `O pagamento do atendimento ${b.id} falhou. Refaça o pagamento para manter o agendamento às ${hora}.`,
+              deeplink: `/agendamento/${b.id}`,
+              priority: 1,
+              idempotencyKey: `notif:payment_failed:client:${b.id}`,
             });
-
-            if (alreadyExists) {
-              this.logger.warn(
-                `[PaymentsService] Entrada de ledger tipo HOLD para o booking ${booking.id} já existe. Ignorando duplicação.`,
-              );
-              return; // Webhook duplicado ou reprocessamento, não cria novas entradas no ledger
-            }
-
-            // 2. Valores: Calcula os valores brutos e de taxa
-            // booking.totalPrice é esperado ser um Prisma.Decimal ou um tipo numérico compatível
-            const grossAmount = new Prisma.Decimal(booking.totalPrice);
-            const feeAmount = grossAmount.mul(0.1); // Calcula 10% de taxa
-            const providerId = booking.provider.userId; // Acessa o userId do provider incluído
-
-            // 3. Ledger: Cria as entradas no ledger
-            await tx.ledgerEntry.createMany({
-              data: [
-                {
-                  userId: providerId,
-                  bookingId: booking.id,
-                  amount: grossAmount,
-                  type: LedgerEntryType.HOLD,
-                  note: `Pagamento bruto recebido (retido)`,
-                },
-                {
-                  userId: providerId,
-                  bookingId: booking.id,
-                  amount: feeAmount.neg(), // A taxa é um débito, então é negativa
-                  type: LedgerEntryType.FEE,
-                  note: `Taxa da plataforma`,
-                },
-              ],
-            });
-            this.logger.log(
-              `[PaymentsService] Entradas de ledger criadas para o booking ${booking.id}.`,
-            );
-            // --- FIM DA IMPLEMENTAÇÃO SEGURA (IDEMPOTENTE) DO LEDGER ---
-          });
-          shouldNotifyPaymentConfirmed = true;
-          bookingForNotification = intent.booking;
-        } else if (intent) {
-          this.logger.log(
-            `[PaymentsService] PaymentIntent ${intent.id} j? estava CONFIRMED; ignorando webhook duplicado.`,
-          );
-
-          return { message: 'Webhook processado com sucesso' };
-        } else {
-          this.logger.warn(
-            `[PaymentsService] Webhook para ref ${externalRef} recebido, mas PaymentIntent nao encontrado.`,
-          );
-        }
-
-        if (bookingIdToConfirm) {
-          try {
-            await this.bookingsService.systemChangeStatus(
-              bookingIdToConfirm,
-              BookingStatus.CONFIRMED,
-            );
-          } catch (err) {
-            this.logger.warn(
-              `[PaymentsService] Falha ao confirmar booking ${bookingIdToConfirm} via BookingsService: ${err?.message || err}`,
-            );
-          } finally {
-            bookingIdToConfirm = null;
           }
         }
       }
-    }
 
-    // Dispara push físico após confirmação de pagamento (cliente e prestador)
-    if (shouldNotifyPaymentConfirmed && bookingForNotification) {
-      const b = bookingForNotification;
-      const hora = formatScheduledTime(b.scheduledTime);
-      const providerName = b.provider?.user?.fullName || 'Prestador';
-      const clientName = b.client?.user?.fullName || 'Cliente';
-      if (b.client?.userId) {
-        await this.queues.addNotificationJob('send-notification', {
-          userId: b.client.userId,
-          kind: 'payment_confirmed',
-          title: 'Pagamento confirmado',
-          body: `Seu serviço com ${providerName} está confirmado para ${hora}.`,
-          deeplink: `/agendamento/${b.id}`,
-          priority: 1,
-          idempotencyKey: `notif:payment_confirmed:client:${b.id}`,
-        });
-      }
-      if (b.provider?.userId) {
-        await this.queues.addNotificationJob('send-notification', {
-          userId: b.provider.userId,
-          kind: 'payment_confirmed',
-          title: 'Novo atendimento confirmado',
-          body: `${clientName || 'Cliente'} confirmou pagamento para ${hora}.`,
-          deeplink: `/agendamento/${b.id}`,
-          priority: 1,
-          idempotencyKey: `notif:payment_confirmed:provider:${b.id}`,
-        });
-      }
-      const clientPhone = b.client?.user?.phone ?? b.client?.phone;
-      if (clientPhone) {
-        const scheduledDate = b.scheduledDate
-          ? new Intl.DateTimeFormat('pt-BR', {
-              day: '2-digit',
-              month: 'long',
-              year: 'numeric',
-            }).format(new Date(b.scheduledDate))
-          : '';
-        const scheduledTime = formatScheduledTime(b.scheduledTime);
-        const scheduleLabel =
-          [scheduledDate, scheduledTime].filter(Boolean).join(' às ') ||
-          'horário agendado';
-        void this.whatsappService.notifyPaymentConfirmed(
-          clientName,
-          scheduleLabel,
-          clientPhone,
-          {
-            bookingId: b.id,
-            status: BookingStatus.CONFIRMED,
-          },
-        );
-      }
-      await this.persistPaymentConfirmedNotification(b);
+      // 3. OK para o PSP
+      return { message: 'Webhook processado com sucesso' };
+    } catch (error: unknown) {
+      const detail =
+        error instanceof Error ? error.message : JSON.stringify(error);
+      this.logger.error(
+        `[PaymentsService] CRITICAL_FINANCIAL_ERROR: Falha no Webhook de Pagamento: ${detail}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw error;
     }
-
-    // Falha de pagamento: marca intent como FAILED e notifica cliente
-    if (failedStatuses.includes(status)) {
-      const externalRef =
-        payload?.data?.id || payload?.resource_id || payload?.transaction?.id;
-      const intent = await this.prisma.paymentIntent.findFirst({
-        where: { externalRef },
-        include: {
-          booking: {
-            include: {
-              client: { include: { user: true } },
-            },
-          },
-        },
-      });
-      if (intent) {
-        if (intent.status !== PaymentIntentStatus.EXPIRED) {
-          await this.prisma.paymentIntent.update({
-            where: { id: intent.id },
-            data: { status: PaymentIntentStatus.EXPIRED },
-          });
-          if (intent.bookingId) {
-            await this.prisma.booking.update({
-              where: { id: intent.bookingId },
-              data: { status: BookingStatus.PENDING },
-            });
-          }
-        }
-        const b = intent.booking;
-        if (b?.client?.userId) {
-          const hora = formatScheduledTime(b.scheduledTime);
-          await this.queues.addNotificationJob('send-notification', {
-            userId: b.client.userId,
-            kind: 'payment_failed',
-            title: 'Pagamento não aprovado',
-            body: `O pagamento do atendimento ${b.id} falhou. Refaça o pagamento para manter o agendamento às ${hora}.`,
-            deeplink: `/agendamento/${b.id}`,
-            priority: 1,
-            idempotencyKey: `notif:payment_failed:client:${b.id}`,
-          });
-        }
-      }
-    }
-
-    // 3. OK para o PSP
-    return { message: 'Webhook processado com sucesso' };
   }
 
   // Função de validação HMAC
@@ -907,11 +917,35 @@ export class PaymentsService {
         referenceId,
         eventReference: referenceId,
       });
-    } catch (err) {
-      this.logger.warn(
-        `[PaymentsService] confirmPixPayment failed for reference ${referenceId}: ${err?.message || err}`,
+    } catch (err: unknown) {
+      const detail = err instanceof Error ? err.message : JSON.stringify(err);
+      this.logger.error(
+        `[PaymentsService] CRITICAL_FINANCIAL_ERROR: Erro ao confirmar PIX reference ${referenceId}: ${detail}`,
+        err instanceof Error ? err.stack : undefined,
+      );
+      throw err;
+    }
+  }
+
+  async forceConfirmPixPayment(referenceId: string) {
+    const trimmedReference = referenceId?.trim();
+    if (!trimmedReference) {
+      throw new BadRequestException(
+        'referenceId é obrigatório para forceConfirmPixPayment.',
       );
     }
+
+    this.logger.log(
+      `[PaymentsService] forceConfirmPixPayment: Forçando confirmação para reference ${trimmedReference}`,
+    );
+    const result = await this.finalizePixPayment({
+      referenceId: trimmedReference,
+      eventReference: trimmedReference,
+    });
+    this.logger.log(
+      `[PaymentsService] forceConfirmPixPayment completado para reference ${trimmedReference}; status atualizada: ${result.didUpdate}`,
+    );
+    return result;
   }
 
   // Admin: listar transações com filtros básicos
@@ -1165,7 +1199,11 @@ export class PaymentsService {
    * Cria um PIX real usando PagBank ORDER API (fluxo oficial).
    * Substitui totalmente o fluxo legado /pix/charges.
    */
-  async createPixCharge(clientUserId: string, dto: CreatePixChargeDto, idempotencyKey?: string): Promise<PixChargeResponseDto> {
+  async createPixCharge(
+    clientUserId: string,
+    dto: CreatePixChargeDto,
+    idempotencyKey?: string,
+  ): Promise<PixChargeResponseDto> {
     const { description, bookingId, providerId } = dto;
 
     if (!providerId) throw new BadRequestException('providerId é obrigatório.');
@@ -1189,7 +1227,9 @@ export class PaymentsService {
       BookingStatus.PENDING_PAYMENT,
     ]);
     if (!pendingStatuses.has(booking.status)) {
-      throw new BadRequestException('Booking não está pendente para pagamento.');
+      throw new BadRequestException(
+        'Booking não está pendente para pagamento.',
+      );
     }
 
     // 2. Idempotência (Evita cobrança duplicada)
@@ -1213,7 +1253,10 @@ export class PaymentsService {
     }
 
     if (!this.pagseguroApiToken || !this.appBaseUrl) {
-      throw new HttpException('PSP not configured', HttpStatus.SERVICE_UNAVAILABLE);
+      throw new HttpException(
+        'PSP not configured',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
 
     const amountCents = Math.round(Number(booking.totalPrice) * 100);
