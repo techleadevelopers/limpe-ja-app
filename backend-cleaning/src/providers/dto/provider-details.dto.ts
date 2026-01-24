@@ -25,6 +25,13 @@ import {
 } from '../providers.service'; // <-- AGORA ProviderWithIncludes É EXPORTADO
 import { ProviderServiceOfferingDto } from './provider-service-offering.dto';
 
+const MARKETING_BADGES = new Set([
+  'PREMIUM',
+  'TOP_RATED',
+  'VERIFIED',
+  'HIGH_VOLUME',
+]);
+
 export class ProviderReviewDto {
   @ApiProperty({ description: 'ID da avaliação', example: 'uuid-da-avaliacao' })
   id: string;
@@ -129,7 +136,7 @@ export class ProviderDetailsDto {
   @IsOptional()
   @IsEnum(ProviderVisibilityStatus)
   visibilityStatus?: ProviderVisibilityStatus;
-  
+
   @ApiPropertyOptional({
     description: 'Motivo registrado para a restricao de visibilidade',
     example: 'Selfie informal',
@@ -137,7 +144,7 @@ export class ProviderDetailsDto {
   @IsOptional()
   @IsString()
   visibilityReason?: string | null;
-  
+
   @ApiPropertyOptional({
     description: 'Data e hora da ultima atualizacao do status de visibilidade',
     example: '2025-01-01T12:00:00.000Z',
@@ -297,8 +304,11 @@ export class ProviderDetailsDto {
     this.averageRating = source.averageRating;
     this.reviewCount = source.reviewCount;
 
-    // NOVO: Badges opcionais
-    this.badges = source.badges;
+    // NOVO: Badges opcionais (filtradas para mostrar apenas marketing)
+    const filteredBadges = (source.badges ?? []).filter((badge) =>
+      MARKETING_BADGES.has(badge),
+    );
+    this.badges = filteredBadges.length > 0 ? filteredBadges : undefined;
 
     // Mapear os serviços oferecidos
     if (source.providerServices) {
