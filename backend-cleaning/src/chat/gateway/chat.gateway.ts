@@ -28,6 +28,8 @@ import { Message } from '../entities/message.entity';
     origin: '*', // Ajuste para a origem do seu frontend em produção
     credentials: true,
   },
+  pingTimeout: 60000,
+  pingInterval: 25000,
   // Adaptação para scaling horizontal com Redis
   // adapter: (() => {
   //   const pubClient = createClient({ host: process.env.REDIS_HOST, port: parseInt(process.env.REDIS_PORT || '6379', 10), password: process.env.REDIS_PASSWORD });
@@ -38,6 +40,9 @@ import { Message } from '../entities/message.entity';
 export class ChatGateway {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(ChatGateway.name);
+  private readonly heartbeatIntervalMs = 25000;
+  private readonly heartbeatGraceMs = 15000;
+  private readonly heartbeatTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly chatService: ChatService,
@@ -47,12 +52,44 @@ export class ChatGateway {
   // Opcional: Lidar com a conexão de um cliente
   handleConnection(client: Socket, ...args: any[]) {
     this.logger.log(`Cliente conectado (WebSocket): ${client.id}`);
-    // O WsAuthGuard já anexa o userId e role ao client.data
+    // O WsAuthGuard j\u00e1 anexa o userId e role ao client.data
+
+    client.data.lastHeartbeatAt = Date.now();
+
+    this.startHeartbeat(client);
   }
 
   // Opcional: Lidar com a desconexão de um cliente
   handleDisconnect(client: Socket) {
     this.logger.log(`Cliente desconectado (WebSocket): ${client.id}`);
+    this.clearHeartbeat(client);
+  }
+
+  private startHeartbeat(client: Socket) {
+    this.clearHeartbeat(client);
+    const heartbeatInterval = setInterval(() => {
+      const lastAck = client.data.lastHeartbeatAt ?? Date.now();
+      if (
+        Date.now() - lastAck >
+        this.heartbeatIntervalMs + this.heartbeatGraceMs
+      ) {
+        this.logger.warn(
+          `[WebSocket] heartbeat timeout para o cliente ${client.id}, desconectando`,
+        );
+        client.disconnect(true);
+        return;
+      }
+      client.emit('heartbeat', { timestamp: Date.now() });
+    }, this.heartbeatIntervalMs);
+    this.heartbeatTimers.set(client.id, heartbeatInterval);
+  }
+
+  private clearHeartbeat(client: Socket) {
+    const timer = this.heartbeatTimers.get(client.id);
+    if (timer) {
+      clearInterval(timer);
+      this.heartbeatTimers.delete(client.id);
+    }
   }
 
   @UseGuards(WsAuthGuard) // Use um guard específico para WebSocket para autenticação
@@ -154,6 +191,12 @@ export class ChatGateway {
         });
       }
     }
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('heartbeatAck')
+  handleHeartbeatAck(@ConnectedSocket() client: Socket) {
+    client.data.lastHeartbeatAt = Date.now();
   }
 
   @UseGuards(WsAuthGuard)
