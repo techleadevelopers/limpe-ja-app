@@ -18,11 +18,11 @@ const MODERATION_PATTERNS: Array<{ regex: RegExp; reason: string }> = [
   },
   {
     regex:
-      /(?:\+?\d{1,3}[\s .()-]*)?(?:\(?\d{2,3}\)?[\s .()-]*)?(?:\d[\s .()-]*){6,}/,
+      /(?:\+?\d{1,3}[\s.():,;*-]*)?(?:\(?\d{2,3}\)?[\s.():,;*-]*)?(?:\d[\s.():,;*-]*){6,}/,
     reason: 'Número de contato detectado na mensagem.',
   },
   {
-    regex: /(?:\d[\s\-\.\(\)\[\]:,;*]*){6,}/,
+    regex: /(?:\d[\s.():,;*-]*){6,}/,
     reason: 'Sequência extensa de dígitos ou tentativa de ofuscação detectada.',
   },
 ];
