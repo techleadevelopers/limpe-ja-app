@@ -107,6 +107,8 @@ export class PricingService {
       scope: string;
       multiplier: number;
     }> = [];
+    let highestImpactRule: PricingRule | null = null;
+    let highestImpactScore = 0;
 
     const context: PricingContext = {
       providerId: dto.providerId,
@@ -152,17 +154,22 @@ export class PricingService {
         scope: this.resolveScope(rule),
         multiplier: Number(ruleMultiplier.toFixed(2)),
       });
+      const impactScore = ruleMultiplier > 1 ? ruleMultiplier : 0;
+      if (impactScore > highestImpactScore) {
+        highestImpactScore = impactScore;
+        highestImpactRule = rule;
+      }
     }
 
     multiplier = Math.min(MULTIPLIER_MAX, Math.max(MULTIPLIER_MIN, multiplier));
 
-    const finalPrice = Number((basePrice * multiplier).toFixed(2));
-    const reason = appliedRules.length
-      ? 'Rules: ' +
-        appliedRules
-          .map((r) => r.scope + ' x' + r.multiplier.toFixed(2))
-          .join(', ')
-      : 'Base price';
+    const finalPrice = Number(
+      new Decimal(basePrice).mul(new Decimal(multiplier)).toFixed(2),
+    );
+    const reason =
+      multiplier > 1 && highestImpactRule
+        ? this.deriveReasonKey(highestImpactRule, demandCount)
+        : 'pricing.reason.base_price';
 
     return {
       originalPrice: basePrice,
@@ -186,12 +193,14 @@ export class PricingService {
         maxMultiplier: maxMultiplier ? new Decimal(maxMultiplier) : null,
       },
     });
+    const snapshotAfter = this.snapshotPricingRule(created);
     const audit: PricingAuditEvent = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       at: new Date().toISOString(),
       actorUserId: actorUserId ?? 'unknown',
       action: 'create',
-      ruleAfter: created,
+      ruleAfter: snapshotAfter,
+      changes: this.buildPricingRuleChanges(null, snapshotAfter),
     };
     await this.settings.appendPricingAudit(audit);
     return created;
@@ -227,13 +236,16 @@ export class PricingService {
           maxMultiplier !== undefined ? new Decimal(maxMultiplier) : undefined,
       },
     });
+    const beforeSnapshot = this.snapshotPricingRule(existingRule);
+    const afterSnapshot = this.snapshotPricingRule(updated);
     const audit: PricingAuditEvent = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       at: new Date().toISOString(),
       actorUserId: actorUserId ?? 'unknown',
       action: 'update',
-      ruleBefore: existingRule,
-      ruleAfter: updated,
+      ruleBefore: beforeSnapshot,
+      ruleAfter: afterSnapshot,
+      changes: this.buildPricingRuleChanges(beforeSnapshot, afterSnapshot),
     };
     await this.settings.appendPricingAudit(audit);
     return updated;
@@ -247,13 +259,15 @@ export class PricingService {
       throw new NotFoundException(`Pricing rule with ID ${id} not found.`);
     }
     const deleted = await this.prisma.pricingRule.delete({ where: { id } });
+    const beforeSnapshot = this.snapshotPricingRule(existingRule);
     const audit: PricingAuditEvent = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       at: new Date().toISOString(),
       actorUserId: actorUserId ?? 'unknown',
       action: 'delete',
-      ruleBefore: existingRule,
+      ruleBefore: beforeSnapshot,
       ruleAfter: null,
+      changes: this.buildPricingRuleChanges(beforeSnapshot, null),
     };
     await this.settings.appendPricingAudit(audit);
     return deleted;
@@ -448,5 +462,114 @@ export class PricingService {
     );
     await this.cacheService.set(key, demand, DEMAND_CACHE_TTL);
     return demand;
+  }
+
+  private snapshotPricingRule(rule: PricingRule | null | undefined) {
+    if (!rule) return null;
+    return {
+      id: rule.id,
+      scope: rule.scope,
+      providerId: rule.providerId,
+      categoryId: rule.categoryId,
+      cityCode: rule.cityCode,
+      zoneId: rule.zoneId,
+      dayOfWeek: rule.dayOfWeek,
+      startTime: rule.startTime,
+      endTime: rule.endTime,
+      activeFrom: rule.activeFrom?.toISOString?.() ?? null,
+      activeTo: rule.activeTo?.toISOString?.() ?? null,
+      demandThreshold: rule.demandThreshold,
+      surgeFactor: this.formatDecimalForSnapshot(rule.surgeFactor),
+      maxMultiplier: this.formatDecimalForSnapshot(rule.maxMultiplier),
+      isActive: rule.isActive,
+      createdAt: rule.createdAt?.toISOString?.() ?? null,
+      updatedAt: rule.updatedAt?.toISOString?.() ?? null,
+    };
+  }
+
+  private buildPricingRuleChanges(
+    before: Record<string, any> | null,
+    after: Record<string, any> | null,
+  ) {
+    const fields = [
+      'scope',
+      'providerId',
+      'categoryId',
+      'cityCode',
+      'zoneId',
+      'dayOfWeek',
+      'startTime',
+      'endTime',
+      'activeFrom',
+      'activeTo',
+      'demandThreshold',
+      'surgeFactor',
+      'maxMultiplier',
+      'isActive',
+    ];
+    const changes: Record<string, { before?: any; after?: any }> = {};
+    for (const field of fields) {
+      const previous = before?.[field];
+      const next = after?.[field];
+      if (previous !== next) {
+        changes[field] = { before: previous ?? null, after: next ?? null };
+      }
+    }
+    return changes;
+  }
+
+  private formatDecimalForSnapshot(
+    value: Decimal | number | null | undefined,
+  ): number | null {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof Decimal) {
+      return Number(value.toFixed(2));
+    }
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) {
+      return null;
+    }
+    return Number(numeric.toFixed(2));
+  }
+
+  private deriveReasonKey(
+    rule: PricingRule,
+    demandCount: number | null,
+  ): string {
+    if (
+      rule.demandThreshold != null &&
+      demandCount != null &&
+      demandCount >= rule.demandThreshold
+    ) {
+      return 'pricing.reason.high_demand';
+    }
+
+    if (rule.zoneId) {
+      const segment = this.sanitizeReasonSegment(rule.zoneId);
+      return segment ? `pricing.reason.zone_${segment}` : 'pricing.reason.surge';
+    }
+
+    const scope = this.resolveScopeValue(rule);
+    switch (scope) {
+      case PricingScope.PROVIDER:
+        return 'pricing.reason.provider_surge';
+      case PricingScope.CITY:
+        return 'pricing.reason.city_surge';
+      case PricingScope.CATEGORY:
+        return 'pricing.reason.category_surge';
+      case PricingScope.GLOBAL:
+      default:
+        return 'pricing.reason.surge';
+    }
+  }
+
+  private sanitizeReasonSegment(value: string): string {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
   }
 }
