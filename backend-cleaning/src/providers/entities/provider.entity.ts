@@ -150,6 +150,12 @@ export class ProviderEntity implements PrismaProvider {
     example: '123****-00',
   })
   pixKeyMasked: string | null;
+ 
+  @ApiProperty({
+    description: 'Prioridade usada para ordenar provedores',
+    example: 0,
+  })
+  sortPriority: number;
 
   // ADICIONADO: ocrResult e livenessResult
   @ApiPropertyOptional({
@@ -215,5 +221,9 @@ export class ProviderEntity implements PrismaProvider {
 
   constructor(partial: Partial<ProviderEntity>) {
     Object.assign(this, partial);
+    this.sortPriority =
+      partial.sortPriority !== undefined && partial.sortPriority !== null
+        ? partial.sortPriority
+        : 0;
   }
 }
