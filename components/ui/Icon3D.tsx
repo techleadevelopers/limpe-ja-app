@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Animated, ImageProps, Pressable } from 'react-native';
+import { Animated, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Icons3D, Icon3DKey } from '../../constants/icons3d';
 
@@ -19,7 +19,7 @@ export default function Icon3D({ name, size = 28, onPress, testID }: Props) {
       Animated.timing(scale, { toValue: 1, duration: 220, useNativeDriver: true }),
       Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
     ]).start();
-  }, []);
+  }, [scale, opacity]);
 
   const handlePressIn = () =>
     Animated.spring(scale, { toValue: 0.96, friction: 4, useNativeDriver: true }).start();
