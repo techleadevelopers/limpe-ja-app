@@ -1,10 +1,21 @@
 import json
+import os
 import re
 import sys
 from pathlib import Path
 from collections import defaultdict
 
 JS_EXT = {".js", ".jsx", ".ts", ".tsx"}
+
+EXCLUDED_DIRS = {
+    "node_modules",
+    "dist",
+    "uploads",
+    "test",
+    ".expo",
+    "docs",
+    "scripts",
+}
 
 # Navegação explícita
 NAV_RE = re.compile(
@@ -39,14 +50,27 @@ def read_text(p: Path) -> str:
     except Exception:
         return ""
 
+def iter_js_files(root: Path):
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [
+            d
+            for d in dirnames
+            if d not in EXCLUDED_DIRS and not d.startswith(".")
+        ]
+        for filename in filenames:
+            if Path(filename).suffix not in JS_EXT:
+                continue
+            yield Path(dirpath) / filename
+
+
 def analyze_components(root: Path):
     nav_calls = []
     literals = defaultdict(list)
     business_rules = []
 
-    for p in root.rglob("*"):
-        if not p.is_file() or p.suffix not in JS_EXT:
-            continue
+    files_scanned = 0
+    for p in iter_js_files(root):
+        files_scanned += 1
 
         text = read_text(p)
         rel = str(p.relative_to(root)).replace("\\", "/")
@@ -74,7 +98,7 @@ def analyze_components(root: Path):
 
     return {
         "components_root": str(root).replace("\\", "/"),
-        "files_scanned": len(list(root.rglob("*"))),
+        "files_scanned": files_scanned,
         "navigation_calls": nav_calls,
         "navigation_literal_targets": dict(literals),
         "ui_business_rule_files": sorted(set(business_rules)),
