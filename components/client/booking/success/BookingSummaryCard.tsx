@@ -94,32 +94,7 @@ export default function BookingSummaryCard({
       AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
           reduceMotionRef.current = enabled;
       });
-  }, []);
-
-  const handleCopyPixQrCode = () => {
-    if (pixChargeDetails?.brCode) {
-      Clipboard.setString(pixChargeDetails.brCode);
-      Toast.show({
-      type: 'info',
-      text1: t('payments.pix.copy_success_title'),
-      text2: t('payments.pix.copy_success_message'),
-      visibilityTime: 4000,
-    });
-      // ✅ Haptics: Feedback tátil no copy (leve, premium)
-      Haptics.selectionAsync();
-      // ✅ A11y: Se reduceMotion, pula qualquer anim interna (se houver)
-      if (!reduceMotionRef.current) {
-          // Aqui você pode adicionar uma micro-animação se quiser, mas mantive simples
-      }
-    } else {
-      Toast.show({
-      type: 'error',
-      text1: t('payments.pix.copy_error_title'),
-      text2: t('payments.pix.copy_error_message'),
-      visibilityTime: 4000,
-    });
-    }
-  };
+  }, [reduceMotionRef]);
 
   return (
     // ✅ FIX: Mudado de Animated.ScrollView para Animated.View (remove aninhado, permite scroll externo fluido)
@@ -250,7 +225,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Bold',
   },
 });
-
 
 
 
