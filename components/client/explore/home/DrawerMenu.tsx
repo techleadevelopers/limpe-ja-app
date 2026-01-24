@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router'; // Importe useRouter
 import React from 'react';
 import {
-    Dimensions,
     Image,
     Platform,
     ScrollView,
@@ -15,8 +14,6 @@ import { useAuth } from '../../../../contexts/AuthContext'; // Importar useAuth 
 
 // Importa a interface UserProfile completa para tipar o 'user' do AuthContext
 import { UserProfile } from '../../../../types/backend/users'; // AJUSTE O CAMINHO CONFORME A ESTRUTURA REAL DO SEU PROJETO
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function DrawerMenu() {
   const { user, signOut } = useAuth() as { user: UserProfile | null; signOut: () => Promise<void> };
