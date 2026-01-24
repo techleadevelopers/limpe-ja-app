@@ -1,7 +1,7 @@
 // components/coupons/CouponWelcomeCard.tsx
 // ================================================
 import React, { useState, useMemo } from 'react';
-import { View, Text, Pressable, Animated, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, Pressable, Animated, useColorScheme } from 'react-native';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Chip from '../../components/common/Chip';
