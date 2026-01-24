@@ -73,6 +73,7 @@ export default function ProofCaptureSheet({
         timestamps: { submittedAt: new Date().toISOString() },
       });
     } catch (submitError) {
+      console.error('Proof capture submit failed', submitError);
       setError('Falha ao enviar comprovante.');
     }
   };
