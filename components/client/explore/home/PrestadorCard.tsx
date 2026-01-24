@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient'; // Adicionado para o efeito de fade na lateral
 import React, { useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Animated, Dimensions, Easing, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AnimatedReanimated, { Keyframe as ReKeyframe } from 'react-native-reanimated';
 import { AppShadows } from '../../../../constants/appStyles'; // Ajuste o caminho conforme necessário
 import { Icons3D } from '../../../../constants/icons3d';
@@ -10,8 +9,6 @@ import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 // Importar os novos formatadores e helpers
 import { AnalyticsService } from '../../../../services/analyticsService';
 import { formatDistance, getNextAvailableDate } from '../../../../utils/formatters';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface PrestadorCardProps {
     item: ProviderDisplayInfo;
@@ -48,8 +45,6 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
-    const { t } = useTranslation();
-    
     // Animação de entrada (fade e slide)
     useEffect(() => {
         Animated.parallel([
@@ -142,10 +137,6 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     }, [item?.id]);
 
     // Efeito premium de aparição (inspirado em slide-in com leve rotate)
-    const hash = (item?.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    const side = (hash % 2 === 0) ? 1 : -1; // direita/esquerda alternado
-    const amp = (hash % 3) + 1; // 1..3
-    const initialRotate = `${side * (5 * amp)}deg`;
     const enteringKF = new ReKeyframe({
         0: { opacity: 0.0001 },
         100: { opacity: 1 },
