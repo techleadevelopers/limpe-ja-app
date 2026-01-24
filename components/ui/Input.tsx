@@ -1,8 +1,7 @@
 // LimpeJaApp/src/components/ui/Input.tsx
 import React from 'react';
-import { TextInput, View, Text, StyleSheet, TextInputProps, TextStyle, ViewStyle } from 'react-native';
+import { TextInput, View, Text, StyleSheet, TextInputProps, TextStyle, ViewStyle, useColorScheme } from 'react-native';
 import Colors from '../../constants/Colors';
-import { useColorScheme } from 'react-native';
 
 interface CustomInputProps extends TextInputProps {
   label?: string;
