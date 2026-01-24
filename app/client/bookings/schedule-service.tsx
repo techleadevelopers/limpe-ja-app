@@ -47,7 +47,7 @@ import { ProviderAvailability, ProviderDisplayInfo, ProviderServiceOffering } fr
 import { UserProfile } from '../../../types/backend/users';
 import { formatBRL } from '../../../utils/formatters';
 
-import axios from 'axios';
+import { isAxiosError } from 'axios';
 import { QuoteStatus, useBookingQuote } from '../../../hooks/useBookingQuote';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { generateDailySlots, TimeSlot } from '../../../utils/timeSlots';
@@ -58,13 +58,6 @@ import {
   normalizeSlotLabel,
   toBrazilDate,
 } from '../../../utils/time';
-
-const makeBrazilDateKey = (date?: Date | null): string | null => {
-  if (!date || Number.isNaN(date.getTime())) {
-    return null;
-  }
-  return formatBrazilDateKey(date);
-};
 import { useCouponValidation } from '../../../utils/useCouponValidation';
 import { normalizeApiError } from '../../_shared/utils/errors';
 
@@ -82,6 +75,13 @@ import VerificationNotice from '../../../components/client/explore/provider/Veri
 
 import { useDevice } from '@/utils/responsive';
 import { AppColors, AppDurations, SCREEN_WIDTH } from '../../../constants/appStyles';
+
+const makeBrazilDateKey = (date?: Date | null): string | null => {
+  if (!date || Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return formatBrazilDateKey(date);
+};
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
@@ -109,7 +109,7 @@ const normalizeBookingError = (error: any, t: TFunction): NormalizedBookingError
   let code = apiError.code;
   let blockAction = apiError.blockAction;
 
-  if (axios.isAxiosError(error)) {
+  if (isAxiosError(error)) {
     const status = error.response?.status;
     if (status === 401 || status === 403) {
       message = t('schedule_service.session_expired', { defaultValue: 'Sua sessão expirou. Faça login novamente.' });
@@ -234,13 +234,6 @@ const SafetyReminderBanner = () => (
   </View>
 );
 
-const SERVICE_OPTIONS = [
-  { id: 'residencial', label: 'Residencial', icon: 'home', set: 'ion' },
-  { id: 'comercial', label: 'Comercial', icon: 'office-building', set: 'mci' },
-  { id: 'escritorio', label: 'Escritório', icon: 'desktop-outline', set: 'ion' },
-  { id: 'pos_obra', label: 'Pós-Obra', icon: 'hammer-wrench', set: 'mci' },
-];
-
 interface BookingSummaryPreviewProps {
   provider: ProviderDisplayInfo | null;
   selectedProviderService: ProviderServiceOffering | null;
@@ -343,7 +336,7 @@ const BookingSummaryPreview = ({
     }
 
     return t('common.na', { defaultValue: 'N/A' });
-  }, [selectedProviderService, durationInMinutes, squareMeters, t]);
+  }, [selectedProviderService, durationInMinutes, t]);
 
   const finalPriceAnim = useRef(new Animated.Value(0)).current;
   const previousFinalPrice = useRef(finalPrice);
@@ -374,18 +367,6 @@ const BookingSummaryPreview = ({
       }),
     ]).start();
   }, [iconAnim, reviewStaggerDelay]);
-
-  const animatedIconStyle = {
-    opacity: iconAnim,
-    transform: [
-      {
-        translateX: iconAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [-10, 0],
-        }),
-      },
-    ],
-  };
 
   const reviewCardAnim = reviewEntranceAnim
     ? {
@@ -526,7 +507,6 @@ const BookingSummaryPreview = ({
     onEditDateTime,
     onEditAddress,
     onEditInsurance,
-    selectedInsuranceId,
     t,
   ]);
 
@@ -757,11 +737,6 @@ export default function ScheduleServiceScreen() {
   const hasAcceptedTerms = Boolean(typedUser?.termsVersion);
   const { isLargePhone } = useDevice();
 
-  const navWrap: StyleProp<ViewStyle> = useMemo(
-    () => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined),
-    [isLargePhone],
-  );
-
   const { providerId, serviceId, servicePrice, couponCode: initialCouponCode } = useLocalSearchParams();
 
   const paramProviderId = Array.isArray(providerId) ? providerId[0] : providerId;
@@ -772,7 +747,7 @@ export default function ScheduleServiceScreen() {
   const [provider, setProvider] = useState<ProviderDisplayInfo | null>(null);
   const [selectedProviderService, setSelectedProviderService] = useState<ProviderServiceOffering | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const debouncedSelectedDate = useDebouncedValue(selectedDate, 250);
+  const debouncedSelectedDate = useDebouncedValue(selectedDate, 500);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const selectedTimeLabel = useMemo(
     () => (selectedTime ? formatTimeFromISO(selectedTime) : null),
@@ -793,7 +768,7 @@ export default function ScheduleServiceScreen() {
 // 1. Estados Principais e de Configuração
   const [notes, setNotes] = useState<string>('');
   const [durationInMinutes, setDurationInMinutes] = useState<number | null>(null);
-  const [squareMeters, setSquareMeters] = useState<number | null>(null);
+  const [squareMeters] = useState<number | null>(null);
   const [insurancePlanId, setInsurancePlanId] = useState<InsurancePlanId | null>(null);
   const [insuranceCatalog, setInsuranceCatalog] = useState<InsurancePlanProposal[] | null>(null);
   const [insuranceCatalogLoading, setInsuranceCatalogLoading] = useState(false);
@@ -806,6 +781,15 @@ export default function ScheduleServiceScreen() {
   const [providerRateLimited, setProviderRateLimited] = useState(false);
   const [providerFetchErrorMessage, setProviderFetchErrorMessage] = useState<string | null>(null);
   const [providerReloadTrigger, setProviderReloadTrigger] = useState(0);
+  const providerFetchTrackerRef = useRef<{
+    providerId: string | null;
+    serviceId: string | null;
+    trigger: number;
+  }>({
+    providerId: null,
+    serviceId: null,
+    trigger: -1,
+  });
 
   // ✅ POSIÇÃO CORRETA: Declarada antes de ser usada em qualquer lugar
   const [displaySlotsInfo, setDisplaySlotsInfo] = useState<TimeSlot[]>([]);
@@ -865,7 +849,6 @@ const availabilityFetchKey = useMemo(() => {
   const [isBooking, setIsBooking] = useState(false);
   const bookingInFlightRef = useRef(false);
   const [isFetchingSlots, setIsFetchingSlots] = useState(false);
-  const isSearchingNextDateRef = useRef(false);
   const [isCancellationOverlayVisible, setCancellationOverlayVisible] = useState(false);
 
   const [currentDisplayMonth, setCurrentDisplayMonth] = useState(new Date());
@@ -895,7 +878,7 @@ const slotStepMinutes = useMemo(() => {
       if (diff > 0 && diff < step) step = diff;
     }
     return step;
-  }, [displaySlotsInfo.length]);
+  }, [displaySlotsInfo]);
 
   const enforcedMinHourlyMinutes = minHourlyMinutes ?? 0;
 
@@ -913,14 +896,12 @@ const slotStepMinutes = useMemo(() => {
 
     const selectedMinutes = selectedSlots.length * slotStepMinutes;
     return Math.max(selectedMinutes, enforcedMinHourlyMinutes);
-  }, [selectedProviderService, selectedSlots.length, slotStepMinutes, enforcedMinHourlyMinutes]);
+  }, [selectedProviderService, selectedSlots, slotStepMinutes, enforcedMinHourlyMinutes]);
 
   const hourlyBlockHours = useMemo(() => 
     hourlyBlockMinutes > 0 ? hourlyBlockMinutes / 60 : 0, 
     [hourlyBlockMinutes]
   );
-  const hasShownTodayAvailableToastRef = useRef(false);
-
   const selectionAnim = useRef(new Animated.Value(1)).current;
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -967,6 +948,7 @@ const slotStepMinutes = useMemo(() => {
   const isMounted = useRef(true);
   const inflightAvailabilityKeyRef = useRef<string | null>(null);
   const lastFetchedAvailabilityKeyRef = useRef<string | null>(null);
+  const availabilityControllerRef = useRef<AbortController | null>(null);
 
   const loadPricingConfig = useCallback(async () => {
     if (!isMounted.current) return;
@@ -989,7 +971,7 @@ const slotStepMinutes = useMemo(() => {
           }),
         );
       }
-    } catch (error) {
+    } catch {
       if (!isMounted.current) return;
       setMinHourlyMinutes(PRICING_CONFIG_FALLBACK_MINUTES);
       setPricingConfigError(t('common.network_error', { defaultValue: 'Erro de rede.' }));
@@ -1089,7 +1071,7 @@ const slotStepMinutes = useMemo(() => {
   });
 
   const quoteLoading = quoteStatus === 'loading' || quoteStatus === 'refreshing';
-  const [rateLimitTick, setRateLimitTick] = useState(0);
+  const [, setRateLimitTick] = useState(0);
   useEffect(() => {
     if (!rateLimitResetAt) {
       setRateLimitTick(0);
@@ -1101,11 +1083,9 @@ const slotStepMinutes = useMemo(() => {
     return () => clearInterval(timer);
   }, [rateLimitResetAt]);
 
-  const rateLimitRemainingSeconds = useMemo(() => {
-    if (!rateLimitResetAt) return 0;
-    const remainingMs = rateLimitResetAt - Date.now();
-    return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0;
-  }, [rateLimitResetAt, rateLimitTick]);
+  const rateLimitRemainingSeconds = rateLimitResetAt
+    ? Math.max(Math.ceil((rateLimitResetAt - Date.now()) / 1000), 0)
+    : 0;
 
   const hourlyBasePrice = useMemo(() => {
     return selectedProviderService?.pricePerHour ?? (paramServicePrice ? Number(paramServicePrice) : 0);
@@ -1143,8 +1123,15 @@ const slotStepMinutes = useMemo(() => {
     );
   const hasCatalogOptions =
     Array.isArray(insuranceCatalog) && insuranceCatalog.length > 0;
-  const insuranceOptionsToRender =
-    insuranceOptions.length > 0 ? insuranceOptions : hasCatalogOptions ? insuranceCatalog! : [];
+  const insuranceOptionsToRender = useMemo(() => {
+    if (insuranceOptions.length > 0) {
+      return insuranceOptions;
+    }
+    if (hasCatalogOptions && insuranceCatalog) {
+      return insuranceCatalog;
+    }
+    return [];
+  }, [insuranceOptions, hasCatalogOptions, insuranceCatalog]);
   const isInsuranceErrorState =
     Boolean(insuranceCatalogError) && !quoteHasOptions && !hasCatalogOptions;
   const insuranceLoading =
@@ -1178,22 +1165,6 @@ const slotStepMinutes = useMemo(() => {
       : fallbackTotalCents;
   const finalCalculatedPrice = Math.max(totalCents, 0) / 100;
   const displayedInsuranceFeeCents = insuranceFeeCents;
-  const reviewInsuranceSnapshot = useMemo<BookingInsuranceSnapshot | null>(() => {
-    if (!selectedInsurancePlan) {
-      return null;
-    }
-
-    return {
-      planId: selectedInsurancePlan.id,
-      priceCents: selectedInsurancePlan.finalPriceCents ?? 0,
-      coverageCents: selectedInsurancePlan.coverageCents,
-      deductibleCents: selectedInsurancePlan.deductibleCents,
-      riskMultiplierBps: selectedInsurancePlan.riskMultiplierBps,
-      proofRequired: selectedInsurancePlan.proofRequired,
-      createdAt: new Date().toISOString(),
-    };
-  }, [selectedInsurancePlan]);
-
   useEffect(() => {
     if (!shouldFetchCatalog || !provider?.id) {
       setInsuranceCatalog(null);
@@ -1273,6 +1244,15 @@ const slotStepMinutes = useMemo(() => {
     setInsuranceCatalogReloadTrigger((prev) => prev + 1);
   }, []);
 
+  const handleApplyCouponCallback = useCallback(
+    async (value: string) => {
+      const normalized = value.trim();
+      setAppliedCouponCode(normalized);
+      setCouponInputValue(normalized);
+    },
+    [setAppliedCouponCode, setCouponInputValue],
+  );
+
   const {
     isApplyingCoupon,
     couponInputAnim,
@@ -1282,12 +1262,14 @@ const slotStepMinutes = useMemo(() => {
     handleApplyCoupon,
   } = useCouponValidation({
     couponValue: couponInputValue,
-    onApplyCoupon: async (value) => {
-      const normalized = value.trim();
-      setAppliedCouponCode(normalized);
-      setCouponInputValue(normalized);
-    },
+    onApplyCoupon: handleApplyCouponCallback,
   });
+
+  const handleApplyCouponRef = useRef(handleApplyCoupon);
+
+  useEffect(() => {
+    handleApplyCouponRef.current = handleApplyCoupon;
+  }, [handleApplyCoupon]);
 
   const priceChangeAnim = useRef(new Animated.Value(0)).current;
   const lastFinalPriceRef = useRef<number>(finalCalculatedPrice);
@@ -1595,7 +1577,6 @@ const handleDaySelect = useCallback(
     prefetchAvailability, 
     scaleAnim, 
     setIsFetchingSlots, 
-    setDisplaySlotsInfo, 
     setSelectedDate, 
     setSelectedTime, 
     setSelectedSlots
@@ -1738,6 +1719,7 @@ const handleDaySelect = useCallback(
     summaryAnim,
     insuranceLoading,
     insuranceOptionsLoaded,
+    TOTAL_STEPS,
   ]);
 
   const handlePreviousStep = useCallback(() => {
@@ -1909,7 +1891,7 @@ const handleDaySelect = useCallback(
       }
 
       if (
-        axios.isAxiosError(error) &&
+        isAxiosError(error) &&
         error.response?.status === 409 &&
         error.response.data?.message === 'PRICE_MISMATCH'
       ) {
@@ -1963,6 +1945,9 @@ const handleDaySelect = useCallback(
     bookingBlockingError,
     shouldBlockBookingRequests,
     isPricingConfigReady,
+    hasAcceptedTerms,
+    insurancePlanId,
+    selectedTimeLabel,
   ]);
 
   useEffect(() => {
@@ -1970,25 +1955,41 @@ const handleDaySelect = useCallback(
       return;
     }
 
-      const loadInitialData = async () => {
-        if (isMounted.current) setIsLoading(true);
-
-      if (!paramProviderId || !paramServiceId || !typedUser?.id) {
-        if (isMounted.current) {
-          NotificationUIService.showError(
-            t('schedule_service.navigation_error_essential_data', { defaultValue: 'Dados essenciais ausentes.' }),
-            t('common.error', { defaultValue: 'Erro' }),
-          );
-          router.replace('/client/explore');
-          setIsLoading(false);
-        }
-        return;
+    if (!paramProviderId || !paramServiceId || !typedUser?.id) {
+      if (isMounted.current) {
+        NotificationUIService.showError(
+          t('schedule_service.navigation_error_essential_data', { defaultValue: 'Dados essenciais ausentes.' }),
+          t('common.error', { defaultValue: 'Erro' }),
+        );
+        router.replace('/client/explore');
+        setIsLoading(false);
       }
+      return;
+    }
 
-        try {
-          void loadPricingConfig();
+    const fetchState = providerFetchTrackerRef.current;
+    const shouldFetch =
+      fetchState.providerId !== paramProviderId ||
+      fetchState.serviceId !== paramServiceId ||
+      fetchState.trigger !== providerReloadTrigger;
 
-          const fetchedProvider = await getProviderDetails(paramProviderId);
+    if (!shouldFetch) {
+      return;
+    }
+
+    providerFetchTrackerRef.current = {
+      providerId: paramProviderId,
+      serviceId: paramServiceId,
+      trigger: providerReloadTrigger,
+    };
+
+    const loadInitialData = async () => {
+      if (isMounted.current) setIsLoading(true);
+
+      try {
+        void loadPricingConfig();
+
+        const fetchedProvider = await getProviderDetails(paramProviderId);
         if (!isMounted.current) return;
 
         setProvider(fetchedProvider);
@@ -2062,7 +2063,9 @@ const handleDaySelect = useCallback(
 
         if (initialCouponCodeString) {
           setTimeout(() => {
-            if (isMounted.current) handleApplyCoupon();
+            if (isMounted.current) {
+              handleApplyCouponRef.current?.();
+            }
           }, 500);
         }
       } catch (error: any) {
@@ -2100,6 +2103,7 @@ const handleDaySelect = useCallback(
     typedUser,
     router,
     prefetchAvailability,
+    loadPricingConfig,
     initialCouponCodeString,
     t,
     providerRateLimited,
@@ -2128,7 +2132,10 @@ const handleDaySelect = useCallback(
     return () => shineAnimation.stop();
   }, [animateShine]);
 
- useEffect(() => {
+useEffect(() => {
+  availabilityControllerRef.current?.abort();
+  availabilityControllerRef.current = null;
+
   // --- 1. TRAVA DE SEGURANÇA INICIAL ---
   // Se a key for nula ou a data for inválida, limpamos e saímos IMEDIATAMENTE.
   if (!availabilityFetchKey || !debouncedSelectedDate || isNaN(debouncedSelectedDate.getTime())) {
@@ -2145,6 +2152,9 @@ const handleDaySelect = useCallback(
     return;
   }
   lastFetchedAvailabilityKeyRef.current = availabilityFetchKey;
+
+  const controller = new AbortController();
+  availabilityControllerRef.current = controller;
 
   let isCancelled = false;
   const fetchKey = availabilityFetchKey;
@@ -2195,12 +2205,15 @@ const handleDaySelect = useCallback(
         }
       }
 
-      if (!backendResponse && provider?.id && !isCancelled) {
-        backendResponse = await fetchAvailabilityWithCooldown(provider.id, dateString);
+      if (!backendResponse && provider?.id && !isCancelled && !controller.signal.aborted) {
+        backendResponse = await fetchAvailabilityWithCooldown(provider.id, dateString, {
+          signal: controller.signal,
+          sharePending: false,
+        });
         availabilityCache.set(cacheKey, { ...backendResponse, timestamp: Date.now() });
       }
 
-      if (!backendResponse || isCancelled) {
+      if (!backendResponse || isCancelled || controller.signal.aborted) {
         if (isMounted.current) setIsFetchingSlots(false);
         return;
       }
@@ -2289,6 +2302,7 @@ const handleDaySelect = useCallback(
 
   return () => {
     isCancelled = true;
+    controller.abort();
   };
 }, [
   availabilityFetchKey,
@@ -2340,21 +2354,13 @@ const handleDaySelect = useCallback(
     selectedProviderService,
     durationInMinutes,
     isBooking,
+    hasAcceptedTerms,
     providerNeedsApproval,
     minHourlySlots,
     quoteLoading,
     isPricingConfigReady,
     shouldBlockBookingRequests,
   ]);
-
-    const selectedHoursLabel = useMemo(() => {
-      if (isHourlyService(selectedProviderService) && hourlyBlockHours > 0) {
-        const formattedHours = formatHourCount(hourlyBlockHours);
-        const labelSuffix = hourlyBlockHours === 1 ? 'hora' : 'horas';
-        return `${formattedHours} ${labelSuffix}`;
-      }
-      return null;
-    }, [selectedProviderService, hourlyBlockHours]);
 
   const selectedSlotRange = useMemo(() => {
     if (!selectedTime || enforcedMinHourlyMinutes <= 0) {
@@ -2487,6 +2493,7 @@ const handleDaySelect = useCallback(
     currentStep,
     scaleAnim,
     fadeAnim,
+    slideUpAnim,
     provider,
     selectedProviderService,
     isLoading,
@@ -3165,7 +3172,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   reviewSectionTitle: {
-    fontSize: Platform.OS === 'android' ? 18 : 17,
+    fontSize: Platform.OS === 'android' ? 15 : 17,
   },
   card: {
     backgroundColor: AppColors.white,
@@ -3249,16 +3256,14 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   premiumSummaryCard: {
-    backgroundColor: '#F9F9F9',
+    backgroundColor: 'transparent',
     borderRadius: 20,
     padding: 16,
     marginHorizontal: 12,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(14, 165, 233, 0.8)',
+    borderStyle: 'dashed',
   },
   premiumSummaryRow: {
     flexDirection: 'row',
@@ -3719,7 +3724,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   premiumReviewTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: AppColors.textBody,
     textAlign: 'center',
