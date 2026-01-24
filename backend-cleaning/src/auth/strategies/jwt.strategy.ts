@@ -34,6 +34,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
+  private readonly safeCacheTtlSeconds = 300;
+  private readonly payloadCacheTtlSeconds = 180;
+  private readonly payloadSuffix = ':payload';
+
   async validate(payload: {
     sub: string;
     email: string;
@@ -52,10 +56,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
     }
 
-    const forceLogoutFlag = await this.cacheService.get<boolean>(
-      this.buildForceLogoutKey(payload.sub),
+    const forceLogoutKey = this.buildForceLogoutKey(payload.sub);
+    const payloadKey = this.buildForceLogoutPayloadKey(payload.sub);
+    const forceLogoutFlag = await this.cacheService.get<true | 'OK'>(
+      forceLogoutKey,
     );
-    if (forceLogoutFlag) {
+    if (forceLogoutFlag === true) {
       this.logger.warn(
         `[JwtStrategy] validate: ${payload.sub} bloqueado por logout forçado`,
       );
@@ -63,6 +69,38 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         message: 'Sessão encerrada por medidas administrativas.',
         code: AuthErrorCode.TOKEN_REVOKED,
       });
+    }
+
+    if (forceLogoutFlag === 'OK') {
+      const cachedPayload = await this.cacheService.get<RequestUserPayload>(
+        payloadKey,
+      );
+      if (cachedPayload) {
+        return cachedPayload;
+      }
+    }
+
+    if (forceLogoutFlag === undefined) {
+      const blockedUntil = await this.getActiveForceLogoutUntil(payload.sub);
+      if (blockedUntil) {
+        const remainingSeconds = Math.max(
+          1,
+          Math.ceil((blockedUntil.getTime() - Date.now()) / 1000),
+        );
+        await this.cacheService.set(forceLogoutKey, true, remainingSeconds);
+        this.logger.warn(
+          `[JwtStrategy] validate: ${payload.sub} bloqueado por logout forçado persistente até ${blockedUntil.toISOString()}`,
+        );
+        throw new UnauthorizedException({
+          message: 'Sessão encerrada por medidas administrativas.',
+          code: AuthErrorCode.TOKEN_REVOKED,
+        });
+      }
+      await this.cacheService.set(
+        forceLogoutKey,
+        'OK',
+        this.safeCacheTtlSeconds,
+      );
     }
 
     let user:
@@ -137,10 +175,45 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     //   `[JwtStrategy] validate: Usuário ${user.email} (ID: ${user.id}) validado com sucesso. Objeto final de req.user: ${JSON.stringify(userPayload)}`
     // );
 
+    await this.cacheService.set(
+      payloadKey,
+      userPayload,
+      this.payloadCacheTtlSeconds,
+    );
+    await this.cacheService.set(
+      forceLogoutKey,
+      'OK',
+      this.safeCacheTtlSeconds,
+    );
     return userPayload;
   }
 
   private buildForceLogoutKey(userId: string): string {
     return `telemetry:force-logout:${userId}`;
+  }
+
+  private buildForceLogoutPayloadKey(userId: string): string {
+    return `${this.buildForceLogoutKey(userId)}${this.payloadSuffix}`;
+  }
+
+  private async getActiveForceLogoutUntil(userId: string): Promise<Date | null> {
+    const record = await this.prisma.telemetryForceLogout.findUnique({
+      where: { userId },
+    });
+    if (!record) {
+      return null;
+    }
+
+    const now = new Date();
+    if (record.forceLogoutUntil > now) {
+      return record.forceLogoutUntil;
+    }
+
+    try {
+      await this.prisma.telemetryForceLogout.delete({ where: { userId } });
+    } catch {
+      // Concurrency or already-removed record; ignore.
+    }
+    return null;
   }
 }
