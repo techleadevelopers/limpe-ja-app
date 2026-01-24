@@ -8,6 +8,7 @@ import type { RedisClientType } from '@redis/client';
 export class CacheService {
   private readonly logger = new Logger(CacheService.name);
   private readonly redisClient?: RedisClientType;
+  private readonly isProduction = process.env.NODE_ENV === 'production';
 
   constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {
     const store = (cacheManager as any)?.store;
@@ -22,9 +23,9 @@ export class CacheService {
     try {
       const value = await this.cacheManager.get<T>(key);
       if (value) {
-        this.logger.debug(`Cache HIT for key: ${key}`);
+        this.logDebug(`Cache HIT for key: ${key}`);
       } else {
-        this.logger.debug(`Cache MISS for key: ${key}`);
+        this.logVerbose(`Cache MISS for key: ${key}`);
       }
       return value;
     } catch (error) {
@@ -44,7 +45,7 @@ export class CacheService {
   async set<T>(key: string, value: T, ttl?: number): Promise<void> {
     try {
       await this.cacheManager.set(key, value, ttl);
-      this.logger.debug(`Cache SET for key: ${key}`);
+      this.logDebug(`Cache SET for key: ${key}`);
     } catch (error) {
       this.logger.error(
         `Erro ao definir no cache para a chave ${key}: ${error.message}`,
@@ -59,7 +60,7 @@ export class CacheService {
   async del(key: string): Promise<void> {
     try {
       await this.cacheManager.del(key);
-      this.logger.debug(`Cache DEL for key: ${key}`);
+      this.logDebug(`Cache DEL for key: ${key}`);
     } catch (error) {
       this.logger.error(
         `Erro ao deletar do cache para a chave ${key}: ${error.message}`,
@@ -118,5 +119,19 @@ export class CacheService {
 
   getRedisClient(): RedisClientType | undefined {
     return this.redisClient;
+  }
+
+  private logDebug(message: string) {
+    if (this.isProduction) {
+      return;
+    }
+    this.logger.debug(message);
+  }
+
+  private logVerbose(message: string) {
+    if (this.isProduction) {
+      return;
+    }
+    this.logger.verbose(message);
   }
 }
