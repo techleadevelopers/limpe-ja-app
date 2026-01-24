@@ -1,6 +1,7 @@
 import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { JwtService } from '@nestjs/jwt';
+import { QueuesService } from '../queues/queues.service';
 import { TelemetryService } from './telemetry.service';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class TelemetryMiddleware implements NestMiddleware {
   constructor(
     private readonly telemetryService: TelemetryService,
     private readonly jwtService: JwtService,
+    private readonly queuesService: QueuesService,
   ) {}
 
   use(req: Request, _res: Response, next: NextFunction): void {
@@ -19,15 +21,7 @@ export class TelemetryMiddleware implements NestMiddleware {
     );
     if (normalized === this.monitoredPath) {
       const userId = this.extractUserId(req);
-      void this.telemetryService
-        .recordRequest(userId, normalized)
-        .catch((error) =>
-          this.logger.error(
-            `[TelemetryMiddleware] Falha ao registrar requisicao: ${
-              (error as Error).message
-            }`,
-          ),
-        );
+      void this.enqueueTelemetry(userId, normalized);
     }
 
     next();
@@ -49,7 +43,7 @@ export class TelemetryMiddleware implements NestMiddleware {
     }
 
     const authHeader =
-      (req.headers?.authorization as string | undefined) ??
+      req.headers?.authorization ??
       (req.headers?.['x-access-token'] as string | undefined);
     const token = this.parseToken(authHeader);
     if (!token) {
@@ -74,5 +68,33 @@ export class TelemetryMiddleware implements NestMiddleware {
     return header.startsWith('Bearer ')
       ? header.slice(7).trim()
       : header.trim();
+  }
+
+  private async enqueueTelemetry(
+    userId: string | undefined,
+    normalizedPath: string,
+  ): Promise<void> {
+    const payload = { userId, path: normalizedPath };
+    try {
+      await this.queuesService.addJob('telemetry', payload);
+      this.logger.debug(
+        `[TelemetryMiddleware] Telemetry job enfileirado para ${userId} ${normalizedPath}`,
+      );
+    } catch (queueError) {
+      this.logger.warn(
+        `[TelemetryMiddleware] Falha ao enfileirar telemetria: ${
+          (queueError as Error).message
+        }, executando fallback inline.`,
+      );
+      try {
+        await this.telemetryService.recordRequest(userId, normalizedPath);
+      } catch (fallbackError) {
+        this.logger.error(
+          `[TelemetryMiddleware] Falha no fallback de telemetria: ${
+            (fallbackError as Error).message
+          }`,
+        );
+      }
+    }
   }
 }
