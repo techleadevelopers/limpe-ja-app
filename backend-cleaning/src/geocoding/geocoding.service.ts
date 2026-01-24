@@ -1,20 +1,28 @@
 // src/geocoding/geocoding.service.ts
-import {
-  Injectable,
-  Logger,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import { CacheService } from '../cache/cache.service';
 import { GeocodeResponseDto } from './dto/geocode-response.dto';
+
+const CACHE_PREFIX = 'geocode:address:';
+const CIRCUIT_BREAKER_KEY = 'geocode:circuit:google';
+const DEFAULT_CACHE_TTL_SECONDS = 5 * 60; // 5 minutos
+const DEFAULT_BREAKER_TTL_SECONDS = 10 * 60; // 10 minutos
+const CIRCUITABLE_STATUSES = new Set(['OVER_QUERY_LIMIT', 'REQUEST_DENIED']);
 
 @Injectable()
 export class GeocodingService {
   private readonly logger = new Logger(GeocodingService.name);
   private readonly googleMapsApiKey: string;
   private readonly googleMapsGeocodingApiUrl: string;
+  private readonly cacheTtlSeconds: number;
+  private readonly breakerTtlSeconds: number;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private cacheService: CacheService,
+  ) {
     this.googleMapsApiKey = this.configService.get<string>(
       'GOOGLE_MAPS_API_KEY',
     );
@@ -22,72 +30,158 @@ export class GeocodingService {
       'GOOGLE_MAPS_GEOCODING_API_URL',
       'https://maps.googleapis.com/maps/api/geocode/json',
     );
+    this.cacheTtlSeconds = this.parseTtl(
+      'GEOCODING_CACHE_TTL_SECONDS',
+      DEFAULT_CACHE_TTL_SECONDS,
+    );
+    this.breakerTtlSeconds = this.parseTtl(
+      'GEOCODING_BREAKER_TTL_SECONDS',
+      DEFAULT_BREAKER_TTL_SECONDS,
+    );
 
     if (!this.googleMapsApiKey) {
       this.logger.warn(
-        'GOOGLE_MAPS_API_KEY não está configurada. A geocodificação de endereços pode não funcionar.',
+        'GOOGLE_MAPS_API_KEY não está configurada. Os endereços serão aceitos apenas com fallback de cidade.',
       );
     }
+  }
+
+  private parseTtl(key: string, fallback: number): number {
+    const value =
+      this.configService.get<number>(key) ??
+      Number(this.configService.get<string>(key));
+    if (!value || Number.isNaN(value) || value <= 0) {
+      return fallback;
+    }
+    return value;
+  }
+
+  private normalizeAddress(address: string): string | null {
+    if (!address) {
+      return null;
+    }
+    return address.trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  private buildCacheKey(normalizedAddress: string): string {
+    return `${CACHE_PREFIX}${normalizedAddress}`;
+  }
+
+  private async isCircuitOpen(): Promise<boolean> {
+    return !!(await this.cacheService.get<boolean>(CIRCUIT_BREAKER_KEY));
+  }
+
+  private async tripCircuit(reason: string) {
+    this.logger.warn(`Circuit breaker ativado para geocoding: ${reason}`);
+    await this.cacheService.set(
+      CIRCUIT_BREAKER_KEY,
+      true,
+      this.breakerTtlSeconds,
+    );
+  }
+
+  private shouldTripDueToStatus(status?: string): boolean {
+    return !!status && CIRCUITABLE_STATUSES.has(status);
+  }
+
+  private shouldTripDueToHttpCode(statusCode?: number): boolean {
+    return statusCode === 429 || statusCode === 403 || statusCode === 401;
   }
 
   /**
    * Converte um endereço legível por humanos em coordenadas de latitude e longitude.
    * @param address O endereço a ser geocodificado (ex: "Rua Exemplo, 123, São Paulo").
-   * @returns Um objeto com latitude e longitude, ou null se não for encontrado.
+   * @returns Um objeto com latitude e longitude, ou null se não for encontrado ou se o circuito estiver aberto.
    */
   async geocodeAddress(address: string): Promise<GeocodeResponseDto | null> {
+    const normalized = this.normalizeAddress(address);
+    if (!normalized) {
+      return null;
+    }
+
+    if (await this.isCircuitOpen()) {
+      this.logger.warn(
+        `Circuit breaker ativo para geocode; pulando tentativa para "${address}"`,
+      );
+      return null;
+    }
+
+    const cacheKey = this.buildCacheKey(normalized);
+    const cached = await this.cacheService.get<GeocodeResponseDto>(cacheKey);
+    if (cached) {
+      this.logger.verbose(`Cache GEOCODE HIT (${cacheKey})`);
+      return cached;
+    }
+
     if (!this.googleMapsApiKey) {
-      this.logger.error(
-        'Não é possível geocodificar o endereço: GOOGLE_MAPS_API_KEY não está configurada.',
+      this.logger.warn(
+        'Sem API key configurada, pulando chamada ao Google Maps (fallback para cidade).',
       );
-      throw new InternalServerErrorException(
-        'Serviço de geocodificação não configurado.',
-      );
+      return null;
     }
 
     try {
       this.logger.log(`Geocodificando endereço: ${address}`);
       const response = await axios.get(this.googleMapsGeocodingApiUrl, {
         params: {
-          address: address,
+          address,
           key: this.googleMapsApiKey,
         },
+        timeout: 8000,
       });
 
-      if (response.data.status === 'OK' && response.data.results.length > 0) {
+      const status: string = response.data?.status;
+      if (status === 'OK' && response.data.results.length > 0) {
         const location = response.data.results[0].geometry.location;
         this.logger.log(
           `Endereço geocodificado: Lat ${location.lat}, Lng ${location.lng}`,
         );
-        return {
+        const payload: GeocodeResponseDto = {
           latitude: location.lat,
           longitude: location.lng,
         };
-      } else if (response.data.status === 'ZERO_RESULTS') {
-        this.logger.warn(
-          `Nenhum resultado encontrado para o endereço: ${address}`,
-        );
+        await this.cacheService.set(cacheKey, payload, this.cacheTtlSeconds);
+        return payload;
+      }
+
+      if (status === 'ZERO_RESULTS') {
+        this.logger.warn(`Nenhum resultado para o endereço: ${address}`);
         return null;
+      }
+
+      if (this.shouldTripDueToStatus(status)) {
+        await this.tripCircuit(status);
+        return null;
+      }
+
+      this.logger.error(
+        `Resposta inesperada da API de geocoding (${status}) para: ${address}`,
+      );
+      return null;
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      if (axios.isAxiosError(axiosError)) {
+        const statusCode = axiosError.response?.status;
+        const errorData = axiosError.response?.data;
+        this.logger.error(
+          `Erro na API de geocodificação (${statusCode}) para ${address}: ${axiosError.message}`,
+        );
+        if (errorData) {
+          this.logger.debug(
+            `Payload de erro do Google: ${JSON.stringify(errorData)}`,
+          );
+        }
+
+        if (this.shouldTripDueToHttpCode(statusCode)) {
+          await this.tripCircuit(`HTTP ${statusCode}`);
+          return null;
+        }
       } else {
         this.logger.error(
-          `Erro na API de geocodificação para ${address}: ${response.data.status} - ${response.data.error_message || 'Erro desconhecido'}`,
-        );
-        throw new InternalServerErrorException(
-          `Falha ao geocodificar endereço: ${response.data.status}`,
+          `Erro inesperado ao geocodificar ${address}: ${(error as Error).message}`,
         );
       }
-    } catch (error) {
-      this.logger.error(
-        `Erro ao chamar a API de geocodificação para ${address}: ${error.message}`,
-      );
-      if (axios.isAxiosError(error) && error.response) {
-        this.logger.error(
-          `Detalhes do erro da API: ${JSON.stringify(error.response.data)}`,
-        );
-      }
-      throw new InternalServerErrorException(
-        'Erro ao se comunicar com o serviço de geocodificação.',
-      );
+      return null;
     }
   }
 
