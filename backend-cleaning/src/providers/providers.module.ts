@@ -14,6 +14,7 @@ import { EarningsModule } from '../earnings/earnings.module';
 import { ProviderPromotionsService } from './provider-promotions.service';
 import { AvailabilityModule } from '../availability/availability.module';
 import { ComplianceModule } from '../compliance/compliance.module';
+import { GeocodingModule } from '../geocoding/geocoding.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ComplianceModule } from '../compliance/compliance.module';
     forwardRef(() => UsersModule),
     forwardRef(() => VerificationModule),
     CacheModule,
+    GeocodingModule,
     DocumentProcessingModule,
     SettingsModule,
     ComplianceModule,
