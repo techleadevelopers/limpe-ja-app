@@ -62,8 +62,6 @@ function RecommendationsSection({ reviews }: { reviews?: ProviderReview[] }) {
   const displayed = (reviews ?? []).slice(0, 5);
   const remainingCount = Math.max((reviews?.length ?? 0) - displayed.length, 0);
 
-  const { t } = useTranslation();
-
   const renderAvatarContent = (review: ProviderReview) => {
     const avatarUrl = review.client?.user?.avatarUrl;
     if (!avatarUrl) {
@@ -176,6 +174,42 @@ function dedupeReviews(reviews?: ProviderReview[]) {
     return true;
   });
 }
+
+const sanitizeProviderOffers = (rawOffers?: Offer[]): Offer[] => {
+  const offersArray = Array.isArray(rawOffers) ? rawOffers : [];
+  return offersArray.filter((offer) => {
+    if (
+      !offer ||
+      typeof offer !== 'object' ||
+      !offer.title ||
+      !offer.id ||
+      typeof offer.discountValue !== 'number'
+    ) {
+      if (__DEV__) {
+        console.warn('[ProviderDetailsScreen] Offer inválido filtrado (silencioso):', offer);
+      }
+      return false;
+    }
+
+    if (offer.description) {
+      const desc = offer.description.toLowerCase();
+      if (
+        desc.includes('erro') ||
+        desc.includes('cannot') ||
+        desc.includes('get') ||
+        desc.includes('active-chat') ||
+        offer.description.length > 100
+      ) {
+        if (__DEV__) {
+          console.warn('[ProviderDetailsScreen] Offer inválido filtrado (silencioso):', offer);
+        }
+        return false;
+      }
+    }
+
+    return true;
+  });
+};
 
 const SecurityBanner: React.FC<{ onPress: () => void }> = ({ onPress }) => (
   <View style={securityBannerStyles.container}>
@@ -290,13 +324,14 @@ export default function ProviderDetailsScreen() {
   const { t } = useTranslation();
 
   const [provider, setProvider] = useState<ProviderDisplayInfoWithStatus | null | undefined>(undefined);
-  const [providerOffers, setProviderOffers] = useState<Offer[]>([]);
+  const [, setProviderOffers] = useState<Offer[]>([]);
+  const [, setOffersLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [canInitiateChat, setCanInitiateChat] = useState(false);
+  const [, setCanInitiateChat] = useState(false);
   const [activeBookingId, setActiveBookingId] = useState<string | undefined>(undefined);
   // Local state for retry (to force useEffect)
-  const [tempProviderId, setTempProviderId] = useState<string | undefined>(providerId as string);
+  const [tempProviderId] = useState<string | undefined>(providerId as string);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   const mainContentAnim = useRef(new Animated.Value(0)).current;
@@ -305,11 +340,6 @@ export default function ProviderDetailsScreen() {
   const imageScaleAnim = useRef(new Animated.Value(0.8)).current;
   const infoChipAnim = useRef(new Animated.Value(0)).current;
   const addReviewButtonPulseAnim = useRef(new Animated.Value(1)).current;
-
-  const callButtonAnim = useRef(new Animated.Value(1)).current;
-  const chatButtonAnim = useRef(new Animated.Value(1)).current;
-  const mapButtonAnim = useRef(new Animated.Value(1)).current;
-  const shareButtonAnim = useRef(new Animated.Value(1)).current;
 
   // Adicionado ref para verificar se o componente está montado
   const isMounted = useRef(true);
@@ -355,119 +385,78 @@ export default function ProviderDetailsScreen() {
       );
       pulseLoop.start();
 
-      // MELHORIA: Usar Promise.allSettled para falhas parciais (ex.: offers falha, mas provider carrega)
-      Promise.allSettled([
-        getProviderDetails(tempProviderId),
-        getProviderOffers(tempProviderId),
-      ]).then(async (results) => {
-        if (!isMounted.current) return; // Verifica se o componente ainda está montado
-
-        const [providerResult, offersResult] = results;
-
-        
-
-        // Provider details - CORRECAO TS: Type guard para 'rejected'
-        let finalProviderData: ProviderDisplayInfoWithStatus | null = null;
-        if (providerResult.status === 'fulfilled' && providerResult.value) {
-          const distance = Number.isFinite(paramDistance)
-            ? paramDistance
-            : providerResult.value?.distance ?? null;
-          finalProviderData = { ...providerResult.value, distance };
-
-          const rawReviews = providerResult.value.reviews ?? [];
-          finalProviderData.reviews = dedupeReviews(rawReviews);
-        } else {
-          // CORREÇÃO TS: Só acessa reason se for 'rejected'
-          if (__DEV__) {
-            if (providerResult.status === 'rejected') {
-              console.warn(
-                '[ProviderDetailsScreen] Falha ao carregar provider (silencioso):',
-                (providerResult as PromiseRejectedResult).reason
-              );
-            } else {
-              console.warn(
-                '[ProviderDetailsScreen] Provider carregado mas inválido (valor falsy, silencioso)'
-              );
-            }
-          }
-          finalProviderData = null;
-        }
-
-        // Provider offers - MELHORIA: Filtrar erros/inválidos + CORREÇÃO TS
-        let offersData: Offer[] = [];
-        if (offersResult.status === 'fulfilled') {
-          const rawOffers = offersResult.value || [];
-          // Filtro premium AGRESSIVO: Pular offers com dados de erro (ex.: description com "erro", "cannot", "get", "active-chat" ou strings longas)
-          offersData = rawOffers.filter((offer) => {
-            if (
-              !offer ||
-              typeof offer !== 'object' ||
-              !offer.title ||
-              !offer.id ||
-              (offer.description && (
-                offer.description.toLowerCase().includes('erro') ||
-                offer.description.toLowerCase().includes('cannot') ||
-                offer.description.toLowerCase().includes('get') ||
-                offer.description.toLowerCase().includes('active-chat') ||
-                offer.description.length > 100  // Erros são longos, offers curtas
-              )) ||
-              typeof offer.discountValue !== 'number'  // Desconto deve ser número
-            ) {
-              if (__DEV__) {
-                console.warn('[ProviderDetailsScreen] Offer inválido filtrado (silencioso):', offer);
-              }
-              return false;
-            }
-            return true;
-          });
-        } else {
+      const loadOffersForProvider = async (provId: string) => {
+        if (!isMounted.current) return;
+        setOffersLoading(true);
+        try {
+          const rawOffers = await getProviderOffers(provId);
+          if (!isMounted.current) return;
+          setProviderOffers(sanitizeProviderOffers(rawOffers));
+        } catch (offersError) {
           if (__DEV__) {
-            if (offersResult.status === 'rejected') {
-              console.warn(
-                '[ProviderDetailsScreen] Falha ao carregar offers (silencioso, usa []):',
-                (offersResult as PromiseRejectedResult).reason
-              );
-            } else {
-              console.warn('[ProviderDetailsScreen] Offers carregado mas inválido (silencioso)');
-            }
+            console.warn(
+              '[ProviderDetailsScreen] Falha ao carregar offers (silencioso, usa []):',
+              offersError,
+            );
           }
-          offersData = []; // Silencioso: Não mostra seção se vazia
+          if (isMounted.current) {
+            setProviderOffers([]);
+          }
+        } finally {
+          if (isMounted.current) {
+            setOffersLoading(false);
+          }
         }
+      };
 
-        setProvider(finalProviderData);
-        setProviderOffers(offersData);
+      const loadProviderData = async () => {
+        try {
+          const providerResult = await getProviderDetails(tempProviderId);
+          if (!isMounted.current) return;
 
-        if (!finalProviderData) {
-          setError(t('provider_details.provider_not_found_friendly', { providerId: tempProviderId }));
-        } else {
-         // Chat check - MELHORIA: Try-catch ainda mais isolado e silencioso (SEM ALERT)
-if (isAuthenticated && user?.id) {
-  (async () => {
-    try {
-      const chatBookingStatus = await checkActiveChatBooking(
-        user.id,
-        finalProviderData.id
-      );
-      if (!isMounted.current) return;
-      setCanInitiateChat(chatBookingStatus.canChat);
-      setActiveBookingId(chatBookingStatus.bookingId);
-      if (__DEV__) {
-        console.log(`[ProviderDetailsScreen] Chat OK: ${chatBookingStatus.canChat}`);
-      }
-    } catch (chatError) {
-      // TOTALMENTE SILENCIOSO: Não loga nada em prod, só desabilita chat (SEM ALERT)
-      // REFORÇO: Como o service não throw mais, isso é redundante, mas mantém para safety
-      if (__DEV__) {
-        console.warn('[ProviderDetailsScreen] Chat check falhou (silencioso, do service fallback):', chatError);
-      }
-      setCanInitiateChat(false);
-      setActiveBookingId(undefined);
-      // NÃO MOSTRA NADA AO USUÁRIO AQUI - só no handleChatPress se tentar usar
-    }
-  })();
-}
+          let finalProviderData: ProviderDisplayInfoWithStatus | null = null;
+          if (providerResult) {
+            const distance = Number.isFinite(paramDistance)
+              ? paramDistance
+              : providerResult?.distance ?? null;
+            finalProviderData = { ...providerResult, distance };
+            const rawReviews = providerResult.reviews ?? [];
+            finalProviderData.reviews = dedupeReviews(rawReviews);
+          }
 
-          // Animações só se provider carregou
+          if (!finalProviderData) {
+            setProvider(null);
+            setError(t('provider_details.provider_not_found_friendly', { providerId: tempProviderId }));
+            return;
+          }
+
+          setProvider(finalProviderData);
+          setProviderOffers([]);
+          void loadOffersForProvider(tempProviderId);
+
+          if (isAuthenticated && user?.id) {
+            (async () => {
+              try {
+                const chatBookingStatus = await checkActiveChatBooking(user.id, finalProviderData.id);
+                if (!isMounted.current) return;
+                setCanInitiateChat(chatBookingStatus.canChat);
+                setActiveBookingId(chatBookingStatus.bookingId);
+                if (__DEV__) {
+                  console.log(`[ProviderDetailsScreen] Chat OK: ${chatBookingStatus.canChat}`);
+                }
+              } catch (chatError) {
+                if (__DEV__) {
+                  console.warn(
+                    '[ProviderDetailsScreen] Chat check falhou (silencioso, do service fallback):',
+                    chatError,
+                  );
+                }
+                setCanInitiateChat(false);
+                setActiveBookingId(undefined);
+              }
+            })();
+          }
+
           Animated.parallel([
             Animated.timing(imageFadeAnim, {
               toValue: 1,
@@ -503,24 +492,38 @@ if (isAuthenticated && user?.id) {
               }),
             ]),
           ]).start();
-        }
-      })
-      .catch((err) => {
-        // CATCH GERAL (raro com allSettled, mas para unhandled) - SILENCIOSO
-        if (__DEV__) {
-          console.error("[ProviderDetailsScreen] Erro geral (silencioso):", err);
-        }
-        if (isMounted.current) {
+        } catch (error: any) {
+          if (!isMounted.current) return;
+          const normalized = normalizeApiError(error);
+          if (normalized.blockAction) {
+            const blockMessage =
+              normalized.code === 'RATE_LIMITED'
+                ? t('schedule_service.provider_rate_limited', {
+                    defaultValue:
+                      'Você atingiu o limite de requisições para obter detalhes deste prestador. Aguarde alguns segundos e tente novamente.',
+                  })
+                : normalized.messageHuman;
+            setProviderFetchErrorMessage(blockMessage);
+            setProviderRateLimited(true);
+            NotificationUIService.showError(blockMessage, t('common.error', { defaultValue: 'Erro' }));
+            return;
+          }
+          NotificationUIService.showError(
+            error.response?.data?.message || t('common.network_error', { defaultValue: 'Erro de rede.' }),
+            t('common.error', { defaultValue: 'Erro' }),
+          );
           setError(t('provider_details.error_loading_details_friendly'));
           setProvider(null);
           setProviderOffers([]);
+          router.replace('/client/explore');
+        } finally {
+          if (isMounted.current) {
+            setIsLoading(false);
+          }
         }
-      })
-      .finally(() => {
-        if (isMounted.current) {
-          setIsLoading(false);
-        }
-      });
+      };
+
+      loadProviderData();
     } else {
       if (isMounted.current) {
         setError(t('provider_details.invalid_professional_id_friendly'));
@@ -602,47 +605,6 @@ if (isAuthenticated && user?.id) {
     [router, requireAuthOrRedirect]
   );
 
-  const handleChatPress = () => {
-    if (!requireAuthOrRedirect('chat')) {
-      return;
-    }
-    if (provider && user && activeBookingId) {
-        router.push({
-          pathname: '/client/messages/[bookingId]',
-          params: {
-            bookingId: activeBookingId,
-            recipientName: provider.fullName,
-            recipientId: provider.id,
-            recipientAvatarUrl: provider.avatarUrl,
-          },
-        } as any);
-      } else {
-      // Mensagem AMIGÁVEL e só se o usuário clicar (não automática) - USE TOAST, NÃO ALERT
-      NotificationUIService.showInfo(
-        t('provider_details.chat_unavailable_message_friendly', {
-          providerName: provider?.fullName || 'o profissional',
-        }),
-        t('provider_details.chat_unavailable_title_friendly')
-      );
-    }
-  };
-
-  const handleActionButtonPressIn = (animValue: Animated.Value) => {
-    Animated.spring(animValue, {
-      toValue: 0.9,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleActionButtonPressOut = (animValue: Animated.Value) => {
-    Animated.spring(animValue, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
-
   const isServiceAvailable = (service?: ProviderServiceOffering) =>
     Boolean(service && getNumericPriceValue(service) > 0 && !service.needsReview);
 
@@ -709,7 +671,6 @@ if (isAuthenticated && user?.id) {
   const bookableService = provider.providerServices?.find(isServiceAvailable);
   const primaryService = bookableService ?? provider.providerServices?.[0];
   const isPrimaryServiceValid = isServiceAvailable(primaryService);
-  const firstProviderServiceOfferingId = bookableService?.id;
   const estimatedTotalPrice =
     isPrimaryServiceValid && primaryService?.durationMinutes
       ? formatBRL((primaryService.pricePerHour ?? 0) * computeBillableHours(primaryService.durationMinutes))
@@ -1157,14 +1118,18 @@ if (isAuthenticated && user?.id) {
         </Animated.View>
       </ScrollView>
       {bookableService ? (
-        <BookServiceButton
-          providerId={provider.id}
-          serviceId={bookableService.id}
-          router={guardedRouter}
-          bookNowButtonAnim={bookNowButtonAnim}
-          servicePrice={bookableService.pricePerHour}
-          sticky
-          safeBottomInset={Platform.OS === 'ios' ? insets.bottom : 35}
+      <BookServiceButton
+        providerId={provider.id}
+        serviceId={bookableService.id}
+        router={guardedRouter}
+        bookNowButtonAnim={bookNowButtonAnim}
+        servicePrice={bookableService.pricePerHour}
+      serviceDurationMinutes={(() => {
+        const candidate = bookableService.durationMinutes ?? primaryService?.durationMinutes;
+        return typeof candidate === 'number' ? candidate : undefined;
+      })()}
+        sticky
+        safeBottomInset={Platform.OS === 'ios' ? insets.bottom : 35}
           isAuthenticated={isAuthenticated}
           requireAuthOrRedirect={requireAuthOrRedirect}
           verificationStatus={provider.verificationStatus}
