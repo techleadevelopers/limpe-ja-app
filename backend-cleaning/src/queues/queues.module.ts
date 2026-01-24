@@ -1,4 +1,4 @@
-import { HttpModule } from '@nestjs/axios';
+﻿import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bull';
 import { Module, forwardRef } from '@nestjs/common';
 import { DisputeModule } from '../disputes/dispute.module';
@@ -14,7 +14,12 @@ import { PayoutWorker } from './workers/payout.worker';
 import { PayoutsModule } from '../payouts/payouts.module';
 import { NotificationWorker } from './workers/notification.worker';
 import { VerificationWorker } from './workers/verification.worker';
-// ✅ importe seu módulo de i18n
+import { TelemetryWorker } from './workers/telemetry.worker';
+import { SafetyAlertWorker } from './workers/safety-alert.worker';
+import { TelemetryModule } from '../telemetry/telemetry.module';
+import { EmailModule } from '../email/email.module';
+import { SmsModule } from '../sms/sms.module';
+// âœ… importe seu módulo de i18n
 import { I18nModule } from '../common/i18n/i18n.module';
 import { RedisLockModule } from '../common/locks/redis-lock.module';
 
@@ -44,17 +49,22 @@ import { RedisLockModule } from '../common/locks/redis-lock.module';
       { name: 'emails' }, // FIX: Adicionada a fila 'emails'
       { name: 'support-escalations' }, // <-- ADICIONADO: Registro da fila de escalonamento de suporte
       { name: 'payouts' },
+      { name: 'telemetry' },
+      { name: 'safety-alerts-queue' },
     ),
     PrismaModule,
     HttpModule,
     forwardRef(() => ProvidersModule),
     DocumentProcessingModule,
     NotificationsModule,
+    EmailModule,
+    SmsModule,
     forwardRef(() => VerificationModule),
     forwardRef(() => SubscriptionsModule),
     forwardRef(() => DisputeModule),
     forwardRef(() => PayoutsModule),
-    I18nModule, // ✅ garante I18nService aqui também
+    forwardRef(() => TelemetryModule),
+    I18nModule, // âœ… garante I18nService aqui tambÃ©m
     RedisLockModule,
   ],
   controllers: [],
@@ -64,7 +74,14 @@ import { RedisLockModule } from '../common/locks/redis-lock.module';
     NotificationWorker,
     DisputeWorker,
     PayoutWorker,
+    TelemetryWorker,
+    SafetyAlertWorker,
   ],
   exports: [QueuesService, BullModule],
 })
 export class QueuesModule {}
+
+
+
+
+
