@@ -2,7 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View, Image } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { styles } from '../../../../styles/providerStyles';
 import { VerificationStatus } from '../../../../types/backend/auth';
 import { ProviderDisplayInfo, ProviderReview } from '../../../../types/backend/providers';
