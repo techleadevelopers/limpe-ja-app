@@ -10,27 +10,40 @@ import {
   LoyaltyTransaction,
   LoyaltyTransactionType,
 } from '@prisma/client';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
+import { ObservabilityService } from '../observability/observability.service';
 import { AddPointsDto } from './dto/add-points.dto';
 import { RedeemPointsDto } from './dto/redeem-points.dto';
 import { CouponsService } from '../coupons/coupons.service';
 import { NotificationService } from '../services/NotificationService';
 
+const DAILY_LIMITS: Partial<Record<LoyaltyTransactionType, number>> = {
+  [LoyaltyTransactionType.REVIEW_SUBMITTED]: 500,
+  [LoyaltyTransactionType.SERVICE_COMPLETED]: 800,
+  [LoyaltyTransactionType.REFERRAL]: 1000,
+};
+
 @Injectable()
 export class LoyaltyService {
   private readonly logger = new Logger(LoyaltyService.name);
+  private readonly POINT_EXPIRATION_DAYS = 180;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly couponsService: CouponsService,
     private readonly notificationService: NotificationService,
+    private readonly observabilityService: ObservabilityService,
   ) {}
 
   /**
    * Adiciona pontos ao saldo de fidelidade de um usuário e registra a transação.
    * Aplica multiplicadores de gamificação (Tier, Streak, NPS/Review).
    */
-  async addPoints(dto: AddPointsDto): Promise<number> {
+  async addPoints(
+    dto: AddPointsDto,
+    options?: { prisma?: Prisma.TransactionClient },
+  ): Promise<number> {
     const { userId, points, type, referenceId } = dto;
 
     if (!userId) throw new BadRequestException('userId é obrigatório.');
@@ -70,7 +83,19 @@ export class LoyaltyService {
     // --- Fim da Lógica de Multiplicadores ---
 
     // Idempotente: evita duplicar pontos para mesma combinação userId+type+referenceId
-    const currentBalance = await this.prisma.$transaction(async (tx) => {
+    const transactionClient = options?.prisma;
+    const runInTransaction = async (
+      action: (tx: Prisma.TransactionClient) => Promise<number>,
+    ) => {
+      if (transactionClient) {
+        return action(transactionClient);
+      }
+      return this.prisma.$transaction(action);
+    };
+
+    const currentBalance = await runInTransaction(async (tx) => {
+      await this.enforceDailyLimit(tx, userId, type, finalPoints);
+
       const alreadyExists = await tx.loyaltyTransaction.findUnique({
         where: {
           userId_type_referenceId: {
@@ -269,7 +294,9 @@ export class LoyaltyService {
   async getUserPoints(userId: string): Promise<number> {
     if (!userId) throw new BadRequestException('userId é obrigatório.');
     const loyalty = await this.prisma.loyalty.findUnique({ where: { userId } });
-    return loyalty?.currentPoints ?? 0;
+    if (!loyalty) return 0;
+    const pendingExpiration = await this.calculatePendingExpiration(userId);
+    return Math.max(0, loyalty.currentPoints - pendingExpiration);
   }
 
   /**
@@ -418,57 +445,124 @@ export class LoyaltyService {
     this.logger.log('[LoyaltyService] Recálculo de tiers concluído.');
   }
 
-  /**
-   * Remove pontos expirados (após 180 dias sem uso).
-   * Este método deve ser chamado por um job agendado (ex: cron diário).
-   * A implementação real depende de como a expiração de pontos é modelada (ex: FIFO, data de expiração por transação).
-   */
-  async expireOldPoints(): Promise<void> {
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handlePointsExpiration() {
+    const start = Date.now();
+    const expiredCount = await this.expirePointsOlderThan180Days();
+    this.observabilityService.recordJobExecution(
+      'points-expiration',
+      Date.now() - start,
+      expiredCount,
+    );
+  }
+
+  private async expirePointsOlderThan180Days(): Promise<number> {
     this.logger.log(
-      '[LoyaltyService] Iniciando expiração de pontos antigos...',
+      '[LoyaltyService] Iniciando expiração de pontos antigos (>=180 dias)...',
     );
-    const oneHundredEightyDaysAgo = new Date(
-      Date.now() - 180 * 24 * 60 * 60 * 1000,
+    const cutoff = new Date(
+      Date.now() - this.POINT_EXPIRATION_DAYS * 24 * 60 * 60 * 1000,
     );
-    this.logger.debug(
-      `[LoyaltyService] Data de corte para expiração: ${oneHundredEightyDaysAgo.toISOString()}`,
-    );
+    const entries = await this.prisma.loyaltyTransaction.findMany({
+      where: {
+        points: { gt: 0 },
+        createdAt: { lte: cutoff },
+      },
+      select: {
+        id: true,
+        userId: true,
+        points: true,
+      },
+    });
 
-    // Esta é uma lógica conceitual. A implementação real requer um modelo de dados mais granular para pontos.
-    // Exemplo: Se cada LoyaltyTransaction tivesse um `expiresAt`
-    // const expiredTransactions = await this.prisma.loyaltyTransaction.findMany({
-    //   where: {
-    //     createdAt: { lte: oneHundredEightyDaysAgo },
-    //     points: { gt: 0 }, // Pontos ganhos
-    //     // E se não foram "consumidos" por resgates (lógica complexa de FIFO)
-    //   },
-    // });
+    let expiredTotal = 0;
+    for (const entry of entries) {
+      const alreadyExpired = await this.prisma.loyaltyTransaction.findFirst({
+        where: {
+          referenceId: `expire:${entry.id}`,
+        },
+      });
+      if (alreadyExpired) {
+        continue;
+      }
 
-    // for (const tx of expiredTransactions) {
-    //   // Debitar pontos do saldo do usuário
-    //   await this.prisma.loyalty.update({
-    //     where: { userId: tx.userId },
-    //     data: { currentPoints: { decrement: tx.points } },
-    //   });
-    //   // Registrar transação de expiração
-    //   await this.prisma.loyaltyTransaction.create({
-    //     data: {
-    //       userId: tx.userId,
-    //       points: -tx.points,
-    //       type: LoyaltyTransactionType.EXPIRED, // Novo tipo de transação no enum
-    //       referenceId: tx.id,
-    //     },
-    //   });
-    //   this.logger.log(`[LoyaltyService] ${tx.points} pontos expirados para o usuário ${tx.userId}.`);
-    //   // TODO: Notificar o usuário sobre pontos expirados via NotificationsModule
-    // }
+      await this.prisma.$transaction(async (tx) => {
+        await tx.loyalty.update({
+          where: { userId: entry.userId },
+          data: { currentPoints: { decrement: entry.points } },
+        });
+        await tx.loyaltyTransaction.create({
+          data: {
+            userId: entry.userId,
+            points: -entry.points,
+            type: LoyaltyTransactionType.ADMIN_ADJUSTMENT,
+            referenceId: `expire:${entry.id}`,
+          },
+        });
+      });
+      expiredTotal += entry.points;
+      this.logger.log(
+        `[LoyaltyService] Expirados ${entry.points} pontos do usuário ${entry.userId} (transação ${entry.id}).`,
+      );
+    }
+    return expiredTotal;
+  }
 
-    this.logger.warn(
-      '[LoyaltyService] Lógica de expiração de pontos é complexa e requer modelagem de dados específica (ex: FIFO). Implementação conceitual.',
+  private async enforceDailyLimit(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    type: LoyaltyTransactionType,
+    addingPoints: number,
+  ): Promise<void> {
+    const limit = DAILY_LIMITS[type];
+    if (!limit) return;
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const pointsToday = await tx.loyaltyTransaction.aggregate({
+      _sum: { points: true },
+      where: {
+        userId,
+        type,
+        points: { gt: 0 },
+        createdAt: { gte: startOfDay },
+      },
+    });
+    const earned = pointsToday._sum.points ?? 0;
+    if (earned + addingPoints > limit) {
+      throw new BadRequestException(
+        `Limite diário de ${limit} pontos para ${type} atingido.`,
+      );
+    }
+  }
+
+  private async calculatePendingExpiration(userId: string): Promise<number> {
+    const cutoff = new Date(
+      Date.now() - this.POINT_EXPIRATION_DAYS * 24 * 60 * 60 * 1000,
     );
-    this.logger.log(
-      '[LoyaltyService] Expiração de pontos concluída (conceitual).',
+    const [expiredRefs, candidates] = await Promise.all([
+      this.prisma.loyaltyTransaction.findMany({
+        where: {
+          userId,
+          referenceId: { startsWith: 'expire:' },
+        },
+        select: { referenceId: true },
+      }),
+      this.prisma.loyaltyTransaction.findMany({
+        where: {
+          userId,
+          points: { gt: 0 },
+          createdAt: { lte: cutoff },
+        },
+        select: { id: true, points: true },
+      }),
+    ]);
+    const expiredSet = new Set(
+      expiredRefs
+        .map((ref) => ref.referenceId?.replace('expire:', ''))
+        .filter(Boolean),
     );
-    await Promise.resolve();
+    return candidates
+      .filter((candidate) => !expiredSet.has(candidate.id))
+      .reduce((sum, candidate) => sum + candidate.points, 0);
   }
 }
