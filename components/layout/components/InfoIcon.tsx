@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import Svg, { Rect, Circle, Defs, LinearGradient, RadialGradient, Stop } from 'react-native-svg';
-import {
+import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
