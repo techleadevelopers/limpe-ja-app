@@ -1,5 +1,5 @@
 // LimpeJaApp/app/services/clientService.ts
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { api } from './api';
 
 // Dev-only logger to avoid RN redbox/yellowbox overlays from console.error/console.warn
@@ -105,12 +105,15 @@ export async function searchProviders(query: ProviderSearchQuery): Promise<Provi
  * @param params Objeto com latitude, longitude e raio.
  * @returns Promessa com um array de objetos ProviderDisplayInfo.
  */
-export async function searchProvidersWithLocation(params: {
-  latitude: number;
-  longitude: number;
-  radius?: number;
-  query?: string;
-}): Promise<ProviderDisplayInfo[]> {
+export async function searchProvidersWithLocation(
+  params: {
+    latitude: number;
+    longitude: number;
+    radius?: number;
+    query?: string;
+  },
+  config?: AxiosRequestConfig,
+): Promise<ProviderDisplayInfo[]> {
   try {
     const validLat = typeof params.latitude === 'number' && isFinite(params.latitude) && params.latitude !== 0;
     const validLon = typeof params.longitude === 'number' && isFinite(params.longitude) && params.longitude !== 0;
@@ -120,10 +123,18 @@ export async function searchProvidersWithLocation(params: {
       ...(params.query ? { searchTerm: params.query } : {}),
     };
 
-    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>('/providers', {
+    const requestConfig: AxiosRequestConfig = {
+      ...config,
       params: mappedParams,
-      headers: { 'X-Silent': '1' },
-    });
+      headers: {
+        'X-Silent': '1',
+        ...(config?.headers ?? {}),
+      },
+    };
+    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>(
+      '/providers',
+      requestConfig,
+    );
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar provedores por localização:', error.response?.data || error.message);
