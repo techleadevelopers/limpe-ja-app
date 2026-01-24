@@ -1,4 +1,5 @@
 import {
+  forwardRef,
   MiddlewareConsumer,
   Module,
   NestModule,
@@ -12,9 +13,10 @@ import { TelemetryEventsService } from './telemetry.events.service';
 import { TelemetryMiddleware } from './telemetry.middleware';
 import { TelemetryNotificationService } from './telemetry.notification.service';
 import { TelemetryService } from './telemetry.service';
+import { QueuesModule } from '../queues/queues.module';
 
 @Module({
-  imports: [CacheModule, AuthModule, ChatModule],
+  imports: [CacheModule, AuthModule, ChatModule, forwardRef(() => QueuesModule)],
   controllers: [TelemetryController],
   providers: [
     TelemetryService,
@@ -22,6 +24,7 @@ import { TelemetryService } from './telemetry.service';
     TelemetryNotificationService,
     TelemetryMiddleware,
   ],
+  exports: [TelemetryService],
 })
 export class TelemetryModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
