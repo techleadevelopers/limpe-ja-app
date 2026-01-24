@@ -14,8 +14,9 @@ export class TelemetryNotificationService {
     private readonly events: TelemetryEventsService,
     private readonly chatGateway: ChatGateway,
   ) {
-    this.events.on(TELEMETRY_ANOMALY_EVENT, (payload: TelemetryAnomalyPayload) =>
-      this.handleAnomaly(payload),
+    this.events.on(
+      TELEMETRY_ANOMALY_EVENT,
+      (payload: TelemetryAnomalyPayload) => this.handleAnomaly(payload),
     );
   }
 
@@ -23,7 +24,7 @@ export class TelemetryNotificationService {
     const server = this.chatGateway.server;
     if (!server) {
       this.logger.warn(
-        'ChatGateway ainda n„o inicializado; aguardando conex„o para notificar admins.',
+        'ChatGateway ainda n√£o inicializado; aguardando conex√£o para notificar admins.',
       );
       return;
     }
