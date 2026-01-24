@@ -10,7 +10,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
 
     name: 'LimpeJá',
     slug: 'limpeja',
-    version: '1.0.34',
+    version: '1.0.35',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'cleaning',
@@ -45,7 +45,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     },
 
     android: {
-      versionCode: 21,
+      versionCode: 22,
       googleServicesFile: './google-services.json',
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
