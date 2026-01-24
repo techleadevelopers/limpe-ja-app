@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 
 // seu card visual
-import HtmlCouponCard from './HtmlCouponCard';
+import { HtmlCouponCard } from './HtmlCouponCard';
 
 /** ---------- Tokens simples (opcional trocar por seu theme) ---------- */
 const SHADOW = 'rgba(0,0,0,0.06)';
@@ -86,10 +86,8 @@ const CouponNudge: React.FC<Props> = ({
   const onAllowedRoute = showOnRoutes
     .map(normalize)
     .some((r) => normalize(pathname || '') === r);
-let timer: ReturnType<typeof setTimeout> | undefined;
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
-
     const maybeShow = async () => {
       if (!onAllowedRoute) return;
 
