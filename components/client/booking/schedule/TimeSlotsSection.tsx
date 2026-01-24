@@ -63,7 +63,7 @@ export default function TimeSlotsSection({
   isPreference = false,
   selectedSlots,
 }: TimeSlotsSectionProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const dense = false;
   const currentGap = dense ? 0 : 8;
