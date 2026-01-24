@@ -143,6 +143,13 @@ export class SupportService {
       );
     }
 
+    await this.notificationService.sendToAdmins({
+      title: '🚨 NOVO TICKET CRÍTICO',
+      body: `Novo chamado aberto: ${newTicket.subject}. Requer resposta imediata.`,
+      priority: 'high',
+      data: { ticketId: newTicket.id },
+    });
+
     return newTicket;
   }
 
