@@ -47,7 +47,7 @@ export default function AdditionalBookingDetails({
     entryAnim.start();
 
     return () => entryAnim.stop();
-  }, []);
+  }, [fadeAnim, translateYAnim, scaleAnim]);
 
   return (
     <Animated.View
