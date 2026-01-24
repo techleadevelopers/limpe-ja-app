@@ -328,13 +328,6 @@ export default function ActiveBookingDetails() {
   const finishActivationReady = estimatedEndDayjs
     ? estimatedEndDayjs.diff(nowDayjs, 'second') <= ACTIVE_DASHBOARD_LEAD_SECONDS
     : false;
-  const isTimeOverdue = serviceRemainingMinutes !== undefined && serviceRemainingMinutes < 0;
-  const remainingMinutesStyle = isTimeOverdue ? styles.overdueText : styles.engineStandbyText;
-
-  const hasStartPermission = useMemo(() => {
-    return booking?.allowedActions?.includes('START_SERVICE') ?? false;
-  }, [booking?.allowedActions]);
-
   const hasCompletePermission = useMemo(() => {
     const inService = booking?.status === BookingStatus.STARTED || booking?.status === 'FINISHED';
     if (inService) return true;
@@ -349,8 +342,6 @@ export default function ActiveBookingDetails() {
   const needsCheckoutProof =
     proofRequired &&
     (!checkoutProof || (requiresCheckoutVideo && !checkoutProof.videoUrl));
-  const completeDisabled =
-    !hasCompletePermission || submitting !== 'NONE';
   const finishButtonDisabled = !hasCompletePermission || submitting !== 'NONE';
 
   const isInProgress = booking ? IN_PROGRESS_STATUSES.has(booking.status) : false;
@@ -483,7 +474,7 @@ export default function ActiveBookingDetails() {
     } finally {
       setSubmitting('NONE');
       }
-  }, [arrive, booking, bookingId, onTheWay, start]);
+  }, [arrive, booking, bookingId, fetchDetails, onTheWay, start]);
   const openProofSheet = useCallback((type: BookingProofType) => {
     setProofSheetType(type);
     setProofSheetVisible(true);
