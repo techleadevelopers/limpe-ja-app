@@ -13,12 +13,12 @@ interface ServiceCategoryCardProps {
 
 const ServiceCategoryCard: React.FC<ServiceCategoryCardProps> = ({ item }) => {
     const router = useRouter();
+    const scaleAnim = useRef(new Animated.Value(1)).current;
 
     if (!item || !item.id || !item.fullName) {
         return null;
     }
 
-    const scaleAnim = useRef(new Animated.Value(1)).current;
     const onPressIn = () => {
         Animated.spring(scaleAnim, {
             toValue: 0.96,
