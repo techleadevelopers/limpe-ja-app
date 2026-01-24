@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, AlertTriangle, ShieldAlert, CheckCircle, XCircle, Clock, MessageSquare, MapPin } from "lucide-react";
+import { Search, AlertTriangle, ShieldAlert, Clock, MessageSquare, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -384,7 +384,7 @@ export default function SafetyAlertsPage() {
                                             <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                                             <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum alerta de pânico encontrado</h3>
                                             <p className="text-gray-500">
-                                                {searchTerm ? `Nenhum alerta corresponde a "${searchTerm}"` : "Nenhum alerta de pânico registrado ainda."}
+                                                {searchTerm ? `Nenhum alerta corresponde a &quot;${searchTerm}&quot;` : "Nenhum alerta de pânico registrado ainda."}
                                             </p>
                                         </div>
                                     ) : (
@@ -482,7 +482,7 @@ export default function SafetyAlertsPage() {
                                             <ShieldAlert className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                                             <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum incidente encontrado</h3>
                                             <p className="text-gray-500">
-                                                {searchTerm ? `Nenhum incidente corresponde a "${searchTerm}"` : "Nenhum incidente registrado ainda."}
+                                                {searchTerm ? `Nenhum incidente corresponde a &quot;${searchTerm}&quot;` : "Nenhum incidente registrado ainda."}
                                             </p>
                                         </div>
                                     ) : (
