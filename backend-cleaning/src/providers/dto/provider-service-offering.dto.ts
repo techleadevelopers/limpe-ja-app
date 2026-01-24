@@ -11,6 +11,15 @@ import { Type } from 'class-transformer';
 import { ServiceDetailsDto } from '../../services/dto/service-details.dto';
 import { Prisma } from '@prisma/client'; // <-- ADICIONADO: Importar Prisma aqui!
 
+const normalizeDecimalToNumber = (
+  value?: number | Prisma.Decimal | null,
+): number | undefined => {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  return value instanceof Prisma.Decimal ? value.toNumber() : value;
+};
+
 export class ProviderServiceOfferingDto {
   @ApiProperty({
     description: 'ID da oferta de serviço do provedor',
@@ -87,17 +96,15 @@ export class ProviderServiceOfferingDto {
     this.id = source.id;
     this.providerId = source.providerId;
     this.serviceId = source.serviceId;
-    // Lógica defensiva para price: pode vir do DB como Prisma.Decimal, mas precisa ser number
-    this.price =
-      source.price instanceof Prisma.Decimal
-        ? source.price.toNumber()
-        : source.price;
+    // Lógica defensiva para price: garantir number baseado em Decimal ou fallback
+    this.price = normalizeDecimalToNumber(source.price) ?? 0;
     this.durationMinutes = source.durationMinutes;
     this.description = source.description;
-    this.pricePerHour =
-      source.pricePerHour instanceof Prisma.Decimal
-        ? source.pricePerHour.toNumber()
-        : source.pricePerHour;
+    const resolvedPricePerHour = normalizeDecimalToNumber(source.pricePerHour);
+    const categoryAveragePerHour = normalizeDecimalToNumber(
+      source.service?.price,
+    );
+    this.pricePerHour = resolvedPricePerHour ?? categoryAveragePerHour ?? 0;
 
     // Garante que service existe antes de tentar instanciar.
     // Se ServiceDetailsDto pode aceitar null (se service for opcional),
