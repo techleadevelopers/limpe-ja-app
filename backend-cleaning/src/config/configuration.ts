@@ -172,6 +172,14 @@ export default () => ({
         process.env.OBS_LATENCY_SAMPLE_RATE_CRITICAL,
         1,
       ),
+      alertThresholdMs: toInt(
+        process.env.OBS_LATENCY_ALERT_THRESHOLD_MS,
+        1500,
+      ),
+      alertCooldownSeconds: toInt(
+        process.env.OBS_LATENCY_ALERT_COOLDOWN_SECONDS,
+        300,
+      ),
     },
   },
 });
