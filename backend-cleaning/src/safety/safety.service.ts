@@ -9,25 +9,41 @@ import { Prisma } from '@prisma/client';
 import { ReportPanicDto } from './dto/report-panic.dto';
 import { ReportIncidentDto } from './dto/report-incident.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
+import { UpdatePanicLocationDto } from './dto/update-panic-location.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
 import { SmsService } from '../sms/sms.service';
 import { QueuesService } from '../queues/queues.service';
+import { RedisLockService } from '../common/locks/redis-lock.service';
 import { Decimal } from '@prisma/client/runtime/library'; // Importação correta para Decimal
 import { IncidentStatus } from './entities/incident.entity';
 
 @Injectable()
 export class SafetyService {
+  private static readonly PANIC_COOLDOWN_MS = 30_000;
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
     private emailService: EmailService,
     private smsService: SmsService,
     private queuesService: QueuesService,
+    private readonly redisLockService: RedisLockService,
   ) {}
 
   async reportPanic(userId: string, reportPanicDto: ReportPanicDto) {
     const { latitude, longitude, message, type } = reportPanicDto;
+
+    const cooldownKey = `panic-cooldown:${userId}`;
+    const lockAcquired = await this.redisLockService.acquireLock(
+      cooldownKey,
+      userId,
+      SafetyService.PANIC_COOLDOWN_MS,
+    );
+    if (!lockAcquired) {
+      throw new BadRequestException(
+        'Aguarde 30 segundos antes de enviar outro alerta de pânico.',
+      );
+    }
 
     const panicAlert = await this.prisma.panicAlert.create({
       data: {
@@ -39,45 +55,9 @@ export class SafetyService {
       },
     });
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { phone: true }, // CORRIGIDO: Usando 'phone' conforme o schema.prisma
-    });
-
-    // Notify administrators/security team immediately
-    const adminUsers = await this.prisma.user.findMany({
-      where: { role: 'ADMIN' },
-    });
-    const notificationPromises = adminUsers.map((admin) =>
-      this.notificationsService.sendPushNotification(
-        admin.id,
-        'ALERTA DE PÂNICO!',
-        `Usuário ${userId} acionou o botão de pânico em ${latitude}, ${longitude}. Tipo: ${type}. Mensagem: ${message || 'N/A'}`,
-        { type: 'panic_alert', panicAlertId: panicAlert.id },
-      ),
-    );
-
-    const smsPromise =
-      user && user.phone
-        ? this.smsService.sendPanicAlertSms(
-            user.phone,
-            panicAlert.message || 'Alerta de pânico sem mensagem específica.',
-          )
-        : Promise.resolve(
-            console.warn(
-              `[SafetyService] Não foi possível enviar SMS de pânico para o usuário ${userId}: número de telefone não encontrado.`,
-            ),
-          );
-
-    await Promise.all([
-      this.emailService.sendPanicAlertEmail(panicAlert),
-      smsPromise,
-      ...notificationPromises,
-    ]);
-
-    // Usando a fila 'verification' e adicionando o jobName 'process-panic-alert'
-    await this.queuesService.addJob('verification', 'process-panic-alert', {
+    await this.queuesService.addSafetyAlertJob('dispatch-panic-alert', {
       panicAlertId: panicAlert.id,
+      panicType: type,
     });
 
     return { message: 'Alerta de pânico registrado e equipe notificada.' };
@@ -204,5 +184,27 @@ export class SafetyService {
     if (!alert)
       throw new NotFoundException(`PanicAlert with ID ${id} not found.`);
     return this.prisma.panicAlert.update({ where: { id }, data: { status } });
+  }
+
+  async updatePanicLocation(
+    panicId: string,
+    userId: string,
+    coords: UpdatePanicLocationDto,
+  ) {
+    const alert = await this.prisma.panicAlert.findUnique({
+      where: { id: panicId },
+    });
+    if (!alert || alert.userId !== userId) {
+      throw new NotFoundException(
+        'Alerta de pânico não encontrado para o usuário atual.',
+      );
+    }
+    return this.prisma.panicAlert.update({
+      where: { id: panicId },
+      data: {
+        latitude: new Decimal(coords.latitude),
+        longitude: new Decimal(coords.longitude),
+      },
+    });
   }
 }
