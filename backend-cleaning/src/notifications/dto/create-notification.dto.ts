@@ -128,6 +128,14 @@ export class CreateNotificationDto {
   ttlSeconds?: number;
 
   @ApiPropertyOptional({
+    description: 'Prioridade local da notificação (menor número = mais urgente)',
+    example: 1,
+  })
+  @IsOptional()
+  @IsInt()
+  priority?: number;
+
+  @ApiPropertyOptional({
     description: 'Data/hora do serviço confirmado (ex: para banners e filtros)',
     example: '2025-12-25T14:30:00.000Z',
   })
