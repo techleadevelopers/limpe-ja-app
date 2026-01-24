@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginTop: 10,
         bottom: 55,
-        marginBottom: 25,
+        marginBottom: Platform.OS === 'ios' ? 35 : 25,
         shadowColor: '#007BFF',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
