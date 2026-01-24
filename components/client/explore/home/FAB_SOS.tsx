@@ -32,7 +32,7 @@ const FAB_SOS: React.FC<FAB_SOSProps> = ({ bottomOffset = 20 }) => {
         }),
       ])
     ).start();
-  }, []);
+  }, [pulseAnim]);
 
   const onPressIn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Feedback háptico
