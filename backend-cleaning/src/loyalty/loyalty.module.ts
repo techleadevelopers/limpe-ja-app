@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module';
 import { CouponsModule } from '../coupons/coupons.module';
 import { MissionsModule } from '../missions/missions.module';
 import { ServicesModule } from '../services/services.module';
+import { ObservabilityModule } from '../observability/observability.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ServicesModule } from '../services/services.module';
     forwardRef(() => CouponsModule), // Adicionado forwardRef para CouponsModule
     forwardRef(() => MissionsModule), // Adicionado forwardRef para MissionsModule
     ServicesModule,
+    ObservabilityModule,
   ],
   controllers: [LoyaltyController],
   providers: [LoyaltyService],
