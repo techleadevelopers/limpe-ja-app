@@ -38,6 +38,10 @@ import { LiveStatusService } from './live-status.service';
     AdminProvidersController,
     LiveStatusController,
   ],
-  providers: [AdminDashboardService, AdminObservabilityService, LiveStatusService],
+  providers: [
+    AdminDashboardService,
+    AdminObservabilityService,
+    LiveStatusService,
+  ],
 })
 export class AdminModule {}
