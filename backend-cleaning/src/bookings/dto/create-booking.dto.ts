@@ -16,8 +16,9 @@ import {
   IsArray,
   IsIn,
 } from 'class-validator'; // <-- Adicione IsDefined aqui!
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { CreateAddressDto } from '../../common/dto/create-address.dto';
+import { trimText } from '../../common/utils/transformers';
 import { MIN_HOURLY_MINUTES } from '../../common/constants/pricing';
 import {
   InsurancePlanId,
@@ -29,6 +30,7 @@ class BookingAddonDto {
     description: 'ID do adicional',
     example: 'addon-cleaning',
   })
+  @Transform(trimText)
   @IsString()
   @IsNotEmpty()
   id: string;
@@ -48,6 +50,7 @@ export class CreateBookingDto {
     description: 'ID do provedor para quem o agendamento está sendo feito',
     example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
   })
+  @Transform(trimText)
   @IsUUID()
   @IsNotEmpty()
   providerId: string;
@@ -56,6 +59,7 @@ export class CreateBookingDto {
     description: 'ID do serviço específico oferecido pelo provedor',
     example: 'f0e9d8c7-b6a5-4321-fedc-ba9876543210',
   })
+  @Transform(trimText)
   @IsUUID()
   @IsNotEmpty()
   providerServiceId: string;
@@ -65,6 +69,7 @@ export class CreateBookingDto {
       'Data agendada para o serviço (formato ISO 8601, ex: 2025-06-15)',
     example: '2025-06-15',
   })
+  @Transform(trimText)
   @IsDateString()
   @IsNotEmpty()
   scheduledDate: string;
@@ -73,6 +78,7 @@ export class CreateBookingDto {
     description: 'Horário agendado para o serviço (formato HH:mm)',
     example: '10:00',
   })
+  @Transform(trimText)
   @IsString()
   @IsNotEmpty()
   @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
@@ -90,6 +96,7 @@ export class CreateBookingDto {
     example: 'Focar na limpeza da cozinha.',
   })
   @IsOptional()
+  @Transform(trimText)
   @IsString()
   notes?: string;
 
@@ -114,6 +121,7 @@ export class CreateBookingDto {
     example: 'DESCONTO10',
   })
   @IsOptional()
+  @Transform(trimText)
   @IsString()
   couponCode?: string;
 
@@ -122,6 +130,7 @@ export class CreateBookingDto {
     example: 'subscription-id',
   })
   @IsOptional()
+  @Transform(trimText)
   @IsUUID()
   subscriptionId?: string;
 
@@ -140,6 +149,7 @@ export class CreateBookingDto {
     enum: INSURANCE_PLAN_IDS,
   })
   @IsOptional()
+  @Transform(trimText)
   @IsIn(INSURANCE_PLAN_IDS)
   insurancePlanId?: InsurancePlanId | null;
 
@@ -148,6 +158,7 @@ export class CreateBookingDto {
     example: 'quote-123',
   })
   @IsOptional()
+  @Transform(trimText)
   @IsString()
   quoteId?: string;
 
@@ -156,6 +167,7 @@ export class CreateBookingDto {
     example: 'fc5e038d2f14b01b...',
   })
   @IsOptional()
+  @Transform(trimText)
   @IsString()
   quoteIdHash?: string;
 
