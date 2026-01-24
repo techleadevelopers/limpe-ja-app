@@ -13,7 +13,7 @@ import { Search, Users, CheckCircle, XCircle, Star, CalendarDays, Edit } from "l
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchClients, fetchClientById, updateClientProfile } from "@/lib/api";
+import { fetchClients, fetchClientById, updateClientProfile, forceLogoutUser } from "@/lib/api";
 import { Client } from "@/lib/types"; // Removido ClientDashboardDto
 
 // Helper function for status badge styling
@@ -84,10 +84,30 @@ const ClientDetailsModal = ({ isOpen, onClose, clientId }: ClientDetailsModalPro
     },
   });
 
+  const forceLogoutMutation = useMutation({
+    mutationFn: (userId: string) => forceLogoutUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/clients'] });
+      queryClient.invalidateQueries({ queryKey: ['/clients', clientId] });
+      toast({ title: "Sessão encerrada", description: "Usuário forçado a deslogar." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro", description: `Não foi possível aplicar o logout forçado: ${error.message}`, variant: "destructive" });
+    },
+  });
+
   const handleSubmit = () => {
     if (clientId) {
       updateClientMutation.mutate({ id: clientId, clientData: formData });
     }
+  };
+
+  const handleForceLogout = () => {
+    if (!client?.userId) return;
+    if (!window.confirm("Confirma banir e encerrar a sessão deste usuário agora?")) {
+      return;
+    }
+    forceLogoutMutation.mutate(client.userId);
   };
 
   if (!clientId) return null;
@@ -104,11 +124,11 @@ const ClientDetailsModal = ({ isOpen, onClose, clientId }: ClientDetailsModalPro
           <div className="text-center py-8 text-red-600">Erro ao carregar cliente: {error?.message}</div>
         ) : client ? (
           <div className="space-y-6">
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="details">Detalhes do Perfil</TabsTrigger>
-                <TabsTrigger value="dashboard">Dashboard do Cliente</TabsTrigger>
-              </TabsList>
+              <Tabs defaultValue="details" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="details">Detalhes do Perfil</TabsTrigger>
+                  <TabsTrigger value="dashboard">Dashboard do Cliente</TabsTrigger>
+                </TabsList>
               <TabsContent value="details" className="pt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -194,9 +214,21 @@ const ClientDetailsModal = ({ isOpen, onClose, clientId }: ClientDetailsModalPro
                   */}
                 </div>
               </TabsContent>
-            </Tabs>
-          </div>
-        ) : null}
+              </Tabs>
+              <div className="mt-6 pt-4 border-t border-dashed border-gray-200">
+                <p className="text-sm text-gray-500 mb-2">
+                  Intervenção emergencial: encerre a sessão e bloqueie o acesso imediatamente.
+                </p>
+                <Button
+                  variant="destructive"
+                  onClick={handleForceLogout}
+                  disabled={forceLogoutMutation.isPending || !client?.userId}
+                >
+                  Banir/Deslogar Agora
+                </Button>
+              </div>
+            </div>
+          ) : null}
       </DialogContent>
     </Dialog>
   );
