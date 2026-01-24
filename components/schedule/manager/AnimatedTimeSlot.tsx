@@ -1,10 +1,9 @@
 // app/provider/schedule/components/AnimatedTimeSlot.tsx
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Funções utilitárias (assumindo que serão importadas de um local comum)
-// Precisamos das funções `parseTime` e `formatTime` do ManageAvailabilityScreen
+// Modelos de dados usados por este componente
 interface TimeSlot {
   id: string;
   backendId?: string; // ID real do backend
@@ -20,16 +19,6 @@ interface AnimatedTimeSlotProps {
   onRemove: (slotId: string) => void;
   delay: number;
 }
-
-// Funções utilitárias duplicadas aqui para garantir que o componente funcione isoladamente.
-// O ideal é que `parseTime` e `formatTime` venham de `utils/helpers.ts` se forem genéricas.
-// Se forem específicas da disponibilidade, crie um `schedule-helpers.ts`
-const parseTime = (timeString: string): Date => {
-  const [hours, minutes] = timeString.split(':').map(Number);
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return date;
-};
 
 const AnimatedTimeSlot: React.FC<AnimatedTimeSlotProps> = ({ slot, onOpenPicker, onRemove, delay }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
