@@ -1,12 +1,12 @@
-import { Transform } from "class-transformer";
-import { IsInt, IsOptional, Max, Min } from "class-validator";
+import { Transform } from 'class-transformer';
+import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
 const parseLimit = (value: unknown) => {
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     const parsed = Number.parseInt(value, 10);
     return Number.isNaN(parsed) ? undefined : parsed;
   }
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     return value;
   }
   return undefined;
