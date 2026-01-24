@@ -4,9 +4,9 @@ import { Dimensions, Platform, TextStyle, ViewStyle } from 'react-native'; // Im
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export const AppColors = {
-  primaryInteractive: '#4A90E2',
-  primaryLight: '#6CB9FF',
-  primaryDark: '#2A72E7',
+  primaryInteractive: '#4A90E2',
+  primaryLight: '#6CB9FF',
+  primaryDark: '#2A72E7',
   successStandard: '#28A745',
   successStrong: '#218838',
   attentionYellow: '#348eefff',
@@ -23,8 +23,9 @@ export const AppColors = {
   white: '#FFFFFF',
   black: '#000000',
   lightGray: '#CED4DA',
-  mediumGray: '#868E96',
-  accentLight: '#EBF5FF', // Adicionado: Um azul claro para acentos
+  mediumGray: '#868E96',
+  accentLight: '#EBF5FF', // Adicionado: Um azul claro para acentos
+  shadowColorSection: 'rgba(0, 0, 0, 0.1)', // Usado pelos cards e seções para sombras suaves
 };
 
 export const AppDurations = {
