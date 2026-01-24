@@ -21,11 +21,10 @@ export class DocumentProcessingService {
     try {
       const filename =
         destinationPath?.split('/')?.pop() || file.originalname || 'upload.jpg';
-      const result = await this.uploadService.uploadFile(
-        file.buffer,
-        filename,
-        file.mimetype,
-      );
+      const buffer = file.buffer;
+      const mimeType = file.mimetype;
+
+      const result = await this.uploadService.uploadFile(buffer, filename, mimeType);
       if (!result?.url) throw new Error('UploadThing não retornou URL pública');
       this.logger.log(`Upload via UploadThing concluído: ${result.url}`);
       return result.url;
