@@ -14,13 +14,6 @@ const WHITE = '#FFFFFF'; // Branco
 const ICON_PRIMARY = '#007AFF'; // Azul Primário (usado para o card principal)
 const WARNING_YELLOW = '#FFC107'; // Amarelo para pendente (usado como WARNING_COLOR_SUMMARY)
 const SUCCESS_GREEN = '#28A745'; // Verde para saque (usado como SUCCESS_COLOR_SUMMARY)
-const TEXT_DARK = '#1A2538'; // Texto escuro
-const TEXT_MUTED = '#7A8599'; // Texto mutado
-const BACKGROUND_ALT = '#F8F9FD'; // Fundo alternativo
-const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)'; // Sombra para seções
-const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)'; // Sombra para cartões pequenos
-const BORDER_SUBTLE = 'rgba(0,0,0,0.08)'; // Borda sutil
-
 interface EarningsSummaryCardProps {
     dashboardData: ProviderDashboard | null;
     earningsData?: EarningsResponseDto | null;
