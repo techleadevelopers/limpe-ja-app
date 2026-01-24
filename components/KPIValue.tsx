@@ -1,6 +1,6 @@
 // components/ui/KPIValue.tsx
 // ================================================
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Text, StyleSheet, useColorScheme, StyleProp, TextStyle } from 'react-native';
 import Colors from '../constants/Colors'; // Importa o objeto de cores
 
@@ -43,20 +43,24 @@ export const KPIValue: React.FC<KPIValueProps> = ({
   const reduced = false; // Temporariamente definido como false se o hook não existir
 
   const [display, setDisplay] = useState(0);
+  const displayRef = useRef(display);
   const theme = useTheme(); // Obtém o tema atual
 
   useEffect(() => {
     if (reduced) {
       setDisplay(value);
+      displayRef.current = value;
       return;
     }
 
     const start = Date.now();
-    const from = display; // Começa a animação do valor atual exibido
+    const from = displayRef.current;
     const tick = () => {
       const t = Math.min(1, (Date.now() - start) / duration);
       const eased = 1 - Math.pow(1 - t, 3); // Função de easing (easeOutCubic)
-      setDisplay(from + (value - from) * eased);
+      const next = from + (value - from) * eased;
+      displayRef.current = next;
+      setDisplay(next);
 
       if (t < 1) {
         requestAnimationFrame(tick);
