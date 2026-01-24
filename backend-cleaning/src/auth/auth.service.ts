@@ -1,33 +1,34 @@
 // src/auth/auth.service.ts
 import {
-    BadRequestException,
-    ConflictException,
-    forwardRef,
-    Inject,
-    Injectable,
-    Logger,
-    NotFoundException,
-    UnauthorizedException
+  BadRequestException,
+  ConflictException,
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
-    BookingStatus,
-    Prisma,
-    User,
-    UserRole,
-    VerificationStatus
+  BookingStatus,
+  Prisma,
+  User,
+  UserRole,
+  VerificationStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { EmailService } from '../common/services/email.service';
 import { GeocodingService } from '../common/services/geocoding.service';
 import {
-    ConsentDocumentType,
-    DEFAULT_CONSENT_VERSIONS,
+  ConsentDocumentType,
+  DEFAULT_CONSENT_VERSIONS,
 } from '../compliance/compliance.constants';
 import { ComplianceService } from '../compliance/compliance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReferralsService } from '../referrals/referrals.service'; // NOVO: Importar ReferralsService
+import { ProvidersService } from '../providers/providers.service';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
 import { UserWithIncludes } from '../users/users.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
@@ -143,6 +144,8 @@ export class AuthService {
     private complianceService: ComplianceService,
     @Inject(forwardRef(() => ReferralsService)) // NOVO: Injetar ReferralsService
     private referralsService: ReferralsService,
+    @Inject(forwardRef(() => ProvidersService))
+    private readonly providersService: ProvidersService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<User | null> {
@@ -214,6 +217,16 @@ export class AuthService {
     this.logger.log(
       `[TELEMETRY] user_logged_in: { userId: ${fullUser.id}, role: ${fullUser.role} }`,
     );
+
+    if (fullUser.role === UserRole.ADMIN) {
+      void this.providersService.refreshDefaultSearchCache().catch((error) => {
+        this.logger.warn(
+          `[ProvidersService] login cache warm-up failed: ${
+            (error as Error)?.message ?? error
+          }`,
+        );
+      });
+    }
 
     return {
       accessToken,
