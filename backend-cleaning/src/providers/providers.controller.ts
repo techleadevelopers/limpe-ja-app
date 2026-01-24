@@ -70,6 +70,7 @@ type RequestWithUser = ExpressRequest & {
 @Controller('providers')
 export class ProvidersController {
   private readonly logger = new Logger(ProvidersController.name);
+  private readonly traceLogsEnabled = process.env.NODE_ENV !== 'production';
 
   constructor(
     private readonly providersService: ProvidersService,
@@ -106,7 +107,7 @@ export class ProvidersController {
     @Query('latitude') latitude?: number,
     @Query('longitude') longitude?: number,
   ): Promise<ProviderViewDto[]> {
-    this.logger.log(
+    this.trace(
       '[ProvidersController] findRecommendedProviders: Chamando serviço.',
     );
     // CORREÇÃO: Coerção explícita de query params para números
@@ -131,7 +132,7 @@ export class ProvidersController {
           safeLat,
           safeLon,
         );
-      this.logger.log(
+      this.trace(
         `[ProvidersController] findRecommendedProviders: Retornando ${providers.length} provedores.`,
       );
       return providers.map((provider) => new ProviderViewDto(provider));
@@ -184,7 +185,7 @@ export class ProvidersController {
     @Query('radius') radius?: number,
     @Query('sortBy') sortBy?: SortByOption,
   ): Promise<ProviderViewDto[]> {
-    this.logger.log(
+    this.trace(
       '[ProvidersController] findNearbyProviders: Chamando serviço.',
     );
 
@@ -222,7 +223,7 @@ export class ProvidersController {
 
     const providers =
       await this.providersService.findAllProviders(findAllParams);
-    this.logger.log(
+    this.trace(
       `[ProvidersController] findNearbyProviders: Retornando ${providers.length} provedores.`,
     );
     // NOVO: Mapeamento inclui novos campos opcionais (ex.: nextAvailable, acceptanceRate)
@@ -356,11 +357,11 @@ export class ProvidersController {
   async search(
     @Query() searchDto: ProviderSearchDto,
   ): Promise<ProviderViewDto[]> {
-    this.logger.log(
+    this.trace(
       `[ProvidersController] search: Chamando serviço com DTO de busca: ${JSON.stringify(searchDto)}`,
     );
     const providers = await this.providersService.search(searchDto);
-    this.logger.log(
+    this.trace(
       `[ProvidersController] search: Retornando ${providers.length} provedores.`,
     );
     // NOVO: Mapeamento inclui novos campos opcionais para cards (ex.: nextAvailable calculado no service)
@@ -388,7 +389,7 @@ export class ProvidersController {
     if (!userId) {
       throw new NotFoundException('Dados de usuário não encontrados no token.');
     }
-    this.logger.log(
+    this.trace(
       `[ProvidersController] getMyProfile: Buscando perfil para userId: ${userId}`,
     );
     const provider = await this.providersService.findByUserId(userId);
@@ -400,7 +401,7 @@ export class ProvidersController {
         `Provedor com User ID "${userId}" não encontrado.`,
       );
     }
-    this.logger.log(
+    this.trace(
       `[ProvidersController] getMyProfile: Perfil encontrado para userId ${userId}.`,
     );
     // NOVO: Inclui novos campos opcionais no mapeamento
@@ -426,7 +427,9 @@ export class ProvidersController {
   ): Promise<ProviderVisibilityDto> {
     const userId = req.user?.userId;
     if (!userId) {
-      throw new NotFoundException('Dados de usuA!rio nALo encontrados no token.');
+      throw new NotFoundException(
+        'Dados de usuA!rio nALo encontrados no token.',
+      );
     }
     const visibility = await this.providersService.getVisibilityForUser(userId);
     if (!visibility) {
@@ -464,7 +467,7 @@ export class ProvidersController {
     if (!userId) {
       throw new NotFoundException('Dados de usuário não encontrados no token.');
     }
-    this.logger.log(
+    this.trace(
       `[ProvidersController] updateMyProfile: Atualizando perfil para userId: ${userId}`,
     );
     const updatedProvider = await this.providersService.updateByUserId(
@@ -479,7 +482,7 @@ export class ProvidersController {
         `Provedor com User ID "${userId}" não encontrado.`,
       );
     }
-    this.logger.log(
+    this.trace(
       `[ProvidersController] updateMyProfile: Perfil atualizado com sucesso para userId ${userId}.`,
     );
     // NOVO: Inclui novos campos opcionais após atualização (ex.: recalcular métricas se necessário)
@@ -540,7 +543,7 @@ export class ProvidersController {
     if (!file) {
       throw new BadRequestException('Nenhum arquivo de imagem enviado.');
     }
-    this.logger.log(
+    this.trace(
       `[ProvidersController] uploadAvatar: Recebido arquivo de avatar para userId: ${userId}`,
     );
     const avatarUrl = await this.providersService.updateAvatar(userId, file);
@@ -562,7 +565,7 @@ export class ProvidersController {
   async getProviderMetrics(
     @Param('providerId') providerId: string,
   ): Promise<ProviderMetrics> {
-    this.logger.log(
+    this.trace(
       `[ProvidersController] getProviderMetrics: Buscando métricas para provedor ID: ${providerId}`,
     );
     return this.providersService.getProviderPerformanceMetrics(providerId);
@@ -582,7 +585,7 @@ export class ProvidersController {
   async getProviderOffers(
     @Param('providerId') providerId: string,
   ): Promise<OfferDetailsDto[]> {
-    this.logger.log(
+    this.trace(
       `[ProvidersController] getProviderOffers: Buscando ofertas para provedor ID: ${providerId}`,
     );
     // ASSUMIMOS QUE this.providersService.getProviderOffers AGORA RETORNA Promise<PrismaOffer[]>
@@ -715,7 +718,7 @@ export class ProvidersController {
     @Param('id') id: string,
     @Body() updateProviderProfileDto: UpdateProviderProfileDto,
   ): Promise<ProviderDetailsDto> {
-    this.logger.log(
+    this.trace(
       `[ProvidersController] updateProviderById: Atualizando provedor ${id}`,
     );
     const updated = await this.providersService.updateById(
@@ -747,9 +750,6 @@ export class ProvidersController {
   })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   async findOne(@Param('id') id: string): Promise<ProviderDetailsDto> {
-    this.logger.log(
-      `[ProvidersController] findOne: Buscando provedor por ID: ${id}`,
-    );
     const provider = await this.providersService.findOne(id);
     if (!provider) {
       this.logger.warn(
@@ -757,9 +757,6 @@ export class ProvidersController {
       );
       throw new NotFoundException(`Provedor com ID "${id}" não encontrado.`);
     }
-    this.logger.log(
-      `[ProvidersController] findOne: Provedor ${id} encontrado.`,
-    );
     // NOVO: Inclui novos campos opcionais (ex.: nextAvailable, badges)
     return new ProviderDetailsDto(provider);
   }
@@ -779,12 +776,19 @@ export class ProvidersController {
   })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   async remove(@Param('id') id: string): Promise<void> {
-    this.logger.log(
+    this.trace(
       `[ProvidersController] remove: Tentando deletar provedor com ID: ${id}`,
     );
     await this.providersService.remove(id);
-    this.logger.log(
+    this.trace(
       `[ProvidersController] remove: Provedor ${id} deletado com sucesso.`,
     );
+  }
+
+  private trace(message: string) {
+    if (!this.traceLogsEnabled) {
+      return;
+    }
+    this.logger.log(message);
   }
 }
