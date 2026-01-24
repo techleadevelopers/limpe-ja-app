@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, StyleSheet, Animated } from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
 
 interface NotesInputSectionProps {
