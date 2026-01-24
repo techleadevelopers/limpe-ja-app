@@ -13,8 +13,13 @@ import { Search, Calendar, CheckCircle, XCircle, Clock, DollarSign, MoreHorizont
 import { useToast } from "@/hooks/use-toast";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { fetchBookingDetails, fetchBookingsPage, updateBookingStatus } from "@/lib/api";
-import { cancelBookingWithRefund } from "@/lib/api";
+import {
+  fetchBookingDetails,
+  fetchBookingsPage,
+  updateBookingStatus,
+  cancelBookingWithRefund,
+  forceConfirmPixPayment,
+} from "@/lib/api";
 import { Booking, BookingPage, BookingStatus } from "@/lib/types";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -94,6 +99,31 @@ const BookingDetailsModal = ({ isOpen, onClose, bookingId }: BookingDetailsModal
       return;
     }
     forceRefundMutation.mutate({ id: bookingId, reason: adminNotes || undefined });
+  };
+
+  const forceConfirmMutation = useMutation({
+    mutationFn: (referenceId: string) => forceConfirmPixPayment(referenceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/bookings', bookingId] });
+      toast({ title: "Pagamento confirmado", description: "Confirmação manual do PIX concluída." });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: `Não foi possível confirmar o PIX manualmente: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleForceConfirmPayment = () => {
+    if (!booking?.id) return;
+    if (!window.confirm("Confirma manualmente o pagamento PIX para este agendamento?")) {
+      return;
+    }
+    const referenceId = `booking_${booking.id}`;
+    forceConfirmMutation.mutate(referenceId);
   };
 
   if (!bookingId) return null;
@@ -224,11 +254,11 @@ const BookingDetailsModal = ({ isOpen, onClose, bookingId }: BookingDetailsModal
                     className="min-h-[120px]"
                   />
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="outline"
-                    className="border-medium-blue text-medium-blue hover:bg-medium-blue/10"
-                    onClick={() => {
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      variant="outline"
+                      className="border-medium-blue text-medium-blue hover:bg-medium-blue/10"
+                      onClick={() => {
                       const rawNumber = (booking?.provider?.phone || booking?.client?.phone || "+5519993223932").replace(/\D/g, "");
                       const message = encodeURIComponent(`LimpeJá Admin Chat — agendamento ${booking?.id}`);
                       window.open(`https://wa.me/${rawNumber}?text=${message}`, "_blank");
@@ -236,13 +266,21 @@ const BookingDetailsModal = ({ isOpen, onClose, bookingId }: BookingDetailsModal
                   >
                     <MessageSquare size={16} className="mr-2" />
                     Chat de Emergência
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    className="flex-1 md:flex-auto"
-                    onClick={handleForceRefund}
-                    disabled={forceRefundMutation.isPending}
-                  >
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 md:flex-auto border-medium-blue text-medium-blue hover:bg-medium-blue/10"
+                      onClick={handleForceConfirmPayment}
+                      disabled={forceConfirmMutation.isPending}
+                    >
+                      Confirmar Manualmente
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1 md:flex-auto"
+                      onClick={handleForceRefund}
+                      disabled={forceRefundMutation.isPending}
+                    >
                     Forçar Estorno/Cancelamento
                   </Button>
                 </div>
