@@ -1,8 +1,7 @@
 // LimpeJaApp/app/auth/components/InputWithIcon.tsx
 import React from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, TextStyle, ViewStyle, Platform } from 'react-native'; // Importe TextStyle e ViewStyle
+import { View, TextInput, StyleSheet, TouchableOpacity, ViewStyle, Platform, TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { TextInputProps } from 'react-native'; // Importar TextInputProps
 
 // A interface InputWithIconProps agora estende TextInputProps.
 interface InputWithIconProps extends TextInputProps { // <-- AQUI ESTÁ A MUDANÇA PRINCIPAL
