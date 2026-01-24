@@ -1,10 +1,10 @@
 // LimpeJaApp/components/client/PersistentCouponPill.tsx
 import React, { useRef, useEffect } from 'react';
-import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { AppColors, AppDurations, AppOffsets, AppShadows } from '../../constants/appStyles';
+import { AppColors, AppDurations, AppOffsets } from '../../constants/appStyles';
 
 interface PersistentCouponPillProps {
   onPress: () => void;
@@ -31,7 +31,7 @@ const PersistentCouponPill: React.FC<PersistentCouponPillProps> = ({ onPress }) 
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideUpAnim]);
 
   const onPressIn = () => {
     Animated.spring(scaleAnim, { toValue: AppOffsets.scalePress, useNativeDriver: true }).start();
@@ -61,7 +61,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 100, // Ajuste a posição conforme necessário para não sobrepor a NavBar
     right: 20,
-    ,
   },
   pillButton: {
     backgroundColor: AppColors.primaryInteractive,
