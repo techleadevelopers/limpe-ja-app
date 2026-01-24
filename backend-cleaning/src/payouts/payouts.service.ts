@@ -759,6 +759,89 @@ export class PayoutsService {
     return sumAll.sub(withhold);
   }
 
+  async holdBookingForClaim(
+    bookingId: string,
+    claimId: string,
+  ): Promise<void> {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        totalPrice: true,
+        provider: { select: { userId: true } },
+      },
+    });
+    if (!booking) {
+      this.logger.warn(
+        `[PayoutsService] holdBookingForClaim: booking ${bookingId} not found.`,
+      );
+      return;
+    }
+
+    const providerUserId = booking.provider?.userId;
+    if (!providerUserId) {
+      this.logger.warn(
+        `[PayoutsService] holdBookingForClaim: provider user missing for booking ${bookingId}.`,
+      );
+      return;
+    }
+
+    const ledgerEntry = await this.prisma.ledgerEntry.findFirst({
+      where: {
+        bookingId,
+        userId: providerUserId,
+        amount: { gt: 0 },
+        type: {
+          in: [LedgerEntryType.EARNING, LedgerEntryType.HOLD],
+        },
+      },
+      orderBy: { createdAt: 'desc' as Prisma.SortOrder },
+    });
+
+    if (ledgerEntry) {
+      if (ledgerEntry.type === LedgerEntryType.HOLD) {
+        this.logger.log(
+          `[PayoutsService] Booking ${bookingId} already under HOLD for claim ${claimId}.`,
+        );
+        return;
+      }
+
+      await this.prisma.ledgerEntry.update({
+        where: { id: ledgerEntry.id },
+        data: {
+          type: LedgerEntryType.HOLD,
+          note: ledgerEntry.note
+            ? `${ledgerEntry.note} | Claim ${claimId} hold`
+            : `Claim ${claimId} hold for booking ${bookingId}`,
+        },
+      });
+      this.logger.log(
+        `[PayoutsService] Booking ${bookingId} earnings reverted to HOLD for claim ${claimId}.`,
+      );
+      return;
+    }
+
+    const total = booking.totalPrice;
+    if (!total || new Prisma.Decimal(total).lte(0)) {
+      this.logger.warn(
+        `[PayoutsService] Claim ${claimId} cannot hold booking ${bookingId} because totalPrice is invalid.`,
+      );
+      return;
+    }
+
+    await this.prisma.ledgerEntry.create({
+      data: {
+        userId: providerUserId,
+        bookingId,
+        amount: new Prisma.Decimal(total),
+        type: LedgerEntryType.HOLD,
+        note: `Claim ${claimId} HOLD for booking ${bookingId}`,
+      },
+    });
+    this.logger.log(
+      `[PayoutsService] Claim ${claimId} created HOLD entry for booking ${bookingId}.`,
+    );
+  }
+
   private async computeAvailableBalance(
     userId: string,
   ): Promise<Prisma.Decimal> {
