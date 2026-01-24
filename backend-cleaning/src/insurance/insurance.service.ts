@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   INSURANCE_PLANS,
   InsurancePlanDefinition,
@@ -40,6 +40,8 @@ export interface InsurancePlanProposal extends InsurancePlanDefinition {
 
 @Injectable()
 export class InsuranceService {
+  private readonly logger = new Logger(InsuranceService.name);
+
   getPlans(input: InsurancePlansInput): InsurancePlanProposal[] {
     const normalizedInput = this.normalizeInput(input);
     const { clientCompleted, estimateTotalCents, provider } = normalizedInput;
@@ -51,10 +53,16 @@ export class InsuranceService {
     const riskMultiplierBps = Math.round(riskModifier * 10000);
 
     return INSURANCE_PLANS.map((plan) => {
-      const { eligible, reasons } = this.evaluateEligibility();
+      const { eligible, reasons } = this.evaluateEligibility(plan, normalizedInput);
+      const finalPriceCents = this.applyRisk(plan.basePriceCents, riskModifier);
+      this.logger.log(
+        `[InsuranceService] Plan ${plan.id} riskModifier=${riskModifier.toFixed(
+          3,
+        )} finalPrice=${finalPriceCents}`,
+      );
       return {
         ...plan,
-        finalPriceCents: this.applyRisk(plan.basePriceCents, riskModifier),
+        finalPriceCents,
         eligible,
         reasons,
         riskMultiplierBps,
@@ -82,10 +90,30 @@ export class InsuranceService {
     };
   }
 
-  private evaluateEligibility(): { eligible: true; reasons: string[] } {
+  private evaluateEligibility(
+    plan: InsurancePlanDefinition,
+    context: InsurancePlansCalculationContext,
+  ): { eligible: boolean; reasons: string[] } {
+    const reasons: string[] = [];
+    switch (plan.id) {
+      case InsurancePlanId.PREMIUM:
+        if (context.clientCompleted < 2) {
+          reasons.push('Requer pelo menos 2 limpezas concluídas.');
+        }
+        break;
+      case InsurancePlanId.TOTAL:
+        if (context.clientCompleted < 5) {
+          reasons.push('Requer pelo menos 5 limpezas concluídas.');
+        }
+        if (context.provider.rating <= 4.85) {
+          reasons.push('Requer nota do prestador superior a 4.85.');
+        }
+        break;
+    }
+
     return {
-      eligible: true,
-      reasons: [],
+      eligible: reasons.length === 0,
+      reasons,
     };
   }
 
@@ -112,7 +140,7 @@ export class InsuranceService {
   }
 
   private applyRisk(basePriceCents: number, riskModifier: number) {
-    return Math.round(basePriceCents * (1 + riskModifier));
+    return Math.ceil(basePriceCents * (1 + riskModifier));
   }
 
   private toNonNegativeNumber(value?: number): number {
