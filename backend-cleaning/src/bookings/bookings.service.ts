@@ -1,10 +1,4 @@
-﻿import dayjsModule = require('dayjs');
-const dayjs: typeof import('dayjs') =
-  (
-    (dayjsModule as typeof import('dayjs') & {
-      default?: typeof import('dayjs');
-    }).default ?? dayjsModule
-  ) as typeof import('dayjs');
+import dayjs from 'dayjs';
 
 import {
   Injectable,
@@ -229,6 +223,7 @@ const DEFAULT_BOOKING_DETAILS_INCLUDE = {
   paymentIntent: true,
   bookingInsurance: true,
   bookingProofs: true,
+  dispute: true,
 } satisfies Prisma.BookingInclude;
 
 const PRICING_VERSION =
@@ -931,6 +926,8 @@ export class BookingsService {
     try {
       await this.queuesService.addNotificationJob('send-notification', {
         userId,
+        type: 'BOOKING_STATUS',
+        bookingId: booking.id,
         kind:
           status === BookingStatus.FINISHED
             ? 'booking_finished'
@@ -958,6 +955,8 @@ export class BookingsService {
     try {
       await this.queuesService.addNotificationJob('send-notification', {
         userId,
+        type: 'BOOKING_ACCEPTED',
+        bookingId: booking.id,
         kind: 'booking_status',
         title: 'Prestador aceitou seu agendamento',
         body: 'O prestador aceitou seu agendamento e está confirmado para amanhã!',
@@ -1179,12 +1178,6 @@ export class BookingsService {
         createBookingDto.scheduledTime,
       );
 
-      await this.availabilityService.canHoldSlot(
-        provider.id,
-        client.id,
-        scheduledStart,
-      );
-
       const durationMinutes =
         createBookingDto.requestedDurationMinutes ||
         providerService.durationMinutes ||
@@ -1201,27 +1194,6 @@ export class BookingsService {
 
       const { weekStart, weekEnd } = this.getSaoPauloWeekRange(scheduledStart);
       // ✅ overlap check (ANTES de criar address/booking e aplicar cupom)
-      const overlap = await this.prisma.booking.findFirst({
-        where: {
-          providerId: provider.id,
-          status: {
-            in: BLOCKED_BOOKING_STATUSES,
-          },
-          scheduledStart: { lt: scheduledEnd },
-          scheduledEnd: { gt: scheduledStart },
-        },
-        select: { id: true },
-      });
-
-      if (overlap) {
-        throw new ConflictException(
-          await this.i18n.translate(
-            'booking.conflict.timeSlotUnavailable',
-            locale,
-          ),
-        );
-      }
-
       const bookingInclude = this.getBookingInclude();
 
       try {
@@ -1231,6 +1203,34 @@ export class BookingsService {
           weekStart,
           async () => {
             return this.prisma.$transaction(async (tx) => {
+              await this.availabilityService.canHoldSlot(
+                provider.id,
+                client.id,
+                scheduledStart,
+                { prisma: tx },
+              );
+
+              const overlap = await tx.booking.findFirst({
+                where: {
+                  providerId: provider.id,
+                  status: {
+                    in: BLOCKED_BOOKING_STATUSES,
+                  },
+                  scheduledStart: { lt: scheduledEnd },
+                  scheduledEnd: { gt: scheduledStart },
+                },
+                select: { id: true },
+              });
+
+              if (overlap) {
+                throw new ConflictException(
+                  await this.i18n.translate(
+                    'booking.conflict.timeSlotUnavailable',
+                    locale,
+                  ),
+                );
+              }
+
               await this.ensureWeeklyLimit(
                 client.id,
                 provider.id,
@@ -1826,6 +1826,7 @@ export class BookingsService {
     subscriptionId: string;
     addressId: string;
     scheduledTime: string;
+    periodId: string;
   }) {
     const providerService = await this.providerServicesService.findOne(
       data.providerServiceId,
@@ -1887,6 +1888,7 @@ export class BookingsService {
         scheduledEnd,
         totalPrice: new Prisma.Decimal(data.totalPrice),
         subscriptionId: data.subscriptionId,
+        periodId: data.periodId,
         addressId: data.addressId,
         status: BookingStatus.PENDING_PAYMENT,
         expiresAt: new Date(Date.now() + PENDING_PAYMENT_TIMEOUT_MS),
@@ -2142,11 +2144,19 @@ export class BookingsService {
             client: {
               is: {
                 OR: [
-                  { fullName: { contains: normalizedSearch, mode: 'insensitive' } },
+                  {
+                    fullName: {
+                      contains: normalizedSearch,
+                      mode: 'insensitive',
+                    },
+                  },
                   {
                     user: {
                       is: {
-                        fullName: { contains: normalizedSearch, mode: 'insensitive' },
+                        fullName: {
+                          contains: normalizedSearch,
+                          mode: 'insensitive',
+                        },
                       },
                     },
                   },
@@ -2158,11 +2168,19 @@ export class BookingsService {
             provider: {
               is: {
                 OR: [
-                  { fullName: { contains: normalizedSearch, mode: 'insensitive' } },
+                  {
+                    fullName: {
+                      contains: normalizedSearch,
+                      mode: 'insensitive',
+                    },
+                  },
                   {
                     user: {
                       is: {
-                        fullName: { contains: normalizedSearch, mode: 'insensitive' },
+                        fullName: {
+                          contains: normalizedSearch,
+                          mode: 'insensitive',
+                        },
                       },
                     },
                   },
@@ -2175,8 +2193,8 @@ export class BookingsService {
       const currentAnd = Array.isArray(where.AND)
         ? where.AND
         : where.AND
-        ? [where.AND]
-        : [];
+          ? [where.AND]
+          : [];
       where.AND = [...currentAnd, searchClause];
     }
 
@@ -3047,6 +3065,8 @@ export class BookingsService {
 
     await this.queuesService.addNotificationJob('send-notification', {
       userId: 'ADMIN_USER_ID',
+      type: 'BOOKING_MANUAL_START_REQUEST',
+      bookingId: bookingId,
       kind: 'manual_start_request',
       title: 'Início manual solicitado',
       body: messageBody,
@@ -3137,10 +3157,12 @@ export class BookingsService {
 
     // side-effects: notifications
     try {
-      if (updated.client?.userId) {
-        await this.queuesService.addNotificationJob('send-notification', {
-          userId: updated.client.userId,
-          kind: 'booking_finished',
+        if (updated.client?.userId) {
+          await this.queuesService.addNotificationJob('send-notification', {
+            userId: updated.client.userId,
+            type: 'BOOKING_FINISHED',
+            bookingId: updated.id,
+            kind: 'booking_finished',
           title: 'Serviço finalizado',
           body: `Seu atendimento com ${updated.provider?.user?.fullName || 'prestador'} foi finalizado.`,
           deeplink: `/agendamento/${updated.id}`,
@@ -3151,6 +3173,8 @@ export class BookingsService {
       if (updated.provider?.userId) {
         await this.queuesService.addNotificationJob('send-notification', {
           userId: updated.provider.userId,
+          type: 'BOOKING_FINISHED',
+          bookingId: updated.id,
           kind: 'booking_finished',
           title: 'Serviço finalizado',
           body: `Atendimento ${updated.id} marcado como finalizado.`,
@@ -3227,6 +3251,8 @@ export class BookingsService {
         if ((updated as any).client?.userId) {
           await this.queuesService.addNotificationJob('send-notification', {
             userId: (updated as any).client.userId,
+            type: 'BOOKING_FINISHED',
+            bookingId: updated.id,
             kind: 'booking_finished',
             title: 'Serviço finalizado',
             body: `Seu atendimento com ${(updated as any).provider?.user?.fullName || 'prestador'} foi finalizado.`,
@@ -3238,6 +3264,8 @@ export class BookingsService {
         if ((updated as any).provider?.userId) {
           await this.queuesService.addNotificationJob('send-notification', {
             userId: (updated as any).provider.userId,
+            type: 'BOOKING_FINISHED',
+            bookingId: updated.id,
             kind: 'booking_finished',
             title: 'Serviço finalizado',
             body: `Atendimento ${updated.id} marcado como finalizado.`,
@@ -3323,6 +3351,7 @@ export class BookingsService {
     await this.queuesService.addNotificationJob('send-notification', {
       userId: 'ADMIN_USER_ID',
       type: 'BOOKING_DISPUTE',
+      bookingId,
       message: notificationMessage,
       targetUrl: `/admin/disputes/${bookingId}`,
     });
@@ -3429,7 +3458,7 @@ export class BookingsService {
     }
 
     if (booking.status !== BookingStatus.PENDING_DISPUTE) {
-      throw new BadRequestException(
+      throw new ConflictException(
         await this.i18n.translate(
           'dispute.badRequest.notInDisputeStatus',
           locale,
@@ -3437,111 +3466,150 @@ export class BookingsService {
       );
     }
 
-    if (refundAmount && refundAmount > 0) {
-      this.logger.log(
-        `[BookingsService] resolveDispute: Iniciando processo de reembolso de R$${refundAmount} para booking ${bookingId}.`,
-      );
-      await this.prisma.transaction.create({
-        data: {
-          providerId: booking.provider.id,
-          bookingId: booking.id,
-          amount: new Prisma.Decimal(refundAmount).neg(),
-          type: 'REFUND',
-          status: 'PROCESSED',
-          description: `Reembolso de disputa para agendamento ${bookingId}. Resolução: ${resolution}`,
-        },
-      });
-      // Telemetria: refund_processed
-      this.logger.log(
-        `[TELEMETRY] refund_processed: { bookingId: ${bookingId}, refundAmount: ${refundAmount} }`,
-      );
-    }
-
     const finalStatus = newStatus || BookingStatus.FINISHED;
-    const updatedBooking = await this.changeBookingStatus(
-      bookingId,
-      finalStatus,
-      {
-        booking,
-        include: DEFAULT_BOOKING_DETAILS_INCLUDE,
-      },
-    );
+    this.assertValidBookingTransition(booking.status, finalStatus);
 
-    // side-effects: ledger adjustments quando finaliza disputa
-    if (
-      finalStatus === BookingStatus.FINISHED &&
-      updatedBooking.provider?.userId
-    ) {
-      // ATENÇÃO: A lógica de Ledger aqui é diferente da implementada em updateStatus
-      // para a transição IN_PROGRESS -> FINISHED.
-      // Se a regra "EARNING + líquido, HOLD - bruto" deve ser universal para todas as finalizações,
-      // esta seção também precisaria ser ajustada.
-      // Mantendo como está para aderir ao "sem alter ao resto" fora do escopo da solicitação original.
+    const disputeId = booking.dispute?.id;
+    const disputeNoteSuffix = disputeId ? ` (dispute ${disputeId})` : '';
+    const providerUserId = booking.provider?.userId;
+    const providerId = booking.provider?.id;
 
-      const existingEarning = await this.prisma.ledgerEntry.findFirst({
-        where: { bookingId: updatedBooking.id, type: LedgerEntryType.EARNING },
-      });
-      const grossAmount = new Prisma.Decimal(updatedBooking.totalPrice);
-      const commissionPercent = new Prisma.Decimal(
-        Math.max(0, Math.min(1, COMMISSION_RATE)),
-      );
-      const feeAmount = grossAmount.mul(commissionPercent);
-      const netAmount = grossAmount.sub(feeAmount);
-
-      if (!existingEarning) {
-        await this.prisma.ledgerEntry.create({
+    const updatedBooking = await this.prisma.$transaction<
+      BookingWithDetailsRelations
+    >(async (tx: Prisma.TransactionClient) => {
+      if (
+        refundAmount &&
+        refundAmount > 0 &&
+        providerUserId &&
+        providerId
+      ) {
+        this.logger.log(
+          `[BookingsService] resolveDispute: Iniciando processo de reembolso de R$${refundAmount} para booking ${bookingId}.`,
+        );
+        const refundDecimal = new Prisma.Decimal(refundAmount);
+        await tx.transaction.create({
           data: {
-            userId: updatedBooking.provider.userId,
-            bookingId: updatedBooking.id,
-            amount: netAmount,
-            type: LedgerEntryType.EARNING,
-            note: `Earning for finished booking ${updatedBooking.id}`,
+            providerId,
+            bookingId: booking.id,
+            amount: refundDecimal.neg(),
+            type: 'REFUND',
+            status: 'PROCESSED',
+            description: `Reembolso de disputa para agendamento ${bookingId}. Resolução: ${resolution}`,
           },
         });
+        await tx.ledgerEntry.create({
+          data: {
+            userId: providerUserId,
+            bookingId: booking.id,
+            amount: refundDecimal.neg(),
+            type: LedgerEntryType.REFUND,
+            note: `Refund for dispute ${bookingId}${disputeNoteSuffix}`,
+          },
+        });
+        // Telemetria: refund_processed
         this.logger.log(
-          `[BookingsService] resolveDispute: Ledger EARNING criado para booking ${updatedBooking.id}.`,
+          `[TELEMETRY] refund_processed: { bookingId: ${bookingId}, refundAmount: ${refundAmount} }`,
         );
       }
-      // Fee da plataforma (take rate)
-      const feeExists = await this.prisma.ledgerEntry.findFirst({
-        where: { bookingId: updatedBooking.id, type: LedgerEntryType.FEE },
-      });
-      if (!feeExists && feeAmount.greaterThan(0)) {
-        await this.prisma.ledgerEntry.create({
-          data: {
-            userId: updatedBooking.provider.userId,
-            bookingId: updatedBooking.id,
-            amount: feeAmount.neg(),
-            type: LedgerEntryType.FEE,
-            note: `Take rate fee for booking ${updatedBooking.id}`,
-          },
-        });
-      }
-    }
 
-    // side-effects: notifications
+      if (
+        finalStatus === BookingStatus.FINISHED &&
+        providerUserId &&
+        booking.totalPrice
+      ) {
+        const grossAmount = new Prisma.Decimal(booking.totalPrice);
+        const commissionPercent = new Prisma.Decimal(
+          Math.max(0, Math.min(1, COMMISSION_RATE)),
+        );
+        const feeAmount = grossAmount.mul(commissionPercent);
+        const netAmount = grossAmount.sub(feeAmount);
+
+        const existingEarning = await tx.ledgerEntry.findFirst({
+          where: { bookingId: booking.id, type: LedgerEntryType.EARNING },
+        });
+        if (!existingEarning && netAmount.greaterThan(0)) {
+          await tx.ledgerEntry.create({
+            data: {
+              userId: providerUserId,
+              bookingId: booking.id,
+              amount: netAmount,
+              type: LedgerEntryType.EARNING,
+              note: `Earning for finished booking ${booking.id}${disputeNoteSuffix}`,
+            },
+          });
+          this.logger.log(
+            `[BookingsService] resolveDispute: Ledger EARNING criado para booking ${booking.id}.`,
+          );
+        }
+
+        const feeExists = await tx.ledgerEntry.findFirst({
+          where: { bookingId: booking.id, type: LedgerEntryType.FEE },
+        });
+        if (!feeExists && feeAmount.greaterThan(0)) {
+          await tx.ledgerEntry.create({
+            data: {
+              userId: providerUserId,
+              bookingId: booking.id,
+              amount: feeAmount.neg(),
+              type: LedgerEntryType.FEE,
+              note: `Take rate fee for booking ${booking.id}${disputeNoteSuffix}`,
+            },
+          });
+        }
+      }
+
+      const result = (await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: finalStatus,
+        },
+        include: DEFAULT_BOOKING_DETAILS_INCLUDE,
+      })) as BookingWithDetailsRelations;
+
+      return result;
+    });
+
     const clientNotificationMessage = await this.i18n.translate(
       'notification.disputeResolvedClient',
       locale,
       { bookingId: booking.id, status: finalStatus, resolution },
     );
-    await this.queuesService.addNotificationJob('send-notification', {
-      userId: booking.client.userId,
-      type: 'DISPUTE_RESOLUTION',
-      message: clientNotificationMessage,
-      targetUrl: `/client/bookings/${booking.id}`,
-    });
+    try {
+      await this.queuesService.addNotificationJob('send-notification', {
+        userId: booking.client.userId,
+        type: 'DISPUTE_RESOLUTION',
+        bookingId: booking.id,
+        message: clientNotificationMessage,
+        targetUrl: `/client/bookings/${booking.id}`,
+      });
+    } catch (notificationError) {
+      this.logger.warn(
+        `[BookingsService] resolveDispute: falha ao notificar cliente: ${
+          (notificationError as Error).message
+        }`,
+      );
+    }
+
     const providerNotificationMessage = await this.i18n.translate(
       'notification.disputeResolvedProvider',
       locale,
       { bookingId: booking.id, status: finalStatus, resolution },
     );
-    await this.queuesService.addNotificationJob('send-notification', {
-      userId: booking.provider.userId,
-      type: 'DISPUTE_RESOLUTION',
-      message: providerNotificationMessage,
-      targetUrl: `/provider/bookings/${booking.id}`,
-    });
+    try {
+      await this.queuesService.addNotificationJob('send-notification', {
+        userId: booking.provider.userId,
+        type: 'DISPUTE_RESOLUTION',
+        bookingId: booking.id,
+        message: providerNotificationMessage,
+        targetUrl: `/provider/bookings/${booking.id}`,
+      });
+    } catch (notificationError) {
+      this.logger.warn(
+        `[BookingsService] resolveDispute: falha ao notificar provedor: ${
+          (notificationError as Error).message
+        }`,
+      );
+    }
 
     this.logger.log(
       `[BookingsService] resolveDispute: Disputa para booking ${bookingId} resolvida. Novo status: ${finalStatus}.`,
