@@ -1,24 +1,26 @@
 import { ConfigService } from '@nestjs/config';
 import { CacheService } from '../cache/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { AdminObservabilityService } from './admin-observability.service';
+import { AdminObservabilityService, BUSINESS_LATENCY_CONFIGS } from './admin-observability.service';
 import { ObservabilityService } from '../observability/observability.service';
-import { LATENCY_CRITICAL_ROUTES } from '../observability/latency-route-config';
 
 describe('AdminObservabilityService', () => {
-  it('builds latencySeriesByRoute for all configured routes and keeps defaults', async () => {
-    const sampleTimestamp = new Date().toISOString();
-    const expectedSeries = [
-      { timestamp: sampleTimestamp, latencyMs: 12 },
-    ];
+  it('aggregates business latency series and averages for the configured routes', async () => {
+    const timestampA = new Date('2024-01-01T10:00:00.000Z').toISOString();
+    const timestampB = new Date('2024-01-01T10:05:00.000Z').toISOString();
+    const seriesMap: Record<string, Array<{ timestamp: string; latencyMs: number }>> = {
+      '/auth/register/client': [
+        { timestamp: timestampA, latencyMs: 100 },
+        { timestamp: timestampB, latencyMs: 120 },
+      ],
+      '/providers/nearby': [{ timestamp: timestampA, latencyMs: 80 }],
+      '/bookings': [{ timestamp: timestampB, latencyMs: 200 }],
+      '/payments/webhook/pix': [],
+    };
     const observabilityServiceMock = {
-      getLatencySeries: jest
-        .fn()
-        .mockImplementation((route: string) =>
-          Promise.resolve(
-            route === LATENCY_CRITICAL_ROUTES[0] ? expectedSeries : [],
-          ),
-        ),
+      getLatencySeries: jest.fn().mockImplementation((route: string) =>
+        Promise.resolve(seriesMap[route] ?? []),
+      ),
     };
 
     const service = new AdminObservabilityService(
@@ -46,21 +48,33 @@ describe('AdminObservabilityService', () => {
     const snapshot = await service.getSnapshot();
 
     expect(observabilityServiceMock.getLatencySeries).toHaveBeenCalledTimes(
-      LATENCY_CRITICAL_ROUTES.length,
+      BUSINESS_LATENCY_CONFIGS.length,
     );
-    LATENCY_CRITICAL_ROUTES.forEach((route) => {
+    BUSINESS_LATENCY_CONFIGS.forEach((config) => {
       expect(observabilityServiceMock.getLatencySeries).toHaveBeenCalledWith(
-        route,
+        config.route,
         { windowHours: 6, points: 12 },
       );
     });
 
-    expect(snapshot.latencySeriesByRoute).toEqual(
-      LATENCY_CRITICAL_ROUTES.reduce<Record<string, any>>((acc, route) => {
-        acc[route] = route === LATENCY_CRITICAL_ROUTES[0] ? expectedSeries : [];
-        return acc;
-      }, {}),
-    );
-    expect(snapshot.latencySeries).toBe(snapshot.latencySeriesByRoute[LATENCY_CRITICAL_ROUTES[0]]);
+    expect(snapshot.latencySeries).toEqual([
+      {
+        timestamp: timestampA,
+        registerLatency: 100,
+        radiusLatency: 80,
+        criticalAverage: 90,
+      },
+      {
+        timestamp: timestampB,
+        registerLatency: 120,
+        bookingLatency: 200,
+        criticalAverage: 160,
+      },
+    ]);
+    expect(snapshot.latencyAverages).toEqual({
+      registerLatency: 110,
+      radiusLatency: 80,
+      bookingLatency: 200,
+    });
   });
 });
