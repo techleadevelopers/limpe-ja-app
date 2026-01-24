@@ -1,7 +1,7 @@
 // components/ui/Skeleton.tsx
 // ================================================
 import React, { useEffect, useRef } from 'react';
-import { Animated, View, StyleSheet, useColorScheme, Easing } from 'react-native';
+import { Animated, View, useColorScheme, Easing } from 'react-native';
 import { useReducedMotion } from '../components/utils/useReducedMotion'; // Certifique-se de que o caminho está correto
 import Colors from '../constants/Colors'; // Importe seu arquivo Colors
 
