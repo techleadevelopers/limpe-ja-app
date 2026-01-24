@@ -158,19 +158,8 @@ export default function Bubble({
     initialY,
     animationDelay,
     animationDuration,
-    scale,
-    opacity,
-    translateX,
-    translateY,
-    shadowOpacityAnim,
-    wobbleY, // Added wobbleY to dependencies
-    size,
-    width,
-    height, // Added height as it's used in Y sequence
     motionOffset,
     yOffsetAmplitude,
-    color1,
-    color2, // Added color2 to dependencies if it's used in styles within the effect
   ]);
 
   const animatedBubbleStyle = useAnimatedStyle(() => ({
