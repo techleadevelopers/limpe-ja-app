@@ -461,7 +461,7 @@ export default function RegisterProviderScreen() {
     if (!dateOfBirth.trim()) {
       setDateOfBirthError('A data de nascimento eh obrigatoria.');
     } else {
-      const dateRegex = /^\\d{2}\/\\d{2}\/\\d{4}$/;
+      const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
       if (!dateRegex.test(dateOfBirth)) {
         setDateOfBirthError('Formato de data invalido (DD/MM/AAAA).');
       } else {
