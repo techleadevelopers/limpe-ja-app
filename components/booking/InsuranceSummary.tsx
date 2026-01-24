@@ -1,11 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Platform } from 'react-native';
 import { AppColors } from '../../constants/appStyles';
 import { formatBRL } from '../../utils/formatters';
 import { BookingInsuranceSnapshot } from '../../types/backend/bookings';
-import { Platform } from 'react-native';
-
 interface InsuranceSummaryProps {
   insurance: BookingInsuranceSnapshot;
 }
