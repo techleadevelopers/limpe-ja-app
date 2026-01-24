@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useIsFocused } from '@react-navigation/native';
 import { Platform, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
@@ -61,10 +61,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
   const cardShrinkStyle = PLATFORM_CARD_SHRINK_STYLE;
   const shouldShowReflection = Platform.OS !== 'android';
 
-  if (!item || !item.id || !item.fullName) {
-    return null;
-  }
-
   // NOVO: Extrair apenas o primeiro nome do fullName (split por espaço e pega o primeiro)
   const firstName = item.fullName.split(' ')[0];
 
@@ -103,7 +99,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
     );
 
     return () => cancelAnimation(reflectionTranslateX);
-  }, [shouldAnimate, shouldShowReflection]);
+  }, [shouldAnimate, shouldShowReflection, reflectionTranslateX]);
 
   const animatedReflectionStyle = useAnimatedStyle(() => {
     return {
@@ -137,7 +133,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
     return () => {
       cancelAnimation(subtleTrembleValue);
     };
-  }, [shouldAnimate]);
+  }, [shouldAnimate, subtleTrembleValue]);
 
   const subtleTrembleAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -172,7 +168,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
     return () => {
       cancelAnimation(fadeValue);
     };
-  }, [shouldAnimate]);
+  }, [shouldAnimate, fadeValue]);
 
   const residencialOpacityStyle = useAnimatedStyle(() => ({
     opacity: 1 - fadeValue.value,
@@ -207,7 +203,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
     return () => {
       cancelAnimation(badgeVisibility);
     };
-  }, [shouldAnimate]);
+  }, [shouldAnimate, badgeVisibility]);
 
   const badgeVisibilityStyle = useAnimatedStyle(() => ({
     opacity: badgeVisibility.value,
@@ -231,7 +227,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
       -1,
       true
     );
-  }, [shouldAnimate]);
+  }, [shouldAnimate, pulse]);
 
   const animatedPulseStyle = useAnimatedStyle(() => {
     // CORRIGIDO: Amplitude menor para "piscar" sutil (sem transparência excessiva: 0.9-1 em vez de 0.75-1)
@@ -259,7 +255,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
       -1,
       false
     );
-  }, [shouldAnimate]);
+  }, [shouldAnimate, borderPulse]);
 
   const animatedBorderStyle = useAnimatedStyle(() => {
     const c = interpolateColor(borderPulse.value, [0, 1], ['#d1d5db53', '#7aa7ff55']);
@@ -284,7 +280,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
     return () => {
       cancelAnimation(priceReflectionX);
     };
-  }, [priceBadgeWidth, shouldAnimate]);
+  }, [priceBadgeWidth, shouldAnimate, priceReflectionX]);
 
   const priceReflectionStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: priceReflectionX.value }],
@@ -301,28 +297,11 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
     }
 
     textFade.value = withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) });
-  }, [index, shouldAnimate]);
+  }, [index, shouldAnimate, textFade]);
 
   const fadeTextStyle = useAnimatedStyle(() => ({
     opacity: textFade.value,
   }));
-
-  const renderStars = (rating: number | undefined) => {
-    // MODIFICADO: Agora renderiza apenas 1 estrela cheia, sem texto
-    if (rating && rating > 0) {
-      return (
-        <View style={styles.ratingStarContainer}>
-          <Ionicons
-            name="star"
-            size={S(11)}
-            color="#5da2ecff"
-            style={styles.ratingStarIcon}
-          />
-        </View>
-      );
-    }
-    return null; // Não renderiza se não houver rating
-  };
 
   const handleCardPress = () => {
     try {
@@ -354,9 +333,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
     ? getFormattedServicePrice(mainServiceForDisplay, t)
     : t('provider_details.price_not_available', { defaultValue: 'Preço não disponível' });
 
-  // Obtém o valor numérico do preço principal para comparações futuras
-  const numericMainPrice = mainServiceForDisplay ? getNumericPriceValue(mainServiceForDisplay) : null;
-
   // --- INÍCIO DA MODIFICAÇÃO PARA O NÚMERO DE AVALIAÇÕES ---
   // Calcula o número real de avaliações
   const actualReviewCount = typeof item.reviewCount === 'number'
@@ -365,12 +341,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
 
   const hasReviews = actualReviewCount > 0;
   const displayedReviewCount = hasReviews ? actualReviewCount : 0;
-  const badgeText = hasReviews
-    ? String(displayedReviewCount)
-    : t('provider_details.badge_new', { defaultValue: 'Novo' });
-  const badgeIconName = hasReviews ? 'star' : 'sparkles';
-  const badgeIconColor = hasReviews ? '#5da2ecff' : '#facc15';
-
   const hasRating = true;
   // --- FIM DA MODIFICAÇÃO ---
 
@@ -439,46 +409,10 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item, isVisible = t
 
   const displayedCategories = categoriesToDisplay.slice(0, 3); // Até 3 categorias
 
-  // NOVO: Função para obter o label do texto abaixo do ícone (mapeamento premium)
-  const getCategoryLabel = (categoryName?: string) => {
-    if (!categoryName) return 'Geral';
-    const baseName = categoryName
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-    switch (baseName) {
-      case 'residencial': return 'Residencial';
-      case 'comercial': return 'Comercial';
-      case 'obra': return 'Pós-Obra';
-      case 'vidro': return 'Vidro';
-      case 'escritorio':
-      case 'escritório': return 'Escritório';
-      case 'estofados': return 'Estofados';
-      case 'passadoria': return 'Passadoria';
-      case 'limpeza geral':
-      case 'limpeza': return 'Limpeza Geral';
-      default: return 'Geral';
-    }
-  };
-
   // Formatar a distancia aceitando number ou string com unidades
-  const parseDistanceMeters = (value: any): number | null => {
-    if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
-      return value;
-    }
-    if (typeof value === 'string') {
-      const normalized = value.trim().toLowerCase();
-      const numeric = parseFloat(normalized.replace(/[^0-9.,]/g, '').replace(',', '.'));
-      if (!Number.isFinite(numeric) || numeric < 0) return null;
-      const isKm = normalized.includes('km');
-      return isKm ? numeric * 1000 : numeric;
-    }
-    return null;
-  };
-
-  const distanceValueMeters = parseDistanceMeters((item as any)?.distance);
-  const distanceLabel = distanceValueMeters !== null ? formatDistance(distanceValueMeters, null) : null;
+  const hasDistance =
+    typeof item.distance === 'number' && Number.isFinite(item.distance) && item.distance >= 0;
+  const distanceLabel = hasDistance ? formatDistance(item.distance, null) : null;
   const showDistancePill = distanceLabel !== null;
 
 type NextAvailabilitySource =
@@ -554,54 +488,6 @@ type NextAvailabilitySource =
   const hasAcceptanceRate = typeof acceptanceRateValue === 'number';
   const hasResponseTime = typeof responseTimeValue === 'number';
 
-  const renderMetrics = () => {
-    if (!hasAcceptanceRate && !hasResponseTime) return null;
-
-    return (
-      <View style={[styles.metricTextContainer, { flexDirection: 'column', alignItems: 'center' }]}>
-        {hasAcceptanceRate && (
-          <View style={styles.metricRow}>
-            <Ionicons name="checkmark-done" size={S(0)} color="#5da2ecff" style={styles.metricPercentIcon} />
-            <Text style={styles.metricValue} allowFontScaling={false}>{Math.round(acceptanceRateValue ?? 0)}%</Text>
-          </View>
-        )}
-        {hasResponseTime && (
-          <View style={styles.metricRow}>
-          <Ionicons name="time-outline" size={S(10)} color="#5da2ecff" />
-            <Text style={styles.metricValue} allowFontScaling={false}>{(responseTimeValue ?? 120)} min</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  // NOVO: Função para mapear categoria para ícone (reutilizando os mesmos da CategoriaCard, mas mini e com tint sutil para diferenciar)
-  const getCategoryIconSource = (categoryName?: string) => {
-    if (!categoryName) return require('../../../../assets/images/icons/residencial.png'); // Default
-    const baseName = categoryName
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim(); // Normaliza acentos e caixa
-    try {
-      switch (baseName) {
-        case 'residencial': return require('../../../../assets/images/icons/residencial5.png');
-        case 'comercial': return require('../../../../assets/images/icons/comercial3.png');
-        case 'obra': return require('../../../../assets/images/icons/regex4.png');
-        case 'vidro': return require('../../../../assets/images/icons/vidro.png');
-        case 'escritorio':
-        case 'escritório': return require('../../../../assets/images/icons/escritorio.png');
-        case 'estofados': return require('../../../../assets/images/icons/estofados.png');
-        case 'passadoria': return require('../../../../assets/images/icons/passadoria.png');
-        case 'limpeza geral':
-        case 'limpeza': return require('../../../../assets/images/icons/residencial.png'); // Fallback para limpeza geral como residencial
-        default: return require('../../../../assets/images/icons/residencial.png');
-      }
-    } catch {
-      return require('../../../../assets/images/icons/residencial.png');
-    }
-  };
-
   const computeFallbackNextAvailable = (): { date: string; time: string } => {
     const now = new Date();
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
@@ -650,14 +536,15 @@ type NextAvailabilitySource =
             {distanceLabel ?? '-- km'}
           </Text>
           {/* Badge animado flutuante para proximo horario */}
-          {formattedNextAvailable && (
-            <AnimatedReanimated.View
-              style={[
-                styles.nextAvailableBadge,
-                { transform: [{ scale: 1 }] },
-                badgeVisibilityStyle,
-              ]}
-            >
+            {formattedNextAvailable && (
+              <AnimatedReanimated.View
+                style={[
+                  styles.nextAvailableBadge,
+                  { transform: [{ scale: 1 }] },
+                  badgeVisibilityStyle,
+                  animatedPulseStyle,
+                ]}
+              >
               <View style={styles.nextAvailableCircle}>
                 <Ionicons name="calendar-outline" size={S(10)} color="#5da2ecff" style={styles.nextAvailableIconCalendar} />
                 <AnimatedText style={[styles.nextAvailableCircleDay, fadeTextStyle]}>
@@ -692,7 +579,7 @@ type NextAvailabilitySource =
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
             <View style={styles.imageWrapper}>
-              <Image source={avatarSource} style={styles.cardImage} resizeMode="contain" />
+              <Image source={avatarSource} style={styles.cardImage} resizeMode="cover" />
             {/* SEL0 DE SEGURANÇA REFINADO */}
             <AnimatedPlusButtonGradient
               style={[styles.securityBadge, subtleTrembleAnimatedStyle]}
@@ -957,11 +844,11 @@ right: Platform.OS === 'android' ? -4 : -4,
   imageWrapper: {
     width: '100%',
     height: S(62), // Mantido: 75px (sem mudança, espaço extra vem do height total)
-    backgroundColor: '#f3f4f6',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative', // Para overlay do selo (botão agora aqui)
-    padding: 6,
+    padding: 0,
   },
   // NOVO: Estilos para o badge animado do horário (background mais opaco para evitar transparência no card)
   nextAvailableBadge: {
@@ -1088,9 +975,9 @@ right: Platform.OS === 'android' ? -4 : -4,
   },
   // REMOVIDO: verifiedBadge style (não mais usado)
   cardImage: {
-    width: '90%',
-    height: '90%',
-    borderRadius: 12,
+    width: '100%',
+    height: '100%',
+    borderRadius: 0,
     alignSelf: 'center',
     resizeMode: 'contain',
   },
