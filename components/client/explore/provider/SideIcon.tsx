@@ -1,8 +1,7 @@
 // components/client/explore/provider/SideIcon.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, Animated, Easing } from 'react-native';
+import { Alert, Animated, Easing, StyleSheet, TouchableOpacity, View, Platform } from 'react-native';
 import { Icons3D } from '../../../../constants/icons3d';
-import { Platform } from 'react-native';
 
 interface SideIconProps {
   showSecurity?: boolean;
