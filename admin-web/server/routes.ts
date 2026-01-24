@@ -64,6 +64,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const metrics = await storage.getDashboardMetrics();
         res.json(metrics);
       } catch (error) {
+        console.error("[Mock API] Failed to fetch dashboard metrics", error);
         res.status(500).json({ message: "Failed to fetch dashboard metrics" });
       }
     });
@@ -74,6 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const providers = await storage.getProviders();
         res.json(providers);
       } catch (error) {
+        console.error("[Mock API] Failed to fetch providers", error);
         res.status(500).json({ message: "Failed to fetch providers" });
       }
     });
@@ -97,6 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const providers = await storage.getProvidersByStatus(status as any);
         res.json(providers);
       } catch (error) {
+        console.error("[Mock API] Failed to fetch providers by status", error);
         res.status(500).json({ message: "Failed to fetch providers by status" });
       }
     });
@@ -113,6 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json(provider);
       } catch (error) {
+        console.error("[Mock API] Failed to fetch provider", error);
         res.status(500).json({ message: "Failed to fetch provider" });
       }
     });
@@ -160,6 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json(updatedProvider);
       } catch (error) {
+        console.error("[Mock API] Failed to update provider", error);
         if (error instanceof z.ZodError) {
           return res.status(400).json({ message: "Invalid request data", errors: error.errors });
         }
@@ -174,6 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const activities = await storage.getActivities(limit);
         res.json(activities);
       } catch (error) {
+        console.error("[Mock API] Failed to fetch activities", error);
         res.status(500).json({ message: "Failed to fetch activities" });
       }
     });
@@ -190,6 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json(queue);
       } catch (error) {
+        console.error("[Mock API] Failed to fetch verification queue", error);
         res.status(500).json({ message: "Failed to fetch verification queue" });
       }
     });
