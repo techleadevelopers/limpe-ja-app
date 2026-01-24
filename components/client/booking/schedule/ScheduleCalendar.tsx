@@ -1,23 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'react-native';
 import React, { memo, useCallback, useRef } from 'react';
 import {
   Alert,
   Animated,
-  Dimensions,
-  Easing,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
-  Image,
   View,
 } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { AppColors } from '../../../../constants/appStyles';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Adicione 'inactive' à lista de strings permitidas
 type DayState = 'selected' | 'disabled' | 'today' | 'filler' | 'inactive' | 'normal' | '';
@@ -68,14 +64,6 @@ const Radii = {
   md: 16,
   sm: 12,
 };
-
-const Spacing = {
-  sm: 12,
-  md: 18,
-  lg: 24,
-};
-
-const easeOut = Easing.out(Easing.ease);
 
 // ✅ PATCH: Helper para blindagem toISOString (defesa contra undefined)
 const safeISO = (d?: Date) => (d instanceof Date ? d.toISOString() : new Date().toISOString());
@@ -265,17 +253,17 @@ const DayCell = memo(({ date, state, marking, handleDayPress }: DayCellProps) =>
           {(date as any)?.day}
         </Text>
         {isDisabled && (
-          <Ionicons
-            name="close"
-            size={20}
-            color={Colors.textMuted}
-            style={{ position: 'absolute', opacity: 0.3 }}
+          <Image
+            source={require('../../../../assets/images/x.png')}
+            style={[styles.disabledIcon, { tintColor: Colors.textMuted }]}
+            resizeMode="contain"
           />
         )}
       </TouchableOpacity>
     </View>
   );
 });
+DayCell.displayName = 'DayCell';
 
 const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(
   ({
@@ -559,9 +547,9 @@ const styles = StyleSheet.create({
   },
   disabledIcon: {
     position: 'absolute',
-    width: 29,
-    height: 29,
+    width: 28,
+    height: 28,
     top: 4,
-    opacity: 0.65,
+    opacity: 0.8,
   },
 });
