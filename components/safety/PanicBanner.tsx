@@ -105,7 +105,7 @@ export const PanicBanner: React.FC<PanicBannerProps> = ({
     const mm = String(Math.floor(s / 60)).padStart(2, '0');
     const ss = String(s % 60).padStart(2, '0');
     return `${mm}:${ss}`;
-  }, [startedAt, status]); // recalculado a cada render
+  }, [startedAt]); // recalculado a cada render
 
   const meta = statusMeta[status];
 
