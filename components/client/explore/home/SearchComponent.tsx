@@ -1,6 +1,6 @@
 // LimpeJaApp/components/client/explore/home/SearchComponent.tsx
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 // Importe AppColors se for usar para cores, ou defina as cores diretamente
 // import { AppColors } from '../../../constants/appStyles'; 
