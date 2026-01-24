@@ -1,9 +1,9 @@
 // LimpeJaApp/app/client/bookings/components/success/DateTimeCards.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ColorValue, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
+import { AppColors } from '../../../../constants/appStyles';
 
 interface DateTimeCardsProps {
   formattedBookingDate: string;
@@ -88,7 +88,14 @@ export default function DateTimeCards({
       anim1.stop();
       anim2.stop(); // Cleanup premium para performance
     };
-  }, []);
+  }, [
+    card1FadeAnim,
+    card1TranslateYAnim,
+    card1ScaleAnim,
+    card2FadeAnim,
+    card2TranslateYAnim,
+    card2ScaleAnim,
+  ]);
 
   return (
     <View style={styles.dateTimeContainer}>
