@@ -51,7 +51,7 @@ export default function MainActionButtons({
     entryAnim.start();
 
     return () => entryAnim.stop(); // Cleanup
-  }, []);
+  }, [fadeAnim, translateYAnim, scaleAnim]);
 
   const onPressInButton = (animValue: Animated.Value) => {
     Animated.spring(animValue, {
