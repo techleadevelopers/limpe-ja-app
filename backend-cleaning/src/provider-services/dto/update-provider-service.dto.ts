@@ -1,6 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNumber, Min, IsOptional, IsInt, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { MIN_HOURLY_MINUTES } from '../../common/constants/pricing';
+import { sanitizeHtmlText } from '../../common/utils/transformers';
 
 export class UpdateProviderServiceDto {
   @ApiPropertyOptional({
@@ -26,6 +28,7 @@ export class UpdateProviderServiceDto {
     example: 'Servico premium com foco em detalhes.',
   })
   @IsOptional()
+  @Transform(sanitizeHtmlText)
   @IsString()
   description?: string;
 }
