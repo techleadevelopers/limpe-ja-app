@@ -30,7 +30,7 @@ export class AdminPaymentsController {
     if (!referenceId || !referenceId.trim()) {
       throw new BadRequestException('referenceId é obrigatório.');
     }
-    await this.paymentsService.confirmPixPayment(referenceId.trim());
+    await this.paymentsService.forceConfirmPixPayment(referenceId.trim());
     return { ok: true };
   }
 
