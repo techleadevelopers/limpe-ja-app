@@ -32,9 +32,23 @@ export class HttpMetricsMiddleware implements NestMiddleware {
   constructor(private readonly observabilityService: ObservabilityService) {}
 
   private isCriticalRoute(route: string): boolean {
-    return ['bookings', 'payments', 'auth', 'search', 'providers', 'safety', 'chat', 'verification', 'payouts', 'subscriptions', 'webhooks', 'notifications', 'disputes', 'reviews', 'admin'].some((segment) =>
-      route.startsWith(`/${segment}`),
-    );
+    return [
+      'bookings',
+      'payments',
+      'auth',
+      'search',
+      'providers',
+      'safety',
+      'chat',
+      'verification',
+      'payouts',
+      'subscriptions',
+      'webhooks',
+      'notifications',
+      'disputes',
+      'reviews',
+      'admin',
+    ].some((segment) => route.startsWith(`/${segment}`));
   }
 
   private normalizeRouteKey(route: string): string {
