@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Platform, StyleSheet, ViewStyle } from 'react-native';
+import { Animated, Platform, StyleSheet, ViewStyle } from 'react-native';
 
 interface BottomSlideInCardProps {
   isVisible: boolean;
@@ -12,8 +12,6 @@ interface BottomSlideInCardProps {
   /** pointerEvents para o container (ex: 'box-none' para não bloquear interações subjacentes) */
   pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only'; // <-- CORRIGIDO: Tipo literal específico do React Native (resolve erro TS)
 }
-
-const { width: screenWidth } = Dimensions.get('window');
 
 const BottomSlideInCard: React.FC<BottomSlideInCardProps> = ({
   isVisible,
