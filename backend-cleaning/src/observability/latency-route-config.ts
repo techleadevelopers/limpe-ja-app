@@ -12,6 +12,7 @@ const CRITICAL_ROUTES = [
   '/auth/register/client',
   '/auth/register/provider',
   '/safety',
+  '/safety/panic',
 ];
 
 // Exposed list for sampling prefixes in the interceptor.
