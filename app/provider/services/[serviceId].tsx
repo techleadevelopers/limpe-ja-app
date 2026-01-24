@@ -1,12 +1,10 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Image, Platform, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 
-import { setSafeError } from '../../../_shared/errors/uiFeedback';
 import Colors from '../../../constants/Colors';
-import { getBookingDetails, updateBookingStatus } from '../../../services/bookingService';
+import { getBookingDetails } from '../../../services/bookingService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { formatDate } from '../../../utils/helpers';
 
@@ -24,7 +22,6 @@ export default function ProviderServiceDetailsScreen() {
 
   const [data, setData] = React.useState<BookingDetails | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isUpdating, setIsUpdating] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -35,7 +32,8 @@ export default function ProviderServiceDetailsScreen() {
         const d = await getBookingDetails(String(serviceId));
         if (mounted) setData(d);
       } catch (e: any) {
-        setSafeError(setError, e);
+        console.error('Failed to load service details', e);
+        setError(String((e.message || e) ?? 'Erro desconhecido'));
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -43,29 +41,13 @@ export default function ProviderServiceDetailsScreen() {
     return () => { mounted = false; };
   }, [serviceId]);
 
-  const statusStyle = React.useMemo(() => {
-    const s = data?.status;
-    switch (s) {
-      case BookingStatus.PENDING:
-        return { text: '#FF6F00', bg: '#FFF3E0', icon: 'clock-outline', label: 'Pendente' };
-      case BookingStatus.CONFIRMED:
-        return { text: '#2E7D32', bg: '#E8F5E9', icon: 'check-circle-outline', label: 'Confirmado' };
-      case BookingStatus.STARTED:
-        return { text: '#007AFF', bg: '#E3F2FD', icon: 'sync-circle-outline', label: 'Em andamento' };
-      case BookingStatus.FINISHED:
-        return { text: '#546E7A', bg: '#ECEFF1', icon: 'check-all', label: 'Concluído' };
-      default:
-        return { text: '#546E7A', bg: '#ECEFF1', icon: 'information-outline', label: 'Status' };
-    }
-  }, [data?.status]);
-
   const serviceScopeLabel = React.useMemo(() => {
     if (!data) return 'Residencial';
     const haystack = `${data.serviceDescription ?? ''} ${data.notes ?? ''}`.toLowerCase();
     if (haystack.includes('comercial')) return 'Comercial';
     if (haystack.includes('residencial')) return 'Residencial';
     return 'Residencial';
-  }, [data?.notes, data?.serviceDescription]);
+  }, [data]);
 
   if (isLoading) return (
     <View style={styles.centered}>
@@ -73,6 +55,15 @@ export default function ProviderServiceDetailsScreen() {
       <ActivityIndicator size="large" color={theme.primary} />
     </View>
   );
+
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -207,6 +198,7 @@ const styles = StyleSheet.create({
   backBtn: { backgroundColor: '#F0F0F0', padding: 8, borderRadius: 12 },
   scrollContent: { padding: 20 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorText: { color: '#D32F2F', fontSize: 16, textAlign: 'center', paddingHorizontal: 20 },
 
   // Cards Premium
 mainCard: { 
