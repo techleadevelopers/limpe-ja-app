@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service'; // Assuming PrismaService exists
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
@@ -20,6 +21,8 @@ import { QueuesService } from '../queues/queues.service'; // Assuming QueuesServ
 
 @Injectable()
 export class SubscriptionsService {
+  private readonly logger = new Logger(SubscriptionsService.name);
+
   constructor(
     private prisma: PrismaService,
     private bookingsService: BookingsService,
@@ -73,14 +76,16 @@ export class SubscriptionsService {
       },
     });
 
-    // Immediately generate the first booking
-    await this.generateRecurringBooking(subscription.id);
-
-    // Schedule future booking generations
-    await this.scheduleNextBookingGeneration(
-      subscription.id,
-      initialNextGenerationDate,
-    );
+    const now = new Date();
+    if (initialNextGenerationDate > now) {
+      await this.scheduleNextBookingGeneration(
+        subscription.id,
+        initialNextGenerationDate,
+        subscription.frequency,
+      );
+    } else {
+      await this.generateRecurringBooking(subscription.id);
+    }
 
     // TODO: Integrate with PaymentsService for initial recurring payment setup (e.g., tokenization)
     // await this.paymentsService.setupRecurringPayment(clientId, subscription.id, totalPrice, frequency);
@@ -200,9 +205,14 @@ export class SubscriptionsService {
       existingSubscription.status !== SubscriptionStatus.ACTIVE
     ) {
       // If reactivated, reschedule future bookings
+      const resumedNextDate =
+        updatedSubscription.nextGenerationDate ??
+        updatedSubscription.startDate ??
+        new Date();
       await this.scheduleNextBookingGeneration(
         updatedSubscription.id,
-        updatedSubscription.nextGenerationDate || new Date(), // Use next generation date or now
+        resumedNextDate,
+        updatedSubscription.frequency,
       );
       // TODO: Notify payments service to resume recurring charges
       // await this.paymentsService.resumeRecurringPayment(id);
@@ -213,65 +223,116 @@ export class SubscriptionsService {
 
   // --- Internal Methods for Recurring Booking Generation ---
 
-  async generateRecurringBooking(subscriptionId: string) {
+  async generateRecurringBooking(subscriptionId: string): Promise<boolean> {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id: subscriptionId },
       include: {
         client: { include: { address: true } },
         provider: true,
         providerService: true,
-      }, // Incluir address do cliente
+      },
     });
 
     if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
-      console.warn(
+      this.logger.warn(
         `Subscription ${subscriptionId} is not active or not found. Skipping booking generation.`,
       );
-      return;
+      return false;
     }
 
-    if (!subscription.client?.address?.id) {
-      console.error(
-        `Subscription ${subscriptionId} cannot generate booking: Client address not found.`,
+    const address = subscription.client?.address;
+    if (!address?.id) {
+      this.logger.error(
+        `Subscription ${subscriptionId} cannot generate booking: client address not found.`,
       );
-      throw new BadRequestException(
-        'Client address not found for subscription booking generation.',
+      await this.flagSubscriptionAddressIssue(
+        subscriptionId,
+        'Client address missing or incomplete.',
+        subscription.status,
       );
+      return false;
+    }
+
+    if (
+      address.latitude === null ||
+      address.latitude === undefined ||
+      address.longitude === null ||
+      address.longitude === undefined
+    ) {
+      this.logger.error(
+        `Subscription ${subscriptionId} address ${address.id} lacks geocoordinates.`,
+      );
+      await this.flagSubscriptionAddressIssue(
+        subscriptionId,
+        'Client address missing latitude/longitude.',
+        subscription.status,
+      );
+      return false;
     }
 
     const now = new Date();
-    // Ensure we only generate if nextGenerationDate is in the past or very near future
-    if (
-      subscription.nextGenerationDate > now &&
-      Math.abs(subscription.nextGenerationDate.getTime() - now.getTime()) >
-        1000 * 60 * 60 * 24
-    ) {
-      // 24 hours leeway
-      console.warn(
-        `Booking for subscription ${subscriptionId} not due yet. Next generation: ${subscription.nextGenerationDate.toISOString()}`,
+    const scheduledDate = new Date(subscription.nextGenerationDate);
+    const horizonMs = 1000 * 60 * 60 * 24;
+    if (scheduledDate > now && scheduledDate.getTime() - now.getTime() > horizonMs) {
+      this.logger.log(
+        `Booking for subscription ${subscriptionId} not due yet. Next generation: ${scheduledDate.toISOString()}`,
       );
-      return;
+      return false;
     }
 
-    const scheduledDate = new Date(subscription.nextGenerationDate);
-    const scheduledTime = '09:00'; // Ou de subscription.scheduledTime se existir no seu modelo
+    const scheduledTime = '09:00';
+    const periodId = this.buildSubscriptionPeriodId(
+      subscription.id,
+      scheduledDate,
+      subscription.frequency,
+    );
 
-    // Create a new booking
-    const newBooking = await this.bookingsService.createBookingFromSubscription(
-      {
+    let booking = await this.prisma.booking.findFirst({
+      where: {
+        subscriptionId: subscription.id,
+        periodId,
+      },
+    });
+
+    if (!booking) {
+      booking = await this.bookingsService.createBookingFromSubscription({
         clientId: subscription.clientId,
         providerId: subscription.providerId,
         providerServiceId: subscription.providerServiceId,
-        scheduledDate: scheduledDate.toISOString(), // Pass as ISO string
-        totalPrice: subscription.totalPrice.toNumber(), // Convert Decimal to number
+        scheduledDate: scheduledDate.toISOString(),
+        totalPrice: subscription.totalPrice.toNumber(),
         subscriptionId: subscription.id,
-        addressId: subscription.client.address.id, // Passar addressId
-        scheduledTime: scheduledTime, // Passar scheduledTime
-        // Any other default booking fields
-      },
-    );
+        addressId: address.id,
+        scheduledTime,
+        periodId,
+      });
 
-    // Update nextGenerationDate for the subscription
+      if (subscription.client?.userId) {
+        try {
+          await this.paymentsService.processRecurringPayment(
+            subscription.client.userId,
+            subscription.id,
+            booking.id,
+            subscription.totalPrice.toNumber(),
+          );
+        } catch (error) {
+          this.logger.warn(
+            `[SubscriptionsService] Failed to start recurring payment for booking ${booking.id}: ${
+              error instanceof Error ? error.message : 'unknown'
+            }`,
+          );
+        }
+      } else {
+        this.logger.warn(
+          `[SubscriptionsService] Client ${subscription.clientId} has no userId; recurring payment kickoff skipped for booking ${booking.id}.`,
+        );
+      }
+    } else {
+      this.logger.log(
+        `[SubscriptionsService] Duplicate booking detected for period ${periodId}; skipping creation.`,
+      );
+    }
+
     const nextDate = this.calculateNextGenerationDate(
       scheduledDate,
       subscription.frequency,
@@ -280,18 +341,20 @@ export class SubscriptionsService {
       where: { id: subscriptionId },
       data: {
         nextGenerationDate: nextDate,
-        // Optionally, increment a counter or add to a history of generated bookings
       },
     });
 
-    console.log(
-      `Generated booking ${newBooking.id} for subscription ${subscriptionId}. Next generation scheduled for ${nextDate.toISOString()}`,
+    this.logger.log(
+      `[SubscriptionsService] Booking ${booking.id} prepared for subscription ${subscriptionId}. Next generation scheduled for ${nextDate.toISOString()}.`,
     );
 
-    // Re-schedule the job for the next generation
-    await this.scheduleNextBookingGeneration(subscription.id, nextDate);
+    await this.scheduleNextBookingGeneration(
+      subscription.id,
+      nextDate,
+      subscription.frequency,
+    );
 
-    return newBooking;
+    return true;
   }
 
   private calculateNextGenerationDate(
@@ -318,30 +381,21 @@ export class SubscriptionsService {
   private async scheduleNextBookingGeneration(
     subscriptionId: string,
     nextGenerationDate: Date,
+    frequency: SubscriptionFrequency,
   ) {
-    // Remove any existing jobs for this subscription to prevent duplicates
-    await this.queuesService.removeSubscriptionGenerationJob(subscriptionId); // CORREÇÃO: Usar o método específico
+    await this.queuesService.removeSubscriptionGenerationJob(subscriptionId);
 
-    // Calculate delay in milliseconds
-    const delay = nextGenerationDate.getTime() - new Date().getTime();
-    if (delay < 0) {
-      // If the date is in the past (e.g., due to immediate generation or missed job),
-      // schedule it for a very short delay to process it ASAP.
-      console.warn(
-        `Next generation date for ${subscriptionId} is in the past. Scheduling for immediate processing.`,
-      );
-      await this.queuesService.addSubscriptionGenerationJob(
-        subscriptionId,
-        1000,
-      ); // CORREÇÃO: Usar o método específico
-    } else {
-      await this.queuesService.addSubscriptionGenerationJob(
-        subscriptionId,
-        delay,
-      ); // CORREÇÃO: Usar o método específico
-    }
-    console.log(
-      `Scheduled next booking generation for subscription ${subscriptionId} at ${nextGenerationDate.toISOString()}`,
+    const target = new Date(nextGenerationDate);
+    const now = new Date();
+    const delay = Math.max(target.getTime() - now.getTime(), 0);
+
+    await this.queuesService.addSubscriptionGenerationJob(
+      subscriptionId,
+      delay,
+    );
+
+    this.logger.log(
+      `Scheduled next booking generation for subscription ${subscriptionId} at ${target.toISOString()} (frequency=${frequency}).`,
     );
   }
 
@@ -361,8 +415,65 @@ export class SubscriptionsService {
     //     status: 'CANCELED_BY_SUBSCRIPTION',
     //   },
     // });
-    console.log(
+    this.logger.log(
       `Cancelled future booking generations and potentially future bookings for subscription ${subscriptionId}.`,
+    );
+  }
+
+  private async flagSubscriptionAddressIssue(
+    subscriptionId: string,
+    reason: string,
+    currentStatus?: SubscriptionStatus,
+  ) {
+    if (currentStatus === SubscriptionStatus.ACTION_REQUIRED_ADDRESS) {
+      return;
+    }
+    await this.prisma.subscription.update({
+      where: { id: subscriptionId },
+      data: {
+        status: SubscriptionStatus.ACTION_REQUIRED_ADDRESS,
+      },
+    });
+    this.logger.warn(
+      `[SubscriptionsService] Subscription ${subscriptionId} marked as ACTION_REQUIRED_ADDRESS: ${reason}`,
+    );
+  }
+
+  private buildSubscriptionPeriodId(
+    subscriptionId: string,
+    date: Date,
+    frequency: SubscriptionFrequency,
+  ) {
+    const year = date.getUTCFullYear();
+    switch (frequency) {
+      case SubscriptionFrequency.WEEKLY: {
+        const week = String(this.getIsoWeekNumber(date)).padStart(2, '0');
+        return `${subscriptionId}-${year}-W${week}`;
+      }
+      case SubscriptionFrequency.BI_WEEKLY: {
+        const week = this.getIsoWeekNumber(date);
+        const biWeekBucket = Math.ceil(week / 2);
+        return `${subscriptionId}-${year}-B${String(biWeekBucket).padStart(2, '0')}`;
+      }
+      case SubscriptionFrequency.MONTHLY: {
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        return `${subscriptionId}-${year}-M${month}`;
+      }
+      default:
+        return `${subscriptionId}-${year}-${String(date.getUTCDate()).padStart(2, '0')}`;
+    }
+  }
+
+  private getIsoWeekNumber(date: Date) {
+    const tmp = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    const dayNumber = (tmp.getUTCDay() + 6) % 7;
+    tmp.setUTCDate(tmp.getUTCDate() - dayNumber + 3);
+    const firstThursday = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 4));
+    return (
+      1 +
+      Math.round(
+        (tmp.getTime() - firstThursday.getTime()) / (7 * 24 * 60 * 60 * 1000),
+      )
     );
   }
 }
