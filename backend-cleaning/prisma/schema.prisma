@@ -161,6 +161,7 @@ enum SubscriptionStatus {
   ACTIVE
   PAUSED
   CANCELED
+  ACTION_REQUIRED_ADDRESS
   COMPLETED
 }
 
@@ -337,7 +338,7 @@ model User {
   fullName              String             @default("Nome Padrão")
   fcmToken              String?            @unique
   isPhoneVerified       Boolean            @default(false)
-  isVerified            Boolean            @default(false)
+  isVerified            Boolean            @default(true)
   deletionScheduledAt   DateTime?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
@@ -381,10 +382,35 @@ model User {
 
   // CORREÇÃO: Adicionado para relação bilateral com CouponReservation
   couponReservations    CouponReservation[]
+  telemetryForceLogout   TelemetryForceLogout?
 
   // ADICIONADO: Relações para auditoria de Booking (quem iniciou/finalizou)
   startedBookings       Booking[]          @relation("BookingStartedBy")
   completedBookings     Booking[]          @relation("BookingCompletedBy")
+}
+
+model TelemetryForceLogout {
+  userId           String   @id @db.Uuid
+  forcedAt         DateTime @default(now())
+  forceLogoutUntil DateTime
+  payload          Json?
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([forceLogoutUntil], name: "idx_telemetry_force_logout_until")
+}
+
+model ObservabilityLatencySummary {
+  id           String   @id @default(uuid())
+  routeKey     String
+  p50          Float
+  p90          Float
+  p99          Float
+  sampleCount  Int
+  windowMinutes Int      @default(30)
+  recordedAt   DateTime @default(now())
+
+  @@index([routeKey, recordedAt], name: "idx_observability_latency_summary_route_recorded")
 }
 
 model PasswordResetToken {
@@ -491,6 +517,7 @@ model Provider {
   fiveStarReviewCount     Int                @default(0)
   monthlyBookingsCount    Int                @default(0)
   badges                  String[]
+  sortPriority            Float               @default(0)
 
   latitude                Float?
   longitude               Float?
@@ -516,6 +543,7 @@ model Provider {
   slotHoldStrikes         SlotHoldStrike[]
 
   @@index([fullName], name: "idx_provider_full_name")
+  @@index([sortPriority], name: "idx_provider_sort_priority")
   @@index([verificationStatus], name: "idx_provider_verification_status")
   @@index([visibilityStatus], name: "idx_provider_visibility_status")
   @@index([verificationStatus, yearsOfExperience], name: "idx_provider_verification_status_years_experience")
@@ -629,6 +657,7 @@ model Booking {
   dispute          Dispute?
   subscriptionId   String?
   subscription     Subscription?    @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
+  periodId         String?          // Identificador único calculado (ex: subID_YYYY_WW)
   incidents        Incident[]
   guaranteeClaims  GuaranteeClaim[]
   insuranceClaims  InsuranceClaim[]
@@ -654,6 +683,7 @@ model Booking {
   @@index([status, scheduledDate])
   @@index([status, expiresAt])
   @@index([providerId, scheduledStart, scheduledEnd]) // ✅ NOVO: overlap fast
+  @@unique([subscriptionId, periodId], name: "booking_subscription_period_unique")
   @@index([providerId, acceptedAt])
 }
 
@@ -743,7 +773,7 @@ model MessagePolicyHit {
 model Notification {
   id               String   @id @default(uuid())
   userId           String
-  user             User     @relation(fields: [userId], references: [id])
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   type             String
   message          String
   isRead           Boolean  @default(false)
