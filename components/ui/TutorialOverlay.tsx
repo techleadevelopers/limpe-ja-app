@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { AppColors, AppShadows } from '../../constants/appStyles';
+import { AppColors } from '../../constants/appStyles';
 
 export interface TutorialOverlayProps {
   visible: boolean;
