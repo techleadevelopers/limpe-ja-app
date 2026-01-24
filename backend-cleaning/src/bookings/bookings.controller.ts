@@ -83,8 +83,7 @@ export class BookingsController {
   ): Promise<BookingDetailsDto[] | AdminBookingPage> {
     const { userId, role } = req.user;
     const shouldPaginate = Boolean(
-      paginated &&
-        ['1', 'true', 'yes'].includes(paginated.toLowerCase()),
+      paginated && ['1', 'true', 'yes'].includes(paginated.toLowerCase()),
     );
 
     if (shouldPaginate) {
