@@ -1,5 +1,5 @@
-import React, { useMemo, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, View, Animated } from 'react-native';
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface SecaoContainerProps<T> {
@@ -21,7 +21,6 @@ const SecaoContainer = <T extends { id: string | number }>({
   horizontal = false,
   renderItem,
 }: SecaoContainerProps<T>) => {
-  const arrowAnim = useRef(new Animated.Value(0)).current;
   const safeData = useMemo(
     () =>
       Array.isArray(data)
