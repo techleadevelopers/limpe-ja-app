@@ -4,7 +4,7 @@ import {
   Module,
   NestModule,
 } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config'; // mantém
+import { ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AnalyticsModule } from './analytics/analytics.module';
@@ -82,16 +82,12 @@ import { HttpMetricsMiddleware } from './common/middleware/http-metrics.middlewa
 import { ConfigController } from './config/config.controller';
 import { HealthModule } from './health/health.module';
 import { QueuesModule } from './queues/queues.module';
+import { CleanupDeletedUserNotificationsJob } from './worker/cleanup-deleted-user-notifications.job';
 import { ExpireBookingsJob } from './worker/expire-bookings.job';
 
 @Module({
   imports: [
-    // 🔥 CORREÇÃO DEFINITIVA: carrega o .env aqui
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-
-    // mantém o módulo customizado
+    // O CustomConfigModule já carrega e valida as variáveis de ambiente.
     CustomConfigModule,
 
     // Scheduler global (necessário para @Cron)
@@ -167,6 +163,7 @@ import { ExpireBookingsJob } from './worker/expire-bookings.job';
   controllers: [AppController, ConfigController],
   providers: [
     AppService,
+    CleanupDeletedUserNotificationsJob,
     ExpireBookingsJob,
     TracingInterceptor,
     {
