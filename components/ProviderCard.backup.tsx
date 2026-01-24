@@ -1,5 +1,6 @@
 // LimpeJaApp/components/ProviderCard.tsx
 
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,7 +25,7 @@ const formatNextAvailable = (iso?: string | null) => {
     }
 };
 
-
+const ProviderCardBackup: React.FC<ProviderCardProps> = ({ provider, onPress }) => {
     const { t } = useTranslation();
     // Lógica para calcular o preço mínimo, similar ao RecomendacaoCard
     const minPrice = provider.providerServices && provider.providerServices.length > 0
@@ -115,6 +116,8 @@ const formatNextAvailable = (iso?: string | null) => {
     );
 };
 
+export default ProviderCardBackup;
+
 const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
@@ -203,7 +206,5 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-end',
     },
 });
-
-export default ProviderCard;
 
 
