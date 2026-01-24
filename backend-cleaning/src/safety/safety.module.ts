@@ -7,6 +7,7 @@ import { EmailModule } from '../email/email.module';
 import { SmsModule } from '../sms/sms.module';
 import { QueuesModule } from '../queues/queues.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { RedisLockModule } from '../common/locks/redis-lock.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     EmailModule,
     SmsModule,
     QueuesModule,
+    RedisLockModule,
   ],
   controllers: [SafetyController],
   providers: [SafetyService, PrismaService],
