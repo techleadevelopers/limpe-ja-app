@@ -3,10 +3,9 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePathname, useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import {
     Animated,
-    LayoutChangeEvent,
     Platform,
     Pressable,
     StyleSheet,
@@ -32,13 +31,9 @@ const ProviderNavBar: React.FC = () => {
 
   const navItemAnims = useRef(navItems.map(() => new Animated.Value(1))).current;
   const rippleAnims = useRef(navItems.map(() => new Animated.Value(0))).current;
-  const [navBarWidth, setNavBarWidth] = useState(0);
 
   const CURRENT_COLOR = theme.primary || '#357abebd';
   const INACTIVE_COLOR = '#707078ff';
-
-  const onLayout = (event: LayoutChangeEvent) =>
-    setNavBarWidth(event.nativeEvent.layout.width);
 
   const onPressIn = (index: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -75,7 +70,7 @@ const ProviderNavBar: React.FC = () => {
   const navigateTo = (path: string) => router.push(path as any);
 
   return (
-    <View style={styles.navBar} onLayout={onLayout}>
+    <View style={styles.navBar}>
       {/* BACKGROUND */}
       <BlurView
         intensity={Platform.OS === 'ios' ? 40 : 5}
