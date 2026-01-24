@@ -19,16 +19,18 @@ describe('ObservabilityLatencyInterceptor', () => {
     };
     const response = { statusCode: 200 };
 
-    return ({
+    return {
       switchToHttp: () => ({
         getRequest: () => request,
         getResponse: () => response,
       }),
-    } as unknown) as ExecutionContext;
+    } as unknown as ExecutionContext;
   };
 
   beforeEach(() => {
-    observabilityService = { recordLatency: jest.fn() } as unknown as ObservabilityService;
+    observabilityService = {
+      recordLatency: jest.fn(),
+    } as unknown as ObservabilityService;
     configService = {
       get: jest.fn((key: string) => {
         if (key === 'observability.latency.enabled') return 'true';
@@ -38,7 +40,10 @@ describe('ObservabilityLatencyInterceptor', () => {
       }),
     } as unknown as ConfigService;
 
-    interceptor = new ObservabilityLatencyInterceptor(observabilityService, configService);
+    interceptor = new ObservabilityLatencyInterceptor(
+      observabilityService,
+      configService,
+    );
   });
 
   afterEach(() => {
@@ -51,7 +56,10 @@ describe('ObservabilityLatencyInterceptor', () => {
     await lastValueFrom(interceptor.intercept(ctx, handler as any));
 
     expect(observabilityService.recordLatency).toHaveBeenCalledTimes(1);
-    expect(observabilityService.recordLatency).toHaveBeenCalledWith('/search', expect.any(Number));
+    expect(observabilityService.recordLatency).toHaveBeenCalledWith(
+      '/search',
+      expect.any(Number),
+    );
   });
 
   it('respects sampling for non-critical paths', async () => {
