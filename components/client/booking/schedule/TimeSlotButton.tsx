@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, Animated } from 'react-native';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import { AppColors } from '../../../../constants/appStyles';
 
 type Props = {
   time: string;
@@ -24,10 +24,6 @@ export default function TimeSlotButton({
   noHorizontalMargin = false,
 }: Props) {
   const pressAnim = useRef(new Animated.Value(1)).current;
-
-  React.useEffect(() => {
-    console.log('[TimeSlotButton] render', { time, isAvailable, isSelected });
-  }, [time, isAvailable, isSelected]);
 
   const onPressIn = () => {
     Animated.spring(pressAnim, { toValue: 0.98, useNativeDriver: true }).start();
