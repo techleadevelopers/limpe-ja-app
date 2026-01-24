@@ -1,6 +1,6 @@
 // LimpeJaApp/components/missions/MissionList.tsx
-import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, Alert, RefreshControl, ScrollView, useColorScheme } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, FlatList, StyleSheet, RefreshControl, ScrollView, useColorScheme } from 'react-native';
 import MissionItem from './MissionItem';
 import { MissionItem as MissionItemType } from '../../services/missionService';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +23,7 @@ interface MissionListProps {
 }
 
 const MissionList: React.FC<MissionListProps> = ({ missions, onClaimMission, claimingMissionId, onRefresh, isRefreshing, asStaticList }) => {
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
   const theme = useTheme(); // Usa o hook de tema
   const isMissionCompleted = (mission: MissionItemType) => Boolean(mission.progress?.completedAt);
 
