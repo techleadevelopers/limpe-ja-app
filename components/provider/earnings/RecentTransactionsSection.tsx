@@ -13,16 +13,11 @@ import { ProviderTransaction } from '../../../types/backend/providers'; // CORRI
 const WHITE = '#FFFFFF';
 const BACKGROUND_ALT = '#F8F9FD';
 const TEXT_DARK = '#1A2538';
-const TEXT_MEDIUM = '#4A5568';
 const TEXT_MUTED = '#7A8599';
 const ICON_PRIMARY = '#007AFF'; // Azul Primário
-const SUCCESS_GREEN = '#28a745'; // Verde de sucesso
-const DANGER_RED = '#dc3545'; // Vermelho de perigo
-const WARNING_YELLOW = '#FFC107'; // Amarelo de aviso
-const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
-const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
-const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
 const PRIMARY_LIGHT = '#EBF5FF'; // CORRIGIDO: Adicionado PRIMARY_LIGHT aqui
+const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
+const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
 // --------------------------------------------------------
 
 interface RecentTransactionsSectionProps {
