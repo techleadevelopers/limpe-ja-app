@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import axios from 'axios';
-import { Stack, useRouter } from 'expo-router';
+import { isAxiosError } from 'axios';
+import { Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
     AccessibilityInfo,
@@ -98,8 +98,6 @@ const PromotionsScreen = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [isVerificationPending, setIsVerificationPending] = useState(false);
-  const [highlightUpdate, setHighlightUpdate] = useState(false);
-  const router = useRouter();
   const lastActivePromotionRef = useRef<string | null>(null);
 
   
@@ -107,7 +105,7 @@ const PromotionsScreen = () => {
 const resolveErrorMessage = useCallback(
   (error: unknown, action: 'list' | 'create' | 'toggle') => {
     const sanitized = getUserMessage(error);
-    if (!axios.isAxiosError(error)) {
+    if (!isAxiosError(error)) {
       return sanitized;
     }
 
@@ -153,7 +151,7 @@ const resolveErrorMessage = useCallback(
       } catch (error) {
         const message = resolveErrorMessage(error, 'list');
         setGlobalError(message);
-        if (axios.isAxiosError(error) && error.response?.status === 403) {
+        if (isAxiosError(error) && error.response?.status === 403) {
           setIsVerificationPending(true);
         } else {
           Toast.show({
@@ -195,17 +193,11 @@ const resolveErrorMessage = useCallback(
   useEffect(() => {
     if (activePromotion?.id && lastActivePromotionRef.current !== activePromotion.id) {
       lastActivePromotionRef.current = activePromotion.id;
-      setHighlightUpdate(true);
       AccessibilityInfo.announceForAccessibility('Novas promoções ativas disponíveis');
-      const timer = setTimeout(() => setHighlightUpdate(false), 2200);
-      return () => {
-        clearTimeout(timer);
-      };
     }
 
     if (!activePromotion) {
       lastActivePromotionRef.current = null;
-      setHighlightUpdate(false);
     }
   }, [activePromotion]);
 
@@ -236,7 +228,7 @@ const resolveErrorMessage = useCallback(
     } catch (error) {
       const message = resolveErrorMessage(error, 'create');
       setModalError(message);
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
+      if (isAxiosError(error) && error.response?.status === 403) {
         setIsVerificationPending(true);
       }
     } finally {
@@ -267,7 +259,7 @@ const resolveErrorMessage = useCallback(
     } catch (error) {
       const message = resolveErrorMessage(error, 'toggle');
       setGlobalError(message);
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
+      if (isAxiosError(error) && error.response?.status === 403) {
         setIsVerificationPending(true);
       }
     } finally {
