@@ -7,9 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { JobOptions, Queue } from 'bull';
-import {
-  queueWaitingGauge
-} from '../metrics/prometheus';
+import { queueWaitingGauge } from '../metrics/prometheus';
 
 // Interface para estender as opções de tarefa do Bull.js
 interface CustomJobOptions extends JobOptions {
@@ -33,7 +31,13 @@ export class QueuesService {
     'emails',
     'support-escalations',
     'payouts',
+    'telemetry',
+    'safety-alerts-queue',
   ] as const;
+
+  private readonly defaultJobNames: Record<string, string> = {
+    telemetry: 'record-request',
+  };
 
   constructor(
     @InjectQueue('verification') private readonly verificationQueue: Queue,
@@ -46,6 +50,9 @@ export class QueuesService {
     @InjectQueue('support-escalations')
     private readonly supportEscalationsQueue: Queue, // Fila de escalonamento de suporte
     @InjectQueue('payouts') private readonly payoutsQueue: Queue,
+    @InjectQueue('telemetry') private readonly telemetryQueue: Queue,
+    @InjectQueue('safety-alerts-queue')
+    private readonly safetyAlertsQueue: Queue,
   ) {}
 
   /**
@@ -72,6 +79,10 @@ export class QueuesService {
         return this.supportEscalationsQueue;
       case 'payouts':
         return this.payoutsQueue;
+      case 'telemetry':
+        return this.telemetryQueue;
+      case 'safety-alerts-queue':
+        return this.safetyAlertsQueue;
       default:
         this.logger.error(`Fila desconhecida: ${queueName}`);
         throw new BadRequestException(`Fila desconhecida: ${queueName}`);
@@ -87,19 +98,39 @@ export class QueuesService {
    */
   async addJob<T>(
     queueName: string,
+    data: T,
+    options?: CustomJobOptions,
+  ): Promise<void>;
+  async addJob<T>(
+    queueName: string,
     jobName: string,
     data: T,
     options?: CustomJobOptions,
+  ): Promise<void>;
+  async addJob<T>(
+    queueName: string,
+    jobNameOrData: string | any,
+    dataOrOptions?: any,
+    options?: CustomJobOptions,
   ): Promise<void> {
+    const isNamedJob = typeof jobNameOrData === 'string';
+    const jobName = isNamedJob
+      ? jobNameOrData
+      : this.defaultJobNames[queueName] ?? 'default';
+    const data = (isNamedJob ? dataOrOptions : jobNameOrData) as T;
+    const customOptions = (isNamedJob ? options : dataOrOptions) as
+      | CustomJobOptions
+      | undefined;
+
     const queue = this.getQueueInstance(queueName);
 
     try {
       const finalOptions: CustomJobOptions = {
-        attempts: options?.attempts ?? 3,
-        backoff: options?.backoff ?? { type: 'exponential', delay: 1000 },
-        removeOnComplete: options?.removeOnComplete ?? true,
-        removeOnFail: options?.removeOnFail ?? false,
-        ...options,
+        attempts: customOptions?.attempts ?? 3,
+        backoff: customOptions?.backoff ?? { type: 'exponential', delay: 1000 },
+        removeOnComplete: customOptions?.removeOnComplete ?? true,
+        removeOnFail: customOptions?.removeOnFail ?? false,
+        ...customOptions,
       };
 
       await queue.add(jobName, data, finalOptions);
@@ -228,6 +259,17 @@ export class QueuesService {
     return this.addJob('data_export', name, data, {
       attempts: 1,
       removeOnFail: true,
+    });
+  }
+
+  /**
+   * Adiciona uma tarefa à fila de alertas de segurança.
+   */
+  async addSafetyAlertJob(name: string, data: any): Promise<void> {
+    return this.addJob('safety-alerts-queue', name, data, {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 1500 },
+      removeOnFail: false,
     });
   }
 
