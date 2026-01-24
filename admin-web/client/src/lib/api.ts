@@ -335,6 +335,13 @@ export const fetchApi = async <T>(path: string, options: RequestInit = {}): Prom
         throw err;
     }
 };
+export const forceConfirmPixPayment = async (referenceId: string): Promise<void> => {
+    await fetchApi('/admin/payments/pix/force-confirm', {
+        method: 'POST',
+        body: JSON.stringify({ referenceId }),
+    });
+};
+
 // --- FunÃ§Ãµes de AutenticaÃ§Ã£o ---
 export const login = async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
     const response = await fetchApi<any>('/auth/login', {
