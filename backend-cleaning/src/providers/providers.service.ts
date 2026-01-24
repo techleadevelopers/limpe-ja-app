@@ -29,10 +29,11 @@ import { SortByOption } from '../search/dto/search-query.dto';
 import { ProviderSearchDto } from './dto/provider-search.dto';
 import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 import { Decimal } from '@prisma/client/runtime/library';
-import { geocodeAddress } from '../utils/geocoding.service';
+import { GeocodingService } from '../geocoding/geocoding.service';
 import { SettingsService } from '../settings/settings.service';
 import { AvailabilityService } from '../availability/availability.service';
 import { GetAvailabilityDto } from '../availability/dto/get-availability.dto';
+import * as Sentry from '@sentry/node';
 
 // Type principal para provedores com todas as inclusÃµes necessÃ¡rias para mapeamento
 export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
@@ -71,7 +72,7 @@ export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
 type ProviderForBadgeUpdate = Prisma.ProviderGetPayload<{
   include: {
     user: { select: { isVerified: true } };
-    bookings: { where: { status: 'FINISHED' } }; // â CORRIGIDO
+    bookings: { where: { status: 'FINISHED' } };
     reviewsReceived: { where: { rating: { gte: 4 } } };
   };
 }>;
@@ -162,6 +163,8 @@ export type ProviderWithCalculatedRating = {
   averageResponseTime?: number; // NOVO: Para mÃ©tricas mini
   // NOVO: Campo para boosts de gamificaÃ§Ã£o no score de ranking
   rankingBoostScore?: number; // Representa o +beta, +gamma, +delta
+  // NOVO: Prioridade para ranking geoespacial
+  sortPriority?: number;
   // NOVO: Para chip de horÃ¡rio (calculado no service)
   nextAvailable?: { date: string; time: string };
 };
@@ -199,12 +202,16 @@ export class ProvidersService {
   private readonly RANKING_METRICS_CACHE_TTL_SECONDS = 5 * 60;
   private readonly PUBLIC_PROVIDERS_CACHE_TTL_SECONDS = 60;
   private readonly SEARCH_RESULTS_CACHE_TTL_SECONDS = 5 * 60;
+  private readonly NEGATIVE_SEARCH_CACHE_TTL_SECONDS = 30;
+  private readonly DEFAULT_SEARCH_CACHE_KEY = `${this.PROVIDERS_CACHE_KEY}:search`;
+  private defaultSearchWarmUpPromise: Promise<void> | null = null;
 
   constructor(
     private prisma: PrismaService,
     private readonly documentProcessingService: DocumentProcessingService,
     private readonly cacheService: CacheService,
     private readonly settingsService: SettingsService,
+    private readonly geocodingService: GeocodingService,
     @Inject(forwardRef(() => AvailabilityService))
     private readonly availabilityService: AvailabilityService,
   ) {}
@@ -213,6 +220,7 @@ export class ProvidersService {
     const normalizeString = (value?: string | null): string | null =>
       value?.trim().toLowerCase() ?? null;
 
+    // Apenas os filtros previsíveis entram na chave, evitando qualquer dado sensível ou específico de sessão.
     const normalized = {
       searchTerm: normalizeString(searchDto.searchTerm),
       serviceId: searchDto.serviceId ?? null,
@@ -227,9 +235,7 @@ export class ProvidersService {
           ? Number(searchDto.longitude)
           : null,
       radius:
-        typeof searchDto.radius === 'number'
-          ? Number(searchDto.radius)
-          : null,
+        typeof searchDto.radius === 'number' ? Number(searchDto.radius) : null,
       city: normalizeString(searchDto.city),
       state: normalizeString(searchDto.state),
       sortBy: searchDto.sortBy ?? null,
@@ -242,6 +248,22 @@ export class ProvidersService {
       .digest('hex');
 
     return `${this.PROVIDERS_CACHE_KEY}:search:${hash}`;
+  }
+
+  private isDefaultSearchDto(searchDto: ProviderSearchDto): boolean {
+    const normalize = (value?: string | null): string => value?.trim() ?? '';
+    return (
+      !normalize(searchDto.searchTerm) &&
+      !searchDto.serviceId &&
+      !normalize(searchDto.location) &&
+      searchDto.minRating == null &&
+      searchDto.latitude === undefined &&
+      searchDto.longitude === undefined &&
+      searchDto.radius === undefined &&
+      !normalize(searchDto.city) &&
+      !normalize(searchDto.state) &&
+      !searchDto.sortBy
+    );
   }
 
   private buildAddressString(address?: Partial<Address>): string | null {
@@ -309,6 +331,7 @@ export class ProvidersService {
   ): Promise<ProviderWithCalculatedRating[]> {
     if (baseLat === undefined || baseLon === undefined) return providers;
     const filtered: ProviderWithCalculatedRating[] = [];
+    const start = Date.now();
 
     // Busca radii em paralelo para os provedores com distance conhecido
     const radii = await Promise.all(
@@ -339,6 +362,13 @@ export class ProvidersService {
         filtered.push(p);
       }
     });
+
+    const elapsedMs = Date.now() - start;
+    if (elapsedMs > 500) {
+      const message = `[ProvidersService] applyRadiusFilter slow: ${elapsedMs}ms (providers=${providers.length}, lat=${baseLat}, lon=${baseLon})`;
+      this.logger.warn(message);
+      Sentry.captureMessage(message, { level: 'warning' });
+    }
 
     return filtered;
   }
@@ -451,6 +481,33 @@ export class ProvidersService {
     await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:user:${userId}`);
   }
 
+  private async warmUpDefaultSearchCache(): Promise<void> {
+    if (this.defaultSearchWarmUpPromise) {
+      return this.defaultSearchWarmUpPromise;
+    }
+    this.defaultSearchWarmUpPromise = (async () => {
+      try {
+        this.logger.log(
+          '[ProvidersService] warmUpDefaultSearchCache: pré-aquecendo cache da busca padrão.',
+        );
+        await this.search({});
+      } catch (error) {
+        this.logger.error(
+          `[ProvidersService] warmUpDefaultSearchCache: falha ao pré-aquecer cache padrão: ${
+            (error as Error)?.message ?? error
+          }`,
+        );
+      } finally {
+        this.defaultSearchWarmUpPromise = null;
+      }
+    })();
+    return this.defaultSearchWarmUpPromise;
+  }
+
+  public async refreshDefaultSearchCache(): Promise<void> {
+    await this.warmUpDefaultSearchCache();
+  }
+
   public mapProviderToCalculatedRating(
     provider: ProviderWithIncludes,
     distance?: number,
@@ -489,9 +546,12 @@ export class ProvidersService {
       userPhone: provider.user?.phone || null,
       bio: provider.bio || null,
       verificationStatus: provider.verificationStatus,
-      visibilityStatus: provider.visibilityStatus ?? ProviderVisibilityStatus.VISIBLE,
+      visibilityStatus:
+        provider.visibilityStatus ?? ProviderVisibilityStatus.VISIBLE,
       visibilityReason: provider.visibilityReason ?? null,
-      visibilityUpdatedAt: provider.visibilityUpdatedAt ? provider.visibilityUpdatedAt.toISOString() : null,
+      visibilityUpdatedAt: provider.visibilityUpdatedAt
+        ? provider.visibilityUpdatedAt.toISOString()
+        : null,
       address: provider.address ?? null,
       providerServices: provider.providerServices.map((ps) => ({
         id: ps.id,
@@ -553,6 +613,7 @@ export class ProvidersService {
       acceptanceRate: provider.acceptanceRate || 0, // NOVO: Default 0 para mÃ©tricas
       averageResponseTime: provider.averageResponseTime || 0, // NOVO: Default 0 para mÃ©tricas
       rankingBoostScore: rankingBoostScore, // NOVO CAMPO
+      sortPriority: provider.sortPriority ?? 0,
       nextAvailable, // NOVO: Calculado para chip de horÃ¡rio
     };
   }
@@ -589,8 +650,11 @@ export class ProvidersService {
         avatarUrl: fileUrl,
       };
       let visibilityTransitioned = false;
-      if (provider.visibilityStatus === ProviderVisibilityStatus.VITRINE_IRREGULAR) {
-        updateData.visibilityStatus = ProviderVisibilityStatus.PENDING_VITRINE_REVIEW;
+      if (
+        provider.visibilityStatus === ProviderVisibilityStatus.VITRINE_IRREGULAR
+      ) {
+        updateData.visibilityStatus =
+          ProviderVisibilityStatus.PENDING_VITRINE_REVIEW;
         updateData.visibilityReason = null;
         updateData.visibilityUpdatedAt = new Date();
         visibilityTransitioned = true;
@@ -628,16 +692,11 @@ export class ProvidersService {
       );
     }
   }
-  async getVisibilityForUser(
-    userId: string,
-  ): Promise<
-    | {
-        visibilityStatus: ProviderVisibilityStatus;
-        visibilityReason: string | null;
-        visibilityUpdatedAt: Date | null;
-      }
-    | null
-  > {
+  async getVisibilityForUser(userId: string): Promise<{
+    visibilityStatus: ProviderVisibilityStatus;
+    visibilityReason: string | null;
+    visibilityUpdatedAt: Date | null;
+  } | null> {
     const provider = await this.prisma.provider.findUnique({
       where: { userId },
       select: {
@@ -668,7 +727,9 @@ export class ProvidersService {
       this.logger.warn(
         `[ProvidersService] setProviderVisibility: Provedor ${providerId} nao encontrado.`,
       );
-      throw new NotFoundException(`Provedor com ID \"${providerId}\" nao encontrado.`);
+      throw new NotFoundException(
+        `Provedor com ID"${providerId}" nao encontrado.`,
+      );
     }
 
     const normalizedReason =
@@ -710,7 +771,10 @@ export class ProvidersService {
       },
     });
 
-    await this.invalidateProviderCache(updatedProvider.id, updatedProvider.userId);
+    await this.invalidateProviderCache(
+      updatedProvider.id,
+      updatedProvider.userId,
+    );
     const mapped = this.mapProviderToCalculatedRating(
       updatedProvider as ProviderWithIncludes,
     );
@@ -721,6 +785,7 @@ export class ProvidersService {
     this.logger.log(
       `[TELEMETRY] provider_visibility_changed: { providerId: ${providerId}, adminId: ${adminId ?? 'system'}, status: ${visibilityStatus}, reason: ${normalizedReason ?? 'none'} }`,
     );
+    void this.warmUpDefaultSearchCache();
     return mapped;
   }
 
@@ -758,7 +823,7 @@ export class ProvidersService {
           },
         },
         bookings: {
-          where: { status: 'FINISHED' }, // â CORRIGIDO
+          where: { status: 'FINISHED' },
           orderBy: { createdAt: 'desc' },
           take: 100,
         },
@@ -868,9 +933,6 @@ export class ProvidersService {
   }
 
   async findOne(id: string): Promise<ProviderWithCalculatedRating | null> {
-    this.logger.log(
-      `[ProvidersService] findOne: Buscando provedor por ID: ${id}`,
-    );
     const cacheKey = `${this.PROVIDERS_CACHE_KEY}:${id}`;
     let provider =
       await this.cacheService.get<ProviderWithCalculatedRating>(cacheKey);
@@ -922,14 +984,8 @@ export class ProvidersService {
         provider,
         this.PUBLIC_PROVIDERS_CACHE_TTL_SECONDS,
       );
-      this.logger.log(
-        `[ProvidersService] findOne: Provedor ${id} adicionado ao cache.`,
-      );
       return provider;
     }
-    this.logger.log(
-      `[ProvidersService] findOne: Resultado para ID ${id}: ${prismaProvider ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`,
-    );
     return null;
   }
 
@@ -1202,7 +1258,9 @@ export class ProvidersService {
       const addressString = this.buildAddressString(
         data.address as Partial<Address>,
       );
-      const geo = addressString ? await geocodeAddress(addressString) : null;
+      const geo = addressString
+        ? await this.geocodingService.geocodeAddress(addressString)
+        : null;
       const coords = this.applyGeocodeFallback(
         data.address as Partial<Address>,
         geo,
@@ -1321,7 +1379,9 @@ export class ProvidersService {
       const addressString = this.buildAddressString(
         data.address as Partial<Address>,
       );
-      const geo = addressString ? await geocodeAddress(addressString) : null;
+      const geo = addressString
+        ? await this.geocodingService.geocodeAddress(addressString)
+        : null;
       const coords = this.applyGeocodeFallback(
         data.address as Partial<Address>,
         geo,
@@ -1490,6 +1550,144 @@ export class ProvidersService {
     );
     // Telemetria: provider_removed
     this.logger.log(`[TELEMETRY] provider_removed: { providerId: ${id} }`);
+    void this.warmUpDefaultSearchCache();
+  }
+
+  private async findNearbyProvidersRaw(
+    latitude: number,
+    longitude: number,
+    radiusMeters: number,
+    limit: number,
+  ): Promise<any[]> {
+    const enforcedLimit = Math.max(1, Math.floor(limit));
+    return this.prisma.$queryRaw(
+      Prisma.sql`
+        SELECT
+          p.id,
+          p."userId",
+          p."fullName",
+          p.phone,
+          p.bio,
+          p."yearsOfExperience",
+          p.cpf,
+          p."dateOfBirth",
+          p."avatarUrl",
+          p."verificationStatus",
+          p."visibilityStatus",
+          p."visibilityReason",
+          p."visibilityUpdatedAt",
+          p."pixKey",
+          p."createdAt",
+          p."updatedAt",
+          p."documentPhotoFrontUrl",
+          p."documentPhotoBackUrl",
+          p."selfieWithDocumentUrl",
+          p."backgroundCheckResult",
+          p."rejectionReason",
+          p."ocrResult",
+          p."livenessResult",
+          p.badges,
+          p."sortPriority",
+          p."acceptanceRate",
+          p."averageResponseTime",
+          u.email,
+          u.role,
+          u."isVerified",
+          u."fullName" AS user_fullName,
+          u."phone" AS user_phone,
+          a.id AS "addressId",
+          a.cep,
+          a.street,
+          a.number,
+          a.complement,
+          a.neighborhood,
+          a.city,
+          a.state,
+          a."providerId",
+          COALESCE(ST_X(a.location), a.longitude::double precision) AS longitude_val,
+          COALESCE(ST_Y(a.location), a.latitude::double precision) AS latitude_val,
+          a.location AS address_location,
+          CASE
+            WHEN a.location IS NOT NULL THEN
+              ST_Distance(
+                a.location::geography,
+                ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
+              )
+            WHEN a.longitude IS NOT NULL AND a.latitude IS NOT NULL THEN
+              ST_Distance(
+                ST_SetSRID(ST_MakePoint(a.longitude::double precision, a.latitude::double precision), 4326)::geography,
+                ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
+              )
+            ELSE NULL
+          END AS distance_m,
+          COALESCE(AVG(r.rating), 0)::numeric AS "averageRating",
+          COUNT(r.id)::int AS "reviewCount",
+          p."fiveStarReviewCount",
+          p."monthlyBookingsCount",
+          json_agg(
+              json_build_object(
+                  'id', ps.id,
+                  'providerId', ps."providerId",
+                  'serviceId', ps."serviceId",
+                  'price', ps.price,
+                  'durationMinutes', ps."durationMinutes",
+                  'createdAt', ps."createdAt",
+                  'updatedAt', ps."updatedAt",
+                  'description', ps.description,
+                  'pricingType', ps."pricingType",
+                  'pricePerHour', ps."pricePerHour",
+                  'pricePerSquareMeter', ps."pricePerSquareMeter",
+                  'pricePerRoom', ps."pricePerRoom",
+                  'service', json_build_object(
+                      'id', s.id,
+                      'name', s.name,
+                      'description', s.description,
+                      'icon', s.icon,
+                      'price', s.price,
+                      'createdAt', s."createdAt",
+                      'updatedAt', s."updatedAt"
+                  )
+              )
+              ORDER BY ps.id
+          ) FILTER (WHERE ps.id IS NOT NULL) AS "providerServicesAgg"
+        FROM
+            "Provider" p
+        JOIN
+            "User" u ON p."userId" = u.id
+        LEFT JOIN
+            "Address" a ON p.id = a."providerId"
+        LEFT JOIN
+            "ProviderService" ps ON p.id = ps."providerId"
+        LEFT JOIN
+            "Service" s ON ps."serviceId" = s.id
+        LEFT JOIN
+            "Review" r ON p.id = r."providerId"
+        WHERE
+            p."verificationStatus"::text = ${Prisma.raw(
+              `'${VerificationStatus.APPROVED}'`,
+            )}
+            AND p."visibilityStatus"::text = ${Prisma.raw(
+              `'${ProviderVisibilityStatus.VISIBLE}'`,
+            )}
+            AND ST_DWithin(
+                a.location::geography,
+                ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography,
+                ${radiusMeters}
+            )
+        GROUP BY
+            p.id, u.email, u.role, u."isVerified", u."fullName", u."phone",
+            a.id, a.cep, a.street, a.number, a.complement, a.neighborhood,
+            a.city, a.state, a."providerId", a.location,
+            p."fiveStarReviewCount", p."monthlyBookingsCount", p.badges,
+            p."sortPriority",
+            p."acceptanceRate", p."averageResponseTime", p."verificationStatus",
+            p."visibilityStatus", p."visibilityReason", p."visibilityUpdatedAt"
+        ORDER BY
+            p."sortPriority" DESC,
+            a.location <-> ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
+        LIMIT ${enforcedLimit};
+      `,
+    );
   }
 
   async search(
@@ -1512,8 +1710,11 @@ export class ProvidersService {
       city,
       state,
     } = searchDto;
+    const isDefaultSearch = this.isDefaultSearchDto(searchDto);
 
-    const cacheKey = this.buildSearchCacheKey(searchDto);
+    const cacheKey = isDefaultSearch
+      ? this.DEFAULT_SEARCH_CACHE_KEY
+      : this.buildSearchCacheKey(searchDto);
     const cachedResult =
       await this.cacheService.get<ProviderWithCalculatedRating[]>(cacheKey);
     if (cachedResult) {
@@ -1581,39 +1782,12 @@ export class ProvidersService {
       );
 
       try {
-        const rawProviders: any[] = await this.prisma.$queryRaw(
-          Prisma.sql`
-    SELECT 
-        p.id, 
-        p."userId", 
-        p."fullName", 
-      p."avatarUrl", 
-      p."verificationStatus",
-      p."visibilityStatus",
-      p."visibilityReason",
-      p."visibilityUpdatedAt",
-      a.location AS address_location,
-      a.latitude AS latitude_val,
-      a.longitude AS longitude_val,
-      ST_Distance(
-        a.location,
-        ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
-      ) * 111.32 AS distance_m
-    FROM "Provider" p
-    JOIN "Address" a ON a."providerId" = p.id
-    JOIN "User" u ON p."userId" = u.id
-        WHERE u.status = 'ACTIVE'
-          AND p."verificationStatus" = 'APPROVED'
-          AND p."visibilityStatus" = 'VISIBLE'
-          AND a.location IS NOT NULL
-          AND ST_DWithin(
-            a.location,
-            ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326),
-            ${radius / 111.32}
-          )
-    ORDER BY distance_m ASC
-    LIMIT ${limit} OFFSET ${offset}
-  `,
+        const radiusMeters = Math.max(radius * 1000, 0);
+        const rawProviders: any[] = await this.findNearbyProvidersRaw(
+          latitude,
+          longitude,
+          radiusMeters,
+          limit ?? 20,
         );
 
         if (rawProviders.length === 0) {
@@ -1657,6 +1831,7 @@ export class ProvidersService {
               ocrResult: rp.ocrResult,
               livenessResult: rp.livenessResult,
               badges: rp.badges || [],
+              sortPriority: typeof rp.sortPriority === 'number' ? rp.sortPriority : Number(rp.sortPriority) || 0,
               fiveStarReviewCount: rp.fiveStarReviewCount || 0,
               monthlyBookingsCount: rp.monthlyBookingsCount || 0,
               acceptanceRate: rp.acceptanceRate || 0,
@@ -1755,11 +1930,11 @@ export class ProvidersService {
           (a, b) => (a.distance || Infinity) - (b.distance || Infinity),
         );
       }
-    await this.cacheService.set(
-      cacheKey,
-      providersWithDistance,
-      this.SEARCH_RESULTS_CACHE_TTL_SECONDS,
-    );
+      await this.cacheSearchResult(
+        cacheKey,
+        providersWithDistance,
+        isDefaultSearch,
+      );
       this.logger.log(
         `[ProvidersService] search: Resultados da busca complexa adicionados ao cache.`,
       );
@@ -1878,15 +2053,29 @@ export class ProvidersService {
       );
     }
 
-    await this.cacheService.set(
-      cacheKey,
-      filteredProviders,
-      this.SEARCH_RESULTS_CACHE_TTL_SECONDS,
-    );
+    await this.cacheSearchResult(cacheKey, filteredProviders, isDefaultSearch);
     this.logger.log(
       `[ProvidersService] search: Resultados da busca complexa (fallback) adicionados ao cache.`,
     );
     return filteredProviders;
+  }
+
+  private async cacheSearchResult(
+    cacheKey: string,
+    result: ProviderWithCalculatedRating[],
+    isDefaultSearch: boolean,
+  ): Promise<void> {
+    const ttl = this.getSearchCacheTtl(result.length);
+    await this.cacheService.set(cacheKey, result, ttl);
+    if (isDefaultSearch) {
+      await this.cacheService.set(this.DEFAULT_SEARCH_CACHE_KEY, result, ttl);
+    }
+  }
+
+  private getSearchCacheTtl(resultLength: number): number {
+    return resultLength === 0
+      ? this.NEGATIVE_SEARCH_CACHE_TTL_SECONDS
+      : this.SEARCH_RESULTS_CACHE_TTL_SECONDS;
   }
 
   async findAllProviders(params: {
@@ -2364,15 +2553,15 @@ export class ProvidersService {
               p.reviewsReceived.length
             : 0;
         const completedBookings = p.bookings.filter(
-          (b) => b.status === 'FINISHED', // â CORREÃÃO 1
+          (b) => b.status === 'FINISHED',
         ).length;
         const hasConflict = p.bookings.some(
           (b) =>
             b.scheduledDate.toISOString().split('T')[0] ===
               scheduledDate.toISOString().split('T')[0] &&
-            (b.status === BookingStatus.PENDING || // â CORREÃÃO 2
-              b.status === BookingStatus.CONFIRMED || // â CORREÃÃO 3 (Assumindo que 'CONFIRMED' Ã© 'ACCEPTED')
-              b.status === BookingStatus.STARTED), // â CORREÃÃO 4 (Assumindo que 'IN_PROGRESS' Ã© 'STARTED')
+            (b.status === BookingStatus.PENDING ||
+              b.status === BookingStatus.CONFIRMED ||
+              b.status === BookingStatus.STARTED),
         );
 
         let score = averageRating * 10 + completedBookings;
