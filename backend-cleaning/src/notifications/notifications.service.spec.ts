@@ -24,15 +24,19 @@ describe('NotificationsService', () => {
     configMock = {
       get: jest.fn().mockImplementation((_key, fallback) => fallback ?? 0),
     };
+    const whatsappServiceMock = {
+      sendWhatsAppMessage: jest.fn().mockResolvedValue({ success: true }),
+    };
 
     service = new NotificationsService(
       prismaMock,
       i18nMock as any,
       configMock as any,
+      whatsappServiceMock as any,
     );
     (service as any).sendPushNotification = jest
       .fn()
-      .mockResolvedValue(undefined);
+      .mockResolvedValue(true);
   });
 
   describe('createNotification', () => {
