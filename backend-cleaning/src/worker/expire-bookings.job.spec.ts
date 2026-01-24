@@ -9,6 +9,12 @@ describe('ExpireBookingsJob', () => {
       update: jest.Mock;
     };
   };
+  let notificationsMock: {
+    createNotification: jest.Mock;
+  };
+  let observabilityMock: {
+    recordJobExecution: jest.Mock;
+  };
 
   beforeEach(() => {
     prismaMock = {
@@ -17,7 +23,17 @@ describe('ExpireBookingsJob', () => {
         update: jest.fn(),
       },
     };
-    job = new ExpireBookingsJob(prismaMock as any);
+    notificationsMock = {
+      createNotification: jest.fn(),
+    };
+    observabilityMock = {
+      recordJobExecution: jest.fn(),
+    };
+    job = new ExpireBookingsJob(
+      prismaMock as any,
+      observabilityMock as any,
+      notificationsMock as any,
+    );
   });
 
   it('expires due pending-payment bookings', async () => {
