@@ -55,20 +55,7 @@ export default function SuccessHeader({
 
     return (
         <SafeAreaView style={styles.safeAreaHeader}> {/* Fix: SafeAreaView para iOS notch/status bar */}
-            <View style={styles.headerContainer}>
-                <Animated.Image
-                    source={require('../../../../assets/images/logo2.png')}
-                    style={[
-                        styles.logoImage,
-                        {
-                            transform: [
-                                { scale: logoPulseAnim },
-                            ]
-                        }
-                    ]}
-                    resizeMode="contain"
-                />
-            </View>
+            <View style={styles.headerContainer} />
         </SafeAreaView>
     );
 }
