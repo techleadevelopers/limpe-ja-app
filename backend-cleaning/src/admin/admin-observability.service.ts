@@ -1,15 +1,10 @@
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CacheService } from '../cache/cache.service';
 import { BookingStatus } from '@prisma/client';
 import { ObservabilityService } from '../observability/observability.service';
 import { ConfigService } from '@nestjs/config';
-import { normalizeRouteKey } from '../observability/route-normalizer';
 import axios, { isAxiosError } from 'axios';
-import type { RedisClientType } from '@redis/client';
 
 interface InsuranceBucket {
   label: string;
@@ -75,8 +70,67 @@ export interface AdminHealthSnapshot {
   memory: MemoryUsageSnapshot;
   activeSessions: number;
   insuranceConversion: InsuranceConversionStats;
-  latencySeries: Array<{ timestamp: string; latencyMs: number }>;
+  latencySeries: BusinessLatencyPoint[];
+  latencyAverages: ObservabilityLatencyAverages;
   sentry: SentryObservabilityResult;
+}
+
+type BusinessLatencyKey =
+  | 'registerLatency'
+  | 'radiusLatency'
+  | 'bookingLatency'
+  | 'paymentLatency';
+
+interface BusinessLatencyConfig {
+  key: BusinessLatencyKey;
+  route: string;
+  label: string;
+}
+
+export const BUSINESS_LATENCY_CONFIGS: BusinessLatencyConfig[] = [
+  {
+    key: 'registerLatency',
+    route: '/auth/register/client',
+    label: 'Registro de Clientes',
+  },
+  {
+    key: 'radiusLatency',
+    route: '/providers/nearby',
+    label: 'Busca por Proximidade',
+  },
+  {
+    key: 'bookingLatency',
+    route: '/bookings',
+    label: 'Agendamentos',
+  },
+  {
+    key: 'paymentLatency',
+    route: '/payments/webhook/pix',
+    label: 'Pagamentos PIX',
+  },
+];
+
+const MAX_LATENCY_POINTS = 12;
+
+interface BusinessLatencyPoint {
+  timestamp: string;
+  registerLatency?: number;
+  radiusLatency?: number;
+  bookingLatency?: number;
+  paymentLatency?: number;
+  criticalAverage?: number;
+}
+
+interface ObservabilityLatencyAverages {
+  registerLatency?: number;
+  radiusLatency?: number;
+  bookingLatency?: number;
+  paymentLatency?: number;
+}
+
+interface RawLatencyPoint {
+  timestamp: string;
+  latencyMs: number;
 }
 
 @Injectable()
@@ -96,7 +150,7 @@ export class AdminObservabilityService {
     private readonly configService: ConfigService,
   ) {}
 
-  async getSnapshot(routeKey?: string): Promise<AdminHealthSnapshot> {
+  async getSnapshot(_routeKey?: string): Promise<AdminHealthSnapshot> {
     try {
       const dbLatencyPromise = this.checkDbLatency()
         .then((value) => ({ ok: true, value }))
@@ -107,11 +161,18 @@ export class AdminObservabilityService {
           return { ok: false, value: 0 };
         });
 
+      const latencySnapshotPromise = this.buildBusinessLatencySnapshot().catch(
+        () => ({
+          latencySeries: [] as BusinessLatencyPoint[],
+          latencyAverages: {},
+        }),
+      );
+
       const [
         dbLatencyResult,
         activeSessions,
         insuranceConversion,
-        latencySeries,
+        businessLatencySnapshot,
       ] = await Promise.all([
         dbLatencyPromise,
         this.estimateActiveSessions().catch(() => 0),
@@ -121,16 +182,10 @@ export class AdminObservabilityService {
           insuredRate: 0,
           breakdown: [],
         })),
-        Promise.resolve(
-          this.observabilityService.getLatencySeries(
-            normalizeRouteKey(routeKey ?? '/search'),
-            {
-              windowHours: 6,
-              points: 12,
-            },
-          ),
-        ).catch(() => []),
+        latencySnapshotPromise,
       ]);
+
+      const { latencySeries, latencyAverages } = businessLatencySnapshot;
 
       const memory = process.memoryUsage();
       const sentrySnapshot = await this.fetchSentrySnapshot().catch(() =>
@@ -155,6 +210,7 @@ export class AdminObservabilityService {
         activeSessions,
         insuranceConversion,
         latencySeries,
+        latencyAverages,
         sentry: sentrySnapshot,
       };
     } catch (error) {
@@ -185,6 +241,7 @@ export class AdminObservabilityService {
         breakdown: [],
       },
       latencySeries: [],
+      latencyAverages: {},
       sentry: this.buildSentryError('Snapshot indisponível'),
     };
   }
@@ -268,18 +325,85 @@ export class AdminObservabilityService {
     }
   }
 
+  private async buildBusinessLatencySnapshot(): Promise<{
+    latencySeries: BusinessLatencyPoint[];
+    latencyAverages: ObservabilityLatencyAverages;
+  }> {
+    const rawSeries = await Promise.all(
+      BUSINESS_LATENCY_CONFIGS.map((config) =>
+        this.observabilityService.getLatencySeries(config.route, {
+          windowHours: 6,
+          points: MAX_LATENCY_POINTS,
+        }),
+      ),
+    );
+
+    const timestamps = Array.from(
+      new Set(
+        rawSeries.flatMap((series) =>
+          series.map((point) => point.timestamp),
+        ),
+      ),
+    ).sort();
+
+    const windowedTimestamps = timestamps.slice(-MAX_LATENCY_POINTS);
+    const seriesMaps = rawSeries.map((series) =>
+      new Map(series.map((point) => [point.timestamp, point.latencyMs])),
+    );
+
+    const latencySeries = windowedTimestamps.map((timestamp) => {
+      const entry: BusinessLatencyPoint = { timestamp };
+      const collected: number[] = [];
+
+      BUSINESS_LATENCY_CONFIGS.forEach((config, index) => {
+        const latency = seriesMaps[index].get(timestamp);
+        if (typeof latency === 'number') {
+          entry[config.key] = latency;
+          collected.push(latency);
+        }
+      });
+      if (collected.length > 0) {
+        entry.criticalAverage = Number(
+          (
+            collected.reduce((sum, value) => sum + value, 0) / collected.length
+          ).toFixed(2),
+        );
+      }
+      return entry;
+    });
+    return {
+      latencySeries,
+      latencyAverages: this.calculateLatencyAverages(rawSeries),
+    };
+  }
+
+  private calculateLatencyAverages(
+    rawSeries: RawLatencyPoint[][],
+  ): ObservabilityLatencyAverages {
+    const averages: ObservabilityLatencyAverages = {};
+    rawSeries.forEach((series, index) => {
+      if (!series.length) {
+        return;
+      }
+      const total = series.reduce((sum, point) => sum + point.latencyMs, 0);
+      averages[BUSINESS_LATENCY_CONFIGS[index].key] = Number(
+        (total / series.length).toFixed(2),
+      );
+    });
+    return averages;
+  }
+
   private async fetchSentrySnapshot(): Promise<SentryObservabilityResult> {
-    const sentryConfig = this.configService.get<{
-      apiToken?: string;
-      orgSlug?: string;
-      projectSlug?: string;
-      apiBaseUrl?: string;
-    }>('sentry');
-    const token = sentryConfig?.apiToken?.trim();
-    const orgSlug = sentryConfig?.orgSlug?.trim();
-    const projectSlug = sentryConfig?.projectSlug?.trim();
+    const token = this.configService.get<string>('SENTRY_API_TOKEN')?.trim();
+    const orgSlug = this.configService
+      .get<string>('SENTRY_API_ORG_SLUG')
+      ?.trim();
+    const projectSlug = this.configService
+      .get<string>('SENTRY_API_PROJECT_SLUG')
+      ?.trim();
     const baseUrl =
-      sentryConfig?.apiBaseUrl?.trim() || 'https://sentry.io/api/0';
+      this.configService.get<string>('SENTRY_API_BASE_URL')?.trim() ||
+      'https://sentry.io/api/0';
 
     const missing: string[] = [];
     if (!token) missing.push('SENTRY_API_TOKEN');
@@ -289,12 +413,13 @@ export class AdminObservabilityService {
     if (missing.length > 0) {
       const message = `Credenciais do Sentry ausentes: ${missing.join(', ')}`;
       this.logger.warn(`[AdminHealth] ${message}`);
-      return this.buildSentryError(message);
+      return this.buildSentryError('Falha na conexão com o Sentry');
     }
-
-    const cached = await this.cacheService.get<SentryObservabilityResult>(
-      this.sentryCacheKey,
-    );
+    
+    const cached =
+      (await this.cacheService.get<SentryObservabilityResult | null>(
+        this.sentryCacheKey,
+      )) ?? null;
     if (cached) {
       return cached;
     }
@@ -302,17 +427,6 @@ export class AdminObservabilityService {
     const headers = {
       Authorization: `Bearer ${token}`,
       Accept: 'application/json',
-    };
-
-    const safeStringify = (value: unknown) => {
-      try {
-        if (value === null || value === undefined) {
-          return String(value);
-        }
-        return JSON.stringify(value, null, 2);
-      } catch {
-        return String(value);
-      }
     };
 
     try {
@@ -334,20 +448,19 @@ export class AdminObservabilityService {
         }),
       ]);
 
-      console.debug(
+      this.logger.verbose(
         `[AdminHealth] Sentry issues URL: ${issuesResponse.config?.url}`,
       );
-      console.debug(
+      this.logger.verbose(
         `[AdminHealth] Sentry project URL: ${projectResponse.config?.url}`,
       );
 
       const issues = Array.isArray(issuesResponse.data)
         ? issuesResponse.data
         : [];
-
-      console.debug(
+      this.logger.debug(
         '[AdminHealth] Sentry issues payload:',
-        safeStringify(issuesResponse.data),
+        this.safeStringify(issuesResponse.data),
       );
 
       const healthStats =
@@ -386,13 +499,18 @@ export class AdminObservabilityService {
         .slice(0, 5)
         .map((issue) => {
           if (!issue) {
-            console.log('Objeto que causou erro:', safeStringify(issue));
+            this.logger.debug(
+              '[AdminHealth] Sentry issue sem payload válido',
+              this.safeStringify(issue),
+            );
           }
           const stackInfo =
             issue?.entries
               ?.map((entry: any) => entry?.data?.stacktrace ?? entry)
               ?.filter(Boolean) || [];
-          const stackTrace = stackInfo.length ? safeStringify(stackInfo) : undefined;
+          const stackTrace = stackInfo.length
+            ? this.safeStringify(stackInfo)
+            : undefined;
           return {
             id: issue?.id ?? String(Date.now()),
             title: issue?.title ?? issue?.metadata?.value ?? 'Sem título',
@@ -415,9 +533,9 @@ export class AdminObservabilityService {
       return payload;
     } catch (error) {
       let statusCode: number | undefined;
-      let message = 'Erro desconhecido ao consultar o Sentry';
+      let message = 'Falha na conexão com o Sentry';
       if (isAxiosError(error)) {
-        console.error(
+        this.logger.debug(
           '[AdminHealth] Sentry request URL (debug):',
           error.config?.url,
         );
@@ -425,9 +543,10 @@ export class AdminObservabilityService {
         message =
           error.response?.data?.detail ??
           error.response?.data?.message ??
-          error.message;
+          error.message ??
+          message;
         if (error.response?.data) {
-          console.error(
+          this.logger.debug(
             '[AdminHealth] Sentry response body:',
             error.response.data,
           );
@@ -436,14 +555,22 @@ export class AdminObservabilityService {
       this.logger.warn(
         `[AdminHealth] erro ao consumir API do Sentry: ${message}`,
       );
-      console.error(
-        `[AdminHealth] Sentry request failed (status=${statusCode ?? 'n/a'}): ${message}`,
-      );
-      console.error(
+      this.logger.debug(
         '[AdminHealth] Sentry error full object:',
-        safeStringify(error),
+        this.safeStringify(error),
       );
       return this.buildSentryError(message, statusCode);
+    }
+  }
+
+  private safeStringify(value: unknown): string {
+    try {
+      if (value === null || value === undefined) {
+        return String(value);
+      }
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
     }
   }
 
