@@ -1,0 +1,1462 @@
+{
+  "components_root": "C:/Users/Paulo/Desktop/relax-app",
+  "files_scanned": 1189,
+  "navigation_calls": [
+    {
+      "file": "admin-web/client/src/components/dashboard/verification-queue-widget.tsx",
+      "raw": "\"/verification-queue\"",
+      "type": "literal",
+      "value": "/verification-queue"
+    },
+    {
+      "file": "admin-web/client/src/components/layout/command-palette.tsx",
+      "raw": "path",
+      "type": "expr"
+    },
+    {
+      "file": "admin-web/client/src/components/layout/sidebar.tsx",
+      "raw": "{item.path}",
+      "type": "expr"
+    },
+    {
+      "file": "admin-web/client/src/components/layout/sidebar.tsx",
+      "raw": "\"/notifications\"",
+      "type": "literal",
+      "value": "/notifications"
+    },
+    {
+      "file": "admin-web/client/src/components/layout/sidebar.tsx",
+      "raw": "\"/settings\"",
+      "type": "literal",
+      "value": "/settings"
+    },
+    {
+      "file": "admin-web/client/src/context/AuthContext.tsx",
+      "raw": "'/login'",
+      "type": "literal",
+      "value": "/login"
+    },
+    {
+      "file": "admin-web/client/src/context/AuthContext.tsx",
+      "raw": "'/profile/correction'",
+      "type": "literal",
+      "value": "/profile/correction"
+    },
+    {
+      "file": "admin-web/client/src/context/AuthContext.tsx",
+      "raw": "'/dashboard'",
+      "type": "literal",
+      "value": "/dashboard"
+    },
+    {
+      "file": "admin-web/client/src/context/AuthContext.tsx",
+      "raw": "'/login'",
+      "type": "literal",
+      "value": "/login"
+    },
+    {
+      "file": "app/+not-found.tsx",
+      "raw": "\"/\"",
+      "type": "literal",
+      "value": "/"
+    },
+    {
+      "file": "app/welcome.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/_layout.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/client-register.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/client-register.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/client-register.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/login.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/login.tsx",
+      "raw": "\"/auth/register-options\"",
+      "type": "literal",
+      "value": "/auth/register-options"
+    },
+    {
+      "file": "app/auth/login.tsx",
+      "raw": "\"/auth/forgot-password\"",
+      "type": "literal",
+      "value": "/auth/forgot-password"
+    },
+    {
+      "file": "app/auth/register-options.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/register-options.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/register-options.tsx",
+      "raw": "{AUTH_ROUTES.LOGIN}",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/reset-password.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/provider-register/coverage-availability.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/provider-register/index.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/provider-register/personal-details.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/provider-register/service-details.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/provider-register/service-details.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/provider-register/verify-account.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/provider-register/verify-account.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/provider-register/verify-account.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/auth/provider-register/verify-account.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/index.tsx",
+      "raw": "{`/client/bookings/${item.id}",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/index.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/schedule-service.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/schedule-service.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/schedule-service.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/schedule-service.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/schedule-service.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/schedule-service.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/schedule-service.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/success.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/success.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/success.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/success.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/success.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/success.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/success.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/[bookingId].tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/[bookingId].tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/[bookingId].tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/bookings/[bookingId].tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/category/[categoryId].tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/coupons/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/resultados-busca.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/search-results.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/servicos-por-categoria.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/todos-prestadores-proximos.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/[providerId].tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/[providerId].tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/[providerId].tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/[providerId].tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/[providerId].tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/explore/menu/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/messages/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/metrics/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/metrics/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/metrics/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/metrics/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/metrics/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/metrics/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/metrics/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/metrics/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/metrics/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/missions/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/missions/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/missions/missions.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/notifications/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/profile/edit.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/profile/index.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/profile/index.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/profile/index.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/subscriptions/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/subscriptions/[subscriptionId].tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/support/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/support/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/support/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/wallet/cashback.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/client/wallet/cashback.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/notifications.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/settings.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/feedback/[targetId].tsx",
+      "raw": "'home'",
+      "type": "literal",
+      "value": "home"
+    },
+    {
+      "file": "app/common/feedback/dispute/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/feedback/dispute/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/safety/defense.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/safety/defense.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/safety/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/safety/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/support/create-ticket.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/support/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/support/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/common/support/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/earnings.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/earnings.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/earnings.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/earnings.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/active-booking/success.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/active-booking/[bookingId].tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/messages/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/notifications/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "replace",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/profile/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/reviews/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/reviews/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/schedule/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/schedule/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/services/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/services/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/services/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/services/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/withdraw/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "app/provider/withdraw/index.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "business/components/client/explore/home/CategoriaCard.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "business/components/client/explore/home/DEFENSE_SOS.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "business/components/client/explore/home/DrawerMenu.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "business/components/client/explore/home/DrawerMenu.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/CategoriaCard.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/CategoryCard2.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/DEFENSE_SOS.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/DrawerMenu.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/DrawerMenu.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/FAB_SOS.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/HorizontalMiniGrid.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/NavBar.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/NavBar2.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/NavBar2.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/NavBar2.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/NewHeader.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/NewHeader.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/NewHeader.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/NewHeader.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/NewHeader.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/RecomendacaoCard.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/home/ServiceCategoryCard.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/provider/ActionButtons.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/provider/BookServiceButton.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/provider/BookServiceButton.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/client/explore/provider/BookServiceButton.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/nudges/IncentiveNudge.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/nudges/SecurityNudge.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/provider/ProviderNudgeContainer.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/provider/earnings/EarningsSummaryCard.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/provider/earnings/RecentTransactionsSection.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/provider/earnings/RecentTransactionsSection.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/provider/navigation/ProviderNavBar.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/ui/outros/ExternalLink.tsx",
+      "raw": "{href}",
+      "type": "expr"
+    },
+    {
+      "file": "components/ui/outros/SaudacaoContainer.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "components/ui/outros/SaudacaoContainer.tsx",
+      "raw": "push",
+      "type": "expr"
+    },
+    {
+      "file": "contexts/AuthContext.tsx",
+      "raw": "replace",
+      "type": "expr"
+    }
+  ],
+  "navigation_literal_targets": {
+    "/verification-queue": [
+      "admin-web/client/src/components/dashboard/verification-queue-widget.tsx"
+    ],
+    "/notifications": [
+      "admin-web/client/src/components/layout/sidebar.tsx"
+    ],
+    "/settings": [
+      "admin-web/client/src/components/layout/sidebar.tsx"
+    ],
+    "/login": [
+      "admin-web/client/src/context/AuthContext.tsx",
+      "admin-web/client/src/context/AuthContext.tsx"
+    ],
+    "/profile/correction": [
+      "admin-web/client/src/context/AuthContext.tsx"
+    ],
+    "/dashboard": [
+      "admin-web/client/src/context/AuthContext.tsx"
+    ],
+    "/": [
+      "app/+not-found.tsx"
+    ],
+    "/auth/register-options": [
+      "app/auth/login.tsx"
+    ],
+    "/auth/forgot-password": [
+      "app/auth/login.tsx"
+    ],
+    "home": [
+      "app/common/feedback/[targetId].tsx"
+    ]
+  },
+  "ui_business_rule_files": [
+    "__tests__/active-booking/ActiveBooking.test.tsx",
+    "__tests__/booking/BookingDetailsScreen.test.tsx",
+    "__tests__/booking/BookingSuccessScreen.test.tsx",
+    "__tests__/context/auth-context-push-registration.test.tsx",
+    "__tests__/context/payment-confirmed-event.test.tsx",
+    "__tests__/explore/provider-search-radius.spec.tsx",
+    "__tests__/fixtures/payment.fixture.ts",
+    "__tests__/manage-availability/manage-availability.radius.spec.tsx",
+    "admin-web/client/src/App.tsx",
+    "admin-web/client/src/components/dashboard/provider-map.tsx",
+    "admin-web/client/src/components/dashboard/providers-summary.tsx",
+    "admin-web/client/src/components/dashboard/recent-activities.tsx",
+    "admin-web/client/src/components/dashboard/verification-queue-widget.tsx",
+    "admin-web/client/src/components/verification/verification-modal.tsx",
+    "admin-web/client/src/context/AuthContext.tsx",
+    "admin-web/client/src/data/mockData.ts",
+    "admin-web/client/src/lib/api.ts",
+    "admin-web/client/src/lib/types.ts",
+    "admin-web/client/src/pages/bookings/booking-management.tsx",
+    "admin-web/client/src/pages/bookings/booking-oversight.tsx",
+    "admin-web/client/src/pages/coupons/coupon-management.tsx",
+    "admin-web/client/src/pages/disputes/dispute-management.tsx",
+    "admin-web/client/src/pages/disputes/guarantee-claims.tsx",
+    "admin-web/client/src/pages/live-tracking.tsx",
+    "admin-web/client/src/pages/missions/mission-management.tsx",
+    "admin-web/client/src/pages/offers/offer-management.tsx",
+    "admin-web/client/src/pages/payments/payment-management.tsx",
+    "admin-web/client/src/pages/providers/providers.tsx",
+    "admin-web/client/src/pages/referrals/referral-management.tsx",
+    "admin-web/client/src/pages/reviews/review-management.tsx",
+    "admin-web/client/src/pages/safety/safety-alerts.tsx",
+    "admin-web/client/src/pages/settings/faq-management.tsx",
+    "admin-web/client/src/pages/settings/pricing-rules.tsx",
+    "admin-web/client/src/pages/users/data-requests.tsx",
+    "admin-web/client/src/pages/users/user-management.tsx",
+    "admin-web/client/src/pages/users/verification-queue.tsx",
+    "admin-web/server/routes.ts",
+    "admin-web/server/storage.ts",
+    "admin-web/shared/schema.ts",
+    "app/_layout.tsx",
+    "app/_shared/routes.ts",
+    "app/auth/client-register.tsx",
+    "app/auth/login.tsx",
+    "app/auth/provider-register/coverage-availability.tsx",
+    "app/auth/provider-register/index.tsx",
+    "app/auth/provider-register/personal-details.tsx",
+    "app/auth/provider-register/service-details.tsx",
+    "app/auth/provider-register/verify-account.tsx",
+    "app/auth/register-options.tsx",
+    "app/client/bookings/[bookingId].tsx",
+    "app/client/bookings/__tests__/success.test.tsx",
+    "app/client/bookings/index.tsx",
+    "app/client/bookings/schedule-service.tsx",
+    "app/client/bookings/success.tsx",
+    "app/client/explore/[providerId].tsx",
+    "app/client/explore/index.tsx",
+    "app/client/explore/resultados-busca.tsx",
+    "app/client/explore/search-results.tsx",
+    "app/client/explore/todos-prestadores-proximos.tsx",
+    "app/client/messages/[chatId].tsx",
+    "app/client/metrics/index.tsx",
+    "app/client/missions/index.tsx",
+    "app/client/missions/missions.tsx",
+    "app/client/subscriptions/[subscriptionId].tsx",
+    "app/client/wallet/cashback.tsx",
+    "app/common/terms-of-service.tsx",
+    "app/provider/_layout.tsx",
+    "app/provider/active-booking/[bookingId].tsx",
+    "app/provider/active-booking/success.tsx",
+    "app/provider/earnings.tsx",
+    "app/provider/index.tsx",
+    "app/provider/messages/[chatId].tsx",
+    "app/provider/messages/index.tsx",
+    "app/provider/profile/edit-services.tsx",
+    "app/provider/profile/index.tsx",
+    "app/provider/schedule/index.tsx",
+    "app/provider/schedule/manage-availability.tsx",
+    "app/provider/services/[serviceId].tsx",
+    "app/provider/services/index.tsx",
+    "backend-cleaning/prisma/seed/align.ts",
+    "backend-cleaning/prisma/seed/seed.ts",
+    "backend-cleaning/src/admin/admin-dashboard.controller.ts",
+    "backend-cleaning/src/admin/admin-dashboard.service.ts",
+    "backend-cleaning/src/admin/admin-observability.service.ts",
+    "backend-cleaning/src/admin/admin-payments.controller.ts",
+    "backend-cleaning/src/admin/admin-providers.controller.ts",
+    "backend-cleaning/src/admin/admin-queues.controller.ts",
+    "backend-cleaning/src/admin/admin-settings.controller.ts",
+    "backend-cleaning/src/admin/dto/admin-provider-query.dto.ts",
+    "backend-cleaning/src/admin/live-status.controller.ts",
+    "backend-cleaning/src/admin/live-status.service.ts",
+    "backend-cleaning/src/audit/audit-log.controller.ts",
+    "backend-cleaning/src/auth/__tests__/password-reset.confirm.spec.ts",
+    "backend-cleaning/src/auth/__tests__/password-reset.request.spec.ts",
+    "backend-cleaning/src/auth/__tests__/password-reset.security.spec.ts",
+    "backend-cleaning/src/auth/auth.controller.ts",
+    "backend-cleaning/src/auth/auth.service.ts",
+    "backend-cleaning/src/auth/dto/register-provider.dto.ts",
+    "backend-cleaning/src/auth/guards/jwt-auth.guard.ts",
+    "backend-cleaning/src/auth/strategies/jwt.strategy.ts",
+    "backend-cleaning/src/availability/availability.controller.ts",
+    "backend-cleaning/src/availability/availability.service.ts",
+    "backend-cleaning/src/availability/my-availability.controller.ts",
+    "backend-cleaning/src/bookings/booking-actions.helper.spec.ts",
+    "backend-cleaning/src/bookings/booking-actions.helper.ts",
+    "backend-cleaning/src/bookings/booking-status.constants.ts",
+    "backend-cleaning/src/bookings/bookings.constants.ts",
+    "backend-cleaning/src/bookings/bookings.controller.ts",
+    "backend-cleaning/src/bookings/bookings.service.spec.ts",
+    "backend-cleaning/src/bookings/bookings.service.ts",
+    "backend-cleaning/src/bookings/dto/booking-details.dto.ts",
+    "backend-cleaning/src/bookings/dto/booking-view.dto.ts",
+    "backend-cleaning/src/bookings/dto/report-dispute.dto.ts",
+    "backend-cleaning/src/bookings/pricing/price-calculator.spec.ts",
+    "backend-cleaning/src/bookings/pricing/price-calculator.ts",
+    "backend-cleaning/src/bookings/states/booking.state-machine.spec.ts",
+    "backend-cleaning/src/bookings/states/booking.state-machine.ts",
+    "backend-cleaning/src/chat/chat.controller.ts",
+    "backend-cleaning/src/chat/chat.service.ts",
+    "backend-cleaning/src/clients/clients.controller.ts",
+    "backend-cleaning/src/clients/clients.service.ts",
+    "backend-cleaning/src/common/constants/roles.enum.ts",
+    "backend-cleaning/src/common/services/contact-leak-policy.service.ts",
+    "backend-cleaning/src/compliance/compliance.service.ts",
+    "backend-cleaning/src/config/configuration.ts",
+    "backend-cleaning/src/config/validation-schema.ts",
+    "backend-cleaning/src/connect/connect.service.ts",
+    "backend-cleaning/src/coupons/coupons.controller.ts",
+    "backend-cleaning/src/coupons/coupons.service.ts",
+    "backend-cleaning/src/coupons/dto/update-coupon.dto.ts",
+    "backend-cleaning/src/coupons/entities/coupon.entity.ts",
+    "backend-cleaning/src/dashboard/dashboard.service.ts",
+    "backend-cleaning/src/disputes/dispute.controller.ts",
+    "backend-cleaning/src/disputes/dispute.service.ts",
+    "backend-cleaning/src/email/email.service.ts",
+    "backend-cleaning/src/faqs/faqs.controller.ts",
+    "backend-cleaning/src/guarantee/entities/guarantee-claim.entity.ts",
+    "backend-cleaning/src/guarantee/guarantee.controller.ts",
+    "backend-cleaning/src/guarantee/guarantee.service.ts",
+    "backend-cleaning/src/incidents/incidents.controller.ts",
+    "backend-cleaning/src/incidents/incidents.service.ts",
+    "backend-cleaning/src/insurance/insurance.service.ts",
+    "backend-cleaning/src/loyalty/dto/add-points.dto.ts",
+    "backend-cleaning/src/loyalty/loyalty.service.ts",
+    "backend-cleaning/src/main.ts",
+    "backend-cleaning/src/meta/meta.service.ts",
+    "backend-cleaning/src/metrics/metrics.service.ts",
+    "backend-cleaning/src/missions/dto/mission-view.dto.ts",
+    "backend-cleaning/src/missions/dto/upsert-mission.dto.ts",
+    "backend-cleaning/src/missions/missions.controller.ts",
+    "backend-cleaning/src/missions/missions.service.ts",
+    "backend-cleaning/src/missions/progress.service.ts",
+    "backend-cleaning/src/notifications/notifications.controller.ts",
+    "backend-cleaning/src/offers/dto/create-offer.dto.ts",
+    "backend-cleaning/src/offers/entities/offer.entity.ts",
+    "backend-cleaning/src/offers/offers.controller.ts",
+    "backend-cleaning/src/payments/dto/create-pix-charge.dto.ts",
+    "backend-cleaning/src/payments/entities/transaction.entity.ts",
+    "backend-cleaning/src/payments/payment-intent-locker.ts",
+    "backend-cleaning/src/payments/payment.state-machine.spec.ts",
+    "backend-cleaning/src/payments/payment.state-machine.ts",
+    "backend-cleaning/src/payments/payments.controller.ts",
+    "backend-cleaning/src/payments/payments.service.spec.ts",
+    "backend-cleaning/src/payments/payments.service.ts",
+    "backend-cleaning/src/payouts/admin-withdrawals.controller.ts",
+    "backend-cleaning/src/payouts/payouts.controller.ts",
+    "backend-cleaning/src/payouts/payouts.service.ts",
+    "backend-cleaning/src/pricing/pricing.controller.ts",
+    "backend-cleaning/src/pricing/pricing.service.ts",
+    "backend-cleaning/src/provider-promotions/provider-promotions.controller.ts",
+    "backend-cleaning/src/provider-promotions/provider-promotions.service.ts",
+    "backend-cleaning/src/provider-services/dto/create-provider-service.dto.ts",
+    "backend-cleaning/src/provider-services/dto/provider-service-details.dto.ts",
+    "backend-cleaning/src/provider-services/dto/update-provider-service.dto.ts",
+    "backend-cleaning/src/provider-services/entities/provider-service.entity.ts",
+    "backend-cleaning/src/provider-services/provider-services.controller.ts",
+    "backend-cleaning/src/provider-services/provider-services.service.ts",
+    "backend-cleaning/src/providers/dto/provider-details.dto.ts",
+    "backend-cleaning/src/providers/dto/provider-promotions-center.dto.ts",
+    "backend-cleaning/src/providers/dto/provider-service-offering.dto.ts",
+    "backend-cleaning/src/providers/dto/provider-view.dto.ts",
+    "backend-cleaning/src/providers/dto/update-provider-profile.dto.ts",
+    "backend-cleaning/src/providers/entities/provider.entity.ts",
+    "backend-cleaning/src/providers/provider-promotions.service.ts",
+    "backend-cleaning/src/providers/providers.controller.ts",
+    "backend-cleaning/src/providers/providers.service.spec.ts",
+    "backend-cleaning/src/providers/providers.service.ts",
+    "backend-cleaning/src/queues/workers/dispute.worker.ts",
+    "backend-cleaning/src/queues/workers/verification.worker.ts",
+    "backend-cleaning/src/ranking/dto/provider-ranking.dto.ts",
+    "backend-cleaning/src/ranking/ranking.service.ts",
+    "backend-cleaning/src/referrals/referrals.controller.ts",
+    "backend-cleaning/src/referrals/referrals.service.ts",
+    "backend-cleaning/src/reviews/reviews.controller.ts",
+    "backend-cleaning/src/reviews/reviews.service.ts",
+    "backend-cleaning/src/safety/entities/incident.entity.ts",
+    "backend-cleaning/src/safety/safety.controller.ts",
+    "backend-cleaning/src/safety/safety.service.ts",
+    "backend-cleaning/src/scheduler/__tests__/cancel-on-reschedule.spec.ts",
+    "backend-cleaning/src/scheduler/__tests__/rehydrate-guards.spec.ts",
+    "backend-cleaning/src/scheduler/__tests__/schedule-reminders.spec.ts",
+    "backend-cleaning/src/scheduler/__tests__/start-cancels-late.spec.ts",
+    "backend-cleaning/src/scheduler/scheduler.service.ts",
+    "backend-cleaning/src/search/dto/provider-service-search-result.dto.ts",
+    "backend-cleaning/src/search/dto/search-query.dto.ts",
+    "backend-cleaning/src/search/search.service.ts",
+    "backend-cleaning/src/services/NotificationService.ts",
+    "backend-cleaning/src/services/services.controller.ts",
+    "backend-cleaning/src/services/whatsappService.ts",
+    "backend-cleaning/src/shared/enums/booking-status.enum.ts",
+    "backend-cleaning/src/shared/enums/verification-status.enum.ts",
+    "backend-cleaning/src/shared/types/user-roles.type.ts",
+    "backend-cleaning/src/subscriptions/entities/subscription.entity.ts",
+    "backend-cleaning/src/subscriptions/subscriptions.controller.ts",
+    "backend-cleaning/src/subscriptions/subscriptions.service.ts",
+    "backend-cleaning/src/support/support.controller.ts",
+    "backend-cleaning/src/support/support.service.ts",
+    "backend-cleaning/src/telemetry/telemetry.controller.ts",
+    "backend-cleaning/src/telemetry/telemetry.notification.service.ts",
+    "backend-cleaning/src/tracing/otel.ts",
+    "backend-cleaning/src/users/dto/user-profile.dto.ts",
+    "backend-cleaning/src/users/entities/user.entity.ts",
+    "backend-cleaning/src/users/users.controller.ts",
+    "backend-cleaning/src/users/users.service.ts",
+    "backend-cleaning/src/verification/verification.controller.ts",
+    "backend-cleaning/src/verification/verification.service.ts",
+    "backend-cleaning/src/worker/expire-bookings.job.ts",
+    "base_chat.tsx",
+    "business/components/ProviderCard.backup.tsx",
+    "business/components/ProviderCard.tsx",
+    "business/components/client/booking/schedule/ProviderBrief.tsx",
+    "business/components/client/booking/schedule/ServiceDetailsInput.tsx",
+    "business/components/client/explore/category/CategoryProviderCard.tsx",
+    "business/components/client/explore/home/DrawerMenu.tsx",
+    "components/CategoryProviderCard.tsx",
+    "components/ProviderCard.backup.tsx",
+    "components/ProviderCard.tsx",
+    "components/client/booking/schedule/ProviderBrief.tsx",
+    "components/client/booking/schedule/ServiceDetailsInput.tsx",
+    "components/client/explore/category/CategoryProviderCard.tsx",
+    "components/client/explore/home/DrawerMenu.tsx",
+    "components/client/explore/home/PrestadorCard.tsx",
+    "components/client/explore/home/RecomendacaoCard.tsx",
+    "components/client/explore/home/ServiceCategoryCard.tsx",
+    "components/client/explore/home/providerAvailability.ts",
+    "components/client/explore/provider/BookServiceButton.test.tsx",
+    "components/client/explore/provider/BookServiceButton.tsx",
+    "components/client/explore/provider/DetailsContent.tsx",
+    "components/client/explore/provider/HeaderSection.tsx",
+    "components/client/explore/provider/OverviewContent.tsx",
+    "components/client/explore/provider/VerificationNotice.tsx",
+    "components/provider/dashboard/UpcomingServicesSection.tsx",
+    "components/provider/earnings/EarningsSummaryCard.tsx",
+    "components/provider/query-client-provider.tsx",
+    "constants/icons3d.ts",
+    "constants/queryKeys.ts",
+    "constants/routes.ts",
+    "contexts/AuthContext.tsx",
+    "e2e/payment-withdrawal.e2e.ts",
+    "hooks/useNotificationsSocket.ts",
+    "hooks/useProviderBookings.ts",
+    "hooks/useProviderMetrics.ts",
+    "json_payloads/app.e2e-spec.ts",
+    "services/__tests__/api.test.ts",
+    "services/adapters/bookingStatus.ts",
+    "services/api.ts",
+    "services/authService.ts",
+    "services/bookingService.ts",
+    "services/clientService.ts",
+    "services/incentiveService.ts",
+    "services/metricsService.ts",
+    "services/missionService.ts",
+    "services/paymentService.ts",
+    "services/providerService.ts",
+    "styles/providerStyles.ts",
+    "types/backend/auth.ts",
+    "types/backend/bookings.ts",
+    "types/backend/coupons.ts",
+    "types/backend/disputes.ts",
+    "types/backend/guarantee.ts",
+    "types/backend/incidents.ts",
+    "types/backend/mission.ts",
+    "types/backend/notifications.ts",
+    "types/backend/offers.ts",
+    "types/backend/payments.ts",
+    "types/backend/provider-service.ts",
+    "types/backend/providers.ts",
+    "types/backend/referrals.ts",
+    "types/backend/safety.ts",
+    "types/backend/search.ts",
+    "types/backend/subscriptions.ts",
+    "types/backend/verification.ts",
+    "utils/normalize.ts",
+    "utils/service-helpers.ts",
+    "utils/useBookingPricing.ts"
+  ]
+}
