@@ -6,6 +6,7 @@
 #   backend_report.json
 #   backend_report.md
 
+import os
 import re
 import json
 import sys
@@ -49,8 +50,28 @@ VALIDATOR_RE = re.compile(r"@(Is[A-Za-z]+)\b")
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
+EXCLUDED_DIRS = {
+    "node_modules",
+    "dist",
+    "test",
+    "uploads",
+    ".expo",
+    "docs",
+    "scripts",
+}
+
 def find_ts_files(root: Path):
-    return [p for p in root.rglob("*.ts") if p.is_file()]
+    collected = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [
+            d
+            for d in dirnames
+            if d not in EXCLUDED_DIRS and not d.startswith(".")
+        ]
+        for filename in filenames:
+            if filename.endswith(".ts"):
+                collected.append(Path(dirpath) / filename)
+    return collected
 
 def file_kind(path: Path):
     n = path.name
