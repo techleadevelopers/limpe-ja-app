@@ -1,5 +1,4 @@
 import { ProviderAvailability } from '../../../types/backend/providers';
-import { getProviderAvailability } from '../../../services/providerService';
 
 const MIN_AVAILABILITY_COOLDOWN = 1200;
 
@@ -20,9 +19,22 @@ export const availabilityPendingRequests = new Map<
 
 const buildCacheKey = (providerId: string, dateString: string) => `${providerId}-${dateString}`;
 
+export type AvailabilityFetcher = (
+  providerId: string,
+  dateString: string,
+  options?: { signal?: AbortSignal },
+) => Promise<{ available: ProviderAvailability[]; occupiedTimes: string[] }>;
+
+let availabilityFetcher: AvailabilityFetcher | null = null;
+
+export const registerAvailabilityFetcher = (fetcher: AvailabilityFetcher) => {
+  availabilityFetcher = fetcher;
+};
+
 export const fetchAvailabilityWithCooldown = async (
   provId: string,
   dateString: string,
+  options?: { signal?: AbortSignal; sharePending?: boolean },
 ): Promise<{ available: ProviderAvailability[]; occupiedTimes: string[] }> => {
   const cacheKey = buildCacheKey(provId, dateString);
   const cached = availabilityCache.get(cacheKey);
@@ -30,7 +42,8 @@ export const fetchAvailabilityWithCooldown = async (
     return cached;
   }
 
-  if (availabilityPendingRequests.has(cacheKey)) {
+  const shouldSharePending = options?.sharePending !== false;
+  if (shouldSharePending && availabilityPendingRequests.has(cacheKey)) {
     return availabilityPendingRequests.get(cacheKey)!;
   }
 
@@ -42,16 +55,28 @@ export const fetchAvailabilityWithCooldown = async (
   }
   availabilityCooldownMap.set(cacheKey, Date.now());
 
+  if (!availabilityFetcher) {
+    throw new Error('Availability fetcher is not registered.');
+  }
+
   const promise = (async () => {
     try {
-      const response = await getProviderAvailability(provId, dateString);
+      const response = await availabilityFetcher(provId, dateString, {
+        signal: options?.signal,
+      });
       availabilityCache.set(cacheKey, { ...response, timestamp: Date.now() });
       return response;
     } finally {
-      availabilityPendingRequests.delete(cacheKey);
+      if (shouldSharePending) {
+        availabilityPendingRequests.delete(cacheKey);
+      }
     }
   })();
-  availabilityPendingRequests.set(cacheKey, promise);
+
+  if (shouldSharePending) {
+    availabilityPendingRequests.set(cacheKey, promise);
+  }
+
   return promise;
 };
 
