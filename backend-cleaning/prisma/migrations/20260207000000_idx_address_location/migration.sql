@@ -1,0 +1,1 @@
+CREATE INDEX "idx_address_location" ON "Address" USING GIST ("location");
