@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Card from '../../common/Card'; // Importa o Card existente
-import Icon from 'react-native-vector-icons/MaterialIcons'; // Importa o Icon existente
+import { MaterialIcons as Icon } from '@expo/vector-icons'; // Importa o Icon existente
 import { colors } from '../../common/theme/colors'; // Importa as cores existentes
 import { typography } from '../../common/theme/typography'; // Importa a tipografia existente
 
