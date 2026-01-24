@@ -9,13 +9,15 @@ import {
   IsPhoneNumber,
   ValidateNested, // Adicionei ValidateNested aqui, se não estava
 } from 'class-validator';
-import { Type } from 'class-transformer'; // Adicionei Type aqui, se não estava
+import { Transform, Type } from 'class-transformer'; // Adicionei Type aqui, se não estava
 import { CreateAddressDto } from '../../common/dto/create-address.dto'; // Reutilize o DTO de endereço
 import { VerificationStatus } from '@prisma/client'; // Importar VerificationStatus para tipagem
+import { sanitizeHtmlText, trimText } from '../../common/utils/transformers';
 
 export class UpdateProviderProfileDto {
   @ApiPropertyOptional({ description: 'Nome completo do provedor' })
   @IsOptional()
+  @Transform(trimText)
   @IsString()
   fullName?: string;
 
@@ -24,6 +26,7 @@ export class UpdateProviderProfileDto {
     example: '12345678900',
   })
   @IsOptional()
+  @Transform(trimText)
   @IsString()
   // @IsCPF() // Se você tiver um validador de CPF customizado
   cpf?: string;
@@ -41,11 +44,13 @@ export class UpdateProviderProfileDto {
     example: '+5511987654321',
   })
   @IsOptional()
+  @Transform(trimText)
   @IsPhoneNumber('BR') // Valida como número de telefone brasileiro
   phone?: string;
 
   @ApiPropertyOptional({ description: 'URL do avatar do provedor' })
   @IsOptional()
+  @Transform(trimText)
   @IsUrl()
   avatarUrl?: string;
 
@@ -71,6 +76,7 @@ export class UpdateProviderProfileDto {
     example: 'Profissional dedicada à limpeza...',
   })
   @IsOptional()
+  @Transform(sanitizeHtmlText)
   @IsString()
   bio?: string;
 
@@ -79,6 +85,7 @@ export class UpdateProviderProfileDto {
     example: 'meu.pix@email.com',
   })
   @IsOptional()
+  @Transform(trimText)
   @IsString()
   pixKey?: string; // <-- ADICIONADO AQUI
 
