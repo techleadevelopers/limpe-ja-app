@@ -24,15 +24,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Asset } from 'expo-asset';
-import * as Location from 'expo-location';
-import { PermissionStatus } from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icons3D } from '../../../constants/icons3d';
-import { getCurrentPosition } from '../../../services/locationService';
-
 import { useAndroidDialog } from '../../../hooks/useAndroidDialog';
 import { useAuth } from '../../../hooks/useAuth';
+import { useLocationBasedProviders } from '../../../hooks/useLocationBasedProviders';
 import { getBookingsForUser } from '../../../services/bookingService';
 import {
     getServiceCategories,
@@ -51,7 +48,6 @@ import { VerificationStatus } from '../../../types/backend/auth';
 import { Service } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
 
-import { alertUserError } from '../../../_shared/errors/uiFeedback';
 import { AppColors } from '../../../constants/appStyles';
 import { CLIENT_ROUTES } from '../../../constants/routes';
 import type { CityStateHint } from '../../../utils/locationFilter';
@@ -92,30 +88,6 @@ const FALLBACK_CATEGORIES: Service[] = [
   { id: 'office-clean', name: 'Escritório', icon: 'escritorio.png' } as Service,
 ];
 const PROTOCOL_PREMIUM_SEEN_KEY = 'protocol_premium_seen';
-const QA_PANEL_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_ENABLE_QA_PANEL === 'true';
-const toNum = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
-const computeDistanceMeters = (
-  baseLat?: number | null,
-  baseLon?: number | null,
-  targetLat?: number | null,
-  targetLon?: number | null,
-): number | null => {
-  const lat1 = toNum(baseLat);
-  const lon1 = toNum(baseLon);
-  const lat2 = toNum(targetLat);
-  const lon2 = toNum(targetLon);
-  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const R = 6371000;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(toRad(lat1)) * Math.cos(toRad(lat2));
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
 const extractLocationHint = (profile?: UserProfile | null): CityStateHint => {
   const addr =
     profile?.clientDetails?.address ||
@@ -230,19 +202,11 @@ export default function ExploreClientScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const primaryBanner = bannerData[0];
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { isLargePhone } = useDevice();
 
   // Variável para compensar o ajuste do NewHeader para visitantes Android
   const isAndroidVisitor = Platform.OS === 'android' && !isAuthenticated;
-  const visitorHowItWorksAdjustment =
-    !isAuthenticated && (Platform.OS === 'android' || Platform.OS === 'ios')
-      ? {
-          marginTop: -15,
-          marginBottom: -2,
-        }
-      : undefined;
-
   const navWrap: StyleProp<ViewStyle> = React.useMemo(
     () => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined),
     [isLargePhone]
@@ -252,14 +216,11 @@ export default function ExploreClientScreen() {
     isReady: exploreTutorialReady,
     hasSeen: exploreTutorialHasSeen,
     show: showExploreTutorial,
-    isVisible: exploreTutorialVisible,
-    markSeen: markExploreTutorialSeen,
   } = exploreTutorial;
 
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
   const [recommendations, setRecommendations] = useState<ProviderDisplayInfo[]>([]);
-  const [nearbyProviders, setNearbyProviders] = useState<ProviderDisplayInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -267,10 +228,36 @@ export default function ExploreClientScreen() {
   const [searchRadiusKm] = useState<number>(50); // Padrão 50 km (como no código original)
   const locationHint = useMemo(() => extractLocationHint(userProfile), [userProfile]);
   const locationHintRef = useRef<CityStateHint>(locationHint);
-  const userCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
   useEffect(() => {
     locationHintRef.current = locationHint;
   }, [locationHint]);
+
+  useEffect(() => {
+    if (locationCoords) {
+      locationHintRef.current = {
+        ...locationHintRef.current,
+        latitude: locationCoords.latitude,
+        longitude: locationCoords.longitude,
+      };
+    }
+  }, [locationCoords]);
+
+  useEffect(() => {
+    if (locationError) {
+      setError(locationError);
+    }
+  }, [locationError]);
+
+  const {
+    providers: locationProviders,
+    location: locationCoords,
+    isLoading: isLocationLoading,
+    error: locationError,
+    refresh: refreshLocationProviders,
+  } = useLocationBasedProviders({
+    radiusKm: searchRadiusKm,
+    fallbackLocation: locationHint,
+  });
 
   const [pendingReview, setPendingReview] = useState<{
     bookingId: string;
@@ -401,71 +388,9 @@ export default function ExploreClientScreen() {
     }
   }, [isAuthenticated, exploreTutorialReady, exploreTutorialHasSeen, showExploreTutorial]);
 
-  const locationFetchStarted = useRef(false);
-  const locationFetchDone = useRef(false);
-
-  const loadLocationAndNearby = useCallback(async () => {
-    if (locationFetchStarted.current || locationFetchDone.current) return; // evita loop de chamadas
-    locationFetchStarted.current = true;
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      const hint = locationHintRef.current;
-      const profileCoords =
-        typeof hint.latitude === 'number' && typeof hint.longitude === 'number'
-          ? { latitude: hint.latitude, longitude: hint.longitude }
-          : null;
-      let coords = null as null | { latitude: number; longitude: number };
-      if (status === PermissionStatus.GRANTED) {
-        coords = await getCurrentPosition();
-      }
-      const coordsToUse = coords || profileCoords;
-      if (!coordsToUse) {
-        // sem GPS e sem fallback de perfil: marca como concluído para não reentrar em loop
-        locationFetchDone.current = true;
-        return;
-      }
-      userCoordsRef.current = coordsToUse;
-      if (!locationHintRef.current?.latitude || !locationHintRef.current?.longitude) {
-        locationHintRef.current = { ...locationHintRef.current, ...coordsToUse };
-      }
-
-      const [nearbyRes, recommendedRes] = await Promise.allSettled([
-        coordsToUse
-          ? searchProvidersWithLocation({
-              latitude: coordsToUse.latitude,
-              longitude: coordsToUse.longitude,
-              radius: searchRadiusKm,
-            })
-          : Promise.resolve([] as ProviderDisplayInfo[]),
-        getRecommendedProviders(
-          coordsToUse
-            ? {
-                latitude: coordsToUse.latitude,
-                longitude: coordsToUse.longitude,
-                radius: searchRadiusKm,
-              }
-            : {}
-        ),
-      ]);
-
-        if (nearbyRes.status === 'fulfilled' && isMounted.current) {
-          setNearbyProviders(normalizeProviderList(Array.isArray(nearbyRes.value) ? nearbyRes.value : []));
-        }
-        if (recommendedRes.status === 'fulfilled' && isMounted.current && recommendedRes.value.length) {
-          setRecommendations(normalizeProviderList(recommendedRes.value));
-      }
-      locationFetchDone.current = true;
-    } catch {
-      // silencioso se falhar
-    } finally {
-      locationFetchDone.current = true; // evita reentrar em loop mesmo em caso de falha
-      locationFetchStarted.current = false;
-    }
-  }, [searchRadiusKm]);
   const triggerLocationRefresh = useCallback(() => {
-    locationFetchDone.current = false;
-    loadLocationAndNearby();
-  }, [loadLocationAndNearby]);
+    refreshLocationProviders();
+  }, [refreshLocationProviders]);
 
 
 
@@ -500,12 +425,9 @@ export default function ExploreClientScreen() {
       if (label === 'pending review') {
         setPendingReview(null);
       }
-        if (label === 'recommended providers') {
-          setRecommendations(normalizeProviderList(FALLBACK_RECOMMENDATIONS));
-        }
-        if (label === 'nearby providers') {
-          setNearbyProviders(normalizeProviderList(FALLBACK_RECOMMENDATIONS));
-        }
+      if (label === 'recommended providers') {
+        setRecommendations(normalizeProviderList(FALLBACK_RECOMMENDATIONS));
+      }
       // log removido para performance
       collectedErrors.push(fallbackMessage);
     }
@@ -757,32 +679,21 @@ export default function ExploreClientScreen() {
 
   // Filtrar nearbyProviders com base em serviços disponíveis
   const radiusMeters = searchRadiusKm * 1000;
-  const filteredNearbyProviders = Array.isArray(nearbyProviders)
-    ? nearbyProviders.filter((item) => {
-      if (!item || !item.fullName) return false;
-      return item.providerServices?.some((service) => {
-        const price = getNumericPriceValue(service);
-        return price > 0;
-      });
-    })
+  const normalizedNearbyProviders = Array.isArray(locationProviders)
+    ? normalizeProviderList(locationProviders)
     : [];
-  const nearbyWithComputedDistance = filteredNearbyProviders.map((item) => {
-    if (!item || !userCoordsRef.current) return item;
-    const currentDistance = Number(item.distance);
-    if (Number.isFinite(currentDistance)) return item;
-    const addr = item.address || (item as any).address || {};
-    const targetLat = addr.latitude ?? addr.lat ?? addr.location?.lat ?? null;
-    const targetLon = addr.longitude ?? addr.lng ?? addr.location?.lng ?? null;
-    const computed = computeDistanceMeters(
-      userCoordsRef.current.latitude,
-      userCoordsRef.current.longitude,
-      targetLat,
-      targetLon
-    );
-    if (computed == null) return item;
-    return { ...(item as any), distance: computed };
+  const filteredNearbyProviders = normalizedNearbyProviders.filter((item) => {
+    if (!item || !item.fullName) return false;
+    return item.providerServices?.some((service) => {
+      const price = getNumericPriceValue(service);
+      return price > 0;
+    });
   });
-  const nearbyWithinRadius = filterByRadiusOrCity(nearbyWithComputedDistance, radiusMeters, locationHintRef.current);
+  const nearbyWithinRadius = filterByRadiusOrCity(
+    filteredNearbyProviders,
+    radiusMeters,
+    locationHintRef.current,
+  );
   const sortedNearbyProviders = sortByDistanceStable(nearbyWithinRadius);
   const activeNearbyProviders = sortedNearbyProviders.filter(
     (provider) =>
@@ -790,57 +701,36 @@ export default function ExploreClientScreen() {
   );
 
   const safeRecommendations = (() => {
-    const distanceById = new Map<string, number | null | undefined>(
-      activeNearbyProviders.map((p) => [p.id, (p as any)?.distance]),
-    );
-    const withDistance = (item: ProviderDisplayInfo): ProviderDisplayInfo => {
-      if (item == null || typeof item !== 'object') return item;
-      let dist = distanceById.get(item.id);
-      // Fallback: se veio sem distance, calcula via coordenadas obtidas (GPS/permission) ou hint de perfil
-      const baseLat = userCoordsRef.current?.latitude ?? locationHintRef.current?.latitude;
-      const baseLon = userCoordsRef.current?.longitude ?? locationHintRef.current?.longitude;
-      if ((dist == null || Number.isNaN(dist as any)) && baseLat != null && baseLon != null) {
-        const addr = (item as any)?.address || {};
-        const targetLat = addr.latitude ?? addr.lat ?? addr.location?.lat ?? null;
-        const targetLon = addr.longitude ?? addr.lng ?? addr.location?.lng ?? null;
-        const computed = computeDistanceMeters(baseLat, baseLon, targetLat, targetLon);
-        if (computed != null) dist = computed;
-      }
-      if (dist == null || Number.isNaN(dist as any)) return item;
-      if (item.distance === dist) return item;
-      return { ...(item as any), distance: dist };
-    };
-
     const valid = Array.isArray(recommendations)
-      ? recommendations.filter(
-          (item) =>
-            item &&
-            typeof item === 'object' &&
-            typeof (item as any).id === 'string' &&
-            (item as any).id.trim() !== '' &&
-            typeof (item as any).fullName === 'string' &&
-            (item as any).fullName.trim() !== '',
-        )
-        .filter(
-          (item) =>
-            (item as ProviderDisplayInfo)?.verificationStatus ===
-            VerificationStatus.APPROVED,
-        )
+      ? recommendations
+          .filter(
+            (item) =>
+              item &&
+              typeof item === 'object' &&
+              typeof (item as any).id === 'string' &&
+              (item as any).id.trim() !== '' &&
+              typeof (item as any).fullName === 'string' &&
+              (item as any).fullName.trim() !== '',
+          )
+          .filter(
+            (item) =>
+              (item as ProviderDisplayInfo)?.verificationStatus ===
+              VerificationStatus.APPROVED,
+          )
       : [];
-    const hydratedRecs = valid.map(withDistance);
-    // Nao filtramos recomendacoes por raio/cidade para nao cortar prestadores aprovados; nearby ja respeita raio.
-    const filteredRecs = hydratedRecs;
-    const mergedPool = [...filteredRecs, ...activeNearbyProviders];
+    const mergedPool = [...valid, ...activeNearbyProviders];
     const mergedSorted = sortByDistanceThenAvailabilityStable(mergedPool);
     const deduped: ProviderDisplayInfo[] = [];
     const seen = new Set<string>();
-    mergedSorted.forEach(it => {
+    mergedSorted.forEach((it) => {
       if (it?.id && !seen.has(it.id)) {
         seen.add(it.id);
         deduped.push(it);
       }
     });
-    const mergedFallback = FALLBACK_RECOMMENDATIONS.filter(it => it && it.id && !seen.has(it.id));
+    const mergedFallback = FALLBACK_RECOMMENDATIONS.filter(
+      (it) => it && it.id && !seen.has(it.id),
+    );
     const combined = [...deduped, ...mergedFallback];
     return combined.length > 0 ? combined : FALLBACK_RECOMMENDATIONS;
   })();
