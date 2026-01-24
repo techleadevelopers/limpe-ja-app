@@ -50,6 +50,7 @@ export class CouponsService {
       issuedBy?: string;
       maxDiscount?: number;
     },
+    options?: { prisma?: Prisma.TransactionClient },
   ) {
     const {
       code,
@@ -67,7 +68,8 @@ export class CouponsService {
       maxDiscount,
     } = createCouponDto;
 
-    const existing = await this.prisma.coupon.findUnique({
+    const prisma = options?.prisma ?? this.prisma;
+    const existing = await prisma.coupon.findUnique({
       where: { code: code.toUpperCase() },
     });
     if (existing) {
@@ -84,7 +86,7 @@ export class CouponsService {
       );
     }
 
-    const createdCoupon = await this.prisma.coupon.create({
+    const createdCoupon = await prisma.coupon.create({
       data: {
         code: code.toUpperCase(),
         description,
@@ -426,7 +428,8 @@ export class CouponsService {
   /**
    * Gera um cupom a partir da conclusão de uma missão.
    */
-  async issueCouponFromMission(params: {
+  async issueCouponFromMission(
+    params: {
     userId: string;
     mission: {
       id: string;
@@ -437,7 +440,9 @@ export class CouponsService {
       couponTemplateId?: string | null;
     };
     validityDays?: number; // default 30
-  }) {
+  },
+    options?: { prisma?: Prisma.TransactionClient },
+  ) {
     const { userId, mission, validityDays = 30 } = params;
 
     if (mission.rewardType !== 'COUPON') {
@@ -456,21 +461,24 @@ export class CouponsService {
     const percentFraction =
       Math.max(0, Math.min(100, mission.rewardValue)) / 100;
 
-    const created = await this.create({
-      code,
-      description: `Recompensa da missão "${mission.title}"`,
-      value: percentFraction,
-      type: CouponType.PERCENT, // <<-- FIXED: Use CouponType.PERCENT
-      target: CouponTarget.GENERAL, // <<-- FIXED: Use CouponTarget.GENERAL
-      maxUses: 1,
-      validFrom: now.toISOString(),
-      validUntil: validUntil.toISOString(),
-      isActive: true,
-      issuedToUserId: userId,
-      issuedBy: 'MISSION',
-      firstBookingOnly: false, // Cupons de missão geralmente não são firstBookingOnly
-      maxDiscount: 50, // Exemplo de cap para cupons de missão
-    });
+    const created = await this.create(
+      {
+        code,
+        description: `Recompensa da missão "${mission.title}"`,
+        value: percentFraction,
+        type: CouponType.PERCENT, // <<-- FIXED: Use CouponType.PERCENT
+        target: CouponTarget.GENERAL, // <<-- FIXED: Use CouponTarget.GENERAL
+        maxUses: 1,
+        validFrom: now.toISOString(),
+        validUntil: validUntil.toISOString(),
+        isActive: true,
+        issuedToUserId: userId,
+        issuedBy: 'MISSION',
+        firstBookingOnly: false, // Cupons de missão geralmente não são firstBookingOnly
+        maxDiscount: 50, // Exemplo de cap para cupons de missão
+      },
+      { prisma: options?.prisma },
+    );
 
     this.logger.log(
       `[CouponsService] Cupom de missão ${created.code} emitido para ${userId}.`,
