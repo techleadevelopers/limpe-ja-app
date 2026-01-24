@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import GiftSplash from './GiftSplash';
+import GiftSplash from './GiftSplash.tsx';
 import CouponModal from './coupons/CouponModal';
 
 export default function MessagesOrchestrator() {
