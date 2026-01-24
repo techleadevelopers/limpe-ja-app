@@ -15,7 +15,7 @@ export default function PaymentConfirmedOverlay({ visible }: { visible: boolean 
     } else {
       Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }).start();
     }
-  }, [visible]);
+  }, [visible, opacity, scale]);
 
   if (!visible) return null;
 
