@@ -9,7 +9,13 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -37,7 +43,9 @@ export class AdminProvidersController {
   constructor(private readonly providersService: ProvidersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Listar provedores paginados para o painel administrativo.' })
+  @ApiOperation({
+    summary: 'Listar provedores paginados para o painel administrativo.',
+  })
   @ApiQuery({
     name: 'searchTerm',
     required: false,
@@ -90,8 +98,15 @@ export class AdminProvidersController {
       category: query.category,
       verificationStatus: query.verificationStatus,
     });
-    const items = pageResult.items.map((provider) => new ProviderViewDto(provider));
-    return new AdminProviderListDto(items, pageResult.totalCount, pageResult.page, pageResult.limit);
+    const items = pageResult.items.map(
+      (provider) => new ProviderViewDto(provider),
+    );
+    return new AdminProviderListDto(
+      items,
+      pageResult.totalCount,
+      pageResult.page,
+      pageResult.limit,
+    );
   }
 
   @Patch(':id/visibility')
