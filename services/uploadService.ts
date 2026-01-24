@@ -26,13 +26,22 @@ function inferFileName(uri: string): string {
   }
 }
 
-export async function uploadImageToCloud(uri: string, filePurpose: FilePurpose): Promise<UploadResponseDto> {
+export async function uploadImageToCloud(
+  uri: string,
+  filePurpose: FilePurpose,
+  metadata?: Record<string, string>,
+): Promise<UploadResponseDto> {
   const form = new FormData();
   const name = inferFileName(uri);
   const type = inferMimeType(uri);
 
   // React Native FormData file object
   form.append('file' as any, { uri, name, type } as any);
+  if (metadata) {
+    Object.entries(metadata).forEach(([key, value]) => {
+      form.append(key, value);
+    });
+  }
 
   // Route to verification endpoints which persist to GCS/local via backend
   let path = '/verification/upload-avatar';
@@ -47,7 +56,7 @@ export async function uploadImageToCloud(uri: string, filePurpose: FilePurpose):
 }
 
 export async function uploadAvatar(imageUri: string): Promise<UploadResponseDto> {
-  return uploadImageToCloud(imageUri, 'avatar');
+  return uploadImageToCloud(imageUri, 'avatar', { premiumFilter: 'true' });
 }
 
 export async function uploadDocument(imageUri: string, side: DocumentSide | DocumentPhotoType): Promise<UploadResponseDto> {
