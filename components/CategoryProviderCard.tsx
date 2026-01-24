@@ -1,11 +1,9 @@
 // app/client/services/category/components/CategoryProviderCard.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ProviderDisplayInfo } from '../types/backend/providers';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface CategoryProviderCardProps { // Renomeado para refletir o novo componente
     item: ProviderDisplayInfo;
