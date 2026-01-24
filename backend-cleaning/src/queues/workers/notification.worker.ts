@@ -6,6 +6,22 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { EmailService } from '../../email/email.service'; // NEW
 import { RedisLockService } from '../../common/locks/redis-lock.service';
 
+type NotificationJobData = {
+  userId: string;
+  type?: string;
+  kind?: string;
+  bookingId?: string;
+  message?: string;
+  body?: string;
+  targetUrl?: string;
+  deeplink?: string;
+  title?: string;
+  imageUrl?: string;
+  actionButtons?: object;
+  priority?: string;
+  idempotencyKey?: string;
+};
+
 @Processor('notifications')
 export class NotificationWorker {
   private readonly logger = new Logger(NotificationWorker.name);
@@ -28,28 +44,24 @@ export class NotificationWorker {
     return acquired;
   }
 
+  private isBookingCritical(kind?: string, type?: string): boolean {
+    const normalizedKind = kind?.toLowerCase() ?? '';
+    const normalizedType = type?.toLowerCase() ?? '';
+    return (
+      normalizedKind.includes('booking') || normalizedType.includes('booking')
+    );
+  }
+
   @Process('send-notification')
-  async sendNotification(
-    job: Job<{
-      userId: string;
-      type?: string;
-      message?: string;
-      body?: string;
-      targetUrl?: string;
-      deeplink?: string;
-      title?: string;
-      imageUrl?: string;
-      actionButtons?: object;
-      priority?: string;
-      idempotencyKey?: string;
-    }>,
-  ): Promise<void> {
+  async sendNotification(job: Job<NotificationJobData>): Promise<void> {
     this.logger.log(
       `Processando tarefa 'send-notification' para userId ${job.data.userId}.`,
     );
     const {
       userId,
       type,
+      kind,
+      bookingId,
       message,
       body,
       targetUrl,
@@ -60,14 +72,18 @@ export class NotificationWorker {
       priority,
       idempotencyKey,
     } = job.data;
+    const notificationType =
+      type ?? kind?.toUpperCase() ?? 'GENERAL_NOTIFICATION';
     const finalMessage = message || body || title || 'Notificação';
     const finalTarget = deeplink || targetUrl;
+    const resolvedPriority: 'default' | 'high' =
+      priority === 'default' ? 'default' : 'high';
 
     try {
       // Usar o DTO para criar a notificação in-app
       await this.notificationsService.createNotification({
         userId,
-        type,
+        type: notificationType,
         message: finalMessage,
         targetUrl: finalTarget,
         title,
@@ -88,14 +104,28 @@ export class NotificationWorker {
       }
 
       // Dispara push físico usando o mesmo payload (APNs/FCM)
+      const shouldFallback = this.isBookingCritical(kind, notificationType);
+      const whatsappFallback = shouldFallback
+        ? {
+            bookingId,
+            kind,
+            type: notificationType,
+            title: title || finalMessage,
+            message: finalMessage,
+          }
+        : undefined;
       await this.notificationsService.sendPushNotification(
         userId,
         title || finalMessage,
         finalMessage,
         {
           deeplink: finalTarget,
-          priority: priority || 'high',
+          priority: resolvedPriority,
           idempotencyKey,
+        },
+        {
+          priority: resolvedPriority,
+          whatsappFallback,
         },
       );
     } catch (error) {
