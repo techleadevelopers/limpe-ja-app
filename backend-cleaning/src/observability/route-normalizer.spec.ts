@@ -31,8 +31,12 @@ describe('normalizeRouteKey', () => {
   });
 
   it('normalizes different UUIDs to the same key', () => {
-    const first = normalizeRouteKey('/api/bookings/b94d27b9-0b4e-4b56-ae1f-0c1f8e9f53f7');
-    const second = normalizeRouteKey('/api/bookings/9fa3b1e3-3e91-4b7d-a7bc-5f2553bd3aa7');
+    const first = normalizeRouteKey(
+      '/api/bookings/b94d27b9-0b4e-4b56-ae1f-0c1f8e9f53f7',
+    );
+    const second = normalizeRouteKey(
+      '/api/bookings/9fa3b1e3-3e91-4b7d-a7bc-5f2553bd3aa7',
+    );
     expect(first).toBe('/api/bookings/{id}');
     expect(second).toBe('/api/bookings/{id}');
   });
