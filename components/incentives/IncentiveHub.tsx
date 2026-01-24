@@ -31,10 +31,10 @@ const IncentiveHub: React.FC<Props> = ({ onUseCoupon, onShareReferral }) => {
     setOpen(false); // mantém o pill para reabrir depois
   }, [current]);
 
-  const handleUseNow = (code: string) => {
+  const handleUseNow = useCallback((code: string) => {
     onUseCoupon?.(code);
     void handleDismiss();
-  };
+  }, [onUseCoupon, handleDismiss]);
 
   const body = useMemo(() => {
     if (!current) return null;
@@ -59,8 +59,8 @@ const IncentiveHub: React.FC<Props> = ({ onUseCoupon, onShareReferral }) => {
           <ReturnCouponCard
             code={p.code}
             title={current.title}
-            expiresAt={p.expiresAt || ''}
-            onBookAgain={handleUseNow}
+            expiresAt={p.expiresAt}
+            onRebookNow={handleUseNow}
           />
         );
       }
@@ -94,14 +94,13 @@ const IncentiveHub: React.FC<Props> = ({ onUseCoupon, onShareReferral }) => {
       default:
         return null;
     }
-  }, [current, handleDismiss]);
+  }, [current, handleDismiss, handleUseNow, onShareReferral]);
 
   if (!current) return null;
 
   // 🔧 Compat: algumas versões do BottomSlideInCard usam `visible`,
   // outras `isVisible`. Também pode existir `onClose`.
   // Para não quebrar tipagem, espalhamos via `any`.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const slideProps: any = {
     visible: open,
     isVisible: open,
