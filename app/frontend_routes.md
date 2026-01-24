@@ -1,8 +1,8 @@
 # Frontend (Expo Router) Report
 
 - Root: `C:/Users/Paulo/Desktop/relax-app/app`
-- Files scanned: **108**
-- Pages (index.*): **30**
+- Files scanned: **116**
+- Pages (index.*): **32**
 - Layouts (_layout.*): **16**
 - Not found files (+not-found.*): **1**
 
@@ -34,9 +34,11 @@
 - `/provider/missions` → `provider/missions/index.tsx`
 - `/provider/notifications` → `provider/notifications/index.tsx`
 - `/provider/profile` → `provider/profile/index.tsx`
+- `/provider/promotions` → `provider/promotions/index.tsx`
 - `/provider/reviews` → `provider/reviews/index.tsx`
 - `/provider/schedule` → `provider/schedule/index.tsx`
 - `/provider/services` → `provider/services/index.tsx`
+- `/provider/support` → `provider/support/index.tsx`
 - `/provider/withdraw` → `provider/withdraw/index.tsx`
 
 ## Layouts
@@ -66,8 +68,17 @@
 
 ### `_layout.tsx`
 - expr: `/provider/active-booking/${booking.id}` as any
-- expr: /^http/
-- expr: '/auth/client-register' as any
+- expr: "/common/safety/panic" as any
+- expr: CLIENT_ROUTES.BOOKING_DETAILS(bookingId
+- expr: {
+          pathname: CLIENT_ROUTES.BOOKING_DETAILS(bookingId
+- expr: {
+          pathname: CLIENT_ROUTES.MISSIONS
+- expr: {
+          pathname: CLIENT_ROUTES.BOOKING_DETAILS(bookingId
+- expr: {
+        pathname: "/client/bookings/success"
+- expr: "/auth/client-register" as any
 - expr: registerOptionsPath as any
 - expr: registerOptionsPath as any
 - expr: targetDashboardPath as any
@@ -76,8 +87,16 @@
 - expr: providerRegistrationVerifyAccountPath as any
 - expr: targetRoute as any
 
+### `_shared/utils/errors.ts`
+- expr: String(body.error
+- expr: String(body.code
+- expr: String(body.message
+- expr: String(axiosError.message
+
 ### `auth/client-register.tsx`
 - expr: /\D/g
+- literal: address.
+- literal: _
 - expr: /\D/g
 - expr: /\D/g
 - expr: /\D/g
@@ -88,10 +107,11 @@
 - expr: /\D/g
 - expr: /\D/g
 - expr: /\D/g
+- expr: TERMS_ROUTE as any
+- expr: TERMS_ROUTE as any
 - expr: /\D/g
 - expr: /\D/g
-- literal: /client/explore
-- expr: /\D/g
+- expr: CLIENT_ROUTES.EXPLORE
 - expr: /\D/g
 - expr: /\D/g
 - expr: /\D/g
@@ -100,14 +120,18 @@
 ### `auth/login.tsx`
 - expr: {
                 key: `b-${i}-${Date.now(
-- expr: targetRoute as any
+- expr: targetRoute
 
 ### `auth/provider-register/coverage-availability.tsx`
-- expr: { start: '08:00'
-- expr: { start: '14:00'
-- expr: nextPath as any
+- expr: {
+              start: buildDateTimeForSlot(baseDate
+- expr: {
+              start: buildDateTimeForSlot(baseDate
+- expr: nextPath
 
 ### `auth/provider-register/index.tsx`
+- literal: address.
+- literal: _
 - expr: /\D/g
 - expr: /\D/g
 - expr: /\D/g
@@ -119,7 +143,7 @@
 - expr: /\D/g
 - expr: /\D/g
 - expr: /\D/g
-- literal: /auth/provider-register/service-details
+- expr: AUTH_ROUTES.PROVIDER_SERVICE_DETAILS
 - expr: /\D/g
 - expr: /\D/g
 - expr: /\D/g
@@ -137,7 +161,7 @@
 - expr: /\D/g
 - expr: /\D/g
 - expr: /\D/g
-- literal: /auth/provider-register/service-details
+- expr: AUTH_ROUTES.PROVIDER_SERVICE_DETAILS
 - expr: /\D/g
 - expr: /\D/g
 - expr: /\D/g
@@ -152,11 +176,13 @@
 - expr: /[\s-]+/g
 - expr: /[^a-z0-9_]/g
 - expr: '
-- literal: /auth/provider-register
+- expr: AUTH_ROUTES.PROVIDER_REGISTER
 - expr: '
-- expr: { start: '08:00'
-- expr: { start: '14:00'
-- expr: '/auth/provider-register/verify-account' as any
+- expr: {
+                start: buildDateTimeForSlot(baseDate
+- expr: {
+                start: buildDateTimeForSlot(baseDate
+- expr: AUTH_ROUTES.PROVIDER_VERIFY_ACCOUNT
 - expr: /[^0-9]/g
 - expr: /[^0-9.
 
@@ -167,38 +193,40 @@
 - expr: PROVIDER_ROUTES.DASHBOARD
 - expr: PROVIDER_ROUTES.DASHBOARD
 - expr: PROVIDER_ROUTES.DASHBOARD
-- literal: /help
+- expr: COMMON_ROUTES.HELP
 
 ### `auth/register-options.tsx`
-- expr: '/client/explore' as any
-- literal: /auth/provider-register
+- expr: CLIENT_ROUTES.EXPLORE
+- expr: AUTH_ROUTES.PROVIDER_REGISTER
+
+### `auth/reset-password.tsx`
+- literal: /auth/login
 
 ### `client/bookings/[bookingId].tsx`
 - expr: {
-                  pathname: '/common/feedback/[targetId]'
+        pathname: CLIENT_ROUTES.CHAT(conversation.chatId
 - expr: {
-      pathname: '/client/messages'
-- expr: {
-      pathname: '/common/feedback/[targetId]'
-- expr: {
-      pathname: '/client/explore/[providerId]'
+      pathname: `/common/feedback/${booking.id}`
+- literal: /client/explore/${booking.providerId}
 - expr: {
       pathname: '/client/bookings/schedule-service'
 
 ### `client/bookings/index.tsx`
 - expr: '/client/bookings' as any
+- expr: `/client/bookings/${meta.bookingId}` as any
 - expr: '/client/explore/todas-categorias' as any
 - expr: '/client/explore' as any
 
 ### `client/bookings/schedule-service.tsx`
-- expr: { dateString
-- expr: availableTimes[i]
+- expr: normalizedTime
+- expr: '/common/terms-of-service' as any
+- expr: '/common/terms-of-service' as any
 - expr: {
         pathname: '/client/bookings/success'
 - literal: /client/explore
 - literal: /client/explore
 - literal: /client/explore
-- expr: (async (dayOffset: number
+- expr: '/client/explore/security' as any
 
 ### `client/bookings/success.tsx`
 - expr: '/client/bookings?highlightNew=true' as any
@@ -206,30 +234,33 @@
 - expr: '/client/bookings?highlightNew=true' as any
 - expr: '/client/explore' as any
 - expr: {
-      pathname: '/client/messages/[chatId]'
+
+        pathname: CLIENT_ROUTES.CHAT(conversation.chatId
 - expr: '/client/missions' as any
 - expr: {
+
         pathname: '/client/bookings/schedule-service'
 
 ### `client/category/[categoryId].tsx`
-- expr: {
-      pathname: '/client/explore/[providerId]'
+- literal: /client/explore/${providerId}
 
 ### `client/coupons/index.tsx`
-- expr: { pathname: '/client/bookings/schedule-service'
+- expr: { pathname: '/client/index'
 
 ### `client/explore/[providerId].tsx`
+- literal: .
+- expr: '/client/explore' as any
 - expr: '/auth/client-register' as any
 - expr: ...args
 - expr: {
-        pathname: '/client/messages/[chatId]'
-- literal: .
+          pathname: '/client/messages/[bookingId]'
 - expr: {
         pathname: '/common/feedback/[targetId]'
-- literal: /h
 - expr: '/client/explore/security' as any
 
 ### `client/explore/index.tsx`
+- expr: '/client/explore/todas-categorias' as any
+- expr: '/client/explore/todas-categorias' as any
 - expr: fallbackMessage
 - expr: runAndTrack<BookingDetails[]>(
         'pending review'
@@ -240,15 +271,11 @@
 - expr: recommendedTask
 - expr: recommendedTask
 - expr: {
-      pathname: '/common/feedback/[targetId]'
+      pathname: `/common/feedback/${pendingReview.bookingId}`
 - expr: {
         pathname: CLIENT_ROUTES.PROVIDER_DETAILS(provider.id
 - expr: it
-- expr: {
-        pathname: CLIENT_ROUTES.SCHEDULE_SERVICE
 - literal: /dev-panel
-- expr: '/client/explore/todas-categorias' as any
-- expr: '/client/explore/todas-categorias' as any
 - expr: '/client/explore/todos-recomendacoes' as any
 - expr: '/client/explore/todos-prestadores-proximos' as any
 
@@ -257,29 +284,24 @@
 - expr: item.route as any
 
 ### `client/explore/resultados-busca.tsx`
-- expr: {
-      pathname: '/client/explore/[providerId]'
+- literal: /client/explore/${providerId}
 
 ### `client/explore/search-results.tsx`
 - literal: /client/explore/${item.id}
-
-### `client/explore/security/index.tsx`
-- expr: '/common/safety' as any
 
 ### `client/explore/servicos-por-categoria.tsx`
 - expr: {
     pathname: '/client/category/[categoryId]'
 
 ### `client/explore/todos-prestadores-proximos.tsx`
-- expr: {
-      pathname: '/client/explore/[providerId]'
+- literal: /client/explore/${providerId}
 
 ### `client/messages/[chatId].tsx`
 - literal: http
 
 ### `client/messages/index.tsx`
 - expr: {
-      pathname: '/client/messages/[chatId]'
+      pathname: `/client/messages/${item.id}`
 
 ### `client/metrics/index.tsx`
 - literal: #
@@ -301,6 +323,9 @@
 ### `client/missions/missions.tsx`
 - literal: #
 - literal: /client/explore
+
+### `client/notifications/index.tsx`
+- expr: targetBooking as any
 
 ### `client/ofertas/[ofertaId].tsx`
 - literal: .
@@ -365,6 +390,8 @@
 - expr: '/common/safety' as any
 
 ### `common/safety/incident-report.tsx`
+- expr: /\s+/g
+- expr: '
 - expr: /_/g
 
 ### `common/safety/index.tsx`
@@ -379,42 +406,14 @@
 
 ### `common/support/index.tsx`
 - expr: '/common/support/create-ticket' as any
+- expr: '/provider/messages?filter=support' as any
 - expr: `/common/support/${ticket.id}` as any
 
 ### `provider/active-booking/[bookingId].tsx`
 - expr: '/provider/messages' as any
 
-### `provider/dashboard.tsx`
-- literal: .
-- literal: .
-- expr: PROVIDER_ROUTES.SERVICES_LIST as any
-- expr: PROVIDER_ROUTES.MESSAGES_LIST as any
-- expr: (PROVIDER_ROUTES.SERVICES_LIST + '?filter=requests'
-- expr: (PROVIDER_ROUTES.SERVICES_LIST + '?filter=upcoming'
-- expr: (PROVIDER_ROUTES.SERVICES_LIST + '?filter=completed'
-- expr: '/provider/notifications' as any
-- expr: PROVIDER_ROUTES.REVIEWS as any
-- expr: PROVIDER_ROUTES.EARNINGS as any
-- expr: PROVIDER_ROUTES.WITHDRAW as any
-- expr: { pathname: '/provider/messages/[chatId]'
-- expr: '/provider/profile' as any
-- literal: /dev-panel
-- expr: PROVIDER_ROUTES.EARNINGS as any
-- expr: '/provider/schedule/manage-availability' as any
-- expr: '/provider/schedule' as any
-- expr: `/provider/active-booking/${item.id}` as any
-- expr: '/provider/schedule' as any
-- expr: `/provider/active-booking/${item.id}` as any
-- expr: '/provider/profile/edit-services' as any
-- expr: '/provider/profile/edit-services' as any
-- expr: '/provider/schedule/manage-availability?preset=today-morning' as any
-- expr: '/provider/schedule/manage-availability?preset=today-morning' as any
-- expr: '/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any
-- expr: '/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any
-- expr: '/provider/schedule/manage-availability?preset=block-today' as any
-- expr: '/provider/schedule/manage-availability?preset=block-today' as any
-- expr: '/provider/schedule/manage-availability?preset=repeat-week' as any
-- expr: '/provider/schedule/manage-availability?preset=repeat-week' as any
+### `provider/active-booking/success.tsx`
+- literal: /provider
 
 ### `provider/earnings.tsx`
 - expr: date.toLocaleDateString('pt-BR'
@@ -425,6 +424,7 @@
 - expr: PROVIDER_ROUTES.REVIEWS as any
 
 ### `provider/index.tsx`
+- expr: '/provider/schedule/manage-availability' as any
 - literal: .
 - literal: .
 - expr: PROVIDER_ROUTES.SERVICES_LIST as any
@@ -436,32 +436,24 @@
 - expr: PROVIDER_ROUTES.REVIEWS as any
 - expr: PROVIDER_ROUTES.EARNINGS as any
 - expr: PROVIDER_ROUTES.WITHDRAW as any
-- expr: { pathname: '/provider/messages/[chatId]'
-- expr: '/provider/profile' as any
-- literal: /dev-panel
+- expr: { pathname: `/provider/messages/${clientId}`
+- expr: '/provider/schedule' as any
+- expr: `/provider/active-booking/${item.id}` as any
 - expr: PROVIDER_ROUTES.EARNINGS as any
 - expr: '/provider/schedule/manage-availability' as any
-- expr: '/provider/schedule' as any
-- expr: `/provider/active-booking/${item.id}` as any
+- literal: /dev-panel
 - expr: '/provider/schedule' as any
 - expr: `/provider/active-booking/${item.id}` as any
 - expr: '/provider/profile/edit-services' as any
 - expr: '/provider/profile/edit-services' as any
-- expr: '/provider/schedule/manage-availability?preset=today-morning' as any
-- expr: '/provider/schedule/manage-availability?preset=today-morning' as any
-- expr: '/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any
-- expr: '/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any
-- expr: '/provider/schedule/manage-availability?preset=block-today' as any
-- expr: '/provider/schedule/manage-availability?preset=block-today' as any
-- expr: '/provider/schedule/manage-availability?preset=repeat-week' as any
-- expr: '/provider/schedule/manage-availability?preset=repeat-week' as any
+- expr: `/provider/active-booking/${floatingServiceBooking.id}` as any
 
 ### `provider/messages/[chatId].tsx`
 - literal: http
 
 ### `provider/messages/index.tsx`
 - expr: {
-      pathname: '/provider/messages/[chatId]'
+      pathname: `/provider/messages/${item.id}`
 
 ### `provider/notifications/index.tsx`
 - expr: link as any
@@ -469,9 +461,6 @@
 ### `provider/profile/edit-services.tsx`
 - expr: /[^\d]/g
 - expr: /\B(?=(\d{3}
-- literal: .
-- literal: .
-- literal: .
 - literal: .
 
 ### `provider/profile/index.tsx`
@@ -493,28 +482,25 @@
 - expr: '/common/privacidade' as any
 
 ### `provider/reviews/index.tsx`
-- expr: { pathname: '/provider/active-booking/[bookingId]'
-- expr: { pathname: '/provider/messages/[chatId]'
+- literal: /provider/active-booking/${bookingId}
+- expr: { pathname: `/provider/messages/${clientId}`
 
 ### `provider/schedule/index.tsx`
-- expr: PROVIDER_ROUTES.SERVICE_DETAILS(detailId
-- expr: `${PROVIDER_ROUTES.MANAGE_AVAILABILITY}?preset=${presetParam}` as any
-- expr: PROVIDER_ROUTES.MANAGE_AVAILABILITY as any
-- expr: PROVIDER_ROUTES.MANAGE_AVAILABILITY as any
-- expr: `${PROVIDER_ROUTES.MANAGE_AVAILABILITY}?preset=tomorrow-afternoon` as any
+- literal: ${PROVIDER_ROUTES.ACTIVE_BOOKING}/${item.booking.id}
+- expr: PROVIDER_ROUTES.MANAGE_AVAILABILITY
 
 ### `provider/schedule/manage-availability.tsx`
 - literal: ${hour}:${minute}
+- literal: ${hh}:00
+- expr: `${String(hour
 - expr: minutesToSlot(nextMinutes
-- literal: ${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}
 - expr: {
-          startTime: currentBlockStart
+        slot
 - expr: {
-            startTime: currentBlockStart
+        startTime: `${hour.toString(
 - literal: ${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}
 - expr: {
               dayOfWeek: day.dayOfWeek
-- literal: ${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}
 - literal: -feira
 - literal: -feira
 
