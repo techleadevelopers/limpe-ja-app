@@ -8,7 +8,7 @@ import { UsersService } from '../users/users.service';
 
 import { BookingEntity } from '../bookings/entities/booking.entity';
 import { ReviewEntity } from '../reviews/entities/review.entity';
-import { geocodeAddress } from '../utils/geocoding.service';
+import { GeocodingService } from '../geocoding/geocoding.service';
 
 export type ClientWithIncludes = Client & {
   user: User;
@@ -30,6 +30,7 @@ export class ClientsService {
   constructor(
     private prisma: PrismaService,
     private usersService: UsersService,
+    private geocodingService: GeocodingService,
   ) {}
 
   private buildAddressString(address?: Partial<Address>): string | null {
@@ -137,7 +138,9 @@ export class ClientsService {
     if (updateClientProfileDto.address) {
       const addressDto: Partial<Address> = updateClientProfileDto.address;
       const addressString = this.buildAddressString(addressDto);
-      const geo = addressString ? await geocodeAddress(addressString) : null;
+      const geo = addressString
+        ? await this.geocodingService.geocodeAddress(addressString)
+        : null;
       const coords = this.applyGeocodeFallback(addressDto, geo);
       finalLatitude = coords.latitude;
       finalLongitude = coords.longitude;
