@@ -1,7 +1,7 @@
 // components/ui/EmptyState.tsx
 // ================================================
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme, StyleProp, ViewStyle, TextStyle } from 'react-native';
+import { Text, StyleSheet, useColorScheme, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import Card from '../components/common/Card'; // Certifique-se que Card.tsx exporta um componente Card real
 import Button from '../components/common/Button'; // Certifique-se que Button.tsx exporta um componente Button real
 import Colors from '../constants/Colors'; // Importa o objeto de cores
