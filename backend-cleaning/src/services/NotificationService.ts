@@ -1,7 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { PrismaService } from '../prisma/prisma.service';
-import { BookingStatus, IncidentStatus, IncidentType } from '@prisma/client';
+import {
+  BookingStatus,
+  IncidentStatus,
+  IncidentType,
+  UserRole,
+} from '@prisma/client';
 
 @Injectable()
 export class NotificationService {
@@ -148,6 +153,7 @@ export class NotificationService {
     title: string,
     body: string,
     payload?: Record<string, unknown>,
+    options?: { priority?: 'default' | 'high'; channelId?: string },
   ) {
     if (!targetToken) {
       this.logger.warn(
@@ -162,6 +168,8 @@ export class NotificationService {
       );
       return;
     }
+    const androidChannelId = options?.channelId ?? 'high-priority';
+    const androidPriority = options?.priority ?? 'high';
 
     try {
       await admin.messaging().send({
@@ -173,8 +181,8 @@ export class NotificationService {
         data: this.formatDataPayload(payload),
         android: {
           notification: {
-            channelId: 'high-priority',
-            priority: 'high',
+            channelId: androidChannelId,
+            priority: androidPriority,
             sound: 'default',
           },
         },
@@ -195,6 +203,56 @@ export class NotificationService {
         error instanceof Error ? error.stack : undefined,
       );
     }
+  }
+
+  async sendToAdmins({
+    title,
+    body,
+    priority = 'high',
+    data,
+    channelId = 'high-priority',
+  }: {
+    title: string;
+    body: string;
+    priority?: 'default' | 'high';
+    data?: Record<string, unknown>;
+    channelId?: string;
+  }) {
+    const admins = await this.prisma.user.findMany({
+      where: { role: UserRole.ADMIN },
+      select: { id: true, fcmToken: true },
+    });
+    if (!admins.length) {
+      this.logger.warn(
+        '[NotificationService] Nenhum admin encontrado para notificações críticas.',
+      );
+      return;
+    }
+
+    const missingTokens = admins.filter((admin) => !admin.fcmToken);
+    const incidentPromises = missingTokens.map((admin) =>
+      this.reportMissingTokenIncident(
+        admin.id,
+        `FCM token ausente ao enviar "${title}" aos admins.`,
+      ),
+    );
+
+    missingTokens.forEach((admin) =>
+      this.logger.warn(
+        `[NotificationService] Admin ${admin.id} sem fcmToken para "${title}".`,
+      ),
+    );
+
+    const sendPromises = admins
+      .filter((admin) => admin.fcmToken)
+      .map((admin) =>
+        this.sendPush(admin.fcmToken, title, body, data, {
+          priority,
+          channelId,
+        }),
+      );
+
+    await Promise.all([...incidentPromises, ...sendPromises]);
   }
 
   async sendToUser(
