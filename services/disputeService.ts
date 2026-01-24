@@ -3,7 +3,7 @@
 import { api } from './api'; // Assumindo que você tem um arquivo api.ts para suas requisições HTTP
 import { createLocalConsole } from './logging';
 const console = createLocalConsole();
-import { ReportDisputeDto, Dispute, DisputeResponse } from '../types/backend/disputes'; // Ajuste o caminho conforme a sua estrutura de pastas
+import { ReportDisputeDto, Dispute, DisputeResponse, DisputeMessage } from '../types/backend/disputes'; // Ajuste o caminho conforme a sua estrutura de pastas
 import axios from 'axios'; // <-- Adicione esta linha para importar a biblioteca axios
 import * as NotificationService from '../services/notificationService'; // NEW: Import NotificationService for error handling
 import * as Sentry from '@sentry/react-native'; // NEW: Import Sentry (conceptual, requires setup)
@@ -60,6 +60,30 @@ export const disputeService = {
       Sentry.captureException(error);
       (NotificationService as any).notifyError('Erro ao buscar detalhes da disputa. Tente novamente.');
       console.error(`Erro ao buscar disputa para o agendamento ${bookingId}:`, error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  /**
+   * Envia uma mensagem relacionada a uma disputa já existente.
+   */
+  addMessage: async (disputeId: string, content: string): Promise<DisputeMessage> => {
+    const trimmed = content?.trim();
+    if (!trimmed) {
+      throw new Error('O conteúdo da mensagem não pode ficar em branco.');
+    }
+
+    try {
+      const response = await api.post<DisputeMessage>(`/disputes/${disputeId}/message`, {
+        content: trimmed,
+      });
+      return response.data;
+    } catch (error: any) {
+      Sentry.captureException(error);
+      (NotificationService as any).notifyError(
+        'Erro ao enviar mensagem da disputa. Tente novamente mais tarde.',
+      );
+      console.error(`Erro ao adicionar mensagem à disputa ${disputeId}:`, error.response?.data || error.message);
       throw error;
     }
   },
