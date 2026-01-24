@@ -76,6 +76,7 @@ export class UpdateVerificationStatusDto {
 }
 
 @ApiTags('verification')
+@ApiBearerAuth()
 @Controller('verification')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class VerificationController {
@@ -117,6 +118,12 @@ export class VerificationController {
         file: {
           type: 'string',
           format: 'binary',
+        },
+        premiumFilter: {
+          type: 'string',
+          description:
+            'Enviar "true" ou "premium_showcase" para acionar o pipeline Premium Showcase.',
+          enum: ['true', 'false', 'premium_showcase'],
         },
       },
     },
@@ -264,6 +271,7 @@ export class VerificationController {
   async uploadAvatar(
     @Req() req: RequestWithUser,
     @UploadedFile() file: Multer.File,
+    @Body('premiumFilter') premiumFilter?: string,
   ) {
     const providerId = req.user?.providerId;
 
@@ -284,9 +292,16 @@ export class VerificationController {
         'Nenhum arquivo enviado ou o arquivo é inválido.',
       );
     }
+    const wantsPremium =
+      premiumFilter?.toLowerCase() === 'true' ||
+      premiumFilter === 'premium_showcase';
+    this.logger.log(
+      `[VerificationController] uploadAvatar: premium pipeline requested=${wantsPremium}`,
+    );
     const uploadedUrl = await this.verificationService.uploadAvatar(
       providerId,
       file,
+      wantsPremium ? { premiumAvatar: true } : undefined,
     );
     return { message: 'Avatar enviado com sucesso.', url: uploadedUrl };
   }
