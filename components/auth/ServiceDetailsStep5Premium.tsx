@@ -30,7 +30,7 @@ export default function ServiceDetailsStep5Premium({
       duration: 500,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [animatedValue]);
 
   return (
     <Animated.View
@@ -224,4 +224,3 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 });
-
