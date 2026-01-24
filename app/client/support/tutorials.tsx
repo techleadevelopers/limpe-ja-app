@@ -14,7 +14,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppColors, AppShadows } from '../../../constants/appStyles';
+import { AppColors } from '../../../constants/appStyles';
 
 type TutorialCard = {
   id: string;
