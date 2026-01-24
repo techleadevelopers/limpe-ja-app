@@ -43,17 +43,34 @@ export const triggerPanic = async (payload: ReportPanicDto): Promise<PanicEvent>
 
 /**
  * NOVO: Atualiza a localização de um evento de pânico ativo.
- * Corresponde a PATCH /safety/panic/:panicId/update-location.
+ * Corresponde a PATCH /safety/panic-alerts/:panicId/location.
  * @param panicId O ID do evento de pânico.
  * @param coords Coordenadas atualizadas (latitude, longitude, precisão).
  * @returns Promessa vazia.
  */
 export const updatePanicLocation = async (panicId: string, coords: { latitude: number; longitude: number; accuracy?: number }): Promise<void> => {
-  try {
-    await api.patch(`/safety/panic/${panicId}/update-location`, coords);
-  } catch (error: any) {
-    console.error(`Erro ao atualizar localização do pânico ${panicId}:`, error.response?.data || error.message);
-    // Não relançar erro para não interromper o watchLocation em caso de falha temporária
+  const maxRetries = 3;
+  const delayBaseMs = 250;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await api.patch(`/safety/panic-alerts/${panicId}/location`, {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      });
+      return;
+    } catch (error: any) {
+      const detail =
+        error instanceof Error ? error.message : JSON.stringify(error);
+      console.error(`Erro de rastreio (tentativa ${attempt}/${maxRetries}):`, detail);
+
+      if (attempt < maxRetries) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, delayBaseMs * attempt),
+        );
+        continue;
+      }
+      // Se falhar após todas as tentativas, o loop de watchPosition tentará novamente no próximo tick.
+    }
   }
 };
 
@@ -88,3 +105,4 @@ export const createIncidentReport = async (panicId: string, data: { description:
     throw error;
   }
 };
+
