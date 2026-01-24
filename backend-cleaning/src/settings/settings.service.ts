@@ -48,6 +48,7 @@ export type PricingAuditEvent = {
   action: 'create' | 'update' | 'delete';
   ruleBefore?: any;
   ruleAfter?: any;
+  changes?: Record<string, { before?: any; after?: any }>;
 };
 
 @Injectable()
@@ -395,6 +396,14 @@ export class SettingsService {
       history,
       this.historyTtlSeconds,
     );
+    const changeSummary = this.formatPricingChanges(event.changes);
+    const ruleId =
+      event.ruleAfter?.id ?? event.ruleBefore?.id ?? 'unknown';
+    this.logger.log(
+      `[SettingsService] Pricing rule ${ruleId} ${event.action} by ${
+        event.actorUserId
+      }${changeSummary ? ` (${changeSummary})` : ''}`,
+    );
   }
 
   async getPricingHistory(
@@ -411,5 +420,19 @@ export class SettingsService {
     const items = history.slice(start, end);
     const nextCursor = end < history.length ? end : null;
     return { items, nextCursor };
+  }
+
+  private formatPricingChanges(
+    changes?: PricingAuditEvent['changes'],
+  ): string {
+    if (!changes || Object.keys(changes).length === 0) {
+      return '';
+    }
+    return Object.entries(changes)
+      .map(
+        ([field, diff]) =>
+          `${field}: ${diff.before ?? 'null'} -> ${diff.after ?? 'null'}`,
+      )
+      .join('; ');
   }
 }
