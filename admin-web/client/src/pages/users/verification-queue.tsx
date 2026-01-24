@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -73,6 +73,9 @@ export default function VerificationQueue() {
   const { data: queue, isLoading, isError, error } = useQuery<Provider[], Error>({
     queryKey: ['/verification/pending-queue'],
     queryFn: () => fetchVerificationQueue(),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const updateProviderStatusMutation = useMutation({
