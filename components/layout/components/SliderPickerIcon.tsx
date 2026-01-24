@@ -45,7 +45,6 @@ const SliderPickerIcon: React.FC<IconProps> = ({ size = 48, color = LIGHT_BLUE, 
 
   useEffect(() => {
     if (animationTrigger) {
-      const startX = 0;
       const endX = barWidth - thumbRadius * 2;
 
       thumbTranslateX.value = withRepeat(
