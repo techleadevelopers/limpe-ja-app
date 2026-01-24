@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Text, TouchableOpacity, StyleSheet, Platform, Animated, Easing, View } from 'react-native';
+import { Text, TouchableOpacity, StyleSheet, Platform, Animated, Easing } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -18,13 +18,9 @@ const TINT_GRADIENT_START = 'rgba(146, 210, 241, 0.45)';
 const TINT_GRADIENT_END = 'rgba(175, 183, 244, 0.12)';
 const BLUR_INTENSITY = Platform.OS === 'ios' ? 20 : 40;
 const BLUR_TINT = 'light';
-const TEXT_COLOR = 'rgba(54, 57, 60, 0.62)';
-
 // Sombra base (a opacidade real fica inline por plataforma)
 const PRIMARY_SHADOW_COLOR = 'rgba(0, 0, 0, 0.5)';
 const PRIMARY_SHADOW_OFFSET_HEIGHT = 6;
-const PRIMARY_ELEVATION_ANDROID = 4; // mais suave (4–6)
-
 // Bordas
 const BORDER_COLOR_LIGHT = Platform.select({
   ios: '#2dc4c475', // igual ao iOS
