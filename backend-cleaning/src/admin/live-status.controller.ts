@@ -1,5 +1,10 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -16,10 +21,13 @@ export class LiveStatusController {
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Agrega provedores e bookings para o Live Tracking' })
+  @ApiOperation({
+    summary: 'Agrega provedores e bookings para o Live Tracking',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Payload unificado de provedores ativos e agendamentos confirmados/iniciados.',
+    description:
+      'Payload unificado de provedores ativos e agendamentos confirmados/iniciados.',
   })
   async getLiveStatus(): Promise<LiveStatusPayload> {
     return this.liveStatusService.getLiveStatus();
