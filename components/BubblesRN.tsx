@@ -139,10 +139,14 @@ function Bubble({
     return () => {
       try {
         translateY.stopAnimation();
-      } catch (_) {}
+      } catch {
+        /* ignored */
+      }
       try {
         wobble.stopAnimation();
-      } catch (_) {}
+      } catch {
+        /* ignored */
+      }
     };
   }, [spec, translateY, wobble]);
 
