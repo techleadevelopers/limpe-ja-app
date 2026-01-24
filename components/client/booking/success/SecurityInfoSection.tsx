@@ -122,7 +122,7 @@ export default function SecurityInfoSection({ successColor, bookingId }: Securit
       ]}
     >
       <Image
-        source={require('../../../../assets/images/safe-icon.png')}
+        source={require('../../../../assets/images/logo.png')}
         style={styles.securityImage}
         accessible={false}
       />
