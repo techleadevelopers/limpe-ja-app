@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef } from 'react';
 import { ActivityIndicator, Animated, Dimensions, Easing, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import { AppColors } from '../../../../constants/appStyles';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
