@@ -6,7 +6,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
   Easing,
   ViewStyle,
   TextStyle,
@@ -17,7 +16,7 @@ import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 
-import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH } from '../../constants/appStyles';
+import { AppColors, AppDurations, AppOffsets, AppTypography, SCREEN_WIDTH } from '../../constants/appStyles';
 
 interface CouponWelcomeCardProps {
   code: string;
@@ -77,7 +76,7 @@ const CouponWelcomeCard: React.FC<CouponWelcomeCardProps> = ({
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideUpAnim]);
 
   const handleCopyCode = useCallback(async () => {
     try {
@@ -91,33 +90,32 @@ const CouponWelcomeCard: React.FC<CouponWelcomeCardProps> = ({
         Animated.timing(scaleButtonAnim, { toValue: 0.96, duration: AppDurations.xs, useNativeDriver: true }),
         Animated.spring(scaleButtonAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
       ]).start();
-    } catch (error) {
+    } catch (_error) {
       Toast.show({
         type: 'error',
         text1: t('common.error'),
         text2: t('offers.failed_to_copy_coupon'),
       });
     }
-  }, [code, t]);
+  }, [code, scaleButtonAnim, t]);
 
   const handleUseNowPress = useCallback(() => {
     Animated.sequence([
       Animated.timing(scaleButtonAnim, { toValue: 0.96, duration: AppDurations.xs, useNativeDriver: true }),
       Animated.spring(scaleButtonAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
     ]).start(() => onUseNow(code));
-  }, [code, onUseNow]);
+  }, [code, onUseNow, scaleButtonAnim]);
 
   const handleDismissPress = useCallback(() => {
     Animated.sequence([
       Animated.timing(scaleButtonAnim, { toValue: 0.96, duration: AppDurations.xs, useNativeDriver: true }),
       Animated.spring(scaleButtonAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
     ]).start(() => onDismiss());
-  }, [onDismiss]);
+  }, [onDismiss, scaleButtonAnim]);
 
   // Convertendo expiresAt para Date object para cálculos e formatação
   const expirationDate = expiresAt ? new Date(expiresAt) : undefined;
 
-  const formattedExpiresAt = expirationDate ? expirationDate.toLocaleDateString(t('common.locale'), { day: 'numeric', month: 'short', year: 'numeric' }) : '';
   const expiresInDays = expirationDate ? Math.ceil((expirationDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
 
   return (
@@ -179,7 +177,6 @@ const styles = StyleSheet.create<CouponWelcomeCardStyles>({
     alignSelf: 'center',
     marginTop: 20,
     marginBottom: 20,
-    ,
   },
   gradientBackground: {
     padding: 20,
