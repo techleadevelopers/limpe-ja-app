@@ -133,7 +133,7 @@ function useReducedMotion() {
       try {
         const enabled = await AccessibilityInfo.isReduceMotionEnabled();
         if (mounted) setIsReducedMotionEnabled(enabled);
-      } catch (e) {
+      } catch {
         // não crítico
       }
     };
@@ -153,7 +153,7 @@ function useReducedMotion() {
           (AccessibilityInfo as any).removeEventListener('reduceMotionChanged', setIsReducedMotionEnabled as any);
           (AccessibilityInfo as any).removeEventListener('change', setIsReducedMotionEnabled as any);
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     };
@@ -426,13 +426,13 @@ export default function EditProviderServicesScreen() {
 
   const resetForm = useCallback(() => {
     setIsEditing(null);
-    setSelectedBaseServiceId(availableBaseServices.length > 0 ? availableBaseServices[0].id : undefined);
+    setSelectedBaseServiceId(availableBaseServices[0]?.id);
     setServiceDesc('');
     setServicePriceRaw('');
     setServicePriceDisplay('');
     setServiceDuration('');
     setFormError(null);
-  }, [availableBaseServices.length]);
+  }, [availableBaseServices]);
 
   const handlePriceChange = useCallback(
     (maskedValue: string, setterRaw: (v: string) => void, setterDisplay: (v: string) => void) => {
@@ -844,9 +844,9 @@ export default function EditProviderServicesScreen() {
 
               {filteredServices.length === 0 && (
                 <View style={{ paddingVertical: 18 }}>
-                  <Text style={{ textAlign: 'center', color: Colors.textMuted }}>
-                    Nenhum resultado para "{typeQuery}"
-                  </Text>
+                    <Text style={{ textAlign: 'center', color: Colors.textMuted }}>
+                      {`Nenhum resultado para "${typeQuery}"`}
+                    </Text>
                 </View>
               )}
             </ScrollView>
