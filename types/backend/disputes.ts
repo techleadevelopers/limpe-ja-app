@@ -58,3 +58,16 @@ export interface ReportDisputeDto {
 export interface DisputeResponse {
   dispute: Dispute;
 }
+
+export interface DisputeMessage {
+  id: string;
+  disputeId: string;
+  ticketId: string;
+  senderUserId: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface AddDisputeMessageDto {
+  content: string;
+}
