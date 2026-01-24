@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { toastUserError } from '../../../_shared/errors/uiFeedback';
@@ -151,7 +150,6 @@ function CouponCard({ coupon, onUseCoupon, theme }: { coupon: CouponItem; onUseC
 
 export default function ClientCouponsScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
   const theme = useTheme();
 
   const [allCoupons, setAllCoupons] = useState<CouponItem[]>([]);
@@ -179,7 +177,7 @@ export default function ClientCouponsScreen() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     loadCoupons();
