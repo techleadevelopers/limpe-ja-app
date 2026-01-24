@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { MessageSquare, Clock, User, ShieldCheck } from "lucide-react";
+import { MessageSquare, Clock, ShieldCheck } from "lucide-react";
 
 type ChatMessage = {
   id: string;
