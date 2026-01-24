@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppColors, AppShadows } from '../../../../constants/appStyles';
+import { AppColors } from '../../../../constants/appStyles';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
