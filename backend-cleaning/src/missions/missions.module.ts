@@ -5,6 +5,7 @@ import { MissionsController } from './missions.controller';
 import { PrismaService } from '../prisma/prisma.service';
 import { CouponsModule } from '../coupons/coupons.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
+import { MissionEventCleanupJob } from './mission-event-cleanup.job';
 import { MissionsProgressService } from './progress.service'; // Importar MissionsProgressService
 import { ServicesModule } from '../services/services.module';
 
@@ -19,6 +20,7 @@ import { ServicesModule } from '../services/services.module';
   providers: [
     MissionsService,
     MissionsProgressService, // ADICIONAR MissionsProgressService
+    MissionEventCleanupJob,
     PrismaService, // Garantir que PrismaService esteja disponível para MissionsProgressService
   ],
   exports: [MissionsService],
