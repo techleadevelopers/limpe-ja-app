@@ -332,6 +332,22 @@ export type ObservabilitySentryError = {
     };
 };
 
+export type ObservabilityLatencyPoint = {
+    timestamp: string;
+    registerLatency?: number;
+    radiusLatency?: number;
+    bookingLatency?: number;
+    paymentLatency?: number;
+    criticalAverage?: number;
+};
+
+export type ObservabilityLatencyAverages = {
+    registerLatency?: number;
+    radiusLatency?: number;
+    bookingLatency?: number;
+    paymentLatency?: number;
+};
+
 export type ObservabilityHealthPayload = {
     status: 'ok' | 'degraded';
     timestamp: string;
@@ -347,7 +363,7 @@ export type ObservabilityHealthPayload = {
     activeSessions: number;
     insuranceConversion: ObservabilityInsuranceConversion;
     latencySeries: ObservabilityLatencyPoint[];
-    latencySeriesByRoute: Record<string, ObservabilityLatencyPoint[]>;
+    latencyAverages: ObservabilityLatencyAverages;
     sentry: ObservabilitySentryData | ObservabilitySentryError;
     apiLatencyMs: number;
     sentryLatencyMs: number;
