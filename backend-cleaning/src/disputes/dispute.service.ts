@@ -176,8 +176,8 @@ export class DisputeService {
             },
           },
         });
-        this.logger.log(
-          `[DisputeService] createDispute: Disputa ${createdDispute.id} criada e notificação enviada para admins.`,
+        this.logger.error(
+          `[DisputeService] Abertura de Disputa ${createdDispute.id} para booking ${createdDispute.bookingId} (motivo: ${createdDispute.reason}). Notificação enviada para admins.`,
         );
 
         return createdDispute;
