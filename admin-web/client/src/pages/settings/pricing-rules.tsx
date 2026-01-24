@@ -1,13 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     fetchPricingRules,
     createPricingRule,
     updatePricingRule,
     deletePricingRule,
-} from '../../lib/api'; // Ajuste o caminho conforme necessário
-import { PricingRule, PricingType } from '../../lib/types'; // Ajuste o caminho conforme necessário
-import { fetchPricingHistory, PricingAuditEvent } from '../../lib/api';
+    fetchPricingHistory,
+    PricingAuditEvent,
+} from '../../lib/api';
+import { PricingRule } from '../../lib/types'; // Ajuste o caminho conforme necessário
 
 // Type definitions for reusable components
 interface ModalProps {
