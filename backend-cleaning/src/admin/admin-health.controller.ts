@@ -13,7 +13,9 @@ export class AdminHealthController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Retorna o estado de saúde do backend administrativo' })
+  @ApiOperation({
+    summary: 'Retorna o estado de saúde do backend administrativo',
+  })
   @ApiResponse({
     status: 200,
     description: 'Indica que o serviço administrativo está operacional.',
