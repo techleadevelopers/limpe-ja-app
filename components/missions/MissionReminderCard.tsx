@@ -1,6 +1,6 @@
 // components/missions/MissionReminderCard.tsx
 // ================================================
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -38,8 +38,6 @@ const withAlpha = (hex: string, alpha: number) => {
   const b = int & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
-const clamp0 = (n: number) => Math.max(0, n);
-
 function formatRemaining(deadlineISO: string) {
   const diff = new Date(deadlineISO).getTime() - Date.now();
   if (diff <= 0) return 'Expirou';
