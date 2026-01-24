@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { Dispatch, SetStateAction, useEffect } from 'react';
+import React, { Dispatch, SetStateAction, useEffect, useRef } from 'react';
 import {
   Animated,
   Dimensions,
-  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -13,8 +12,7 @@ import {
   Easing
 } from 'react-native';
 import { BookingAddress } from '../../../../types/backend/bookings';
-import { Icons3D } from '../../../../constants/icons3d'; // << ícones 3D (docCheck)
-import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
+import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -35,8 +33,8 @@ const AddressSection: React.FC<AddressSectionProps> = ({
   isInputMode,
   onEditAddress
 }) => {
-  const trackerIconPulseAnim = new Animated.Value(1);
-  const msgShineAnim = new Animated.Value(0); // era dottedLineShineAnim
+  const trackerIconPulseAnim = useRef(new Animated.Value(1)).current;
+  const msgShineAnim = useRef(new Animated.Value(0)).current; // era dottedLineShineAnim
 
   useEffect(() => {
     // pulso dos ícones
@@ -54,7 +52,7 @@ const AddressSection: React.FC<AddressSectionProps> = ({
         Animated.timing(msgShineAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
       ])
     ).start();
-  }, []);
+  }, [trackerIconPulseAnim, msgShineAnim]);
 
   const format1 = (addr: BookingAddress) => `${addr.street}, ${addr.number}`;
   const format2 = (addr: BookingAddress) => `${addr.neighborhood}, ${addr.city}/${addr.state} - ${addr.cep}`;
