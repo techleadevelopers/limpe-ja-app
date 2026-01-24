@@ -4,7 +4,8 @@ import { ProviderViewDto } from '../../providers/dto/provider-view.dto';
 export class AdminProviderListDto {
   @ApiProperty({
     type: () => [ProviderViewDto],
-    description: 'Lista paginada de provedores formatada para o painel administrativo.',
+    description:
+      'Lista paginada de provedores formatada para o painel administrativo.',
   })
   items: ProviderViewDto[];
 
@@ -23,7 +24,12 @@ export class AdminProviderListDto {
   })
   limit: number;
 
-  constructor(items: ProviderViewDto[], totalCount: number, page: number, limit: number) {
+  constructor(
+    items: ProviderViewDto[],
+    totalCount: number,
+    page: number,
+    limit: number,
+  ) {
     this.items = items;
     this.totalCount = totalCount;
     this.page = page;
