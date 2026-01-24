@@ -1,6 +1,5 @@
-﻿import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics'; // CORREÇÃO: Import separado e correto para Haptics
-import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -10,6 +9,7 @@ import {
   Animated,
   Easing,
   Image,
+  Modal,
   Platform,
   RefreshControl,
   ScrollView,
@@ -33,6 +33,7 @@ import NotificationUIService from '../../services/notificationUIService'; // Add
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/dashboardService';
 import { uploadMyAvatar } from '../../services/providerService';
+import * as ImagePicker from 'expo-image-picker';
 // Importações das tipagens centralizadas
 import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
 // CORREÇÃO: Usar a interface ProviderDashboard do arquivo de provedores,
@@ -96,8 +97,6 @@ const WARNING_YELLOW = '#FFC107';
 const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
 const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
 const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
-const PRIMARY_LIGHT = '#EBF5FF';
-
 // Spacing e Radii tokens (consistentes e clean) - CORREÇÃO: Adicionado 'md' ao Radii
 const Spacing = {
   xs: 6,
@@ -112,11 +111,7 @@ const Radii = {
   md: 12, // CORREÇÃO: Adicionado 'md' para resolver TS2339 em borderRadius: Radii.md
   sm: 10,
 };
-const QA_PANEL_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_ENABLE_QA_PANEL === 'true';
-
 // Easing suave para animações iOS
-const easeOut = (value: any) => Easing.out(Easing.ease)(value);
-
 // --- Componentes Reutilizáveis ---
 // Componente: DashboardHeader (refinado com haptics e reduced motion) - CORREÇÃO: Adicionado useSafeAreaInsets para alinhamento iOS
 const DashboardHeader: React.FC<{
@@ -347,12 +342,20 @@ const FinancialSummaryCard: React.FC<{
   const cardPaddingBottom = expanded ? Spacing.md : Spacing.xs;
   return (
     <Animated.View
-     
+      style={[
+        summaryStyles.summaryCard,
+        {
+          paddingBottom: cardPaddingBottom,
+          transform: [{ scale: scaleAnim }],
+        },
+      ]}
     >
       {/* Header clicável (compacto) */}
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={toggleExpand}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
         accessibilityRole="button"
         accessibilityLabel="Seus ganhos"
         accessibilityHint={expanded ? 'Toque para recolher' : 'Toque para expandir'}
@@ -398,7 +401,9 @@ const FinancialSummaryCard: React.FC<{
         >
           <Ionicons name="wallet-outline" size={18} color={WHITE} style={summaryStyles.buttonIcon} />
           <Text style={summaryStyles.viewEarningsButtonText}>Gerenciar Ganhos</Text>
-          <Ionicons name="chevron-forward-outline" size={18} color={WHITE} />
+          <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
+            <Ionicons name="chevron-forward-outline" size={18} color={WHITE} />
+          </Animated.View>
         </TouchableOpacity>
       </Animated.View>
     </Animated.View>
@@ -576,7 +581,7 @@ const ShortcutsGrid: React.FC<{
   const a9 = useAnimatedTouch();
   const withdrawAnim = useAnimatedTouch();
   const animationRefs = [a1, a2, a3, a4, a5, a6, a7, a8, a9];
-  const shortcutItems: Array<{ icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; primary?: boolean }> = [
+  const shortcutItems: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; primary?: boolean }[] = [
     { icon: 'calendar', label: labels.agenda ?? 'Agenda', onPress: onManageAvailability, primary: true },
     { icon: 'file-tray-full', label: labels.requests ?? 'Solicitações', onPress: onOpenRequests, primary: true },
     { icon: 'calendar', label: labels.upcoming ?? 'Próximos', onPress: onOpenUpcoming },
@@ -1420,70 +1425,114 @@ export default function ProviderDashboardScreen() {
     setIsRefreshing(true);
     fetchData();
   }, [fetchData, isReducedMotionEnabled]);
-  const handleAvatarPress = useCallback(async () => {
-    if (isUploadingAvatar) return;
-    const wasVitrineIrregular = providerVisibilityStatus === ProviderVisibilityStatus.VITRINE_IRREGULAR;
-    try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
-        NotificationUIService.showError(
-          'Precisamos da sua permissão para acessar a galeria e atualizar sua foto.',
-          'Permissão necessária',
-        );
-        return;
-      }
-      const pickerResult = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-      if (pickerResult.canceled) return;
-      const fileUri = pickerResult.assets?.[0]?.uri ?? (pickerResult as any).uri;
-      if (!fileUri) return;
+  const processAvatarUri = useCallback(
+    async (fileUri: string) => {
+      if (!fileUri || isUploadingAvatar) return;
+      const wasVitrineIrregular = providerVisibilityStatus === ProviderVisibilityStatus.VITRINE_IRREGULAR;
       setIsUploadingAvatar(true);
-      const { url } = await uploadMyAvatar(fileUri);
-      const successMessage = wasVitrineIrregular
-        ? 'Foto enviada. Em revisão para liberar sua vitrine.'
-        : 'Perfil atualizado! Sua nova foto já está visível para os clientes.';
-      NotificationUIService.showSuccess(successMessage, 'Foto atualizada');
-      if (user) {
-        await updateUser({ avatarUrl: url });
+      try {
+        const { url } = await uploadMyAvatar(fileUri);
+        const successMessage = wasVitrineIrregular
+          ? 'Foto enviada. Em revisão para liberar sua vitrine.'
+          : 'Perfil atualizado! Sua nova foto já está visível para os clientes.';
+        NotificationUIService.showSuccess(successMessage, 'Foto atualizada');
+        if (user) {
+          await updateUser({ avatarUrl: url });
+        }
+        const nowIso = new Date().toISOString();
+        setDashboardData((prev) =>
+          prev
+            ? {
+                ...prev,
+                avatarUrl: url,
+                updatedAt: nowIso,
+                visibilityStatus: wasVitrineIrregular ? ProviderVisibilityStatus.PENDING_VITRINE_REVIEW : prev.visibilityStatus,
+                visibilityReason: wasVitrineIrregular ? null : prev.visibilityReason,
+                visibilityUpdatedAt: wasVitrineIrregular ? nowIso : prev.visibilityUpdatedAt,
+                provider: prev.provider
+                  ? {
+                      ...prev.provider,
+                      avatarUrl: url,
+                      visibilityStatus: wasVitrineIrregular
+                        ? ProviderVisibilityStatus.PENDING_VITRINE_REVIEW
+                        : prev.provider.visibilityStatus,
+                      visibilityReason: wasVitrineIrregular ? null : prev.provider.visibilityReason,
+                      visibilityUpdatedAt: wasVitrineIrregular ? nowIso : prev.provider.visibilityUpdatedAt,
+                    }
+                  : prev.provider,
+              }
+            : prev,
+        );
+        appQueryClient.invalidateQueries({ queryKey: ['providers'] });
+        if (user?.id) {
+          appQueryClient.invalidateQueries({ queryKey: ['provider', user.id] });
+        }
+      } catch (error: any) {
+        NotificationUIService.showError(error, 'Não foi possível atualizar a foto.');
+      } finally {
+        setIsUploadingAvatar(false);
       }
-      const nowIso = new Date().toISOString();
-      setDashboardData((prev) =>
-        prev
-          ? {
-              ...prev,
-              avatarUrl: url,
-              updatedAt: nowIso,
-              visibilityStatus: wasVitrineIrregular ? ProviderVisibilityStatus.PENDING_VITRINE_REVIEW : prev.visibilityStatus,
-              visibilityReason: wasVitrineIrregular ? null : prev.visibilityReason,
-              visibilityUpdatedAt: wasVitrineIrregular ? nowIso : prev.visibilityUpdatedAt,
-              provider: prev.provider
-                ? {
-                    ...prev.provider,
-                    avatarUrl: url,
-                    visibilityStatus: wasVitrineIrregular
-                      ? ProviderVisibilityStatus.PENDING_VITRINE_REVIEW
-                      : prev.provider.visibilityStatus,
-                    visibilityReason: wasVitrineIrregular ? null : prev.provider.visibilityReason,
-                    visibilityUpdatedAt: wasVitrineIrregular ? nowIso : prev.provider.visibilityUpdatedAt,
-                  }
-                : prev.provider,
-            }
-          : prev,
-      );
-      appQueryClient.invalidateQueries({ queryKey: ['providers'] });
-      if (user?.id) {
-        appQueryClient.invalidateQueries({ queryKey: ['provider', user.id] });
+    },
+    [appQueryClient, isUploadingAvatar, providerVisibilityStatus, setDashboardData, updateUser, user],
+  );
+  const pickAvatarImage = useCallback(
+    async (source: 'camera' | 'library') => {
+      if (isUploadingAvatar) return;
+      try {
+        const permission =
+          source === 'camera'
+            ? await ImagePicker.requestCameraPermissionsAsync()
+            : await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permission.granted === false) {
+          Alert.alert(
+            'Permissão necessária',
+            source === 'camera'
+              ? 'Precisamos liberar a câmera para capturar sua foto.'
+              : 'Precisamos liberar a galeria para selecionar sua foto.',
+          );
+          return;
+        }
+        const result =
+          source === 'camera'
+            ? await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              })
+            : await ImagePicker.launchImageLibraryAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+        if (!result.canceled && result.assets.length) {
+          processAvatarUri(result.assets[0].uri);
+        }
+      } catch (error: any) {
+        NotificationUIService.showError(
+          'Não foi possível atualizar a foto.',
+          'Falha no Upload',
+        );
       }
-    } catch (error: any) {
-      NotificationUIService.showError(error, 'Não foi possível atualizar a foto.');
-    } finally {
-      setIsUploadingAvatar(false);
-    }
-  }, [isUploadingAvatar, providerVisibilityStatus, updateUser, user]);
+    },
+    [isUploadingAvatar, processAvatarUri],
+  );
+  const handleAvatarPress = useCallback(() => {
+    if (isUploadingAvatar) return;
+    Alert.alert('Atualizar foto profissional', 'Selecione uma fonte:', [
+      {
+        text: 'Galeria',
+        onPress: () => pickAvatarImage('library'),
+      },
+      {
+        text: 'Câmera',
+        onPress: () => pickAvatarImage('camera'),
+      },
+      {
+        text: 'Cancelar',
+        style: 'cancel',
+      },
+    ]);
+  }, [isUploadingAvatar, pickAvatarImage]);
   const handleViewAllServicesPress = () => {
     if (__DEV__) {
       console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviços.");
@@ -2649,4 +2698,3 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 });
-
