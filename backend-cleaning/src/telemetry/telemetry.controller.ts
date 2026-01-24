@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Logger,
-  Param,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Logger, Param, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -28,18 +22,25 @@ export class TelemetryController {
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'ForÁar logout de um usu·rio identificado pela telemetria.' })
+  @ApiOperation({
+    summary: 'For√ßar logout de um usu√°rio identificado pela telemetria.',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Usu·rio marcado para logout forÁado por tempo limitado.',
+    description: 'Usu√°rio marcado para logout for√ßado por tempo limitado.',
   })
-  @ApiResponse({ status: 401, description: 'N„o autorizado.' })
+  @ApiResponse({ status: 401, description: 'N√£o autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
-  async forceLogout(@Param('userId') userId: string): Promise<{ message: string; userId: string }> {
-    this.logger.warn(`[TelemetryController] forceLogout: usu·rio ${userId} marcado para logout forÁado`);
+  async forceLogout(
+    @Param('userId') userId: string,
+  ): Promise<{ message: string; userId: string }> {
+    this.logger.warn(
+      `[TelemetryController] forceLogout: usu√°rio ${userId} marcado para logout for√ßado`,
+    );
     await this.telemetryService.markForceLogout(userId);
     return {
-      message: 'Usu·rio marcado para logout forÁado. A sess„o ser· bloqueada nos prÛximos segundos.',
+      message:
+        'Usu√°rio marcado para logout for√ßado. A sess√£o ser√° bloqueada nos pr√≥ximos segundos.',
       userId,
     };
   }
