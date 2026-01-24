@@ -25,7 +25,7 @@ export default function Settings() {
   const [genHistory, setGenHistory] = useState<GeneralAuditEvent[]>([]);
   const [genCursor, setGenCursor] = useState<number | null>(0);
 
-  const { data: slaData, isLoading: slaLoading } = useQuery<SlaSettings>({
+  const { data: slaData } = useQuery<SlaSettings>({
     queryKey: ['admin-settings-slas'],
     queryFn: fetchSlaSettings,
   });
