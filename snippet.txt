@@ -1,8 +1,0 @@
-      } catch (error: any) {
-        console.error('Erro ao carregar mensagens ou verificar agendamento:', error);
-        const normalized = getUserMessage(error);
-        if (
-          error.message.includes('NĂŁo Ă© possĂ­vel acessar esta conversa') ||
-          error.message.includes('NĂŁo Ă© possĂ­vel enviar mensagens')
-        ) {
-          
