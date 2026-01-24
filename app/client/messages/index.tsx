@@ -204,8 +204,6 @@ export default function ConversationsListScreen() {
     router.back();
   };
 
-  const loggedInUserName = user?.fullName || 'João';
-
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
