@@ -41,6 +41,27 @@ const formatLatency = (value?: number) => {
   return "0 ms";
 };
 
+const formatLatencyValue = (value?: number) =>
+  typeof value === "number" ? `${value.toFixed(0)} ms` : "—";
+
+export const buildLatencyChartData = (
+  series?: ObservabilityLatencyPoint[],
+) => {
+  if (!series) {
+    return [];
+  }
+
+  return series.map((point) => ({
+    label: timeLabel(point.timestamp),
+    registerLatency:
+      point.registerLatency !== undefined ? point.registerLatency : null,
+    radiusLatency: point.radiusLatency ?? null,
+    bookingLatency: point.bookingLatency ?? null,
+    paymentLatency: point.paymentLatency ?? null,
+    criticalAverage: point.criticalAverage ?? null,
+  }));
+};
+
 const isSentryData = (
   value?: ObservabilitySentryData | ObservabilitySentryError,
 ): value is ObservabilitySentryData => {
@@ -58,13 +79,10 @@ export default function ObservabilityPage() {
     refetchOnWindowFocus: false,
   });
 
- const chartData = useMemo(() => {
-  // Garanta que latencySeries existe antes de mapear
-  return data?.latencySeries?.map((point) => ({
-    label: timeLabel(point.timestamp),
-    latency: point.latencyMs ?? 0,
-  })) ?? [];
-}, [data]);
+  const chartData = useMemo(
+    () => buildLatencyChartData(data?.latencySeries),
+    [data],
+  );
 
   const systemStatusUp = data?.db?.status === "up";
   const sentryInfo = data?.sentry;
@@ -73,6 +91,8 @@ export default function ObservabilityPage() {
     sentryInfo && !isSentryData(sentryInfo) ? sentryInfo.error : undefined;
   const hasSentryData = Boolean(sentryData);
   const activeUserCount = 137;
+  const radiusLatencyAverage = data?.latencyAverages?.radiusLatency;
+  const registerLatencyAverage = data?.latencyAverages?.registerLatency;
 
   return (
     <div className="flex h-screen bg-admin-bg">
@@ -224,6 +244,37 @@ export default function ObservabilityPage() {
           </section>
 
           <section className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 md:col-span-6">
+              <div className="flex flex-col gap-2 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Tempo Médio de Busca (Radius)
+                </div>
+                <p className="text-3xl font-semibold">
+                  {formatLatencyValue(radiusLatencyAverage)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Média dos pontos mais recentes registrados na rota de busca por
+                  proximidade.
+                </p>
+              </div>
+            </div>
+
+            <div className="col-span-12 md:col-span-6">
+              <div className="flex flex-col gap-2 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Latência de Cadastro
+                </div>
+                <p className="text-3xl font-semibold">
+                  {formatLatencyValue(registerLatencyAverage)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Média da latência da rota de registro de novos clientes.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-12 gap-6">
             <div className="col-span-12 xl:col-span-8">
               <div className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between">
@@ -232,7 +283,8 @@ export default function ObservabilityPage() {
                       Gráfico de Latência
                     </p>
                     <p className="text-xs text-gray-500">
-                      Tempo de resposta da rota /search nas últimas horas
+                      Tempo médio das rotas críticas (Cadastro, Radius, Agendamento
+                      e Pagamento PIX) nas últimas horas
                     </p>
                   </div>
                 </div>
@@ -254,16 +306,62 @@ export default function ObservabilityPage() {
                           tickFormatter={(value) => `${value} ms`}
                         />
                         <Tooltip
-  formatter={(value: number) => [`${(Number(value) || 0).toFixed(1)} ms`, "Latência"]}
-  labelFormatter={(label) => `Hora: ${label}`}
-/>
+                          formatter={(value: number) =>
+                            value !== null && value !== undefined
+                              ? [`${value.toFixed(1)} ms`, 'Latência']
+                              : ['—', 'Latência']
+                          }
+                          labelFormatter={(label) => `Hora: ${label}`}
+                        />
                         <Line
                           type="monotone"
-                          dataKey="latency"
-                          stroke="#14b8a6"
+                          dataKey="registerLatency"
+                          stroke="#22c55e"
+                          name="Cadastro"
                           strokeWidth={3}
-                          dot={{ r: 3 }}
+                          dot={false}
                           activeDot={{ r: 5 }}
+                          connectNulls
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="radiusLatency"
+                          stroke="#2563eb"
+                          name="Busca por Proximidade"
+                          strokeWidth={3}
+                          dot={false}
+                          activeDot={{ r: 5 }}
+                          connectNulls
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="bookingLatency"
+                          stroke="#f97316"
+                          name="Agendamentos"
+                          strokeWidth={3}
+                          dot={false}
+                          activeDot={{ r: 5 }}
+                          connectNulls
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="paymentLatency"
+                          stroke="#facc15"
+                          name="Pagamentos PIX"
+                          strokeWidth={3}
+                          dot={false}
+                          activeDot={{ r: 5 }}
+                          connectNulls
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="criticalAverage"
+                          stroke="#6b7280"
+                          name="Média Crítica"
+                          strokeWidth={2}
+                          dot={false}
+                          strokeDasharray="5 5"
+                          connectNulls
                         />
                       </LineChart>
                     </ResponsiveContainer>
