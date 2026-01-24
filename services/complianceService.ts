@@ -79,7 +79,7 @@ export class ComplianceService {
 
   static async requestDataExport(): Promise<void> {
     try {
-      await api.post('/compliance/export-data');
+      await api.post('/users/data-export');
     } catch (error) {
       console.error('Erro ao solicitar exportação de dados:', error);
       throw error;
@@ -88,7 +88,7 @@ export class ComplianceService {
 
   static async requestAccountDeletion(reason: string): Promise<void> {
     try {
-      await api.post('/compliance/delete-account', { reason });
+      await api.post('/compliance/erasure', { reason });
     } catch (error) {
       console.error('Erro ao solicitar exclusão de conta:', error);
       throw error;
