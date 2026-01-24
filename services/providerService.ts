@@ -1,6 +1,13 @@
 // app/services/providerService.ts
-import axios, { AxiosResponse, InternalAxiosRequestConfig, AxiosHeaders, AxiosError } from 'axios';
+import axios, {
+  AxiosError,
+  AxiosHeaders,
+  AxiosRequestConfig,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from 'axios';
 import { api } from './api';
+import { invalidateAvailabilityCache } from '../app/client/bookings/availabilityCache';
 
 // Importa o serviço de reviews do frontend
 import { ReviewService as FrontendReviewService } from './reviewService'; // Renomeado para evitar conflito
@@ -303,7 +310,11 @@ export async function getProviderDetails(providerId: string): Promise<ProviderDi
  * @param date Data opcional no formato string (ex: "YYYY-MM-DD") para filtrar a disponibilidade.
  * @returns Uma Promise que resolve para um objeto contendo 'available' (slots configurados) e 'occupiedTimes' (slots já agendados).
  */
-export async function getProviderAvailability(providerId: string, date?: any): Promise<GetProviderAvailabilityResponse> {
+export async function getProviderAvailability(
+  providerId: string,
+  date?: any,
+  config?: AxiosRequestConfig,
+): Promise<GetProviderAvailabilityResponse> {
 
   try {
 
@@ -311,33 +322,25 @@ export async function getProviderAvailability(providerId: string, date?: any): P
 
     let dateParam: string;
 
-    
-
     if (date instanceof Date && !isNaN(date.getTime())) {
-
       dateParam = date.toISOString().split('T')[0];
-
     } else if (typeof date === 'string' && date.length >= 10 && !date.includes('NaN')) {
-
       dateParam = date.split('T')[0];
-
     } else {
-
       // Se der qualquer erro na data, envia a data de HOJE para não quebrar o backend
-
       dateParam = new Date().toISOString().split('T')[0];
-
     }
 
+    const requestConfig: AxiosRequestConfig = {
+      ...config,
+      params: {
+        date: dateParam,
+        ...(config?.params ?? {}),
+      },
+    };
 
-
-    const response: AxiosResponse<GetProviderAvailabilityResponse | ProviderAvailability[]> = await api.get(
-  
-      `/providers/${providerId}/availability`,
-  
-      { params: { date: dateParam } }
-  
-    );
+    const response: AxiosResponse<GetProviderAvailabilityResponse | ProviderAvailability[]> =
+      await api.get(`/providers/${providerId}/availability`, requestConfig);
   
     const rawData = response.data;
     if (Array.isArray(rawData)) {
@@ -432,9 +435,13 @@ export async function addMyProviderAvailability(data: UpdateAvailabilityData): P
  * @param availabilityId O ID do slot de disponibilidade a ser deletado.
  * @returns Uma Promise que resolve quando a operação é concluída.
  */
-export async function deleteMyProviderAvailability(availabilityId: string): Promise<void> {
+export async function deleteMyProviderAvailability(
+  availabilityId: string,
+  providerId?: string,
+): Promise<void> {
   try {
     await api.delete(`/providers/me/availability/${availabilityId}`);
+    invalidateAvailabilityCache(providerId);
   } catch (error: any) {
     console.error(`Erro ao deletar disponibilidade ${availabilityId} do provedor autenticado:`, error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
@@ -549,6 +556,7 @@ export async function addProviderAvailability(providerId: string, data: UpdateAv
 export async function deleteProviderAvailability(providerId: string, availabilityId: string): Promise<void> {
   try {
     await api.delete(`/providers/${providerId}/availability/${availabilityId}`);
+    invalidateAvailabilityCache(providerId);
   } catch (error: any) {
     console.error(`Erro ao deletar disponibilidade ${availabilityId} do provedor ${providerId}:`, error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
