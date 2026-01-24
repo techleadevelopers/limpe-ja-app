@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Animated, Easing, useColorScheme, StyleProp, ViewStyle, TextStyle, Platform } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Animated, Easing, useColorScheme, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/Colors'; // Adjust path based on your project structure
 
