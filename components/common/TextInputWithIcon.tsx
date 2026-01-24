@@ -10,7 +10,7 @@ import {
     View,
     ViewStyle,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { inputBase, shadow, textBase } from '../../_shared/ui/parity';
 import { colors } from './theme/colors';
 import { typography } from './theme/typography';
