@@ -149,57 +149,83 @@ export class MissionsService {
    * - Outros tipos (ex: destaque para provedor)
    */
   async claimMission(userId: string, missionId: string) {
-    const progress = await this.prisma.missionProgress.findUnique({
-      where: { userId_missionId: { userId, missionId } },
-      include: { mission: true },
-    });
-
-    if (!progress)
-      throw new NotFoundException('Progresso da missão não encontrado.');
-    if (progress.status !== MissionStatus.COMPLETED || progress.claimedAt) {
-      throw new BadRequestException('Missão não está disponível para resgate.');
-    }
-
-    const mission = progress.mission; // Este 'mission' é do tipo Prisma.MissionGetPayload
-    let reward: any = null;
-
-    this.logger.log(
-      `[TELEMETRY] mission_claim_attempt: { userId: ${userId}, missionId: ${missionId}, rewardType: ${mission.rewardType} }`,
-    );
-
-    if (mission.rewardType === RewardType.COUPON) {
-      reward = await this.couponsService.issueCouponFromMission({
-        userId,
-        mission: {
-          id: mission.id,
-          code: mission.code,
-          title: mission.title,
-          rewardType: mission.rewardType as 'COUPON' | 'POINTS', // Cast necessário se RewardType do Prisma for 'string' e não o enum
-          rewardValue: mission.rewardValue,
-          couponTemplateId: mission.couponTemplateId ?? null, // Usa ?? null para lidar com String? do Prisma
-        },
-        validityDays: 30,
+    const { mission, reward } = await this.prisma.$transaction(async (tx) => {
+      const progress = await tx.missionProgress.findUnique({
+        where: { userId_missionId: { userId, missionId } },
+        include: { mission: true },
       });
-    } else if (mission.rewardType === RewardType.POINTS) {
-      await this.loyaltyService.addPoints({
-        userId,
-        points: mission.rewardValue,
-        type: LoyaltyTransactionType.MISSION_COMPLETED,
-        referenceId: mission.id,
-      });
-      reward = { type: 'POINTS', points: mission.rewardValue };
-    } else {
-      this.logger.warn(
-        `[MissionsService] Tipo de recompensa ${mission.rewardType} não suportado para resgate.`,
-      );
-      throw new BadRequestException(
-        'Tipo de recompensa não suportado para resgate.',
-      );
-    }
 
-    await this.prisma.missionProgress.update({
-      where: { userId_missionId: { userId, missionId } },
-      data: { status: MissionStatus.CLAIMED, claimedAt: new Date() },
+      if (!progress)
+        throw new NotFoundException('Progresso da missão não encontrado.');
+      if (progress.status !== MissionStatus.COMPLETED || progress.claimedAt) {
+        throw new BadRequestException('Missão não está disponível para resgate.');
+      }
+
+      const mission = progress.mission; // Este 'mission' é do tipo Prisma.MissionGetPayload
+
+      this.logger.log(
+        `[TELEMETRY] mission_claim_attempt: { userId: ${userId}, missionId: ${missionId}, rewardType: ${mission.rewardType} }`,
+      );
+
+      let reward: any = null;
+      if (mission.rewardType === RewardType.COUPON) {
+        reward = await this.couponsService.issueCouponFromMission(
+          {
+            userId,
+            mission: {
+              id: mission.id,
+              code: mission.code,
+              title: mission.title,
+              rewardType: mission.rewardType as 'COUPON' | 'POINTS',
+              rewardValue: mission.rewardValue,
+              couponTemplateId: mission.couponTemplateId ?? null,
+            },
+            validityDays: 30,
+          },
+          { prisma: tx },
+        );
+      } else if (mission.rewardType === RewardType.POINTS) {
+        await this.loyaltyService.addPoints(
+          {
+            userId,
+            points: mission.rewardValue,
+            type: LoyaltyTransactionType.MISSION_COMPLETED,
+            referenceId: mission.id,
+          },
+          { prisma: tx },
+        );
+        reward = { type: 'POINTS', points: mission.rewardValue };
+      } else {
+        this.logger.warn(
+          `[MissionsService] Tipo de recompensa ${mission.rewardType} não suportado para resgate.`,
+        );
+        throw new BadRequestException(
+          'Tipo de recompensa não suportado para resgate.',
+        );
+      }
+
+      const now = new Date();
+      await tx.missionProgress.update({
+        where: { userId_missionId: { userId, missionId } },
+        data: { status: MissionStatus.CLAIMED, claimedAt: now },
+      });
+
+      try {
+        await this.missionsProgressService.pruneMissionEvents(
+          userId,
+          mission.eventName,
+          now,
+          { prisma: tx },
+        );
+      } catch (error) {
+        this.logger.warn(
+          `[MissionsService] Falha ao limpar MissionEvent após resgate de ${missionId}: ${
+            error instanceof Error ? error.message : 'unknown'
+          }`,
+        );
+      }
+
+      return { mission, reward };
     });
 
     this.logger.log(
