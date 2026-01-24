@@ -14,6 +14,7 @@ import { SafetyService } from './safety.service';
 import { ReportPanicDto } from './dto/report-panic.dto';
 import { ReportIncidentDto } from './dto/report-incident.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
+import { UpdatePanicLocationDto } from './dto/update-panic-location.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Assuming JWT guard
 import { RolesGuard } from '../auth/guards/roles.guard'; // Assuming Roles guard
 import { Roles } from '../auth/decorators/roles.decorator'; // Assuming Roles decorator
@@ -171,5 +172,28 @@ export class SafetyController {
     @Body() body: { status: string },
   ) {
     return this.safetyService.updatePanicAlertStatus(id, body?.status);
+  }
+
+  @Patch('panic-alerts/:id/location')
+  @Roles(UserRole.CLIENT, UserRole.PROVIDER)
+  @ApiOperation({
+    summary:
+      'Atualiza as coordenadas mais recentes de um alerta de pânico ativo',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Localização atualizada com sucesso.',
+  })
+  async updatePanicLocation(
+    @Param('id') id: string,
+    @Body() coords: UpdatePanicLocationDto,
+    @Req() req: RequestWithUser,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new NotFoundException('Dados de usuário ausentes na requisição.');
+    }
+    await this.safetyService.updatePanicLocation(id, userId, coords);
+    return { message: 'Localização do alerta de pânico atualizada.' };
   }
 }
