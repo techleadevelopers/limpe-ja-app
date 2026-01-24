@@ -4,7 +4,6 @@ import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   Dimensions,
-  Image,
   StyleSheet,
   Text,
   View,
@@ -42,7 +41,7 @@ const SecurityRef: React.FC<SecurityRefProps> = ({
         Animated.timing(msgShineAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
       ])
     ).start();
-  }, []);
+  }, [trackerIconPulseAnim, msgShineAnim]);
 
   // O estado de carregamento e o modo de input foram removidos, pois não são relevantes para este componente.
   // Se houver necessidade de um skeleton para este componente, ele precisaria ser reimplementado especificamente.
