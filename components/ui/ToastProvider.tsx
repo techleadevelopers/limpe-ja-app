@@ -84,7 +84,13 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({children
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) => g.dy < -10 || g.dy > 10,
       onPanResponderMove: (_, g) => { y.setValue(Math.min(g.dy, 0)); },
-      onPanResponderRelease: (_, g) => { (g.dy < -20) ? dismiss() : Animated.spring(y,{toValue:0,useNativeDriver:true}).start(); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy < -20) {
+          dismiss();
+        } else {
+          Animated.spring(y, { toValue: 0, useNativeDriver: true }).start();
+        }
+      },
     })
   ).current;
 
