@@ -1,7 +1,7 @@
 // src/missions/progress.service.ts
 import { Injectable, Logger } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import {
-  Prisma,
   MissionKind,
   MissionStatus,
   MissionAudience,
@@ -314,9 +314,76 @@ export class MissionsProgressService {
           lastEventAt: occurredAt,
         },
       });
+      try {
+        await this.pruneMissionEvents(userId, mission.eventName, occurredAt);
+      } catch (error) {
+        this.logger.warn(
+          `[MissionsProgressService] Falha ao limpar MissionEvent após missão ${missionId} COMPLETED: ${
+            error instanceof Error ? error.message : 'unknown'
+          }`,
+        );
+      }
     }
 
     return progress;
+  }
+
+  async pruneMissionEvents(
+    userId: string,
+    eventName: string,
+    before?: Date,
+    options?: { prisma?: Prisma.TransactionClient },
+  ): Promise<Prisma.BatchPayload> {
+    const prisma = options?.prisma ?? this.prisma;
+    return prisma.missionEvent.deleteMany({
+      where: {
+        userId,
+        name: eventName,
+        createdAt: { lte: before ?? new Date() },
+      },
+    });
+  }
+
+  async cleanupStaleMissionEvents({
+    olderThanHours = 24,
+    limit = 200,
+  }: { olderThanHours?: number; limit?: number } = {}): Promise<number> {
+    const cutoff = new Date(
+      Date.now() - (olderThanHours ?? 24) * 60 * 60 * 1000,
+    );
+    const progresses = await this.prisma.missionProgress.findMany({
+      where: {
+        status: { in: [MissionStatus.COMPLETED, MissionStatus.CLAIMED] },
+        lastEventAt: { lt: cutoff },
+      },
+      take: limit,
+      orderBy: { lastEventAt: 'asc' },
+      select: { userId: true, missionId: true, lastEventAt: true },
+    });
+    if (!progresses.length) return 0;
+    const missionIds = Array.from(
+      new Set(progresses.map((progress) => progress.missionId)),
+    );
+    const missions = await this.prisma.mission.findMany({
+      where: { id: { in: missionIds } },
+      select: { id: true, eventName: true },
+    });
+    const eventNameByMission = new Map(
+      missions.map((mission) => [mission.id, mission.eventName]),
+    );
+    let deleted = 0;
+    for (const progress of progresses) {
+      const eventName = eventNameByMission.get(progress.missionId);
+      if (!eventName) continue;
+      const cutoffForProgress = progress.lastEventAt ?? cutoff;
+      const result = await this.pruneMissionEvents(
+        progress.userId,
+        eventName,
+        cutoffForProgress,
+      );
+      deleted += result.count;
+    }
+    return deleted;
   }
 
   // =========================
