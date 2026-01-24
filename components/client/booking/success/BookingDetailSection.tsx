@@ -51,7 +51,7 @@ export default function BookingDetailSection({
     entryAnimation.start();
 
     return () => entryAnimation.stop(); // Cleanup da animação
-  }, []);
+  }, [fadeAnim, translateYAnim, scaleAnim]);
 
   return (
     <Animated.View
