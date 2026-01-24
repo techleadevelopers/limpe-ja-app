@@ -1,6 +1,6 @@
 {
   "root": "C:/Users/Paulo/Desktop/relax-app/app",
-  "files_scanned": 108,
+  "files_scanned": 116,
   "pages": [
     {
       "route": "/",
@@ -237,6 +237,15 @@
       "has_group": false
     },
     {
+      "route": "/provider/promotions",
+      "file": "provider/promotions/index.tsx",
+      "segments": [
+        "provider",
+        "promotions"
+      ],
+      "has_group": false
+    },
+    {
       "route": "/provider/reviews",
       "file": "provider/reviews/index.tsx",
       "segments": [
@@ -260,6 +269,15 @@
       "segments": [
         "provider",
         "services"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/support",
+      "file": "provider/support/index.tsx",
+      "segments": [
+        "provider",
+        "support"
       ],
       "has_group": false
     },
@@ -625,6 +643,15 @@
       "has_group": false
     },
     {
+      "route": "/provider/promotions",
+      "file": "provider/promotions/index.tsx",
+      "segments": [
+        "provider",
+        "promotions"
+      ],
+      "has_group": false
+    },
+    {
       "route": "/provider/reviews",
       "file": "provider/reviews/index.tsx",
       "segments": [
@@ -648,6 +675,15 @@
       "segments": [
         "provider",
         "services"
+      ],
+      "has_group": false
+    },
+    {
+      "route": "/provider/support",
+      "file": "provider/support/index.tsx",
+      "segments": [
+        "provider",
+        "support"
       ],
       "has_group": false
     },
@@ -681,11 +717,31 @@
         },
         {
           "type": "expr",
-          "value": "/^http/"
+          "value": "\"/common/safety/panic\" as any"
         },
         {
           "type": "expr",
-          "value": "'/auth/client-register' as any"
+          "value": "CLIENT_ROUTES.BOOKING_DETAILS(bookingId"
+        },
+        {
+          "type": "expr",
+          "value": "{\n          pathname: CLIENT_ROUTES.BOOKING_DETAILS(bookingId"
+        },
+        {
+          "type": "expr",
+          "value": "{\n          pathname: CLIENT_ROUTES.MISSIONS"
+        },
+        {
+          "type": "expr",
+          "value": "{\n          pathname: CLIENT_ROUTES.BOOKING_DETAILS(bookingId"
+        },
+        {
+          "type": "expr",
+          "value": "{\n        pathname: \"/client/bookings/success\""
+        },
+        {
+          "type": "expr",
+          "value": "\"/auth/client-register\" as any"
         },
         {
           "type": "expr",
@@ -725,60 +781,72 @@
           "value": "/\\D/g"
         },
         {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
+          "type": "literal",
+          "value": "address."
         },
         {
           "type": "literal",
-          "value": "/client/explore"
+          "value": "_"
         },
         {
           "type": "expr",
           "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "TERMS_ROUTE as any"
+        },
+        {
+          "type": "expr",
+          "value": "TERMS_ROUTE as any"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "CLIENT_ROUTES.EXPLORE"
         },
         {
           "type": "expr",
@@ -807,7 +875,7 @@
         },
         {
           "type": "expr",
-          "value": "targetRoute as any"
+          "value": "targetRoute"
         }
       ]
     },
@@ -816,11 +884,20 @@
       "calls": [
         {
           "type": "expr",
-          "value": "'/client/explore' as any"
+          "value": "CLIENT_ROUTES.EXPLORE"
         },
         {
+          "type": "expr",
+          "value": "AUTH_ROUTES.PROVIDER_REGISTER"
+        }
+      ]
+    },
+    {
+      "rel": "auth/reset-password.tsx",
+      "calls": [
+        {
           "type": "literal",
-          "value": "/auth/provider-register"
+          "value": "/auth/login"
         }
       ]
     },
@@ -829,15 +906,15 @@
       "calls": [
         {
           "type": "expr",
-          "value": "{ start: '08:00'"
+          "value": "{\n              start: buildDateTimeForSlot(baseDate"
         },
         {
           "type": "expr",
-          "value": "{ start: '14:00'"
+          "value": "{\n              start: buildDateTimeForSlot(baseDate"
         },
         {
           "type": "expr",
-          "value": "nextPath as any"
+          "value": "nextPath"
         }
       ]
     },
@@ -845,52 +922,60 @@
       "rel": "auth/provider-register/index.tsx",
       "calls": [
         {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
-        },
-        {
-          "type": "expr",
-          "value": "/\\D/g"
+          "type": "literal",
+          "value": "address."
         },
         {
           "type": "literal",
-          "value": "/auth/provider-register/service-details"
+          "value": "_"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "/\\D/g"
+        },
+        {
+          "type": "expr",
+          "value": "AUTH_ROUTES.PROVIDER_SERVICE_DETAILS"
         },
         {
           "type": "expr",
@@ -958,8 +1043,8 @@
           "value": "/\\D/g"
         },
         {
-          "type": "literal",
-          "value": "/auth/provider-register/service-details"
+          "type": "expr",
+          "value": "AUTH_ROUTES.PROVIDER_SERVICE_DETAILS"
         },
         {
           "type": "expr",
@@ -1015,8 +1100,8 @@
           "value": "'"
         },
         {
-          "type": "literal",
-          "value": "/auth/provider-register"
+          "type": "expr",
+          "value": "AUTH_ROUTES.PROVIDER_REGISTER"
         },
         {
           "type": "expr",
@@ -1024,15 +1109,15 @@
         },
         {
           "type": "expr",
-          "value": "{ start: '08:00'"
+          "value": "{\n                start: buildDateTimeForSlot(baseDate"
         },
         {
           "type": "expr",
-          "value": "{ start: '14:00'"
+          "value": "{\n                start: buildDateTimeForSlot(baseDate"
         },
         {
           "type": "expr",
-          "value": "'/auth/provider-register/verify-account' as any"
+          "value": "AUTH_ROUTES.PROVIDER_VERIFY_ACCOUNT"
         },
         {
           "type": "expr",
@@ -1060,8 +1145,8 @@
           "value": "PROVIDER_ROUTES.DASHBOARD"
         },
         {
-          "type": "literal",
-          "value": "/help"
+          "type": "expr",
+          "value": "COMMON_ROUTES.HELP"
         }
       ]
     },
@@ -1083,6 +1168,10 @@
         },
         {
           "type": "expr",
+          "value": "`/client/bookings/${meta.bookingId}` as any"
+        },
+        {
+          "type": "expr",
           "value": "'/client/explore/todas-categorias' as any"
         },
         {
@@ -1096,11 +1185,15 @@
       "calls": [
         {
           "type": "expr",
-          "value": "{ dateString"
+          "value": "normalizedTime"
         },
         {
           "type": "expr",
-          "value": "availableTimes[i]"
+          "value": "'/common/terms-of-service' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/common/terms-of-service' as any"
         },
         {
           "type": "expr",
@@ -1120,7 +1213,7 @@
         },
         {
           "type": "expr",
-          "value": "(async (dayOffset: number"
+          "value": "'/client/explore/security' as any"
         }
       ]
     },
@@ -1145,7 +1238,7 @@
         },
         {
           "type": "expr",
-          "value": "{\n      pathname: '/client/messages/[chatId]'"
+          "value": "{\n\n        pathname: CLIENT_ROUTES.CHAT(conversation.chatId"
         },
         {
           "type": "expr",
@@ -1153,7 +1246,7 @@
         },
         {
           "type": "expr",
-          "value": "{\n        pathname: '/client/bookings/schedule-service'"
+          "value": "{\n\n        pathname: '/client/bookings/schedule-service'"
         }
       ]
     },
@@ -1162,19 +1255,15 @@
       "calls": [
         {
           "type": "expr",
-          "value": "{\n                  pathname: '/common/feedback/[targetId]'"
+          "value": "{\n        pathname: CLIENT_ROUTES.CHAT(conversation.chatId"
         },
         {
           "type": "expr",
-          "value": "{\n      pathname: '/client/messages'"
+          "value": "{\n      pathname: `/common/feedback/${booking.id}`"
         },
         {
-          "type": "expr",
-          "value": "{\n      pathname: '/common/feedback/[targetId]'"
-        },
-        {
-          "type": "expr",
-          "value": "{\n      pathname: '/client/explore/[providerId]'"
+          "type": "literal",
+          "value": "/client/explore/${booking.providerId}"
         },
         {
           "type": "expr",
@@ -1186,8 +1275,8 @@
       "rel": "client/category/[categoryId].tsx",
       "calls": [
         {
-          "type": "expr",
-          "value": "{\n      pathname: '/client/explore/[providerId]'"
+          "type": "literal",
+          "value": "/client/explore/${providerId}"
         }
       ]
     },
@@ -1196,13 +1285,21 @@
       "calls": [
         {
           "type": "expr",
-          "value": "{ pathname: '/client/bookings/schedule-service'"
+          "value": "{ pathname: '/client/index'"
         }
       ]
     },
     {
       "rel": "client/explore/index.tsx",
       "calls": [
+        {
+          "type": "expr",
+          "value": "'/client/explore/todas-categorias' as any"
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore/todas-categorias' as any"
+        },
         {
           "type": "expr",
           "value": "fallbackMessage"
@@ -1229,7 +1326,7 @@
         },
         {
           "type": "expr",
-          "value": "{\n      pathname: '/common/feedback/[targetId]'"
+          "value": "{\n      pathname: `/common/feedback/${pendingReview.bookingId}`"
         },
         {
           "type": "expr",
@@ -1240,20 +1337,8 @@
           "value": "it"
         },
         {
-          "type": "expr",
-          "value": "{\n        pathname: CLIENT_ROUTES.SCHEDULE_SERVICE"
-        },
-        {
           "type": "literal",
           "value": "/dev-panel"
-        },
-        {
-          "type": "expr",
-          "value": "'/client/explore/todas-categorias' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/client/explore/todas-categorias' as any"
         },
         {
           "type": "expr",
@@ -1269,8 +1354,8 @@
       "rel": "client/explore/resultados-busca.tsx",
       "calls": [
         {
-          "type": "expr",
-          "value": "{\n      pathname: '/client/explore/[providerId]'"
+          "type": "literal",
+          "value": "/client/explore/${providerId}"
         }
       ]
     },
@@ -1296,14 +1381,22 @@
       "rel": "client/explore/todos-prestadores-proximos.tsx",
       "calls": [
         {
-          "type": "expr",
-          "value": "{\n      pathname: '/client/explore/[providerId]'"
+          "type": "literal",
+          "value": "/client/explore/${providerId}"
         }
       ]
     },
     {
       "rel": "client/explore/[providerId].tsx",
       "calls": [
+        {
+          "type": "literal",
+          "value": "."
+        },
+        {
+          "type": "expr",
+          "value": "'/client/explore' as any"
+        },
         {
           "type": "expr",
           "value": "'/auth/client-register' as any"
@@ -1314,19 +1407,11 @@
         },
         {
           "type": "expr",
-          "value": "{\n        pathname: '/client/messages/[chatId]'"
-        },
-        {
-          "type": "literal",
-          "value": "."
+          "value": "{\n          pathname: '/client/messages/[bookingId]'"
         },
         {
           "type": "expr",
           "value": "{\n        pathname: '/common/feedback/[targetId]'"
-        },
-        {
-          "type": "literal",
-          "value": "/h"
         },
         {
           "type": "expr",
@@ -1348,20 +1433,11 @@
       ]
     },
     {
-      "rel": "client/explore/security/index.tsx",
-      "calls": [
-        {
-          "type": "expr",
-          "value": "'/common/safety' as any"
-        }
-      ]
-    },
-    {
       "rel": "client/messages/index.tsx",
       "calls": [
         {
           "type": "expr",
-          "value": "{\n      pathname: '/client/messages/[chatId]'"
+          "value": "{\n      pathname: `/client/messages/${item.id}`"
         }
       ]
     },
@@ -1446,6 +1522,15 @@
         {
           "type": "literal",
           "value": "/client/explore"
+        }
+      ]
+    },
+    {
+      "rel": "client/notifications/index.tsx",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "targetBooking as any"
         }
       ]
     },
@@ -1669,6 +1754,14 @@
       "calls": [
         {
           "type": "expr",
+          "value": "/\\s+/g"
+        },
+        {
+          "type": "expr",
+          "value": "'"
+        },
+        {
+          "type": "expr",
           "value": "/_/g"
         }
       ]
@@ -1704,132 +1797,11 @@
         },
         {
           "type": "expr",
+          "value": "'/provider/messages?filter=support' as any"
+        },
+        {
+          "type": "expr",
           "value": "`/common/support/${ticket.id}` as any"
-        }
-      ]
-    },
-    {
-      "rel": "provider/dashboard.tsx",
-      "calls": [
-        {
-          "type": "literal",
-          "value": "."
-        },
-        {
-          "type": "literal",
-          "value": "."
-        },
-        {
-          "type": "expr",
-          "value": "PROVIDER_ROUTES.SERVICES_LIST as any"
-        },
-        {
-          "type": "expr",
-          "value": "PROVIDER_ROUTES.MESSAGES_LIST as any"
-        },
-        {
-          "type": "expr",
-          "value": "(PROVIDER_ROUTES.SERVICES_LIST + '?filter=requests'"
-        },
-        {
-          "type": "expr",
-          "value": "(PROVIDER_ROUTES.SERVICES_LIST + '?filter=upcoming'"
-        },
-        {
-          "type": "expr",
-          "value": "(PROVIDER_ROUTES.SERVICES_LIST + '?filter=completed'"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/notifications' as any"
-        },
-        {
-          "type": "expr",
-          "value": "PROVIDER_ROUTES.REVIEWS as any"
-        },
-        {
-          "type": "expr",
-          "value": "PROVIDER_ROUTES.EARNINGS as any"
-        },
-        {
-          "type": "expr",
-          "value": "PROVIDER_ROUTES.WITHDRAW as any"
-        },
-        {
-          "type": "expr",
-          "value": "{ pathname: '/provider/messages/[chatId]'"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/profile' as any"
-        },
-        {
-          "type": "literal",
-          "value": "/dev-panel"
-        },
-        {
-          "type": "expr",
-          "value": "PROVIDER_ROUTES.EARNINGS as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule' as any"
-        },
-        {
-          "type": "expr",
-          "value": "`/provider/active-booking/${item.id}` as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule' as any"
-        },
-        {
-          "type": "expr",
-          "value": "`/provider/active-booking/${item.id}` as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/profile/edit-services' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/profile/edit-services' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=today-morning' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=today-morning' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=block-today' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=block-today' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=repeat-week' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=repeat-week' as any"
         }
       ]
     },
@@ -1866,6 +1838,10 @@
       "rel": "provider/index.tsx",
       "calls": [
         {
+          "type": "expr",
+          "value": "'/provider/schedule/manage-availability' as any"
+        },
+        {
           "type": "literal",
           "value": "."
         },
@@ -1911,15 +1887,15 @@
         },
         {
           "type": "expr",
-          "value": "{ pathname: '/provider/messages/[chatId]'"
+          "value": "{ pathname: `/provider/messages/${clientId}`"
         },
         {
           "type": "expr",
-          "value": "'/provider/profile' as any"
+          "value": "'/provider/schedule' as any"
         },
         {
-          "type": "literal",
-          "value": "/dev-panel"
+          "type": "expr",
+          "value": "`/provider/active-booking/${item.id}` as any"
         },
         {
           "type": "expr",
@@ -1930,12 +1906,8 @@
           "value": "'/provider/schedule/manage-availability' as any"
         },
         {
-          "type": "expr",
-          "value": "'/provider/schedule' as any"
-        },
-        {
-          "type": "expr",
-          "value": "`/provider/active-booking/${item.id}` as any"
+          "type": "literal",
+          "value": "/dev-panel"
         },
         {
           "type": "expr",
@@ -1955,35 +1927,16 @@
         },
         {
           "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=today-morning' as any"
-        },
+          "value": "`/provider/active-booking/${floatingServiceBooking.id}` as any"
+        }
+      ]
+    },
+    {
+      "rel": "provider/active-booking/success.tsx",
+      "calls": [
         {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=today-morning' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=tomorrow-afternoon' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=block-today' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=block-today' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=repeat-week' as any"
-        },
-        {
-          "type": "expr",
-          "value": "'/provider/schedule/manage-availability?preset=repeat-week' as any"
+          "type": "literal",
+          "value": "/provider"
         }
       ]
     },
@@ -2001,7 +1954,7 @@
       "calls": [
         {
           "type": "expr",
-          "value": "{\n      pathname: '/provider/messages/[chatId]'"
+          "value": "{\n      pathname: `/provider/messages/${item.id}`"
         }
       ]
     },
@@ -2033,18 +1986,6 @@
         {
           "type": "expr",
           "value": "/\\B(?=(\\d{3}"
-        },
-        {
-          "type": "literal",
-          "value": "."
-        },
-        {
-          "type": "literal",
-          "value": "."
-        },
-        {
-          "type": "literal",
-          "value": "."
         },
         {
           "type": "literal",
@@ -2125,12 +2066,12 @@
       "rel": "provider/reviews/index.tsx",
       "calls": [
         {
-          "type": "expr",
-          "value": "{ pathname: '/provider/active-booking/[bookingId]'"
+          "type": "literal",
+          "value": "/provider/active-booking/${bookingId}"
         },
         {
           "type": "expr",
-          "value": "{ pathname: '/provider/messages/[chatId]'"
+          "value": "{ pathname: `/provider/messages/${clientId}`"
         }
       ]
     },
@@ -2138,24 +2079,12 @@
       "rel": "provider/schedule/index.tsx",
       "calls": [
         {
-          "type": "expr",
-          "value": "PROVIDER_ROUTES.SERVICE_DETAILS(detailId"
+          "type": "literal",
+          "value": "${PROVIDER_ROUTES.ACTIVE_BOOKING}/${item.booking.id}"
         },
         {
           "type": "expr",
-          "value": "`${PROVIDER_ROUTES.MANAGE_AVAILABILITY}?preset=${presetParam}` as any"
-        },
-        {
-          "type": "expr",
-          "value": "PROVIDER_ROUTES.MANAGE_AVAILABILITY as any"
-        },
-        {
-          "type": "expr",
-          "value": "PROVIDER_ROUTES.MANAGE_AVAILABILITY as any"
-        },
-        {
-          "type": "expr",
-          "value": "`${PROVIDER_ROUTES.MANAGE_AVAILABILITY}?preset=tomorrow-afternoon` as any"
+          "value": "PROVIDER_ROUTES.MANAGE_AVAILABILITY"
         }
       ]
     },
@@ -2167,20 +2096,24 @@
           "value": "${hour}:${minute}"
         },
         {
+          "type": "literal",
+          "value": "${hh}:00"
+        },
+        {
+          "type": "expr",
+          "value": "`${String(hour"
+        },
+        {
           "type": "expr",
           "value": "minutesToSlot(nextMinutes"
         },
         {
-          "type": "literal",
-          "value": "${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}"
+          "type": "expr",
+          "value": "{\n        slot"
         },
         {
           "type": "expr",
-          "value": "{\n          startTime: currentBlockStart"
-        },
-        {
-          "type": "expr",
-          "value": "{\n            startTime: currentBlockStart"
+          "value": "{\n        startTime: `${hour.toString("
         },
         {
           "type": "literal",
@@ -2189,10 +2122,6 @@
         {
           "type": "expr",
           "value": "{\n              dayOfWeek: day.dayOfWeek"
-        },
-        {
-          "type": "literal",
-          "value": "${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}"
         },
         {
           "type": "literal",
@@ -2282,6 +2211,27 @@
           "value": "'"
         }
       ]
+    },
+    {
+      "rel": "_shared/utils/errors.ts",
+      "calls": [
+        {
+          "type": "expr",
+          "value": "String(body.error"
+        },
+        {
+          "type": "expr",
+          "value": "String(body.code"
+        },
+        {
+          "type": "expr",
+          "value": "String(body.message"
+        },
+        {
+          "type": "expr",
+          "value": "String(axiosError.message"
+        }
+      ]
     }
   ],
   "nav_literal_targets": {
@@ -2292,9 +2242,13 @@
       "client/ranking/index.tsx",
       "common/safety/defense.tsx"
     ],
+    "${PROVIDER_ROUTES.ACTIVE_BOOKING}/${item.booking.id}": [
+      "provider/schedule/index.tsx"
+    ],
+    "${hh}:00": [
+      "provider/schedule/manage-availability.tsx"
+    ],
     "${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}": [
-      "provider/schedule/manage-availability.tsx",
-      "provider/schedule/manage-availability.tsx",
       "provider/schedule/manage-availability.tsx"
     ],
     "${hour}:${minute}": [
@@ -2307,25 +2261,15 @@
     ".": [
       "client/explore/[providerId].tsx",
       "client/ofertas/[ofertaId].tsx",
-      "provider/dashboard.tsx",
-      "provider/dashboard.tsx",
       "provider/index.tsx",
       "provider/index.tsx",
-      "provider/profile/edit-services.tsx",
-      "provider/profile/edit-services.tsx",
-      "provider/profile/edit-services.tsx",
       "provider/profile/edit-services.tsx",
       "provider/services/index.tsx",
       "provider/services/[serviceId].tsx",
       "provider/withdraw/index.tsx"
     ],
-    "/auth/provider-register": [
-      "auth/register-options.tsx",
-      "auth/provider-register/service-details.tsx"
-    ],
-    "/auth/provider-register/service-details": [
-      "auth/provider-register/index.tsx",
-      "auth/provider-register/personal-details.tsx"
+    "/auth/login": [
+      "auth/reset-password.tsx"
     ],
     "/bookings/${booking.id}": [
       "client/subscriptions/[subscriptionId].tsx"
@@ -2341,7 +2285,6 @@
       "client/wallet/cashback.tsx"
     ],
     "/client/explore": [
-      "auth/client-register.tsx",
       "client/bookings/schedule-service.tsx",
       "client/bookings/schedule-service.tsx",
       "client/bookings/schedule-service.tsx",
@@ -2349,8 +2292,16 @@
       "client/missions/index.tsx",
       "client/missions/missions.tsx"
     ],
+    "/client/explore/${booking.providerId}": [
+      "client/bookings/[bookingId].tsx"
+    ],
     "/client/explore/${item.id}": [
       "client/explore/search-results.tsx"
+    ],
+    "/client/explore/${providerId}": [
+      "client/category/[categoryId].tsx",
+      "client/explore/resultados-busca.tsx",
+      "client/explore/todos-prestadores-proximos.tsx"
     ],
     "/client/missions": [
       "client/metrics/index.tsx",
@@ -2371,23 +2322,30 @@
     ],
     "/dev-panel": [
       "client/explore/index.tsx",
-      "provider/dashboard.tsx",
       "provider/index.tsx"
     ],
     "/earnings": [
       "provider/withdraw/index.tsx"
     ],
-    "/h": [
-      "client/explore/[providerId].tsx"
+    "/provider": [
+      "provider/active-booking/success.tsx"
     ],
-    "/help": [
-      "auth/provider-register/verify-account.tsx"
+    "/provider/active-booking/${bookingId}": [
+      "provider/reviews/index.tsx"
     ],
     "/services": [
       "provider/withdraw/index.tsx"
     ],
     "/subscriptions/${item.id}": [
       "client/subscriptions/index.tsx"
+    ],
+    "_": [
+      "auth/client-register.tsx",
+      "auth/provider-register/index.tsx"
+    ],
+    "address.": [
+      "auth/client-register.tsx",
+      "auth/provider-register/index.tsx"
     ],
     "home": [
       "common/feedback/[targetId].tsx"
