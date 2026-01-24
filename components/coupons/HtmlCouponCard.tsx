@@ -12,18 +12,9 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    useColorScheme,
     View,
 } from 'react-native';
-import Colors from '../../constants/Colors';
 import Toast from '../Toast';
-
-// Helper hook to get theme colors
-function useTheme() {
-  const scheme = useColorScheme?.() || 'light';
-  const theme = (Colors as any)[scheme] || (Colors as any).light;
-  return theme as typeof Colors.light;
-}
 
 interface HtmlCouponCardProps {
   code: string;
@@ -47,7 +38,6 @@ export const HtmlCouponCard: React.FC<HtmlCouponCardProps> = ({
   isVisible,
 }) => {
   const [copyButtonText, setCopyButtonText] = useState('COPIAR');
-  const theme = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -73,7 +63,7 @@ export const HtmlCouponCard: React.FC<HtmlCouponCardProps> = ({
       fadeAnim.setValue(0);
       slideAnim.setValue(30);
     }
-  }, [isVisible]);
+  }, [isVisible, fadeAnim, slideAnim]);
 
   // Pulso luminoso no botão principal
   useEffect(() => {
@@ -93,7 +83,7 @@ export const HtmlCouponCard: React.FC<HtmlCouponCardProps> = ({
         }),
       ])
     ).start();
-  }, []);
+  }, [pulseAnim]);
 
   const copyToClipboard = async () => {
     try {
@@ -105,7 +95,7 @@ export const HtmlCouponCard: React.FC<HtmlCouponCardProps> = ({
         text2: 'Cole no campo de cupom para usar.',
       });
       setTimeout(() => setCopyButtonText('COPIAR'), 3000);
-    } catch (e) {
+    } catch {
       Toast.show({ type: 'error', text1: 'Erro', text2: 'Não foi possível copiar o código.' });
     }
   };
