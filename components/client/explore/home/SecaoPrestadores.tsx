@@ -1,10 +1,8 @@
 // app/client/explore/components/home/SecaoPrestadores.tsx
 
-import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Platform } from 'react-native';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 import { normalizeProviderAvailability } from './providerAvailability';
 
@@ -27,7 +25,6 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
   horizontal = false,
   renderItem,
 }) => {
-  const arrowAnim = useRef(new Animated.Value(0)).current;
 
   const safeData = useMemo(
     () =>
@@ -47,24 +44,6 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
     [data],
   );
 
-  const onPressInViewAll = () => {
-    Animated.spring(arrowAnim, {
-      toValue: 5,
-      useNativeDriver: true,
-      friction: 5,
-      tension: 80,
-    }).start();
-  };
-
-  const onPressOutViewAll = () => {
-    Animated.spring(arrowAnim, {
-      toValue: 0,
-      friction: 5,
-      tension: 80,
-      useNativeDriver: true,
-    }).start();
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -73,8 +52,6 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
           <TouchableOpacity
             onPress={onVerTudoPress}
             style={styles.viewAllButton}
-            onPressIn={onPressInViewAll}
-            onPressOut={onPressOutViewAll}
           >
            
           </TouchableOpacity>
