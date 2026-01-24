@@ -1,11 +1,20 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { VerificationStatus } from '@prisma/client';
-import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AdminProviderQueryDto {
   @ApiPropertyOptional({
-    description: 'Termo livre para busca em nome, email ou especialidade do provedor.',
+    description:
+      'Termo livre para busca em nome, email ou especialidade do provedor.',
     example: 'limpeza',
   })
   @IsOptional()
@@ -21,7 +30,8 @@ export class AdminProviderQueryDto {
   serviceId?: string;
 
   @ApiPropertyOptional({
-    description: 'Categoria textual (nome de serviA§o) para filtrar provedores.',
+    description:
+      'Categoria textual (nome de serviA§o) para filtrar provedores.',
     example: 'Limpeza comercial',
   })
   @IsOptional()
