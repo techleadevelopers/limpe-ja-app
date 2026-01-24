@@ -6,9 +6,10 @@ import { WhatsappWebhookController } from './whatsapp.webhook.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { I18nModule } from '../common/i18n/i18n.module';
+import { ServicesModule } from '../services/services.module';
 
 @Module({
-  imports: [PrismaModule, forwardRef(() => AuthModule)],
+  imports: [PrismaModule, forwardRef(() => AuthModule), ServicesModule],
   controllers: [NotificationsController, WhatsappWebhookController],
   providers: [
     NotificationsService,
