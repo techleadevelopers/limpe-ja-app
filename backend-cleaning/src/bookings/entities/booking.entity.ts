@@ -65,6 +65,7 @@ export class BookingEntity implements PrismaBooking {
 
   // CORREÇÃO: Adicionado subscriptionId e couponId
   subscriptionId: string | null;
+  periodId: string | null;
   couponId: string | null;
   discountAmount: Prisma.Decimal | null; // <<-- ADICIONADO: Para corresponder a PrismaBooking
 
@@ -138,6 +139,7 @@ export class BookingEntity implements PrismaBooking {
     // CORREÇÃO: Inicializar subscriptionId e couponId
     this.subscriptionId =
       partial.subscriptionId === undefined ? null : partial.subscriptionId;
+    this.periodId = partial.periodId === undefined ? null : partial.periodId;
     this.couponId = partial.couponId === undefined ? null : partial.couponId;
 
     // Auditoria: parse de datas e FKs
