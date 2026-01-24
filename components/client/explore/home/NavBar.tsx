@@ -1,11 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import {
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
   Animated,
-  LayoutChangeEvent,
   Platform,
   Pressable,
 } from 'react-native';
@@ -34,13 +32,9 @@ const NavBar: React.FC = () => {
 
   const navItemAnims = useRef(navItems.map(() => new Animated.Value(1))).current;
   const rippleAnims = useRef(navItems.map(() => new Animated.Value(0))).current;
-  const [navBarWidth, setNavBarWidth] = useState(0);
 
   const CURRENT_COLOR = theme.primary || '#6198cebd';
   const INACTIVE_COLOR = '#8A8A8E';
-
-  const onLayout = (event: LayoutChangeEvent) =>
-    setNavBarWidth(event.nativeEvent.layout.width);
 
   const onPressIn = (index: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -78,7 +72,7 @@ const NavBar: React.FC = () => {
   const navigateTo = (path: string) => router.push(path as any);
 
   return (
-    <View style={styles.navBar} onLayout={onLayout}>
+    <View style={styles.navBar}>
       {/* BACKGROUND LUXO */}
       <BlurView
         intensity={Platform.OS === 'ios' ? 40 : 65}
