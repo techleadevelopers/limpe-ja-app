@@ -13,14 +13,14 @@ import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 
-import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH } from '../../constants/appStyles';
+import { AppColors, AppDurations, AppOffsets, AppTypography, SCREEN_WIDTH } from '../../constants/appStyles';
 
 interface ReturnCouponCardProps {
   code: string;
   title: string;
   subtitle?: string;
-  expiresAt?: Date; // <<-- DEVE SER 'Date | undefined'
-  onRebookNow: (code: string) => void; // <<-- DEVE SER 'onRebookNow'
+  expiresAt?: string | Date | null;
+  onRebookNow: (code: string) => void;
 }
 
 export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
@@ -64,7 +64,7 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
         Animated.timing(scaleButtonAnim, { toValue: 0.96, duration: AppDurations.xs, useNativeDriver: true }),
         Animated.spring(scaleButtonAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
       ]).start();
-    } catch (error) {
+    } catch {
       Toast.show({
         type: 'error',
         text1: t('common.error'),
@@ -80,8 +80,8 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
     ]).start(() => onRebookNow(code));
   }, [code, onRebookNow, scaleButtonAnim]);
 
-  // Calcula os dias restantes para expiração
-  const expiresInDays = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+  const expiresDate = expiresAt ? (expiresAt instanceof Date ? expiresAt : new Date(expiresAt)) : null;
+  const expiresInDays = expiresDate ? Math.ceil((expiresDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
 
   // Definindo as cores do gradiente para um azul claro e limpo
   // Usando AppColors.primaryInteractive como base e um tom mais claro
@@ -141,7 +141,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: -10,
     marginBottom: -5,
-    ,
   },
   gradientBackground: {
     padding: 20,
