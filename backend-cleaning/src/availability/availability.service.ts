@@ -5,6 +5,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma, Availability, BookingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { GetAvailabilityDto } from './dto/get-availability.dto';
@@ -13,7 +14,6 @@ import {
   getSaoPauloDayRangeFromTimestamp,
   SAO_PAULO_TIMEZONE_OFFSET_MS,
 } from './timezone';
-import { Availability, BookingStatus } from '@prisma/client';
 import {
   formatScheduledTime,
   scheduledTimeToMinutes,
@@ -173,12 +173,14 @@ export class AvailabilityService {
     const bookingsOnDate = await this.prisma.booking.findMany({
       where: {
         providerId: providerId,
-        scheduledDate: {
-          gte: rangeStart,
-          lte: rangeEnd,
-        },
         status: {
           in: BLOCKED_BOOKING_STATUSES,
+        },
+        scheduledStart: {
+          lt: rangeEnd,
+        },
+        scheduledEnd: {
+          gt: rangeStart,
         },
       },
       select: {
@@ -429,14 +431,16 @@ export class AvailabilityService {
     providerId: string,
     clientId: string,
     start: Date,
+    options?: { prisma?: Prisma.TransactionClient },
   ): Promise<void> {
+    const db = options?.prisma ?? this.prisma;
     const slotStart = start instanceof Date ? start : new Date(start);
     if (Number.isNaN(slotStart.getTime())) {
       throw new BadRequestException('Horário inválido.');
     }
 
     const windowStart = new Date(Date.now() - SLOT_HOLD_STRIKE_WINDOW_MS);
-    const strikeCount = await this.prisma.slotHoldStrike.count({
+    const strikeCount = await db.slotHoldStrike.count({
       where: {
         clientId,
         providerId,
