@@ -14,6 +14,15 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 import * as Sentry from '@sentry/node'; // NEW: Import Sentry (conceptual, requires setup)
 import type { SeverityLevel } from '@sentry/core';
 import axios from 'axios';
+import { WhatsappService } from '../services/whatsappService';
+
+type WhatsappFallbackContext = {
+  bookingId?: string;
+  type?: string;
+  kind?: string;
+  title?: string;
+  message?: string;
+};
 
 @Injectable()
 export class NotificationsService {
@@ -35,6 +44,7 @@ export class NotificationsService {
     private prisma: PrismaService,
     private readonly i18n: I18nService,
     private readonly configService: ConfigService,
+    private readonly whatsappService: WhatsappService,
   ) {
     this.dedupeWindowSeconds = this.configService.get<number>(
       'notifications.dedupeWindowSeconds',
@@ -75,6 +85,7 @@ export class NotificationsService {
 
     const dedupeKey = dto.dedupeKey ?? this.buildDedupeKey(dto);
     const ttlSeconds = dto.ttlSeconds ?? this.defaultAppEventTtl;
+    const finalPriority = this.resolveNotificationPriority(dto);
 
     if (dedupeKey) {
       const since = new Date(Date.now() - this.dedupeWindowSeconds * 1000);
@@ -108,6 +119,7 @@ export class NotificationsService {
           dedupeKey,
           payload: (dto.payload as any) ?? null,
           ttlSeconds,
+          priority: finalPriority,
         },
       });
       const appEvent = this.toAppEvent(notification);
@@ -171,7 +183,22 @@ export class NotificationsService {
     if (!reference) {
       return null;
     }
-    return `${dto.type}:${reference}:${dto.userId}`;
+    return `${dto.userId}:${dto.type}:${reference}`;
+  }
+
+  private resolveNotificationPriority(dto: CreateNotificationDto): number {
+    if (typeof dto.priority === 'number' && Number.isFinite(dto.priority)) {
+      return dto.priority;
+    }
+    const normalized =
+      `${dto.type ?? ''} ${dto.category ?? ''}`.toUpperCase();
+    if (normalized.includes('PAYMENT') || normalized.includes('SECURITY')) {
+      return 1;
+    }
+    if (normalized.includes('MISSION')) {
+      return 3;
+    }
+    return 2;
   }
 
   private extractReferenceFromPayload(
@@ -370,33 +397,43 @@ export class NotificationsService {
    * @param userId ID do usuário (para validação de propriedade).
    */
   /**
-   * Envia uma notifica��o push para um usu�rio (FCM legado se dispon�vel; fallback simulado).
+   * Envia uma notificacao push para um usuario com fallback opcional via WhatsApp.
    */
   async sendPushNotification(
     userId: string,
     title: string,
     body: string,
     data?: Record<string, unknown>,
-  ): Promise<void> {
-    this.logger.log(
-      `Iniciando envio de notificação push para userId: ${userId}`,
-    );
+    options?: {
+      priority?: 'default' | 'high';
+      channelId?: string;
+      whatsappFallback?: WhatsappFallbackContext;
+    },
+  ): Promise<boolean> {
+    const fallbackContext = options?.whatsappFallback;
+    this.logger.log(`Iniciando envio de notificacao push para userId: ${userId}`);
+
     try {
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         select: { fcmToken: true },
       });
+
       if (!user?.fcmToken) {
         this.logger.warn(
-          `Sem fcmToken para ${userId}; push será simulado com notif DB.`,
+          `Sem fcmToken para ${userId}; push sera simulado com notif DB.`,
         );
         Sentry.addBreadcrumb({
           message: 'Token ausente ao enviar push',
           data: { userId, hasToken: false },
           level: 'warning' as SeverityLevel,
         });
-        return;
+        if (fallbackContext) {
+          await this.attemptWhatsappFallback(userId, fallbackContext);
+        }
+        return false;
       }
+
       const token = user.fcmToken;
       const serverKey = process.env.FCM_SERVER_KEY;
       const getStringField = (key: string, fallback: string) => {
@@ -407,6 +444,7 @@ export class NotificationsService {
         val: unknown,
       ): val is { response?: { status?: number; data?: unknown } } =>
         typeof val === 'object' && val !== null && 'response' in val;
+
       if (serverKey) {
         try {
           await axios.post(
@@ -417,8 +455,14 @@ export class NotificationsService {
               data: { ...(data || {}) },
               android: {
                 notification: {
-                  channel_id: getStringField('channelId', 'high-priority'),
-                  priority: getStringField('priority', 'high'),
+                  channel_id: getStringField(
+                    'channelId',
+                    options?.channelId ?? 'high-priority',
+                  ),
+                  priority: getStringField(
+                    'priority',
+                    options?.priority ?? 'high',
+                  ),
                 },
               },
             },
@@ -431,7 +475,7 @@ export class NotificationsService {
             },
           );
           this.logger.log(`Push FCM enviado para ${userId}.`);
-          return;
+          return true;
         } catch (e: unknown) {
           const status =
             isAxiosError(e) && typeof e.response?.status === 'number'
@@ -444,19 +488,80 @@ export class NotificationsService {
           const payloadStr =
             typeof payload === 'string' ? payload : JSON.stringify(payload);
           this.logger.warn(`Falha FCM ${userId}: ${status} ${payloadStr}`);
+          if (fallbackContext) {
+            await this.attemptWhatsappFallback(userId, fallbackContext);
+          }
+          return false;
         }
       }
+
       this.logger.log(
-        `[SIMULADO] Push para ${userId}: ${title} | ${body} | ${JSON.stringify(data)}`,
+        `[SIMULADO] Push para ${userId}: ${title} | ${body} | ${JSON.stringify(
+          data,
+        )}`,
       );
+      return true;
     } catch (error: unknown) {
       this.logger.error(
         `Erro ao enviar push para ${userId}: ${this.formatError(error)}`,
         error instanceof Error ? error.stack : undefined,
       );
-      throw new Error(
-        `Falha ao enviar notificação push: ${this.formatError(error)}`,
+      if (fallbackContext) {
+        await this.attemptWhatsappFallback(userId, fallbackContext);
+      }
+      return false;
+    }
+  }
+  private async attemptWhatsappFallback(
+    userId: string,
+    context: WhatsappFallbackContext,
+  ): Promise<boolean> {
+    if (!context) {
+      return false;
+    }
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { phone: true },
+      });
+      const phone = user?.phone?.trim();
+      if (!phone) {
+        this.logger.warn(
+          `[NotificationsService] Fallback WhatsApp ignorado para ${userId}: telefone ausente.`,
+        );
+        return false;
+      }
+      const pieces: string[] = [];
+      if (context.title) {
+        pieces.push(context.title);
+      }
+      if (context.message) {
+        pieces.push(context.message);
+      }
+      let payload = pieces.filter(Boolean).join(' | ');
+      if (!payload) {
+        payload = 'Há uma atualização importante sobre seu agendamento.';
+      }
+      if (context.bookingId) {
+        payload = `[Agendamento ${context.bookingId}] ${payload}`;
+      }
+      const { success } = await this.whatsappService.sendWhatsAppMessage(
+        phone,
+        payload,
       );
+      if (success) {
+        this.logger.log(
+          `[NotificationsService] WhatsApp fallback entregue para ${userId}${context.bookingId ? ` (booking ${context.bookingId})` : ''}.`,
+        );
+      }
+      return success;
+    } catch (error) {
+      this.logger.warn(
+        `[NotificationsService] Falha no fallback WhatsApp para ${userId}: ${this.formatError(
+          error,
+        )}`,
+      );
+      return false;
     }
   }
 
