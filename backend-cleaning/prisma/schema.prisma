@@ -390,11 +390,10 @@ model User {
 }
 
 model TelemetryForceLogout {
-  userId           String   @id @db.Uuid
+  userId           String   @id // REMOVA o @db.Uuid que estava aqui
   forcedAt         DateTime @default(now())
   forceLogoutUntil DateTime
   payload          Json?
-
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([forceLogoutUntil], name: "idx_telemetry_force_logout_until")
