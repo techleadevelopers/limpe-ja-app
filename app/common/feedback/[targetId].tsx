@@ -11,241 +11,245 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Modal,
 } from 'react-native';
 
 interface Props {
-  route: {
-    params: {
-      providerName: string;
-      providerAvatar?: string;
+    route?: {
+        params: {
+            providerName: string;
+            providerAvatar?: string;
+        };
     };
-  };
-  navigation: any;
+    navigation: any;
+    visible?: boolean; // Pode ser usado como Modal
+    onClose?: () => void;
 }
 
-export default function PostBookingReview({ route, navigation }: Props) {
-  // Protege acesso aos params vindo da navegação
-  const fallbackRoute = useRoute<any>();
-  const navRoute = route ?? fallbackRoute;
-  const params = navRoute?.params || {};
-  const providerName: string = params.providerName || 'Prestador';
-  const providerAvatar: string | undefined = params.providerAvatar;
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
-  const hasAvatar = !!providerAvatar;
-  const providerInitial = useMemo(
-    () => (providerName ? providerName.charAt(0).toUpperCase() : '?'),
-    [providerName],
-  );
+export default function PostBookingReview({ route, navigation, visible = true, onClose }: Props) {
+    const fallbackRoute = useRoute<any>();
+    const navRoute = route ?? fallbackRoute;
+    const params = navRoute?.params || {};
+    
+    const providerName: string = params.providerName || 'Prestador';
+    const providerAvatar: string | undefined = params.providerAvatar;
+    
+    // Zé, mudei para 0 para o usuário ser obrigado a clicar e interagir
+    const [rating, setRating] = useState(0); 
+    const [comment, setComment] = useState('');
+    const hasAvatar = !!providerAvatar;
+    
+    const providerInitial = useMemo(
+        () => (providerName ? providerName.charAt(0).toUpperCase() : '?'),
+        [providerName],
+    );
 
-  const fade = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.92)).current;
+    const fade = useRef(new Animated.Value(0)).current;
+    const scale = useRef(new Animated.Value(0.92)).current;
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fade, { toValue: 1, duration: 380, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, friction: 6, useNativeDriver: true }),
-    ]).start();
-  }, [fade, scale]);
+    useEffect(() => {
+        if (visible) {
+            Animated.parallel([
+                Animated.timing(fade, { toValue: 1, duration: 400, useNativeDriver: true }),
+                Animated.spring(scale, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true }),
+            ]).start();
+        }
+    }, [visible]);
 
-  const handleSubmit = () => {
-    // TODO: integrar submitReview
-    // navigation.navigate('home');
-    console.log(`Avaliação enviada: ${rating} estrelas, Comentário: ${comment}`);
-    navigation.goBack(); // Usar goBack() simula fechar o modal/overlay
-  };
-
-  return (
-    // 🛑 Fundo: Neutro, Muito Claro e Confortável (Quase branco)
-    <LinearGradient colors={['#F5F5F5', '#FFFFFF']} style={styles.container}>
-      
-      {/* 🛑 REMOVIDO: View style={styles.glow} -> Simplificar e limpar o fundo */}
-
-      <Animated.View style={[styles.card, { opacity: fade, transform: [{ scale }] }]}>
+    const handleSubmit = () => {
+        if (rating === 0) {
+            alert("Por favor, selecione uma nota antes de enviar.");
+            return;
+        }
+        console.log(`Avaliação enviada: ${rating} estrelas, Comentário: ${comment}`);
         
-        {/* 🛑 REMOVIDO: Badge superior "Sua Avaliação" -> Design mais clean */}
+        // Se for modal, fecha pelo onClose, senão volta a navegação
+        if (onClose) {
+            onClose();
+        } else {
+            navigation.goBack();
+        }
+    };
 
-        <View style={styles.avatarWrap}>
-          {hasAvatar ? (
-            <Image source={{ uri: providerAvatar }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Text style={styles.avatarInitial}>{providerInitial}</Text>
+    return (
+        <Modal transparent visible={visible} animationType="none">
+            <View style={styles.overlay}>
+                {/* Background escurecido para dar foco total no Card */}
+                <Animated.View style={[styles.container, { opacity: fade }]}>
+                    
+                    <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
+                        
+                        <View style={styles.avatarWrap}>
+                            {hasAvatar ? (
+                                <Image source={{ uri: providerAvatar }} style={styles.avatar} />
+                            ) : (
+                                <View style={[styles.avatar, styles.avatarFallback]}>
+                                    <Text style={styles.avatarInitial}>{providerInitial}</Text>
+                                </View>
+                            )}
+                        </View>
+
+                        <Text style={styles.title}>O que achou do serviço?</Text>
+                        <Text style={styles.subtitle}>com **{providerName}**</Text>
+
+                        <View style={styles.starsContainer}>
+                            {[1, 2, 3, 4, 5].map((s) => (
+                                <TouchableOpacity 
+                                    key={s} 
+                                    onPress={() => setRating(s)} 
+                                    activeOpacity={0.6}
+                                    style={styles.starTouch}
+                                >
+                                    <Ionicons
+                                        name={s <= rating ? 'star' : 'star-outline'}
+                                        size={42} // Estrelas maiores para impacto visual
+                                        color={s <= rating ? '#FFC300' : '#E0E0E0'} 
+                                    />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <Text style={styles.helper}>Sua opinião ajuda a comunidade LimpeJá</Text>
+
+                        <TextInput
+                            placeholder="Conte um pouco mais (opcional)..."
+                            placeholderTextColor="#A0A0A0"
+                            multiline
+                            style={styles.input}
+                            value={comment}
+                            onChangeText={setComment}
+                            autoCorrect={false}
+                        />
+
+                        <TouchableOpacity
+                            style={[styles.button, { opacity: rating > 0 ? 1 : 0.6 }]}
+                            onPress={handleSubmit}
+                            activeOpacity={0.8}
+                            disabled={rating === 0}
+                        >
+                            <LinearGradient
+                                colors={['#107FBF', '#0B598F']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.buttonGradient}
+                            >
+                                <Text style={styles.buttonText}>Confirmar Avaliação</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={onClose || (() => navigation.goBack())} style={styles.closeAction}>
+                            <Text style={styles.closeText}>Pular</Text>
+                        </TouchableOpacity>
+
+                    </Animated.View>
+                </Animated.View>
             </View>
-          )}
-        </View>
-
-        {/* 🛑 Títulos: Mais suaves e centralizados */}
-        <Text style={styles.title}>O que achou do serviço?</Text>
-        <Text style={styles.subtitle}>com **{providerName}**</Text>
-
-        <View style={styles.starsContainer}>
-          {[1, 2, 3, 4, 5].map((s) => (
-            <TouchableOpacity key={s} onPress={() => setRating(s)} activeOpacity={0.7}>
-              <Ionicons
-                name={s <= rating ? 'star' : 'star-outline'}
-                size={34} // Estrelas maiores para melhor toque e visual
-                // 🛑 Cor: Primária, mais vibrante e consistente
-                color={s <= rating ? '#FFC300' : '#E0E0E0'} 
-                style={styles.starIcon}
-              />
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* 🛑 Helper: Feedback de texto mais direto */}
-        <Text style={styles.helper}>Sua opinião é importante para o **{providerName}**</Text>
-
-        <TextInput
-          placeholder="Deixe um comentário opcional..."
-          placeholderTextColor="#B0B0B0" // Cinza claro e suave
-          multiline
-          style={styles.input}
-          value={comment}
-          onChangeText={setComment}
-          autoCorrect={false}
-          keyboardAppearance={Platform.OS === 'ios' ? 'light' : 'default'}
-        />
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleSubmit}
-          activeOpacity={0.8}
-        >
-          {/* 🛑 Botão: Gradiente suave, alto contraste */}
-          <LinearGradient
-            colors={['#107FBF', '#0B598F']} // Azul institucional mais forte
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.buttonGradient}
-          >
-            <Text style={styles.buttonText}>Enviar avaliação</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </Animated.View>
-    </LinearGradient>
-  );
+        </Modal>
+    );
 }
 
 const styles = StyleSheet.create({
-  // 🛑 Container: Fundo Super Claro
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    // Não usar paddingHorizontal aqui, o card já se ajusta
-  },
-  // 🛑 Card: Mais Redondo, Menor Padding, Sombra Sutil
-  card: {
-    width: '90%', // Levemente menor
-    padding: 30, // Padding vertical e horizontal balanceado
-    borderRadius: 20, // Mais arredondado
-    backgroundColor: '#FFFFFF', // Branco puro para a Apple Vibe
-    
-    // Sombra: Mais leve e moderna (iOS style)
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 10 },
-    shadowRadius: 15,
-    elevation: 0,
-    
-    alignItems: 'center',
-    borderWidth: 0, // Remover borda de cor fraca
-  },
-  
-  // 🛑 Avatar: Mais suave e com mais destaque
-  avatarWrap: {
-    marginBottom: 10,
-    marginTop: 0, // Remove o gap superior do badge
-  },
-  avatar: {
-    width: 80, // Levemente menor
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 8,
-    borderWidth: 3, // Borda um pouco mais grossa para destacar
-    borderColor: '#E0E0E0', // Cor de borda neutra (cinza claro)
-  },
-  avatarFallback: {
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarInitial: {
-    fontSize: 32,
-    fontWeight: '600',
-    color: '#0B598F',
-  },
-  
-  // 🛑 Títulos: Mais clean
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333333',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#888888',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  
-  // Estrelas
-  starsContainer: {
-    flexDirection: 'row',
-    marginBottom: 25,
-    justifyContent: 'center',
-  },
-  starIcon: { 
-    marginHorizontal: 4, 
-    // Garante que o toque seja o único responsável pela cor
-  },
-  
-  // Helper
-  helper: {
-    fontSize: 13,
-    color: '#AAAAAA',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  
-  // 🛑 Input: Mais claro e arredondado
-  input: {
-    width: '100%',
-    minHeight: 120, // Altura maior para conforto
-    borderRadius: 12, // Levemente menos arredondado que o card
-    backgroundColor: '#F7F7F7',
-    borderWidth: 1,
-    borderColor: '#EFEFEF', // Borda super clara
-    padding: 14,
-    fontSize: 15,
-    textAlignVertical: 'top',
-    marginBottom: 25,
-    color: '#333333',
-    // Sombra interna sutil
-    shadowColor: 'transparent', 
-  },
-  
-  // 🛑 Botão: Flat, Foco no Gradiente
-  button: {
-    width: '100%',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  buttonGradient: {
-    paddingVertical: 14, // Levemente menor para compactar
-    borderRadius: 12,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600', // Levemente menos negrito (iOS style)
-    textAlign: 'center',
-  },
-  
-  // Badge antigo REMOVIDO
-  // badge: { ... },
-  // badgeText: { ... },
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Efeito de escurecimento do fundo
+    },
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    card: {
+        width: '100%',
+        maxWidth: 400,
+        padding: 24,
+        borderRadius: 32, // Bordas bem arredondadas estilo Apple
+        backgroundColor: '#FFFFFF',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowOffset: { width: 0, height: 20 },
+        shadowRadius: 40,
+        elevation: 10,
+    },
+    avatarWrap: {
+        marginBottom: 12,
+    },
+    avatar: {
+        width: 90,
+        height: 90,
+        borderRadius: 45,
+        borderWidth: 4,
+        borderColor: '#F0F0F0',
+    },
+    avatarFallback: {
+        backgroundColor: '#E8F4FA',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatarInitial: {
+        fontSize: 36,
+        fontWeight: 'bold',
+        color: '#107FBF',
+    },
+    title: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#1A1A1A',
+        textAlign: 'center',
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#666666',
+        marginTop: 4,
+        marginBottom: 20,
+    },
+    starsContainer: {
+        flexDirection: 'row',
+        marginBottom: 20,
+    },
+    starTouch: {
+        padding: 5,
+    },
+    helper: {
+        fontSize: 14,
+        color: '#999',
+        marginBottom: 15,
+    },
+    input: {
+        width: '100%',
+        minHeight: 100,
+        borderRadius: 16,
+        backgroundColor: '#F8F9FA',
+        padding: 16,
+        fontSize: 16,
+        textAlignVertical: 'top',
+        marginBottom: 20,
+        color: '#333',
+        borderWidth: 1,
+        borderColor: '#EEEEEE',
+    },
+    button: {
+        width: '100%',
+        borderRadius: 18,
+        overflow: 'hidden',
+    },
+    buttonGradient: {
+        paddingVertical: 16,
+        alignItems: 'center',
+    },
+    buttonText: {
+        color: '#FFF',
+        fontSize: 18,
+        fontWeight: '700',
+    },
+    closeAction: {
+        marginTop: 15,
+        padding: 10,
+    },
+    closeText: {
+        color: '#A0A0A0',
+        fontSize: 14,
+        fontWeight: '500',
+    }
 });
