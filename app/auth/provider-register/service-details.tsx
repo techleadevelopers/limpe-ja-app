@@ -13,11 +13,14 @@ import {
     Image,
     Platform,
     ScrollView,
+    StyleProp,
     StyleSheet,
     Text,
     TextInput,
+    TextStyle,
     TouchableOpacity,
     View,
+    ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { bulkSetAvailability, saveProviderSettings, TimeRange } from '../../../services/providerSettingsService';
@@ -193,7 +196,7 @@ export default function ServiceDetailsScreen() {
     { id: 'pos_obra',    label: 'Pós-Obra',    icon: 'hammer-wrench', set: 'mci' },
   ];
 
-  const totalSteps = 5;
+  const totalSteps = 4;
   const progress = currentServiceSubStep / totalSteps;
 
   // Efeito para transição de passo
@@ -286,7 +289,6 @@ export default function ServiceDetailsScreen() {
             serviceAreas: loadedData.serviceAreas || [],
           });
           setCurrentServiceSubStep(loadedData.currentServiceSubStep || 1);
-          setGeneralError("Dados carregados automaticamente. Continue preenchendo seus detalhes de serviço.");
         }
       } catch (e) {
         console.error("Failed to load service details form data from AsyncStorage", e);
@@ -347,6 +349,23 @@ export default function ServiceDetailsScreen() {
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível capturar a imagem.');
     }
+  };
+
+  const handleSelectPhoto = () => {
+    Alert.alert('Atualizar foto profissional', 'Selecione uma fonte:', [
+      {
+        text: 'Galeria',
+        onPress: handleOpenGallery,
+      },
+      {
+        text: 'Câmera',
+        onPress: handleOpenCamera,
+      },
+      {
+        text: 'Cancelar',
+        style: 'cancel',
+      },
+    ]);
   };
 
   // Validation functions
@@ -422,24 +441,18 @@ export default function ServiceDetailsScreen() {
         setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
       }
     } else if (currentServiceSubStep === 2) {
-      if (validateSubStep2()) {
+      if (validateSubStep2() && validateSubStep3()) {
         setCurrentServiceSubStep(3);
       } else {
         setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
       }
     } else if (currentServiceSubStep === 3) {
-      if (validateSubStep3()) {
+      if (validateSubStep4()) {
         setCurrentServiceSubStep(4);
       } else {
         setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
       }
     } else if (currentServiceSubStep === 4) {
-      if (validateSubStep4()) {
-        setCurrentServiceSubStep(5);
-      } else {
-        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
-      }
-    } else if (currentServiceSubStep === 5) {
       handleFinalSubmission();
     }
   };
@@ -659,14 +672,16 @@ export default function ServiceDetailsScreen() {
     multiline: boolean = false,
     icon: string = 'text-outline',
     maxLength?: number,
+    containerStyle?: StyleProp<ViewStyle>,
+    titleStyle?: TextStyle,
     error: string | null = null,
     onBlur?: () => void
   ) => (
     <View style={styles.inputSection}>
-      <Text style={styles.inputLabel}>
+      <Text style={[styles.inputLabel, titleStyle]}>
         <Ionicons name={icon as any} size={16} color="#2C3E50" /> {title}
       </Text>
-      <View style={[styles.inputContainer, error ? styles.inputContainerError : {}]}>
+      <View style={[styles.inputContainer, containerStyle, error ? styles.inputContainerError : {}]}>
         <TextInput
           style={[styles.textInput, multiline && styles.multilineInput]}
           placeholder={placeholder}
@@ -710,7 +725,8 @@ export default function ServiceDetailsScreen() {
         >
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={currentServiceSubStep === 2 ? [styles.scrollContent, styles.scrollContentStep2] : styles.scrollContent}
+            style={styles.scrollView}
           >
             {/* Header with Back Button */}
             <View style={styles.header}>
@@ -732,10 +748,9 @@ export default function ServiceDetailsScreen() {
             {/* Sub-step 1: Photo + Description */}
             {currentServiceSubStep === 1 && (
               <View style={styles.formContainer}>
-                <Text style={styles.sectionTitle}>Sua foto é sua vitrine</Text>
                 <TouchableOpacity
                   style={[styles.imageUploadButton, {transform: [{scale: avatarScaleAnim}]}, profilePhotoError ? styles.imageUploadButtonError : {}]}
-                  onPress={handleOpenGallery}
+                  onPress={handleSelectPhoto}
                   onPressIn={onPressInAvatar}
                   onPressOut={onPressOutAvatar}
                   activeOpacity={0.8}
@@ -753,18 +768,10 @@ export default function ServiceDetailsScreen() {
                     style={styles.imageOverlay}
                   />
                 </TouchableOpacity>
-                <View style={styles.photoActionsRow}>
-                  <TouchableOpacity style={styles.photoActionButton} onPress={handleOpenGallery}>
-                    <Text style={styles.photoActionButtonText}>Escolher da galeria</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.photoActionButton} onPress={handleOpenCamera}>
-                    <Text style={styles.photoActionButtonText}>Usar câmera básica</Text>
-                  </TouchableOpacity>
-                </View>
                 <View style={styles.photoHintContainer}>
                   <Text style={styles.photoHintText}>
                     Olhe para a câmera e tire a foto da cintura para cima. {'\n'}
-                    Nossa inteligência cuidará do fundo para você! 🚀
+                    Nossa inteligência cuidará do fundo para você!
                   </Text>
                 </View>
                 {profilePhotoError && <Text style={styles.inlineErrorMessageCentered}>{profilePhotoError}</Text>}
@@ -779,6 +786,8 @@ export default function ServiceDetailsScreen() {
                   true,
                   'document-text-outline',
                   500,
+                  styles.descriptionInputContainerShadow,
+                  styles.descriptionTitleSpacing,
                   descriptionError,
                   validateSubStep1
                 )}
@@ -787,7 +796,7 @@ export default function ServiceDetailsScreen() {
 
             {/* Sub-step 2: Experience + Specialties */}
             {currentServiceSubStep === 2 && (
-              <View style={styles.formContainer}>
+              <View style={[styles.formContainer, styles.step2Spacing]}>
                 {renderInputSection(
                   'Anos de Experiência',
                   'Ex: 5',
@@ -797,6 +806,8 @@ export default function ServiceDetailsScreen() {
                   false,
                   'time-outline',
                   2,
+                  styles.descriptionInputContainerShadow,
+                  styles.yearsTitleSpacing,
                   yearsOfExperienceError,
                   validateSubStep2
                 )}
@@ -806,8 +817,8 @@ export default function ServiceDetailsScreen() {
                   <Text style={styles.sectionTitle}>
                     <Ionicons name="home-outline" size={16} color="#2C3E50" /> Tipo de Serviço
                   </Text>
-                  <View style={[styles.serviceTypeGrid, Platform.OS === 'android' && styles.serviceTypeGridAndroidScale]}>
-                    {serviceOptions.map((s, index) => {
+                <View style={[styles.serviceTypeGrid, Platform.OS === 'android' && styles.serviceTypeGridAndroidScale]}>
+                  {serviceOptions.map((s, index) => {
                         const animationStyle = {
                             opacity: chipAnimations[index],
                             transform: [{
@@ -841,33 +852,27 @@ export default function ServiceDetailsScreen() {
                   </View>
                   {specialtiesError && <Text style={styles.inlineErrorMessage}>{specialtiesError}</Text>}
                 </View>
+                <View style={styles.additionalFieldSpacing}>
+                  {renderInputSection(
+                    'Preço por hora',
+                    'Ex: 50,00',
+                    formData.basePrice,
+                    (text) => { setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.,]/g, '') })); setBasePriceError(null); },
+                    'numeric',
+                    false,
+                    'cash-outline',
+                    undefined,
+                    styles.descriptionInputContainerShadow,
+                    basePriceError,
+                    validateSubStep3
+                  )}
+                  <Text style={styles.priceHintText}>Quanto você cobra por hora?</Text>
+                </View>
               </View>
             )}
 
-            {/* Sub-step 3: Hourly Price */}
+            {/* Sub-step 3: PIX + Service Areas */}
             {currentServiceSubStep === 3 && (
-              <View style={styles.formContainer}>
-                <Text style={styles.sectionTitle}>
-                  <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Preço por hora
-                </Text>
-                <Text style={styles.priceHintText}>Mínimo de 4 horas (240 min). A cobrança segue o modelo horário.</Text>
-                {renderInputSection(
-                  'Preço por hora',
-                  'Ex: 50,00',
-                  formData.basePrice,
-                  (text) => { setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.,]/g, '') })); setBasePriceError(null); },
-                  'numeric',
-                  false,
-                  'cash-outline',
-                  undefined,
-                  basePriceError,
-                  validateSubStep3
-                )}
-              </View>
-            )}
-
-            {/* Sub-step 4: PIX + Service Areas */}
-            {currentServiceSubStep === 4 && (
               <View style={styles.formContainer}>
                 {renderInputSection(
                   'Chave PIX',
@@ -896,8 +901,8 @@ export default function ServiceDetailsScreen() {
                 )}
               </View>
             )}
-            {/* Sub-step 5: Cobertura & Agenda (Premium Component) */}
-            {currentServiceSubStep === 5 && (
+            {/* Sub-step 4: Cobertura & Agenda (Premium Component) */}
+            {currentServiceSubStep === 4 && (
               <View style={styles.formContainer}>
                 <ServiceDetailsStep5Premium
                   radiusKm={radiusKm}
@@ -910,24 +915,14 @@ export default function ServiceDetailsScreen() {
             )}
             {generalError && <Text style={styles.inlineErrorMessageCentered}>{generalError}</Text>}
 
+          </ScrollView>
+          <View style={styles.fixedButtonWrapper}>
             <View
               style={[
                 styles.navigationButtonsContainer,
                 currentServiceSubStep > 1 ? styles.navigationButtonsWithBack : undefined,
               ]}
             >
-              {currentServiceSubStep > 1 && (
-                <TouchableOpacity
-                  onPress={handleBackSubStep}
-                  activeOpacity={0.9}
-                  style={[styles.navButton, styles.navButtonBack]}
-                  disabled={isUploading}
-                >
-                  <Ionicons name="arrow-back-outline" size={18} color="#00BCD4" />
-                  <Text style={styles.navButtonTextBack}>Voltar</Text>
-                </TouchableOpacity>
-              )}
-
               <TouchableOpacity
                 onPress={handleNextSubStep}
                 activeOpacity={0.95}
@@ -955,7 +950,7 @@ export default function ServiceDetailsScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </ScrollView>
+          </View>
         </Animated.View>
       </View>
     </SafeAreaView>
@@ -1034,8 +1029,19 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    
+    paddingBottom: 20,
+  },
+  scrollContentStep2: {
+    paddingTop: 10,
     paddingBottom: 40,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  fixedButtonWrapper: {
+    paddingHorizontal: 20,
+    paddingVertical: Platform.OS === 'ios' ? 18 : 10,
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -1063,12 +1069,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     bottom: Platform.OS === 'android' ? 50 : 0,
-    fontSize: 18,
-    left: Platform.OS === 'android' ? 2 : 0,
+    fontSize: Platform.OS === 'android' ? 17 : 18,
+    left: Platform.OS === 'android' ? 3 : 0,
     fontWeight: '700',
     color: '#2C3E50',
     marginBottom: Platform.OS === 'android' ? -69 : 12,
-    marginTop: 10,
+    marginTop: Platform.OS === 'android' ? 8 : 10,
     textAlign: 'center',
     flex: 1,
   },
@@ -1102,9 +1108,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     width: '100%',
   },
+  additionalFieldSpacing: {
+    marginTop: 2,
+    marginBottom: 10,
+  },
   priceHintText: {
     fontSize: 12,
     color: '#6C757D',
+    textAlign: 'center',
     marginBottom: 12,
   },
   imageUploadButton: {
@@ -1149,12 +1160,23 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 4,
     alignItems: 'flex-start',
+    width: '100%',
+    padding: 12,
+    borderRadius: 18,
+    backgroundColor: '#E6F3FF',
+    borderWidth: 1,
+    borderColor: '#B8DFFF',
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
   photoHintText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#1F3C6C',
     marginBottom: 6,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   photoActionsRow: {
     flexDirection: 'row',
@@ -1192,12 +1214,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 20,
+    bottom: 10,
     borderRadius: 18,
     minWidth: 120,
     flex: 1,
-    marginHorizontal: 4,
+    marginHorizontal: 14,
   },
   navButtonBack: {
     backgroundColor: '#F7F8FC',
@@ -1247,6 +1270,8 @@ const styles = StyleSheet.create({
   inputContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
+    marginTop: 10,
+    marginBottom: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1255,8 +1280,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
+  descriptionInputContainerShadow: {
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 14,
+    backgroundColor: '#F8FAFF',
+  },
   inputContainerError: {
     borderColor: '#E53E3E',
+  },
+  descriptionTitleSpacing: {
+    marginTop: 15,
+    marginBottom: 25,
+  },
+  yearsTitleSpacing: {
+    marginBottom: 10,
+  },
+  step2Spacing: {
+    marginTop: 10,
+    marginBottom: 0,
   },
   textInput: {
     paddingHorizontal: 16,
@@ -1271,7 +1315,8 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   serviceTypeContainer: {
-    marginBottom: 30,
+    marginTop: 12,
+    marginBottom: 20,
   },
   serviceTypeGrid: {
     flexDirection: 'row',
