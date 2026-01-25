@@ -9,6 +9,7 @@ import * as Sentry from '@sentry/react-native';
 import { appQueryClient } from '../components/provider/query-client-provider';
 import { AuthErrorCode } from '../types/backend/auth-error-code';
 import { AuthEventType, emitAuthEvent } from './authEvents';
+import { router } from 'expo-router';
 
 type AuthErrorResponse = { code?: AuthErrorCode };
 
@@ -231,19 +232,20 @@ const handleAuthError = async (
         return null;
       }
       configWithMeta._refreshAttempted = true;
-    try {
-      const { default: authService } = await import('./authService');
-      const authData = await authService.refreshSession();
-      emitAuthEvent(AuthEventType.SESSION_REFRESHED, authData);
+      try {
+        const { default: authService } = await import('./authService');
+        const authData = await authService.refreshSession();
+        emitAuthEvent(AuthEventType.SESSION_REFRESHED, authData);
         config.headers = config.headers ?? {};
         config.headers.Authorization = `Bearer ${authData.accessToken}`;
         revocationUnauthorizedCallbackCalled = false;
         return { handled: true, result: api(config) };
-    } catch (refreshError) {
-      Sentry.captureException(refreshError, { tags: { scope: 'auth' } });
+      } catch (refreshError) {
+        // Aqui o refresh falhou de verdade. O token de atualização (refresh) expirou.
+        Sentry.captureException(refreshError, { tags: { scope: 'auth' } });
         const storedToken = await AsyncStorage.getItem('auth_token');
         await attemptRevokedCleanup(storedToken ?? undefined, Boolean(storedToken));
-        await notifyUnauthorizedCallback(config, axiosError);
+        router.replace('/auth/login');
         return { handled: true };
       }
     }
