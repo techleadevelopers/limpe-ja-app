@@ -112,7 +112,7 @@ export class TelemetryService {
         }`,
       );
     }
-    this.logger.warn(
+    this.logger.verbose(
       `[TelemetryService] markForceLogout: usuário ${userId} bloqueado automaticamente por ${ttlSeconds}s`,
     );
   }
