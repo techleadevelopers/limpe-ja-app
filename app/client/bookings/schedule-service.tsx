@@ -260,7 +260,6 @@ interface BookingSummaryPreviewProps {
   couponFeedbackIcon: string;
   reviewEntranceAnim?: Animated.Value;
   reviewStaggerDelay?: number;
-  notesAnim?: Animated.Value;
   cupomAnim?: Animated.Value;
   summaryAnim?: Animated.Value;
   quoteStatus?: QuoteStatus;
@@ -302,7 +301,6 @@ const BookingSummaryPreview = ({
   couponFeedbackIcon,
   reviewEntranceAnim,
   reviewStaggerDelay = 0,
-  notesAnim,
   cupomAnim,
   summaryAnim,
   quoteStatus,
@@ -388,20 +386,6 @@ const BookingSummaryPreview = ({
       }
     : {};
 
-  const notesSectionAnim = notesAnim
-    ? {
-        opacity: notesAnim,
-        transform: [
-          {
-            translateY: notesAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [10, 0],
-            }),
-          },
-        ],
-      }
-    : {};
-
   const cupomSectionAnim = cupomAnim
     ? {
         opacity: cupomAnim,
@@ -478,7 +462,7 @@ const BookingSummaryPreview = ({
       {
         key: 'insurance',
         icon: 'shield-checkmark',
-        label: t('schedule_service.summary_insurance_label', { defaultValue: 'Seguro/Proteção' }),
+        label: t('schedule_service.summary_insurance_label', { defaultValue: 'Proteção Essencial' }),
         value: (
           <View style={styles.reviewInsuranceValue}>
             <Text style={styles.reviewRowValue}>{insuranceLabel}</Text>
@@ -649,25 +633,28 @@ const BookingSummaryPreview = ({
               <Text style={styles.premiumSummaryLabel}>
                 {t('schedule_service.subtotal', { defaultValue: 'Subtotal' })}
               </Text>
-              <Text style={styles.premiumSummaryValue}>{formatBRL(subtotal)}</Text>
+              <Text style={[styles.premiumSummaryValue, styles.subtotalValue]}>
+                {formatBRL(subtotal)}
+              </Text>
             </View>
-            <Text style={styles.premiumSummaryValue}>{formatBRL(finalPrice)}</Text>
           </View>
+          {insuranceFeeCents > 0 && (
+            <View style={styles.premiumCostRow}>
+              <Text style={styles.insuranceLabel}>
+                {t('schedule_service.summary_insurance_label', { defaultValue: 'Proteção Essencial' })}
+              </Text>
+              <Text style={styles.insuranceValue}>
+                +{formatBRL(insuranceFeeCents / 100)}
+              </Text>
+            </View>
+          )}
           {discountAmount > 0 && (
             <View style={styles.premiumCostRow}>
               <Text style={styles.premiumSummaryLabel}>
                 {t('schedule_service.discount', { defaultValue: 'Desconto' })}
               </Text>
-              <Text style={[styles.premiumSummaryValue, styles.discountValue]}>- {formatBRL(discountAmount)}</Text>
-            </View>
-          )}
-          {insuranceFeeCents > 0 && (
-            <View style={styles.premiumCostRow}>
-              <Text style={styles.premiumSummaryLabel}>
-                {t('schedule_service.insurance_fee', { defaultValue: 'Seguro' })}
-              </Text>
-              <Text style={[styles.premiumSummaryValue, styles.insuranceThinValue]}>
-                {formatBRL(insuranceFeeCents / 100)}
+              <Text style={[styles.premiumSummaryValue, styles.discountValue]}>
+                - {formatBRL(discountAmount)}
               </Text>
             </View>
           )}
@@ -722,9 +709,6 @@ const BookingSummaryPreview = ({
         </TouchableOpacity>
       </Animated.View>
 
-  <Animated.View style={[styles.compactSection, styles.notesFinalSection, notesSectionAnim]}>
-    <NotesInputSection notes={notes} setNotes={setNotes} compactMode={true} showTitle={false} />
-  </Animated.View>
 </Animated.View>
 );
 };
@@ -914,6 +898,17 @@ const slotStepMinutes = useMemo(() => {
   const reviewStepAnim = useRef(new Animated.Value(0)).current;
   const serviceDetailsAnim = useRef(new Animated.Value(0)).current;
   const notesAnim = useRef(new Animated.Value(0)).current;
+  const notesSectionAnim = {
+    opacity: notesAnim,
+    transform: [
+      {
+        translateY: notesAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [10, 0],
+        }),
+      },
+    ],
+  };
   const cupomAnim = useRef(new Animated.Value(0)).current;
   const summaryAnim = useRef(new Animated.Value(0)).current;
 
@@ -1714,7 +1709,6 @@ const handleDaySelect = useCallback(
     scaleAnim,
     reviewStepAnim,
     serviceDetailsAnim,
-    notesAnim,
     cupomAnim,
     summaryAnim,
     insuranceLoading,
@@ -2633,7 +2627,6 @@ useEffect(() => {
           quoteRateLimitRemainingSeconds={rateLimitRemainingSeconds}
           reviewEntranceAnim={reviewStepAnim}
           reviewStaggerDelay={0}
-          notesAnim={notesAnim}
           cupomAnim={cupomAnim}
           onEditService={() => handleReviewEditStep(1)}
           onEditProvider={() => handleReviewEditStep(1)}
@@ -2648,7 +2641,6 @@ useEffect(() => {
     currentStep,
     reviewStepAnim,
     serviceDetailsAnim,
-    notesAnim,
     cupomAnim,
     summaryAnim,
     selectedProviderService,
@@ -2843,6 +2835,12 @@ useEffect(() => {
         )}
 
         {currentStep === 3 && (
+          <Animated.View style={[styles.compactSection, styles.notesFinalSection, notesSectionAnim]}>
+            <NotesInputSection notes={notes} setNotes={setNotes} compactMode showTitle={false} />
+          </Animated.View>
+        )}
+
+        {currentStep === 3 && (
           <Animated.View style={confirmButtonAnimatedStyle}>
             <ConfirmBookingButton
               isButtonDisabled={isConfirmButtonDisabled}
@@ -3028,12 +3026,18 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    
+    backgroundColor: AppColors.white,
+    shadowColor: '#0d253c',
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   safetyBannerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    paddingRight: 8,
   },
   safetyBannerIconBadge: {
     width: 36,
@@ -3142,6 +3146,7 @@ const styles = StyleSheet.create({
     fontSize: Platform.OS === 'android' ? 11 : 10,
     color: AppColors.textAuxiliary,
     lineHeight: 16,
+    paddingRight: 10,
   },
   sectionHeaderRow: {
     marginHorizontal: 20,
@@ -3256,14 +3261,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   premiumSummaryCard: {
-    backgroundColor: 'transparent',
+    backgroundColor: AppColors.white,
     borderRadius: 20,
-    padding: 16,
+    padding: 20,
     marginHorizontal: 12,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(14, 165, 233, 0.8)',
-    borderStyle: 'dashed',
+    shadowColor: '#04152d',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   premiumSummaryRow: {
     flexDirection: 'row',
@@ -3289,14 +3296,35 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginTop: 2,
   },
+  subtotalValue: {
+    fontSize: Platform.OS === 'android' ? 18 : 17,
+    fontWeight: '700',
+    color: AppColors.textBody,
+    marginTop: 6,
+  },
+  insuranceLabel: {
+    fontSize: Platform.OS === 'android' ? 14 : 13,
+    fontWeight: '600',
+    color: AppColors.textAuxiliary,
+  },
+  insuranceValue: {
+    fontSize: Platform.OS === 'android' ? 16 : 15,
+    fontWeight: '700',
+    color: AppColors.primaryInteractive,
+  },
   premiumCostCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    padding: 16,
+    padding: 18,
     marginHorizontal: 12,
     marginBottom: 11,
     borderWidth: 1,
     borderColor: '#ECEFF3',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   premiumCostRow: {
     flexDirection: 'row',
@@ -3526,8 +3554,8 @@ const styles = StyleSheet.create({
     color: AppColors.textBody,
   },
   totalPriceValue: {
-    fontSize: Platform.OS === 'android' ? 24 : 22,
-    fontWeight: 'bold',
+    fontSize: Platform.OS === 'android' ? 28 : 26,
+    fontWeight: '800',
     color: AppColors.primaryInteractive,
   },
   quoteStatusText: {
@@ -3724,10 +3752,10 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   premiumReviewTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: Platform.OS === 'android' ? 18 : 17,
+    fontWeight: '600',
     color: AppColors.textBody,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
 });
