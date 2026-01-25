@@ -40,7 +40,7 @@ import {
 } from "../constants/routes";
 import { AppProvider } from "../contexts/AppContext";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
-import { ProviderRegistrationProvider } from "../contexts/ProviderRegistrationContext";
+import { ProviderRegistrationProvider, useProviderRegistration } from "../contexts/ProviderRegistrationContext";
 import { OverlayPortal } from "../hooks/useOverlayMessage";
 import { useBookingStatusMeta } from "../hooks/useBookingStatusMeta";
 import i18n from "../i18n";
@@ -609,6 +609,7 @@ const PENDING_PAYMENT_KEY = "pending_payment";
 
 function RootLayoutContent() {
   const { isAuthenticated, isLoading: authIsLoading, user, token } = useAuth();
+  const { isRegistrationInProgress } = useProviderRegistration();
 
   const router = useRouter();
 
@@ -1491,7 +1492,7 @@ function RootLayoutContent() {
         {/* PÃ­lula flutuante global (sem banner no dashboard) */}
 
         {user?.role === UserRole.PROVIDER && (
-          <FloatingActiveServicePill enabled={true} />
+          <FloatingActiveServicePill enabled={!isRegistrationInProgress} />
         )}
 
         {/* ProteÃ§Ãµes simples: sÃ³ renderizar OverlayPortal/Toast se existirem */}
