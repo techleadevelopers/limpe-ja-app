@@ -28,11 +28,16 @@ export const isSameDayInBrazil = (a: Date, b: Date): boolean => {
 };
 
 // Constr\u00f3i um Date para um slot (HH:mm) em uma data base.
-export const buildDateTimeForSlot = (date: Date, slot: string): Date => {
-  const [h, m] = slot.split(':').map((n) => parseInt(n, 10));
-  const d = new Date(date);
-  d.setHours(h || 0, m || 0, 0, 0);
-  return d;
+export const buildDateTimeForSlot = (date: Date, slot: string | null | undefined): Date => {
+  const safeDate = date instanceof Date && !Number.isNaN(date.getTime()) ? new Date(date) : new Date();
+  const [rawH, rawM] = (slot ?? '00:00').split(':');
+  const h = parseInt(rawH ?? '', 10);
+  const m = parseInt(rawM ?? '', 10);
+  const hours = Number.isFinite(h) ? h : 0;
+  const minutes = Number.isFinite(m) ? m : 0;
+  const d = new Date(safeDate);
+  d.setHours(hours, minutes, 0, 0);
+  return Number.isNaN(d.getTime()) ? new Date() : d;
 };
 
 // Verifica se um slot j\u00e1 passou, considerando o fuso de S\u00e3o Paulo e apenas quando a data \u00e9 hoje.
