@@ -34,6 +34,7 @@ import NotificationUIService from '../../services/notificationUIService'; // Add
 // Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/dashboardService';
+import verificationService from '../../services/verificationService';
 import * as ImagePicker from 'expo-image-picker';
 // Importações das tipagens centralizadas
 import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
