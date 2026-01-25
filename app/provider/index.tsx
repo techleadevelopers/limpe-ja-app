@@ -1,4 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import dayjs from 'dayjs';
 import * as Haptics from 'expo-haptics'; // CORREÇÃO: Import separado e correto para Haptics
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -32,7 +34,6 @@ import NotificationUIService from '../../services/notificationUIService'; // Add
 // Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/dashboardService';
-import { uploadMyAvatar } from '../../services/providerService';
 import * as ImagePicker from 'expo-image-picker';
 // Importações das tipagens centralizadas
 import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
@@ -289,237 +290,7 @@ const headerStyles = StyleSheet.create({
   },
 });
 
-// Componente: FinancialSummaryCard (refinado com haptics e reduced motion)
-// Componente: FinancialSummaryCard (compacto + expandível)
-const FinancialSummaryCard: React.FC<{
-  totalEarnings: number | undefined;
-  pendingWithdrawals: number | undefined;
-  onViewEarnings: () => void;
-  animation: Animated.Value;
-  isReducedMotionEnabled: boolean;
-}> = ({ totalEarnings, pendingWithdrawals, onViewEarnings, animation, isReducedMotionEnabled }) => {
-  const { scaleAnim, onPressIn, onPressOut } = useAnimatedTouch();
 
-  const [expanded, setExpanded] = useState(false);
-  const expandAnim = useRef(new Animated.Value(0)).current; // 0 = fechado | 1 = aberto
-
-  const formattedTotalEarnings = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalEarnings || 0);
-  const formattedPendingWithdrawals = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pendingWithdrawals || 0);
-
-  const toggleExpand = () => {
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
-    const next = !expanded;
-    setExpanded(next);
-
-    if (isReducedMotionEnabled) {
-      expandAnim.setValue(next ? 1 : 0);
-      return;
-    }
-
-    Animated.timing(expandAnim, {
-      toValue: next ? 1 : 0,
-      duration: 220,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: false, // altura/opacidade
-    }).start();
-  };
-
-  const detailsMaxHeight = expandAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 120], // ajuste fino se quiser mais/menos
-  });
-
-  const detailsOpacity = expandAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
-
-  const chevronRotate = expandAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '180deg'],
-  });
-
-  const cardPaddingBottom = expanded ? Spacing.md : Spacing.xs;
-  return (
-    <Animated.View
-      style={[
-        summaryStyles.summaryCard,
-        {
-          paddingBottom: cardPaddingBottom,
-          transform: [{ scale: scaleAnim }],
-        },
-      ]}
-    >
-      {/* Header clicável (compacto) */}
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={toggleExpand}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        accessibilityRole="button"
-        accessibilityLabel="Seus ganhos"
-        accessibilityHint={expanded ? 'Toque para recolher' : 'Toque para expandir'}
-        accessibilityState={{ expanded }}
-      >
-      </TouchableOpacity>
-
-      {/* Conteúdo expandido (CTA + extras) */}
-      <Animated.View
-        style={[
-          summaryStyles.expandArea,
-          {
-            maxHeight: detailsMaxHeight,
-            opacity: detailsOpacity,
-          },
-        ]}
-      >
-        <View style={summaryStyles.metricsRowCompact}>
-          <View style={summaryStyles.metricCompact}>
-            <Text style={summaryStyles.metricLabel}>Ganhos Totais</Text>
-            <Text style={summaryStyles.metricValuePrimary}>{formattedTotalEarnings}</Text>
-          </View>
-
-          <View style={summaryStyles.dividerV} />
-
-          <View style={summaryStyles.metricCompact}>
-            <Text style={summaryStyles.metricLabel}>Saques Pendentes</Text>
-            <Text style={summaryStyles.metricValueWarning}>{formattedPendingWithdrawals}</Text>
-          </View>
-        </View>
-
-        <View style={summaryStyles.expandSpacer} />
-
-        <TouchableOpacity
-          style={summaryStyles.viewEarningsButton}
-          onPress={() => {
-            onViewEarnings();
-            if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Gerenciar ganhos"
-          accessibilityHint="Abrir detalhes de ganhos e saques"
-        >
-          <Ionicons name="wallet-outline" size={18} color={WHITE} style={summaryStyles.buttonIcon} />
-          <Text style={summaryStyles.viewEarningsButtonText}>Gerenciar Ganhos</Text>
-          <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
-            <Ionicons name="chevron-forward-outline" size={18} color={WHITE} />
-          </Animated.View>
-        </TouchableOpacity>
-      </Animated.View>
-    </Animated.View>
-  );
-};
-
-const summaryStyles = StyleSheet.create({
-  summaryCard: {
-    backgroundColor: ICON_PRIMARY,
-    borderRadius: Radii.xl,
-    padding: 16,            // menor
-    marginBottom: 18,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: SHADOW_COLOR_SECTION,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-      },
-      android: { elevation: 0 },
-    }),
-  },
-
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-
-  cardTitle: {
-    fontSize: 15.5,
-    fontWeight: '800',
-    color: WHITE,
-  },
-
-  chevronWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  metricsRowCompact: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-  },
-
-  metricCompact: {
-    flex: 1,
-    alignItems: 'center',
-  },
-
-  dividerV: {
-    width: 1,
-    height: 34,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    marginHorizontal: 10,
-  },
-
-  metricLabel: {
-    fontSize: 12.5,
-    color: 'rgba(255,255,255,0.85)',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-
-  metricValuePrimary: {
-    fontSize: 16.5,
-    fontWeight: '800',
-    color: WHITE,
-    textAlign: 'center',
-  },
-
-  metricValueWarning: {
-    fontSize: 16.5,
-    fontWeight: '800',
-    color: WARNING_YELLOW,
-    textAlign: 'center',
-  },
-
-  expandArea: {
-    overflow: 'hidden',
-  },
-
-  expandSpacer: {
-    height: 12,
-  },
-
-  viewEarningsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.20)',
-    borderRadius: Radii.pill,
-    paddingVertical: 10,
-  },
-
-  viewEarningsButtonText: {
-    color: WHITE,
-    fontSize: 15.5,
-    fontWeight: '700',
-    marginHorizontal: 8,
-  },
-
-  buttonIcon: {
-    marginRight: Spacing.xs,
-  },
-});
 
 
 // Seção isolada: apenas "Atalhos do Dia"
@@ -1115,14 +886,11 @@ const ConfirmedServiceItem: React.FC<{
   isReducedMotionEnabled: boolean;
 }> = ({ item, onPress, entryAnim, isReducedMotionEnabled }) => {
   const touchAnimation = useAnimatedTouch();
-  const scheduledTimeDate = item.scheduledTime
-    ? new Date(item.scheduledTime)
-    : item.scheduledDate
-      ? new Date(`${item.scheduledDate}T00:00:00`)
-      : new Date();
-  const safeScheduledTimeDate = Number.isNaN(scheduledTimeDate.getTime()) ? new Date() : scheduledTimeDate;
-  const scheduledDate = safeScheduledTimeDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-  const scheduledTime = safeScheduledTimeDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const scheduledSource =
+    item.scheduledTime ??
+    (item.scheduledDate ? `${item.scheduledDate}T${item.scheduledTime ?? '00:00:00'}` : undefined);
+  const candidateDate = scheduledSource ? dayjs(scheduledSource) : dayjs();
+  const displayDate = candidateDate.isValid() ? candidateDate.format('DD/MM [às] HH:mm') : 'Data pendente';
   return (
     <Animated.View style={{
       opacity: entryAnim,
@@ -1145,13 +913,11 @@ const ConfirmedServiceItem: React.FC<{
             <MaterialCommunityIcons name="calendar-check-outline" size={28} color={ICON_PRIMARY} accessibilityHidden={true} />
           </View>
           <View style={styles.serviceItemDetails}>
-            <Text style={styles.serviceItemText} numberOfLines={1}>
-              <Text style={{ fontWeight: 'bold' }}>{item.serviceName || 'Serviço Desconhecido'}</Text>
-              {item.clientFullName ? ` com ${item.clientFullName}` : ''}
-            </Text>
-            <Text style={styles.serviceItemTime}>
-              {scheduledDate}, {scheduledTime}
-            </Text>
+          <Text style={styles.serviceItemText} numberOfLines={1}>
+            <Text style={{ fontWeight: 'bold' }}>{item.serviceName || 'Serviço Desconhecido'}</Text>
+            {item.clientFullName ? ` com ${item.clientFullName}` : ''}
+          </Text>
+          <Text style={styles.serviceItemTime}>{displayDate}</Text>
           </View>
           <Ionicons name="chevron-forward-outline" size={24} color={TEXT_MUTED} accessibilityHidden={true} />
         </Animated.View>
@@ -1294,6 +1060,23 @@ export default function ProviderDashboardScreen() {
       animationSequence.start();
     } catch (err: any) {
       console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
+      if (err?.response?.status === 404 && err?.response?.config?.url?.includes('/bookings/me')) {
+        try {
+          await AsyncStorage.multiRemove([
+            'auth_token',
+            'user_role',
+            'user_id',
+            'user_profile',
+            'serviceDetailsFormData',
+            'providerRegisterFormData',
+          ]);
+        } catch (cleanupError) {
+          console.warn("[DashboardScreen] cleanup during 404 reset failed", cleanupError);
+        }
+        await logout?.();
+        router.replace('/auth/login');
+        return;
+      }
       if (isMounted.current) {
         toastUserError(err, 'Erro ao carregar os dados do dashboard');
       }
@@ -1431,13 +1214,17 @@ export default function ProviderDashboardScreen() {
       const wasVitrineIrregular = providerVisibilityStatus === ProviderVisibilityStatus.VITRINE_IRREGULAR;
       setIsUploadingAvatar(true);
       try {
-        const { url } = await uploadMyAvatar(fileUri);
+        const uploadResponse = await verificationService.uploadAvatar(fileUri);
+        if (!uploadResponse || !uploadResponse.url) {
+          throw new Error('O serviço de processamento de imagem não retornou uma URL válida.');
+        }
+        const url = uploadResponse.url;
         const successMessage = wasVitrineIrregular
-          ? 'Foto enviada. Em revisão para liberar sua vitrine.'
-          : 'Perfil atualizado! Sua nova foto já está visível para os clientes.';
+          ? 'Foto processada com sucesso! Nossa equipe revisará para liberar sua vitrine.'
+          : 'Perfil atualizado com padrão Premium! Sua nova foto já está visível.';
         NotificationUIService.showSuccess(successMessage, 'Foto atualizada');
         if (user) {
-          await updateUser({ avatarUrl: url });
+          await updateUser({ ...user, avatarUrl: url });
         }
         const nowIso = new Date().toISOString();
         setDashboardData((prev) =>
@@ -1445,10 +1232,7 @@ export default function ProviderDashboardScreen() {
             ? {
                 ...prev,
                 avatarUrl: url,
-                updatedAt: nowIso,
                 visibilityStatus: wasVitrineIrregular ? ProviderVisibilityStatus.PENDING_VITRINE_REVIEW : prev.visibilityStatus,
-                visibilityReason: wasVitrineIrregular ? null : prev.visibilityReason,
-                visibilityUpdatedAt: wasVitrineIrregular ? nowIso : prev.visibilityUpdatedAt,
                 provider: prev.provider
                   ? {
                       ...prev.provider,
@@ -1456,7 +1240,6 @@ export default function ProviderDashboardScreen() {
                       visibilityStatus: wasVitrineIrregular
                         ? ProviderVisibilityStatus.PENDING_VITRINE_REVIEW
                         : prev.provider.visibilityStatus,
-                      visibilityReason: wasVitrineIrregular ? null : prev.provider.visibilityReason,
                       visibilityUpdatedAt: wasVitrineIrregular ? nowIso : prev.provider.visibilityUpdatedAt,
                     }
                   : prev.provider,
@@ -1468,12 +1251,13 @@ export default function ProviderDashboardScreen() {
           appQueryClient.invalidateQueries({ queryKey: ['provider', user.id] });
         }
       } catch (error: any) {
-        NotificationUIService.showError(error, 'Não foi possível atualizar a foto.');
+        console.error('[Dashboard] Erro no upload via Vision IA:', error);
+        NotificationUIService.showError(error, 'Não foi possível processar sua foto profissional.');
       } finally {
         setIsUploadingAvatar(false);
       }
     },
-    [appQueryClient, isUploadingAvatar, providerVisibilityStatus, setDashboardData, updateUser, user],
+    [isUploadingAvatar, providerVisibilityStatus, user, updateUser, setDashboardData, appQueryClient],
   );
   const pickAvatarImage = useCallback(
     async (source: 'camera' | 'library') => {
@@ -1804,13 +1588,6 @@ export default function ProviderDashboardScreen() {
             totalEarnings={dashboardData?.totalEarnings}
             pendingWithdrawals={dashboardData?.pendingWithdrawals}
           />
-        <FinancialSummaryCard
-          totalEarnings={dashboardData?.totalEarnings}
-          pendingWithdrawals={dashboardData?.pendingWithdrawals}
-          onViewEarnings={() => router.push(PROVIDER_ROUTES.EARNINGS as any)}
-          animation={financialSummaryAnim}
-          isReducedMotionEnabled={isReducedMotionEnabled}
-        />
         <View style={quickActionStyles.shortcutsContainer}>
           <ShortcutsGrid
             labels={{
