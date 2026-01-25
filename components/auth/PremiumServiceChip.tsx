@@ -1,9 +1,8 @@
 // PremiumServiceChip.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type ChipProps = {
   id: string;
@@ -17,7 +16,6 @@ type ChipProps = {
 };
 
 export const PremiumServiceChip: React.FC<ChipProps> = ({
-  id,
   label,
   selected,
   onPress,
@@ -27,32 +25,6 @@ export const PremiumServiceChip: React.FC<ChipProps> = ({
   style
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
-  const highlightAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (selected) {
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(highlightAnim, {
-            toValue: 1,
-            duration: 1400,
-            useNativeDriver: true,
-            easing: Easing.linear,
-          }),
-          Animated.timing(highlightAnim, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          }),
-          Animated.delay(1600),
-        ])
-      );
-      loop.start();
-      return () => loop.stop();
-    }
-    highlightAnim.stopAnimation();
-    highlightAnim.setValue(0);
-  }, [selected, highlightAnim]);
 
   const handlePressIn = () => {
     Animated.spring(scale, { toValue: 0.98, useNativeDriver: true }).start();
@@ -62,11 +34,9 @@ export const PremiumServiceChip: React.FC<ChipProps> = ({
   };
 
   const IconComp = iconSet === 'ion' ? Ionicons : MaterialCommunityIcons;
-  const highlightScale = highlightAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.2] });
-  const highlightOpacity = highlightAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.35] });
 
   return (
-    <Animated.View style={[{ transform: [{ scale }], width: '48%', marginBottom: 12 }, style]}>
+    <Animated.View style={[{ transform: [{ scale }], marginRight: 8, marginBottom: 8 }, style]}>
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={() => {
@@ -76,113 +46,71 @@ export const PremiumServiceChip: React.FC<ChipProps> = ({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled}
-        style={[chipStyles.card, disabled && { opacity: 0.5 }]}
+        style={[
+          chipStyles.chipContainer,
+          selected && chipStyles.chipSelected,
+          disabled && chipStyles.chipDisabled,
+        ]}
       >
-        <LinearGradient
-          colors={selected ? ['#7DB7FF', '#3B82F6'] : ['#E9EEF6', '#E9EEF6']}
-          style={chipStyles.border}
+        <View style={[chipStyles.iconWrap, selected && chipStyles.iconWrapSelected]}>
+          <IconComp
+            name={iconName as any}
+            size={20}
+            color={selected ? '#1D4ED8' : '#64748B'}
+          />
+        </View>
+
+        <Text
+          style={[chipStyles.chipText, selected && chipStyles.chipTextSelected]}
         >
-          <View style={[chipStyles.inner, selected && chipStyles.innerSelected]}>
-            {selected && (
-              <View style={chipStyles.badge}>
-                <Ionicons name="checkmark" size={14} color="#fff" />
-              </View>
-            )}
-
-            <View style={chipStyles.iconWrap}>
-              <IconComp
-                name={iconName as any}
-                size={28}
-                color={selected ? '#ffffff' : '#3B82F6'}
-              />
-              {selected && (
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    chipStyles.highlightSquare,
-                    {
-                      opacity: highlightOpacity,
-                      transform: [{ scale: highlightScale }],
-                    },
-                  ]}
-                />
-              )}
-            </View>
-
-            <Text
-              numberOfLines={1}
-              style={[chipStyles.label, selected && chipStyles.labelSelected]}
-            >
-              {label}
-            </Text>
-          </View>
-        </LinearGradient>
+          {label}
+        </Text>
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
 const chipStyles = StyleSheet.create({
-  card: {
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 0,
-  },
-  border: {
-    borderRadius: 16,
-    padding: 1.5,
-  },
-  inner: {
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    paddingHorizontal: 14,
+  chipContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  innerSelected: {
-    backgroundColor: '#3B82F6',
+  chipSelected: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#3B82F6',
+  },
+  chipDisabled: {
+    opacity: 0.5,
   },
   iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(59,130,246,0.08)',
-    marginBottom: 8,
-    ...Platform.select({
-      android: { elevation: 0 },
-      ios: { shadowOpacity: 0 },
-    }),
   },
-  highlightSquare: {
-    position: 'absolute',
-    width: 52,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.35)',
-    top: -4,
-    left: -6,
+  iconWrapSelected: {
+    backgroundColor: 'rgba(59,130,246,0.18)',
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#2C3E50',
+  chipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#64748B',
+    marginLeft: 8,
   },
-  labelSelected: {
-    color: '#FFFFFF',
-  },
-  badge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+  chipTextSelected: {
+    color: '#1D4ED8',
   },
 });
