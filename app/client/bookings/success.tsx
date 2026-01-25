@@ -387,9 +387,9 @@ await getBookingDetails(bookingId);
 } catch {
 // ignore
 }
-setTimeout(() => {
-router.replace('/client/bookings?highlightNew=true' as any);
-}, 1200);
+        setTimeout(() => {
+          router.push('/client/bookings?highlightNew=true');
+        }, 1200);
 }
 return;
 }
@@ -423,9 +423,9 @@ NotificationUIService.showInfo(
 'SessALo atualizada',
 'Sua sessALo de pagamento foi renovada. Voltamos para a pA!gina inicial para garantir sua seguranA�a.',
 );
-setTimeout(() => {
-router.replace('/client/explore' as any);
-}, 400);
+        setTimeout(() => {
+          router.push('/client/explore');
+        }, 400);
 return;
 }
 if (status === 404) {
@@ -458,16 +458,24 @@ if (pollRef.current) clearInterval(pollRef.current);
 }, [startPolling, shouldPollIntent]);
 useEffect(() => {}, [booking, paid, paymentMethod, isLoading, error, shouldPollIntent]);
 const handleGoToBookings = useCallback(() => {
-if (Platform.OS === 'ios') {
-try { Haptics.selectionAsync(); } catch {}
-}
-router.replace('/client/bookings?highlightNew=true' as any);
+  if (pollRef.current) {
+    clearInterval(pollRef.current);
+    pollRef.current = null;
+  }
+  if (Platform.OS === 'ios') {
+    try { Haptics.selectionAsync(); } catch {}
+  }
+  router.push('/client/bookings?highlightNew=true');
 }, [router]);
 const handleGoHome = useCallback(() => {
-if (Platform.OS === 'ios') {
-try { Haptics.selectionAsync(); } catch {}
-}
-router.replace('/client/explore' as any);
+  if (pollRef.current) {
+    clearInterval(pollRef.current);
+    pollRef.current = null;
+  }
+  if (Platform.OS === 'ios') {
+    try { Haptics.selectionAsync(); } catch {}
+  }
+  router.replace('/client/explore' as any);
 }, [router]);
 const handleAddToCalendar = useCallback(() => {
 // Silencioso por enquanto
