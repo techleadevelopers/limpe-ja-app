@@ -32,6 +32,7 @@ export default function ServiceDetailsStep5Premium({
     }).start();
   }, [animatedValue]);
 
+  const visibleDays = upcoming.slice(0, 4);
   return (
     <Animated.View
       style={{
@@ -44,11 +45,8 @@ export default function ServiceDetailsStep5Premium({
       }}
     >
       <LinearGradient colors={['#E0F2FE', '#F0F9FF']} style={styles.stageCard}>
-        <Ionicons name="checkmark-circle" size={22} color="#3B82F6" />
-        <View style={{ marginLeft: 10 }}>
-          <Text style={styles.stageTitle}>Etapa 5 de 5</Text>
-          <Text style={styles.stageSubtitle}>Defina onde e quando você atende</Text>
-        </View>
+        
+       
       </LinearGradient>
 
       <View style={styles.radiusContainer}>
@@ -75,7 +73,7 @@ export default function ServiceDetailsStep5Premium({
 
       <View style={{ marginTop: 20 }}>
         <Text style={styles.sectionTitle}> Quando você pode atender?</Text>
-        {upcoming.map((d) => {
+        {visibleDays.map((d) => {
           const key = d.toISOString().slice(0, 10);
           const s = selectedDays[key] ?? { morning: false, afternoon: false };
           const dayLabel = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d.getDay()];
