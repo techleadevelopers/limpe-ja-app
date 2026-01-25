@@ -43,6 +43,9 @@ export class ChatGateway {
   private readonly heartbeatIntervalMs = 25000;
   private readonly heartbeatGraceMs = 15000;
   private readonly heartbeatTimers = new Map<string, NodeJS.Timeout>();
+  private readonly disconnectWindowMs = 60_000;
+  private disconnectWindowStart = Date.now();
+  private disconnectCountInWindow = 0;
 
   constructor(
     private readonly chatService: ChatService,
@@ -61,7 +64,20 @@ export class ChatGateway {
 
   // Opcional: Lidar com a desconexão de um cliente
   handleDisconnect(client: Socket) {
-    this.logger.log(`Cliente desconectado (WebSocket): ${client.id}`);
+    const now = Date.now();
+    if (now - this.disconnectWindowStart >= this.disconnectWindowMs) {
+      if (this.disconnectCountInWindow > 0) {
+        const windowSeconds = Math.round(
+          (now - this.disconnectWindowStart) / 1000,
+        );
+        this.logger.log(
+          `[WebSocket] ${this.disconnectCountInWindow} disconnects in the last ${windowSeconds}s (latest client ${client.id}).`,
+        );
+      }
+      this.disconnectCountInWindow = 0;
+      this.disconnectWindowStart = now;
+    }
+    this.disconnectCountInWindow += 1;
     this.clearHeartbeat(client);
   }
 
