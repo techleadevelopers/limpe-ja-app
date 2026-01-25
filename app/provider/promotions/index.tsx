@@ -321,14 +321,14 @@ const resolveErrorMessage = useCallback(
               <View style={styles.iconContainer}>
                 <Ionicons name="pricetag" size={32} color="#2563EB" />
               </View>
-              <Text style={{ fontSize: 22, fontWeight: '800', color: '#1E293B', textAlign: 'center' }}>
+              <Text style={{ fontSize: 19, fontWeight: '800', color: '#1E293B', textAlign: 'center' }}>
                 Aumente seus ganhos
               </Text>
-              <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginTop: 8, marginBottom: 24 }}>
+              <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 8, marginBottom: 24 }}>
                 Crie uma promoção para aparecer no topo das buscas dos clientes.
               </Text>
               <TouchableOpacity style={styles.primaryButton} onPress={handleOpenModal}>
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Criar novo cupom</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Criar novo cupom</Text>
                 <Ionicons name="add-circle" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -501,12 +501,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   scrollContent: {
+    marginTop: 40,
     paddingBottom: 100,
   },
   mainActionCard: {
     backgroundColor: '#fff',
     margin: 20,
     padding: 24,
+    marginBottom: 40,
     borderRadius: 28,
     borderWidth: 1,
     borderColor: '#F1F5F9',
@@ -569,7 +571,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: '#1E293B',
     marginTop: 10,
@@ -713,7 +715,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '700',
     color: '#1E293B',
   },
