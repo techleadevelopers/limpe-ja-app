@@ -34,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  private readonly safeCacheTtlSeconds = 300;
+  private readonly safeCacheTtlSeconds = 60 * 60;
   private readonly payloadCacheTtlSeconds = 180;
   private readonly payloadSuffix = ':payload';
 
