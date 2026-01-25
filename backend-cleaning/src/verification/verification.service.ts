@@ -9,7 +9,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { File } from 'multer';
 import axios from 'axios';
-import FormData from 'form-data';
+import FormData = require('form-data');
 import { DocumentProcessingService } from '../document-processing/document-processing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -97,28 +97,53 @@ export class VerificationService {
     } as any);
 
     let responseUrl: string | undefined;
+    const visionStart = Date.now();
     try {
       const response = await axios.post(
         `${visionUrl}/vision/process-avatar`,
         form,
         {
           headers: form.getHeaders(),
-          timeout: 20000,
-        },
-      );
-      responseUrl = response.data?.url;
-    } catch (error: any) {
-      this.logger.error(
-        `[VerificationService] uploadAvatar: Falha ao chamar Vision IA: ${error?.message || error}`,
-      );
-      throw new InternalServerErrorException('Falha ao processar avatar.');
-    }
+        timeout: 60_000,
+      },
+    );
+    responseUrl = response.data?.url;
+    this.logger.log(
+      `[VerificationService] uploadAvatar: Vision IA respondeu em ${
+        Date.now() - visionStart
+      } ms.`,
+    );
+  } catch (error: any) {
+    this.logger.error(
+      `[VerificationService] uploadAvatar: Falha ao chamar Vision IA: ${error?.message || error}`,
+    );
+    this.logger.log(
+      `[VerificationService] uploadAvatar: Vision IA falhou após ${
+        Date.now() - visionStart
+      } ms.`,
+    );
+  }
 
     if (!responseUrl) {
-      this.logger.error(
-        '[VerificationService] uploadAvatar: Vision IA não retornou URL.',
+      this.logger.warn(
+        '[VerificationService] uploadAvatar: Vision IA não retornou URL, utilizando fallback.',
       );
-      throw new InternalServerErrorException('Vision IA não retornou URL.');
+      const fallbackPath = `provider-avatars/${providerId}/${filename}`;
+      try {
+        responseUrl = await this.documentProcessingService.uploadImage(
+          file,
+          fallbackPath,
+          'avatar',
+        );
+        this.logger.log(
+          `[VerificationService] uploadAvatar: Fallback completo com URL ${responseUrl}`,
+        );
+      } catch (fallbackError: any) {
+        this.logger.error(
+          `[VerificationService] uploadAvatar: Fallback falhou ao enviar avatar direto: ${(fallbackError as Error)?.message || fallbackError}`,
+        );
+        throw new InternalServerErrorException('Falha ao enviar avatar.');
+      }
     }
 
     // Atualiza o banco com a foto TRATADA pela IA
