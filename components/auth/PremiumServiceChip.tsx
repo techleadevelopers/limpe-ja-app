@@ -85,6 +85,7 @@ const chipStyles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+    minWidth: 120,
   },
   chipSelected: {
     backgroundColor: '#EFF6FF',
