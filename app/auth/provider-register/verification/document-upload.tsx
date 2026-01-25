@@ -149,72 +149,59 @@ export default function DocumentUploadScreen({
 
   return (
     <Animated.View style={[styles.container, { opacity: contentFade, transform: [{ translateY: contentSlide }] }]}>
-      <View style={styles.header}>
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <Ionicons name="card" size={40} color={Colors.primary} style={styles.headerIcon} />
-        </Animated.View>
-        <Text style={styles.title}>Envio de Documentos</Text>
-        <Text style={styles.description}>
-          Precisamos de fotos nítidas da frente e do verso do seu documento de identidade (RG ou CNH).
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>Frente do Documento</Text>
-        <View style={styles.imageUploadWrapper}>
-          {documentPhotoFront ? (
-            <Image source={{ uri: documentPhotoFront }} style={styles.uploadedImage} />
-          ) : (
-            <Image source={PARTE_FRENTE_IMAGE} style={styles.placeholderImage} />
-          )}
-          <View style={styles.imageUploadButtons}>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
-              <Ionicons name="camera-outline" size={18} color="#fff" />
-              <Text style={styles.uploadButtonText}>Tirar Foto</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
-              <Ionicons name="folder-open-outline" size={18} color="#fff" />
-              <Text style={styles.uploadButtonText}>Galeria</Text>
-            </TouchableOpacity>
+      <View style={styles.content}>
+          <View style={styles.header}>
+            {/*
+              Animated icon intentionally disabled. Pulse animation tied to `pulseAnim` would draw attention
+              to the card icon that previously sat above the title, so we leave it out for now.
+            */}
+            <Text style={styles.title}>Envio de Documentos</Text>
+            <Text style={styles.description}>
+              Precisamos de fotos nítidas da frente e do verso do seu documento de identidade (RG ou CNH).
+            </Text>
           </View>
-        </View>
-        {frontError && <AnimatedErrorMessage message={frontError} isVisible={!!frontError} />}
 
-        <Text style={styles.label}>Verso do Documento</Text>
-        <View style={styles.imageUploadWrapper}>
-          {documentPhotoBack ? (
-            <Image source={{ uri: documentPhotoBack }} style={styles.uploadedImage} />
-          ) : (
-            <Image source={PARTE_TRAS_IMAGE} style={styles.placeholderImage} />
-          )}
-          <View style={styles.imageUploadButtons}>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
-              <Ionicons name="camera-outline" size={18} color="#fff" />
-              <Text style={styles.uploadButtonText}>Tirar Foto</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
-              <Ionicons name="folder-open-outline" size={18} color="#fff" />
-              <Text style={styles.uploadButtonText}>Galeria</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        {backError && <AnimatedErrorMessage message={backError} isVisible={!!backError} />}
-
-        <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
-          <TouchableOpacity
-            style={[styles.submitButton, (!isNextButtonEnabled) && styles.buttonDisabled]}
-            onPress={handleSubmitDocuments}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            disabled={!isNextButtonEnabled}
-          >
-            {isLoading || submissionStatus === 'pending' ? (
-              <ActivityIndicator color="#FFFFFF" />
+        <View style={styles.card}>
+          <Text style={styles.label}>Frente do Documento</Text>
+          <View style={styles.imageUploadWrapper}>
+            {documentPhotoFront ? (
+              <Image source={{ uri: documentPhotoFront }} style={styles.uploadedImage} />
             ) : (
-              <Text style={styles.submitButtonText}>Próxima Etapa</Text>
+              <Image source={PARTE_FRENTE_IMAGE} style={styles.placeholderImage} />
             )}
-          </TouchableOpacity>
-        </Animated.View>
+            <View style={styles.imageUploadButtons}>
+              <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
+                <Ionicons name="camera-outline" size={18} color="#fff" />
+                <Text style={styles.uploadButtonText}>Tirar Foto</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
+                <Ionicons name="folder-open-outline" size={18} color="#fff" />
+                <Text style={styles.uploadButtonText}>Galeria</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          {frontError && <AnimatedErrorMessage message={frontError} isVisible={!!frontError} />}
+
+          <Text style={styles.label}>Verso do Documento</Text>
+          <View style={styles.imageUploadWrapper}>
+            {documentPhotoBack ? (
+              <Image source={{ uri: documentPhotoBack }} style={styles.uploadedImage} />
+            ) : (
+              <Image source={PARTE_TRAS_IMAGE} style={styles.placeholderImage} />
+            )}
+            <View style={styles.imageUploadButtons}>
+              <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
+                <Ionicons name="camera-outline" size={18} color="#fff" />
+                <Text style={styles.uploadButtonText}>Tirar Foto</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
+                <Ionicons name="folder-open-outline" size={18} color="#fff" />
+                <Text style={styles.uploadButtonText}>Galeria</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          {backError && <AnimatedErrorMessage message={backError} isVisible={!!backError} />}
+        </View>
 
         {submissionStatus !== 'none' && (
           <View style={[styles.statusBadge,
@@ -237,6 +224,22 @@ export default function DocumentUploadScreen({
           </View>
         )}
       </View>
+
+      <Animated.View style={[styles.fixedButtonWrapper, { transform: [{ scale: buttonScale }] }]}>
+        <TouchableOpacity
+          style={[styles.submitButton, (!isNextButtonEnabled) && styles.buttonDisabled]}
+          onPress={handleSubmitDocuments}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          disabled={!isNextButtonEnabled}
+        >
+          {isLoading || submissionStatus === 'pending' ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.submitButtonText}>Próxima Etapa</Text>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -248,7 +251,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: SIZES.paddingSmall,
-    backgroundColor: Colors.background,
+    backgroundColor: 'transparent',
+    paddingBottom: 20,
   },
   header: {
     alignItems: 'center',
@@ -259,7 +263,7 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.base,
   },
   title: {
-    fontSize: SIZES.h2,
+    fontSize: 17,
     fontWeight: 'bold',
     color: Colors.textPrimary,
     marginTop: SIZES.base * 2,
@@ -286,6 +290,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.primaryLight,
+  },
+
+  content: {
+    width: '100%',
+    alignItems: 'center',
   },
   label: {
     fontSize: SIZES.body4,
