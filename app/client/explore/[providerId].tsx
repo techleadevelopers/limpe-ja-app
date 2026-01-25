@@ -21,6 +21,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import NotificationUIService from '../../../services/notificationUIService';
 
+import { normalizeApiError } from '../../_shared/utils/errors';
+
 import BookServiceButton from '../../../components/client/explore/provider/BookServiceButton';
 import InfoChip from '../../../components/client/explore/provider/InfoChip';
 // ServiceCategoryBadges removido (voltando ao layout anterior)
@@ -326,6 +328,8 @@ export default function ProviderDetailsScreen() {
   const [provider, setProvider] = useState<ProviderDisplayInfoWithStatus | null | undefined>(undefined);
   const [, setProviderOffers] = useState<Offer[]>([]);
   const [, setOffersLoading] = useState(false);
+  const [, setProviderFetchErrorMessage] = useState<string | null>(null);
+  const [, setProviderRateLimited] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [, setCanInitiateChat] = useState(false);
