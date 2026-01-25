@@ -107,13 +107,46 @@ export class ObservabilityService {
       recordedAt: Date.now(),
     };
     this.jobMetrics.set(jobName, metric);
-    this.logger.log(
-      `[ObservabilityService] job '${jobName}' finished in ${sanitizedDuration}ms affecting ${affectedCount} records.`,
-    );
+
+    if (affectedCount > 0) {
+      this.logger.log(
+        `[ObservabilityService] job '${jobName}' finished in ${sanitizedDuration}ms affecting ${affectedCount} records.`,
+      );
+    } else if (sanitizedDuration > 100) {
+      this.logger.warn(
+        `[ObservabilityService] job '${jobName}' completed 0 records in ${sanitizedDuration}ms (possible latency/CPU bottleneck).`,
+      );
+    }
+
+    void this.reportJobMetricToMonitoring(jobName, sanitizedDuration, affectedCount);
   }
 
   getJobMetric(jobName: string): JobMetric | null {
     return this.jobMetrics.get(jobName) ?? null;
+  }
+
+  private async reportJobMetricToMonitoring(
+    jobName: string,
+    durationMs: number,
+    affectedCount: number,
+  ) {
+    try {
+      const metricLine = [
+        `limpeja_job_duration_ms{job="${jobName}",recordsAffected="${affectedCount}"}`,
+        durationMs,
+      ].join(' ');
+      // Simulação de envio para Prometheus/Grafana (substituir por cliente real quando disponível)
+      this.logger.debug(
+        `[ObservabilityService] pushing job metric to monitoring: ${metricLine}`,
+      );
+      await Promise.resolve();
+    } catch (error) {
+      this.logger.warn(
+        `[ObservabilityService] failed to push job metric for '${jobName}': ${
+          (error as Error)?.message ?? error
+        }`,
+      );
+    }
   }
 
   private toPoint(entry: LatencyEntry): LatencyPoint {
