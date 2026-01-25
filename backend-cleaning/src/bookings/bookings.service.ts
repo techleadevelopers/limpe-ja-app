@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import * as dayjs from 'dayjs';
 
 import {
   Injectable,
@@ -2392,8 +2392,10 @@ export class BookingsService {
       );
     }
 
-    this.logger.log(
-      `[BookingsService] findUserBookings: Cláusula WHERE final: ${JSON.stringify(whereClause)}`,
+    this.logger.debug(
+      `[BookingsService] findUserBookings: Cláusula WHERE final: ${JSON.stringify(
+        whereClause,
+      )}`,
     );
     const bookingInclude: Prisma.BookingInclude = {
       ...DEFAULT_BOOKING_DETAILS_INCLUDE,
