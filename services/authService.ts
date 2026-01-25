@@ -87,6 +87,9 @@ class AuthService {
                 cpf: userData.cpf,
                 address: userData.address,
                 referralCode: userData.referralCode,
+                termsAccepted: Boolean(userData.termsAccepted),
+                termsAcceptedAt: userData.termsAcceptedAt ?? null,
+                termsVersion: userData.termsVersion ?? null,
             };
             const response = await api.post('/auth/register/client', payload);
             const authData: AuthResponse = response.data;
