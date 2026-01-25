@@ -43,10 +43,10 @@ import { AUTH_ROUTES } from '../../_shared/routes';
 const MIN_HOURLY_DURATION = 240;
 
 const SERVICE_OPTIONS = [
-  { id: 'residencial', label: 'Residencial', icon: 'home', set: 'ion' },
-  { id: 'comercial',   label: 'Comercial',   icon: 'office-building', set: 'mci' },
-  { id: 'escritorio',  label: 'Escritrio',  icon: 'desktop-outline', set: 'ion' },
-  { id: 'pos_obra',    label: 'Ps-Obra',    icon: 'hammer-wrench', set: 'mci' },
+  { id: 'residencial', label: 'Residencial', icon: 'home-outline', set: 'ion' },
+  { id: 'comercial',   label: 'Comercial',   icon: 'business-outline', set: 'ion' },
+  { id: 'escritorio',  label: 'Escritório',  icon: 'desktop-outline', set: 'ion' },
+  { id: 'pos_obra',    label: 'Pós-Obra',    icon: 'hammer-outline', set: 'ion' },
 ];
 
 
@@ -115,6 +115,21 @@ export default function ServiceDetailsScreen() {
   const [pixKeyError, setPixKeyError] = useState<string | null>(null);
   const [serviceAreasError, setServiceAreasError] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
+
+  const cancelRegistrationAndGoBack = React.useCallback(async () => {
+    setIsRegistrationInProgress(false);
+    router.replace(AUTH_ROUTES.REGISTER_OPTIONS);
+    try {
+      await AsyncStorage.multiRemove([
+        'providerRegisterFormData',
+        'serviceDetailsFormData',
+        '@LimpeJa:registration_start_time',
+        '@LimpeJa:auth_token',
+      ]);
+    } catch (_) {
+      // best effort
+    }
+  }, [router, setIsRegistrationInProgress]);
 
   useEffect(() => {
     let isMounted = true;
@@ -429,7 +444,7 @@ export default function ServiceDetailsScreen() {
     }
   };
 
-  const handleBackSubStep = () => {
+  const handleBackSubStep = async () => {
     setGeneralError(null);
     // Clear specific errors when going back
     setProfilePhotoError(null);
@@ -442,18 +457,14 @@ export default function ServiceDetailsScreen() {
 
     if (currentServiceSubStep > 1) {
       setCurrentServiceSubStep(currentServiceSubStep - 1);
-    } else {
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace(AUTH_ROUTES.PROVIDER_REGISTER);
-      }
+      return;
     }
+    await cancelRegistrationAndGoBack();
   };
 
   const handleFinalSubmission = async () => {
-    if (!user || !user.token || !user.providerDetails?.id) {
-      Alert.alert('Erro de autenticação', 'Usuário não logado ou detalhes do provedor ausentes. Por favor, faça login novamente.');
+    if (!user || !user.token) {
+      Alert.alert('Erro de autenticação', 'Usuário não logado. Por favor, faça login novamente.');
       return;
     }
 
@@ -470,38 +481,69 @@ export default function ServiceDetailsScreen() {
     setIsUploading(true);
 
     try {
-      const providerId = user.providerDetails.id;
-      let avatarUrl: string | null | undefined = user.providerDetails.avatarUrl;
-
-      // 1. Upload da foto, se for uma URI local
-      if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
-        try {
-          const uploadResponse = await verificationService.uploadAvatar(formData.profilePhoto);
-          if (uploadResponse && uploadResponse.url) {
-            avatarUrl = uploadResponse.url;
-          } else {
-            throw new Error('O serviço de upload de avatar não retornou uma URL válida.');
-          }
-        } catch (uploadError: any) {
-          throw new Error("Não foi possível fazer o upload da foto de perfil.");
-        }
-      }
-
-      // 2. Atualização do Perfil (TEMP: anexa as áreas no bio)
       const areasLine =
         formData.serviceAreas && formData.serviceAreas.length
           ? `Áreas de atendimento: ${formData.serviceAreas.join(', ')}`
           : '';
 
       const profileUpdateData = {
-        avatarUrl: avatarUrl,
         bio: `${formData.description}${areasLine}`, // TEMP: anexa as áreas no bio
         yearsOfExperience: parseInt(formData.yearsOfExperience, 10),
         pixKey: formData.pixKey,
         // Não enviar serviceAreas enquanto o backend não suportar
       };
 
-      await updateMyProviderProfile(profileUpdateData);
+        let updatedProvider;
+        try {
+          updatedProvider = await updateMyProviderProfile(profileUpdateData);
+        } catch (err: any) {
+          if (err?.response?.status === 404) {
+            Alert.alert(
+              'Perfil não encontrado',
+              'Seu registro foi reiniciado. Por favor, faça o cadastro novamente.',
+            );
+            await AsyncStorage.removeItem('serviceDetailsFormData');
+            await AsyncStorage.removeItem('providerRegisterFormData');
+            await AsyncStorage.removeItem('@LimpeJa:auth_token');
+            router.replace(AUTH_ROUTES.PROVIDER_REGISTER);
+            return;
+          }
+          throw err;
+        }
+        const providerId = updatedProvider?.id;
+      if (!providerId) {
+        throw new Error('Não foi possível identificar o provedor atualizado.');
+      }
+
+      let avatarUrl: string | null | undefined =
+        updatedProvider.avatarUrl ?? user.avatarUrl ?? null;
+
+      await updateUser({
+        ...user,
+        role: 'PROVIDER',
+        avatarUrl,
+        providerDetails: updatedProvider,
+      } as any);
+
+      if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
+        try {
+          const uploadResponse = await verificationService.uploadAvatar(formData.profilePhoto);
+          if (!uploadResponse || !uploadResponse.url) {
+            setGeneralError('O serviço de upload de avatar não retornou uma URL válida.');
+            return;
+          }
+          avatarUrl = uploadResponse.url;
+          await updateUser({
+            ...user,
+            role: 'PROVIDER',
+            avatarUrl,
+            providerDetails: { ...updatedProvider, avatarUrl },
+          } as any);
+        } catch (uploadError: any) {
+          setGeneralError('Não foi possível fazer o upload da foto de perfil. Tente novamente.');
+          return;
+        }
+      }
 
       // 3. Atualização/Criação de Serviços
       const existingProviderServices = await getProviderServicesOffered(providerId);
@@ -578,11 +620,17 @@ export default function ServiceDetailsScreen() {
       }
 
       // 6. Atualizar estado local
+      const providerDetailsWithStatus = {
+        ...(updatedProvider && typeof updatedProvider === 'object' ? updatedProvider : {}),
+        verificationStatus: VerificationStatus.PENDING_DOCUMENTS_UPLOAD,
+        avatarUrl,
+      };
+
       await updateUser({
-        avatarUrl: avatarUrl ?? user?.avatarUrl ?? null,
-        providerDetails: user?.providerDetails
-          ? { ...user.providerDetails, verificationStatus: VerificationStatus.PENDING_DOCUMENTS_UPLOAD }
-          : (user?.providerDetails as any),
+        ...user,
+        role: 'PROVIDER',
+        avatarUrl,
+        providerDetails: providerDetailsWithStatus,
       } as any);
 
       // 6. Finalização e Navegação (Requisito 3: Sem Alert de sucesso)
@@ -636,25 +684,7 @@ export default function ServiceDetailsScreen() {
     </View>
   );
 
-  const getSubStepTitle = () => {
-  switch (currentServiceSubStep) {
-    case 1: return '';
-    case 2: return '2. Experiência e Especialidades';
-    case 3: return '3. Preço por hora';
-    case 4: return '4. Chave PIX e Áreas de Atendimento';
-    default: return '';
-  }
-};
 
-const getMicrocopyText = () => {
-  switch (currentServiceSubStep) {
-    case 1: return 'Sua foto e uma breve descrição ajudam os clientes a te conhecerem.';
-    case 2: return 'Conte-nos sobre sua experiência e os serviços que você oferece.';
-    case 3: return 'Defina o preço por hora (mínimo de 4h).';
-    case 4: return 'Para receber pagamentos e informar suas áreas de atuação.';
-    default: return '';
-  }
-};
 
   const getBackButtonText = () => {
     if (currentServiceSubStep === 1) return '';
@@ -699,15 +729,10 @@ const getMicrocopyText = () => {
               <Text style={styles.progressText}>{`Etapa ${currentServiceSubStep} de ${totalSteps}`}</Text>
             </View>*/}
 
-            <Text style={styles.headerSubtitle}>
-              {getSubStepTitle()}
-            </Text>
-            <Text style={styles.microcopyText}>{getMicrocopyText()}</Text>
-
             {/* Sub-step 1: Photo + Description */}
             {currentServiceSubStep === 1 && (
               <View style={styles.formContainer}>
-                <Text style={styles.sectionTitle}>Foto do Perfil</Text>
+                <Text style={styles.sectionTitle}>Sua foto é sua vitrine</Text>
                 <TouchableOpacity
                   style={[styles.imageUploadButton, {transform: [{scale: avatarScaleAnim}]}, profilePhotoError ? styles.imageUploadButtonError : {}]}
                   onPress={handleOpenGallery}
@@ -737,19 +762,10 @@ const getMicrocopyText = () => {
                   </TouchableOpacity>
                 </View>
                 <View style={styles.photoHintContainer}>
-                  <Text style={styles.photoHintTitle}>Foto de vitrine profissional</Text>
                   <Text style={styles.photoHintText}>
-                    Perfis com foto profissional recebem mais solicitações.
+                    Olhe para a câmera e tire a foto da cintura para cima. {'\n'}
+                    Nossa inteligência cuidará do fundo para você! 🚀
                   </Text>
-                  <View style={styles.photoHintBulletRow}>
-                    <Text style={styles.photoHintBulletText}>✅ Meio corpo, fundo claro e boa iluminação</Text>
-                  </View>
-                  <View style={styles.photoHintBulletRow}>
-                    <Text style={styles.photoHintBulletText}>✅ Roupa neutra ou uniforme e postura profissional</Text>
-                  </View>
-                  <View style={styles.photoHintBulletRow}>
-                    <Text style={styles.photoHintBulletText}>❌ Evite selfie muito próxima e filtros exagerados</Text>
-                  </View>
                 </View>
                 {profilePhotoError && <Text style={styles.inlineErrorMessageCentered}>{profilePhotoError}</Text>}
 
@@ -894,19 +910,21 @@ const getMicrocopyText = () => {
             )}
             {generalError && <Text style={styles.inlineErrorMessageCentered}>{generalError}</Text>}
 
-            {/* 2) Botões inferiores (premium clean) */}
-            <View style={styles.navigationButtonsContainer}>
+            <View
+              style={[
+                styles.navigationButtonsContainer,
+                currentServiceSubStep > 1 ? styles.navigationButtonsWithBack : undefined,
+              ]}
+            >
               {currentServiceSubStep > 1 && (
                 <TouchableOpacity
                   onPress={handleBackSubStep}
                   activeOpacity={0.9}
-                  style={btn.backGlass}
+                  style={[styles.navButton, styles.navButtonBack]}
                   disabled={isUploading}
                 >
-                  <LinearGradient colors={['#FFFFFF', '#F7FAFF']} style={btn.backGlassInner}>
-                    <Ionicons name="arrow-back-outline" size={18} color="#1F2A37" />
-                    <Text style={btn.backGlassText}>Voltar</Text>
-                  </LinearGradient>
+                  <Ionicons name="arrow-back-outline" size={18} color="#00BCD4" />
+                  <Text style={styles.navButtonTextBack}>Voltar</Text>
                 </TouchableOpacity>
               )}
 
@@ -914,25 +932,27 @@ const getMicrocopyText = () => {
                 onPress={handleNextSubStep}
                 activeOpacity={0.95}
                 disabled={isUploading}
-                style={[btn.primaryWrap, isUploading && { opacity: 0.7 }]}
+                style={[
+                  styles.navButton,
+                  styles.navButtonNext,
+                  currentServiceSubStep > 1 ? styles.navButtonNextSpacing : undefined,
+                  isUploading && styles.buttonDisabled,
+                ]}
               >
-                <LinearGradient colors={['#7DB7FF', '#3B82F6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={btn.primary}>
-                  {isUploading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <>
-                      <Text style={btn.primaryText}>
-                        {currentServiceSubStep === totalSteps ? 'Concluir cadastro' : 'Continuar'}
-                      </Text>
-                      <Ionicons
-                        name={currentServiceSubStep === totalSteps ? 'checkmark-circle' : 'arrow-forward'}
-                        size={18}
-                        color="#fff"
-                      />
-                      <View style={btn.primaryGlow} />
-                    </>
-                  )}
-                </LinearGradient>
+                {isUploading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Text style={styles.navButtonTextNext}>
+                      {currentServiceSubStep === totalSteps ? 'Concluir cadastro' : 'Continuar'}
+                    </Text>
+                    <Ionicons
+                      name={currentServiceSubStep === totalSteps ? 'checkmark-circle' : 'arrow-forward-outline'}
+                      size={18}
+                      color="#fff"
+                    />
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -941,33 +961,6 @@ const getMicrocopyText = () => {
     </SafeAreaView>
   );
 }
-
-// Styles dos botões
-const btn = StyleSheet.create({
-  backGlass: {
-    flex: 1, marginRight: 10, borderRadius: 14, overflow: 'hidden',
-    borderWidth: 1, borderColor: 'rgba(148,163,184,0.35)',
-    minHeight: 48,
-  },
-  backGlassInner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 12, borderRadius: 14,
-  },
-  backGlassText: { marginLeft: 8, fontSize: 15, fontWeight: '700', color: '#1F2A37' },
-  primaryWrap: { flex: 1, marginLeft: 10, borderRadius: 14, overflow: 'hidden', minHeight: 48, },
-  primary: {
-    paddingVertical: 12, paddingHorizontal: 18, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center', flexDirection: 'row',
-    shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 0,
-    minHeight: 48,
-  },
-  primaryGlow: {
-    position: 'absolute', bottom: -14, left: -10, right: -10, height: 28, borderRadius: 20,
-    backgroundColor: 'rgba(59,130,246,0.25)', opacity: 0.65,
-  },
-  primaryText: { color: '#fff', fontWeight: '800', fontSize: 15, marginRight: 8, letterSpacing: 0.2 },
-});
-
 
 const styles = StyleSheet.create({
   headerGlass: {
@@ -1079,21 +1072,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     flex: 1,
   },
-  headerSubtitle: {
-    fontSize: Platform.OS === 'android' ? 16 : 14,
-    color: '#6C757D',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginTop:  Platform.OS === 'android' ? 26 : 0,
-    marginBottom: Platform.OS === 'android' ? 1 : 8,
-  },
-  microcopyText: {
-    fontSize:  Platform.OS === 'android' ? 14 : 13,
-    color: '#6C757D',
-    textAlign: 'center',
-    marginBottom: Platform.OS === 'android' ? -2 : 19,
-    paddingHorizontal: 10,
-  },
   progressContainer: {
     width: '100%',
     alignItems: 'center',
@@ -1172,26 +1150,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     alignItems: 'flex-start',
   },
-  photoHintTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 2,
-  },
   photoHintText: {
     fontSize: 12,
     color: '#6B7280',
     marginBottom: 6,
-    lineHeight: 16,
-  },
-  photoHintBulletRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 2,
-  },
-  photoHintBulletText: {
-    fontSize: 12,
-    color: '#6B7280',
     lineHeight: 16,
   },
   photoActionsRow: {
@@ -1214,6 +1176,59 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#0F172A',
+  },
+  navigationButtonsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 24,
+    marginBottom: 8,
+    justifyContent: 'flex-end',
+  },
+  navigationButtonsWithBack: {
+    justifyContent: 'space-between',
+  },
+  navButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 18,
+    minWidth: 120,
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  navButtonBack: {
+    backgroundColor: '#F7F8FC',
+    borderWidth: 1,
+    borderColor: '#00BCD4',
+  },
+  navButtonNext: {
+    backgroundColor: '#40C0F0',
+    shadowColor: '#00BCD4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 0,
+  },
+  navButtonNextSpacing: {
+    marginLeft: 6,
+  },
+  navButtonTextBack: {
+    color: '#00BCD4',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  navButtonTextNext: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 6,
+  },
+  buttonDisabled: {
+    backgroundColor: '#A0CFFF',
   },
   formContainer: {
     marginBottom: 30,
@@ -1261,7 +1276,7 @@ const styles = StyleSheet.create({
   serviceTypeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   serviceTypeGridAndroidScale: {
     ...Platform.select({
@@ -1308,15 +1323,6 @@ const styles = StyleSheet.create({
   },
   priceTypeLabelSelected: {
     color: '#FFFFFF',
-  },
-  navigationButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   inlineErrorMessage: {
     color: '#E53E3E',
