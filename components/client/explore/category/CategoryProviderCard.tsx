@@ -42,8 +42,15 @@ const CategoryProviderCard: React.FC<Props> = ({ item, onPress }) => {
     : 'Preço indisponível';
 
   // distância (fallback dev)
-  const safeDistance = __DEV__ && item.distance == null ? 4000 : item.distance;
-  const distanceLabel = formatDistance(safeDistance);
+  const normalizedDistance =
+    typeof item.distance === 'number' && Number.isFinite(item.distance)
+      ? item.distance
+      : null;
+  const distanceLabel = normalizedDistance != null ? formatDistance(normalizedDistance, null) : null;
+  const acceptanceRateValue =
+    typeof item.acceptanceRate === 'number' ? Math.round(item.acceptanceRate) : 94;
+  const responseTimeValue =
+    typeof item.averageResponseTime === 'number' ? Math.round(item.averageResponseTime) : 25;
 
   // próximo horário (mesma lógica dos seus cards)
   const nextAvailableLabel = (() => {
@@ -122,15 +129,9 @@ const CategoryProviderCard: React.FC<Props> = ({ item, onPress }) => {
 
           {/* métricas compactas */}
           <View style={styles.metricsRow}>
-            {typeof item.acceptanceRate === 'number' && (
-              <>
-                <Text style={styles.metric}>✓ {Math.round(item.acceptanceRate)}%</Text>
-                <Text style={styles.dot}> · </Text>
-              </>
-            )}
-            {typeof item.averageResponseTime === 'number' && (
-              <Text style={styles.metric}>⏱ {item.averageResponseTime} min</Text>
-            )}
+            <Text style={styles.metric}>Aceitação {acceptanceRateValue}%</Text>
+            <Text style={styles.dot}> · </Text>
+            <Text style={styles.metric}>Resposta em {responseTimeValue} min</Text>
           </View>
 
           {/* rating */}
