@@ -34,6 +34,7 @@ import { UserWithIncludes } from '../users/users.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { RegisterClientDto } from './dto/register-client.dto';
 import { RegisterProviderDto } from './dto/register-provider.dto';
+import { CacheService } from '../cache/cache.service';
 
 // --- INÍCIO DAS CORREÇÕES DE TIPAGEM E ESTRUTURA ---
 const loginProviderInclude = {
@@ -146,6 +147,7 @@ export class AuthService {
     private referralsService: ReferralsService,
     @Inject(forwardRef(() => ProvidersService))
     private readonly providersService: ProvidersService,
+    private readonly cacheService: CacheService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<User | null> {
@@ -217,6 +219,8 @@ export class AuthService {
     this.logger.log(
       `[TELEMETRY] user_logged_in: { userId: ${fullUser.id}, role: ${fullUser.role} }`,
     );
+
+    await this.clearForceLogoutCache(fullUser.id);
 
     if (fullUser.role === UserRole.ADMIN) {
       void this.providersService.refreshDefaultSearchCache().catch((error) => {
@@ -851,5 +855,36 @@ export class AuthService {
     this.logger.log(
       `[AuthService] Usuário ${referredUserId} vinculado ao indicador ${referrerUser.id} via código ${referralCode}.`,
     );
+  }
+
+  private readonly forceLogoutPayloadSuffix = ':payload';
+
+  private buildForceLogoutKey(userId: string): string {
+    return `telemetry:force-logout:${userId}`;
+  }
+
+  private buildForceLogoutPayloadKey(userId: string): string {
+    return `${this.buildForceLogoutKey(userId)}${this.forceLogoutPayloadSuffix}`;
+  }
+
+  private async clearForceLogoutCache(userId: string): Promise<void> {
+    if (!userId) {
+      return;
+    }
+    try {
+      await Promise.all([
+        this.cacheService.del(this.buildForceLogoutKey(userId)),
+        this.cacheService.del(this.buildForceLogoutPayloadKey(userId)),
+      ]);
+      this.logger.verbose(
+        `[AuthService] clearForceLogoutCache: removed force logout cache for ${userId}`,
+      );
+    } catch (error: any) {
+      this.logger.warn(
+        `[AuthService] clearForceLogoutCache: failed to clean cache for ${userId}: ${
+          (error as Error).message ?? error
+        }`,
+      );
+    }
   }
 }
