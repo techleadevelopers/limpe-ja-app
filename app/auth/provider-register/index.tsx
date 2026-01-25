@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -54,6 +54,8 @@ const devError = (...args: unknown[]) => {
     console.error(...args);
   }
 };
+
+const REGISTRATION_EXPIRATION_MS = 8 * 60 * 1000; // 8 minutos
 
 export default function RegisterProviderScreen() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -144,6 +146,37 @@ export default function RegisterProviderScreen() {
   const router = useRouter();
   const { signUpProvider } = useAuth();
   const { setPersonalDetails: setContextPersonalDetails } = useProviderRegistration();
+
+  useFocusEffect(
+    useCallback(() => {
+      const checkExpiration = async () => {
+        try {
+          const startTime = await AsyncStorage.getItem('@LimpeJa:registration_start_time');
+          const now = Date.now();
+
+          if (startTime) {
+            const elapsed = now - parseInt(startTime, 10);
+
+            if (elapsed > REGISTRATION_EXPIRATION_MS) {
+              await AsyncStorage.multiRemove([
+                '@LimpeJa:registration_start_time',
+                'providerRegisterFormData',
+              ]);
+              alert('Sessão Expirada: Por segurança, reinicie seu cadastro.');
+              router.replace('/auth/login');
+              return;
+            }
+          } else {
+            await AsyncStorage.setItem('@LimpeJa:registration_start_time', now.toString());
+          }
+        } catch (expirationError) {
+          devWarn('Erro ao verificar expiração de cadastro', expirationError);
+        }
+      };
+
+      checkExpiration();
+    }, [router]),
+  );
 
   const mainElementsOpacity = useRef(new Animated.Value(0)).current;
   const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
