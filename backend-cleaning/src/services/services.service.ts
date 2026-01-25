@@ -6,6 +6,8 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 import { Service, Prisma } from '@prisma/client';
 import { CacheService } from '../cache/cache.service';
 
+const ONE_HOUR_SECONDS = 60 * 60;
+
 @Injectable()
 export class ServicesService {
   private readonly SERVICES_CACHE_KEY = 'all_services';
@@ -36,7 +38,7 @@ export class ServicesService {
     );
     if (services) return services;
     services = await this.prisma.service.findMany();
-    await this.cacheService.set(this.SERVICES_CACHE_KEY, services);
+    await this.cacheService.set(this.SERVICES_CACHE_KEY, services, ONE_HOUR_SECONDS);
     return services;
   }
 
