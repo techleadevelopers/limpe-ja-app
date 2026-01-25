@@ -232,6 +232,18 @@ export default function ExploreClientScreen() {
     locationHintRef.current = locationHint;
   }, [locationHint]);
 
+  // MOVEU PARA CÁ (Antes dos useEffects)
+  const {
+    providers: locationProviders,
+    location: locationCoords,
+    isLoading: isLocationLoading,
+    error: locationError,
+    refresh: refreshLocationProviders,
+  } = useLocationBasedProviders({
+    radiusKm: searchRadiusKm,
+    fallbackLocation: locationHint,
+  });
+
   useEffect(() => {
     if (locationCoords) {
       locationHintRef.current = {
@@ -247,17 +259,6 @@ export default function ExploreClientScreen() {
       setError(locationError);
     }
   }, [locationError]);
-
-  const {
-    providers: locationProviders,
-    location: locationCoords,
-    isLoading: isLocationLoading,
-    error: locationError,
-    refresh: refreshLocationProviders,
-  } = useLocationBasedProviders({
-    radiusKm: searchRadiusKm,
-    fallbackLocation: locationHint,
-  });
 
   const [pendingReview, setPendingReview] = useState<{
     bookingId: string;
