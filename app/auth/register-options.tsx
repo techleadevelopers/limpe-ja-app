@@ -110,7 +110,7 @@ export default function ChooseRegistrationTypeScreen() {
                     },
                 ]}
             >
-                Bem-vindo(a) ao LimpeJá !
+                Bem-vindo(a) ao LimpeJá
             </Animated.Text>
             <Animated.Text
                 style={[
