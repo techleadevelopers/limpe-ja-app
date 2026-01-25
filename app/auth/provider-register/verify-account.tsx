@@ -10,10 +10,11 @@ import {
     StatusBar,
     StyleSheet,
     Text,
-    TouchableOpacity // Adicionado para o botão de tentar novamente
-    ,
+    TouchableOpacity, // Adicionado para o botão de tentar novamente
     View
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { showUserError } from '../../../_shared/errors/userError';
 import ToastMessage from '../../../components/ui/ToastMessage';
 import { useAuth } from '../../../hooks/useAuth';
@@ -65,6 +66,9 @@ export default function VerifyAccountScreen() {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(50)).current;
     const logoScale = useRef(new Animated.Value(0.8)).current;
+    const stepFadeAnim = useRef(new Animated.Value(1)).current;
+    const stepTranslateAnim = useRef(new Animated.Value(0)).current;
+    const scannerAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         Animated.sequence([
@@ -72,7 +76,7 @@ export default function VerifyAccountScreen() {
             Animated.parallel([
                 Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
                 Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
-                Animated.spring(logoScale, { toValue: 1, friction: 3, useNativeDriver: true }),
+                // Animated.spring(logoScale, { toValue: 1, friction: 3, useNativeDriver: true }), // logoScale intentionally disabled
             ]),
         ]).start(() => {
             // Se o provedor já estiver aprovado, pule para a etapa final ou redirecione
@@ -92,28 +96,61 @@ export default function VerifyAccountScreen() {
         });
     }, [fadeAnim, slideAnim, logoScale, isApproved, router, user?.providerDetails?.verificationStatus]);
 
+    useEffect(() => {
+        stepFadeAnim.setValue(0);
+        stepTranslateAnim.setValue(20);
+        Animated.parallel([
+            Animated.timing(stepFadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+            Animated.timing(stepTranslateAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+        ]).start();
+    }, [currentVerificationStep, stepFadeAnim, stepTranslateAnim]);
+
+    useEffect(() => {
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(scannerAnim, {
+                    toValue: 1,
+                    duration: 1200,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(scannerAnim, {
+                    toValue: 0,
+                    duration: 0,
+                    useNativeDriver: true,
+                }),
+            ])
+        );
+        loop.start();
+        return () => loop.stop();
+    }, [scannerAnim]);
+
     // Efeito para verificar periodicamente o status do provedor
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | null = null;
+        let isMounted = true;
         // Só inicia a verificação periódica se o provedor não estiver aprovado ou rejeitado
         if (providerId && !isApproved && user?.providerDetails?.verificationStatus !== VerificationStatus.REJECTED) {
             console.log("[VerifyAccountScreen] Iniciando verificação periódica do status do provedor...");
             interval = setInterval(async () => {
                 try {
                     const verificationInfo = await verificationService.getProviderVerificationInfo(providerId);
+                    if (!isMounted) return;
                     console.log("[VerifyAccountScreen] Status de verificação obtido:", verificationInfo.verificationStatus);
                     
                     if (verificationInfo.verificationStatus === VerificationStatus.APPROVED) {
                         setToastMessage({ message: "Sua conta foi aprovada! Redirecionando para o Dashboard.", type: "success" });
                         if (interval) clearInterval(interval); // Parar polling
                         await refreshUser(); // Atualiza o estado do usuário no AuthContext
+                        if (!isMounted) return;
                         router.replace(PROVIDER_ROUTES.DASHBOARD);
                     } else if (verificationInfo.verificationStatus === VerificationStatus.REJECTED) {
                         setToastMessage({ message: `Sua verificação foi rejeitada.`, type: "error" });
                         if (interval) clearInterval(interval); // Parar polling
                         await refreshUser(); // Atualiza o estado para refletir a rejeição e o motivo
+                        if (!isMounted) return;
                         setCurrentVerificationStep(5); // Nova etapa para exibir o motivo da rejeição e opções
                     } else if (verificationInfo.verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW) {
+                        if (!isMounted) return;
                         // Se o status mudar para revisão manual, atualiza a UI para refletir isso
                         setCurrentVerificationStep(4); // Mantém na tela de "verificação em andamento"
                         setToastMessage({ message: "Seus documentos estão sob revisão manual. Você será notificado em breve.", type: "info" });
@@ -122,6 +159,7 @@ export default function VerifyAccountScreen() {
                     // e a tela permanece no passo de upload ou análise.
 
                 } catch (error) {
+                    if (!isMounted) return;
                     console.error("[VerifyAccountScreen] Erro ao verificar status:", error);
                     setToastMessage({ message: "Erro ao verificar o status da sua conta. Tente novamente mais tarde.", type: "error" });
                     // Em caso de erro na API, pode-se parar o polling ou aumentar o intervalo
@@ -139,6 +177,7 @@ export default function VerifyAccountScreen() {
 
 
         return () => {
+            isMounted = false;
             if (interval) {
                 clearInterval(interval);
                 console.log("[VerifyAccountScreen] Verificação periódica interrompida.");
@@ -191,13 +230,27 @@ export default function VerifyAccountScreen() {
     }, [providerId, setIsRegistrationInProgress]);
 
     const renderVerificationStep = () => {
-        // Renderiza o loading robusto para "Confirmando Identidade"
         if (isSubmittingDocuments) {
             return (
                 <View style={styles.analysisContent}>
-                    <Image source={LOGO_IMAGE} style={styles.analysisLogo} />
-                    <Text style={styles.analysisText}>Confirmando Identidade?</Text>
-                    <Text style={styles.analysisSubText}>Estamos processando seus documentos...</Text>
+                    <View style={styles.analysisLogoWrapper}>
+                        <Image source={LOGO_IMAGE} style={styles.analysisLogo} />
+                        <Animated.View style={[
+                            styles.scannerBar,
+                            {
+                                transform: [
+                                    {
+                                        translateX: scannerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [-180, 180],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]} />
+                    </View>
+                    <Text style={styles.analysisText}>Validando seus documentos</Text>
+                    <Text style={styles.analysisSubText}>Nossa inteligência está processando suas fotos com scanner ativo.</Text>
                     <ActivityIndicator size="large" color={Colors.primary} style={styles.analysisIndicator} />
                 </View>
             );
@@ -207,10 +260,6 @@ export default function VerifyAccountScreen() {
             case 0:
                 return (
                     <View style={styles.splashContent}>
-                        <Animated.Image source={LOGO_IMAGE} style={[styles.splashLogo, { transform: [{ scale: logoScale }] }]} />
-                        <Animated.Text style={[styles.splashText, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-                            Iniciando Verificação...
-                        </Animated.Text>
                         <ActivityIndicator size="large" color={Colors.primary} style={styles.splashIndicator} />
                     </View>
                 );
@@ -225,40 +274,63 @@ export default function VerifyAccountScreen() {
                 );
             case 4:
                 return (
-                    <View style={styles.analysisContent}>
-                        <Image source={LOGO_IMAGE} style={styles.analysisLogo} />
-                        <Text style={styles.analysisText}>Verificação em andamento</Text>
-                        <Text style={styles.analysisSubText}>Seus documentos estão sendo analisados. Isso pode levar alguns minutos.</Text>
-                        <ActivityIndicator size="large" color={Colors.primary} style={styles.analysisIndicator} />
-                    </View>
+                    <Animated.View style={[styles.analysisContent, { opacity: stepFadeAnim }]}>
+                        <View style={styles.analysisLogoWrapper}>
+                            <Image source={HEADER_ICON_IMAGE} style={styles.analysisLogoSmall} />
+                            <Animated.View style={[
+                                styles.scannerBar,
+                                {
+                                    transform: [
+                                        {
+                                            translateX: scannerAnim.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: [-220, 220],
+                                            }),
+                                        },
+                                    ],
+                                },
+                            ]} />
+                        </View>
+                        <Text style={styles.analysisText}>Análise em andamento</Text>
+                        <View style={styles.statusCard}>
+                            <ActivityIndicator size="small" color={Colors.primary} />
+                            <Text style={styles.statusCardText}>
+                                Nossa IA está validando suas fotos. Isso geralmente leva menos de 2 minutos.
+                            </Text>
+                        </View>
+                        <Text style={styles.helperText}>Você pode fechar o app, avisaremos quando estiver pronto.</Text>
+                    </Animated.View>
                 );
-            case 5: // Nova etapa para rejeição
+            case 5: // Tela de Rejeição com foco em Conversão
                 return (
                     <View style={styles.analysisContent}>
-                        <Image source={LOGO_IMAGE} style={styles.analysisLogo} />
-                        <Text style={styles.analysisText}>Verificação Rejeitada</Text>
-                        <Text style={styles.rejectionReasonText}>
-                            {rejectionReason || 'Não foi possível aprovar sua conta. Entre em contato com o suporte para mais detalhes.'}
-                        </Text>
-                        <TouchableOpacity style={styles.retryButton} onPress={() => {
-                            // Limpa os estados de documentos para permitir novo upload
-                            setDocumentPhotoFront(null);
-                            setDocumentPhotoBack(null);
-                            setCurrentVerificationStep(2); // Volta para a etapa de upload
-                            setToastMessage(null); // Limpa qualquer toast anterior
-                        }}>
-                            <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+                        <Ionicons name="alert-circle" size={80} color={Colors.error} />
+                        <Text style={[styles.analysisText, { color: Colors.error }]}>Ops! Algo precisa ser ajustado</Text>
+                        <View style={styles.rejectionCard}>
+                            <Text style={styles.rejectionReasonText}>
+                                {rejectionReason || 'As fotos enviadas estão sem nitidez ou cortadas.'}
+                            </Text>
+                        </View>
+                        <TouchableOpacity 
+                            style={styles.retryButton} 
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                setDocumentPhotoFront(null);
+                                setDocumentPhotoBack(null);
+                                setToastMessage(null);
+                                setCurrentVerificationStep(2);
+                            }}
+                        >
+                            <Text style={styles.retryButtonText}>Tirar novas fotos</Text>
                         </TouchableOpacity>
-                        {/* Opcional: Botão para contato com suporte */}
-                        {/* <TouchableOpacity onPress={() => router.push(COMMON_ROUTES.HELP)}>
-                            <Text style={styles.contactSupportText}>Contatar Suporte</Text>
-                        </TouchableOpacity> */}
                     </View>
                 );
             default:
                 return null;
         }
     };
+
+    const stepContent = renderVerificationStep();
 
     return (
         <KeyboardAvoidingView
@@ -283,13 +355,17 @@ export default function VerifyAccountScreen() {
                 contentContainerStyle={styles.scrollContentContainer}
                 keyboardShouldPersistTaps="handled"
             >
-                {currentVerificationStep === 0 ? (
-                    <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-                        {renderVerificationStep()}
-                    </Animated.View>
-                ) : (
-                    renderVerificationStep()
-                )}
+                <Animated.View
+                    style={[
+                        styles.stepWrapper,
+                        {
+                            opacity: stepFadeAnim,
+                            transform: [{ translateY: stepTranslateAnim }],
+                        },
+                    ]}
+                >
+                    {stepContent}
+                </Animated.View>
             </ScrollView>
 
             {toastMessage && (
@@ -345,10 +421,9 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     analysisLogo: {
-        width: 250,
-        height: 250,
+        width: 220,
+        height: 220,
         resizeMode: 'contain',
-        marginBottom: 20,
     },
     analysisText: {
         fontSize: 20,
@@ -365,11 +440,67 @@ const styles = StyleSheet.create({
     analysisIndicator: {
         marginTop: 20,
     },
+    analysisLogoWrapper: {
+        marginBottom: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        position: 'relative',
+    },
+    analysisLogoSmall: {
+        width: 180,
+        height: 180,
+        resizeMode: 'contain',
+    },
+    scannerBar: {
+        position: 'absolute',
+        top: '45%',
+        width: '80%',
+        height: 6,
+        backgroundColor: 'rgba(64, 192, 240, 0.6)',
+        borderRadius: 6,
+    },
     headerIcon: {
         width: 40,
         height: 40,
         resizeMode: 'contain',
         marginLeft: 15,
+    },
+    statusCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.primaryLight,
+        padding: 16,
+        borderRadius: 14,
+        marginVertical: 12,
+        width: '90%',
+        justifyContent: 'center',
+    },
+    statusCardText: {
+        marginLeft: 12,
+        flex: 1,
+        fontSize: 15,
+        color: Colors.textPrimary,
+    },
+    helperText: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        textAlign: 'center',
+        marginTop: 10,
+        paddingHorizontal: 24,
+    },
+    rejectionCard: {
+        backgroundColor: Colors.errorBg,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: Colors.error,
+        padding: 16,
+        marginVertical: 12,
+        width: '100%',
+    },
+    stepWrapper: {
+        flexGrow: 1,
+        width: '100%',
     },
     rejectionReasonText: { // Novo estilo para motivo de rejeição
         fontSize: 16,
