@@ -36,6 +36,23 @@ import { GetAvailabilityDto } from '../availability/dto/get-availability.dto';
 import * as Sentry from '@sentry/node';
 
 // Type principal para provedores com todas as inclusÃµes necessÃ¡rias para mapeamento
+const addressSelectWithoutLocation = {
+  select: {
+    id: true,
+    cep: true,
+    street: true,
+    number: true,
+    complement: true,
+    neighborhood: true,
+    city: true,
+    state: true,
+    latitude: true,
+    longitude: true,
+    providerId: true,
+    clientId: true,
+  },
+} as const;
+
 export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
   include: {
     user: {
@@ -47,7 +64,7 @@ export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
         phone: true;
       };
     };
-    address: true;
+    address: typeof addressSelectWithoutLocation;
     providerServices: { include: { service: true } };
     reviewsReceived: {
       include: {
@@ -754,7 +771,7 @@ export class ProvidersService {
             phone: true,
           },
         },
-        address: true,
+        address: addressSelectWithoutLocation,
         providerServices: { include: { service: true } },
         reviewsReceived: {
           include: {
@@ -813,7 +830,7 @@ export class ProvidersService {
             phone: true,
           },
         },
-        address: true,
+        address: addressSelectWithoutLocation,
         providerServices: { include: { service: true } },
         reviewsReceived: {
           include: {
@@ -903,7 +920,7 @@ export class ProvidersService {
               phone: true,
             },
           },
-          address: true,
+          address: addressSelectWithoutLocation,
           providerServices: { include: { service: true } },
           reviewsReceived: {
             include: {
@@ -956,7 +973,7 @@ export class ProvidersService {
             phone: true,
           },
         },
-        address: true,
+        address: addressSelectWithoutLocation,
         providerServices: { include: { service: true } },
         reviewsReceived: {
           include: {
@@ -1186,7 +1203,7 @@ export class ProvidersService {
             phone: true,
           },
         },
-        address: true,
+        address: addressSelectWithoutLocation,
         providerServices: { include: { service: true } },
         reviewsReceived: {
           include: {
@@ -1292,7 +1309,7 @@ export class ProvidersService {
             phone: true,
           },
         },
-        address: true,
+        address: addressSelectWithoutLocation,
         providerServices: { include: { service: true } },
         reviewsReceived: {
           include: {
@@ -1413,7 +1430,7 @@ export class ProvidersService {
             phone: true,
           },
         },
-        address: true,
+        address: addressSelectWithoutLocation,
         providerServices: { include: { service: true } },
         reviewsReceived: {
           include: {
@@ -1466,7 +1483,7 @@ export class ProvidersService {
         providerServices: true,
         subscriptions: true,
         availability: true,
-        address: true,
+        address: addressSelectWithoutLocation,
       },
     });
     if (!provider) {
@@ -1962,7 +1979,7 @@ export class ProvidersService {
             phone: true,
           },
         },
-        address: true,
+        address: addressSelectWithoutLocation,
         providerServices: { include: { service: true } },
         reviewsReceived: {
           take: 5, // Traga apenas as últimas 5 avaliações, não todas!
@@ -2257,7 +2274,7 @@ export class ProvidersService {
                 fullName: true,
               },
             },
-            address: true,
+            address: addressSelectWithoutLocation,
             providerServices: { include: { service: true } },
             reviewsReceived: {
               include: {
@@ -2295,7 +2312,7 @@ export class ProvidersService {
               fullName: true,
             },
           },
-          address: true,
+          address: addressSelectWithoutLocation,
           providerServices: { include: { service: true } },
           reviewsReceived: {
             include: {
