@@ -48,9 +48,13 @@ const CategoryProviderCard: React.FC<Props> = ({ item, onPress }) => {
       : null;
   const distanceLabel = normalizedDistance != null ? formatDistance(normalizedDistance, null) : null;
   const acceptanceRateValue =
-    typeof item.acceptanceRate === 'number' ? Math.round(item.acceptanceRate) : 94;
+    typeof item.acceptanceRate === 'number'
+      ? Math.round(item.acceptanceRate)
+      : null;
   const responseTimeValue =
-    typeof item.averageResponseTime === 'number' ? Math.round(item.averageResponseTime) : 25;
+    typeof item.averageResponseTime === 'number'
+      ? Math.round(item.averageResponseTime)
+      : null;
 
   // próximo horário (mesma lógica dos seus cards)
   const nextAvailableLabel = (() => {
@@ -129,9 +133,18 @@ const CategoryProviderCard: React.FC<Props> = ({ item, onPress }) => {
 
           {/* métricas compactas */}
           <View style={styles.metricsRow}>
-            <Text style={styles.metric}>Aceitação {acceptanceRateValue}%</Text>
-            <Text style={styles.dot}> · </Text>
-            <Text style={styles.metric}>Resposta em {responseTimeValue} min</Text>
+            {acceptanceRateValue != null && (
+              <View style={styles.metricItem}>
+                <Ionicons name="checkmark-circle" size={14} color={AppColors.primaryInteractive} />
+                <Text style={styles.metricText}>{`${acceptanceRateValue}% Aceitação`}</Text>
+              </View>
+            )}
+            {responseTimeValue != null && (
+              <View style={styles.metricItem}>
+                <Ionicons name="timer-outline" size={14} color={AppColors.primaryInteractive} />
+                <Text style={styles.metricText}>{`${responseTimeValue} min`}</Text>
+              </View>
+            )}
           </View>
 
           {/* rating */}
@@ -198,9 +211,24 @@ const styles = StyleSheet.create({
   },
   distanceText: { marginLeft: 3, fontSize: 10, fontWeight: '600', color: '#334155' },
   specialty: { fontSize: 12, color: AppColors.textAuxiliary, marginTop: 2 },
-  metricsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  metric: { fontSize: 11, color: '#6C757D', fontWeight: '600' },
-  dot: { fontSize: 11, color: '#6C757D', marginHorizontal: 3 },
+  metricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  metricItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+    marginTop: 4,
+  },
+  metricText: {
+    fontSize: 11,
+    color: AppColors.textAuxiliary,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
   ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   reviewsText: { fontSize: 10, color: '#8CA0B3' },
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
