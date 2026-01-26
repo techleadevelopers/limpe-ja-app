@@ -512,6 +512,29 @@ export class NotificationsService {
       return false;
     }
   }
+  async subscribeCurrentUserToTopic(userId: string, topic: string): Promise<void> {
+    await this.subscribeUserToTopic(userId, topic);
+  }
+
+  async unsubscribeCurrentUserFromTopic(
+    userId: string,
+    topic: string,
+  ): Promise<void> {
+    await this.unsubscribeUserFromTopic(userId, topic);
+  }
+
+  async subscribeUserToTopic(userId: string, topic: string): Promise<void> {
+    this.logger.log(
+      `[NotificationsService] subscribeUserToTopic userId=${userId} topic=${topic}`,
+    );
+  }
+
+  async unsubscribeUserFromTopic(userId: string, topic: string): Promise<void> {
+    this.logger.log(
+      `[NotificationsService] unsubscribeUserFromTopic userId=${userId} topic=${topic}`,
+    );
+  }
+
   private async attemptWhatsappFallback(
     userId: string,
     context: WhatsappFallbackContext,
