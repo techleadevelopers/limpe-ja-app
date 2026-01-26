@@ -602,88 +602,93 @@ model ProviderServiceVersion {
 }
 
 model Booking {
-  id               String          @id @default(uuid())
-  clientId         String
-  providerId       String
-  providerServiceId String
+  id                 String          @id @default(uuid())
+  clientId           String
+  providerId         String
+  providerServiceId  String
 
-  client           Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  provider         Provider        @relation(fields: [providerId], references: [id], onDelete: Restrict)
-  providerService  ProviderService @relation(fields: [providerServiceId], references: [id])
+  client             Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  provider           Provider        @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  providerService    ProviderService @relation(fields: [providerServiceId], references: [id])
 
   // Agendamento
-  scheduledDate    DateTime
-  scheduledTime    DateTime
-  scheduledStart   DateTime?
-  durationMinutes  Int?
-  scheduledEnd     DateTime?        // ✅ NOVO: derivado (scheduledStart + durationMinutes)
-  acceptedAt       DateTime?
-  status           BookingStatus    @default(PENDING_PAYMENT)
-  expiresAt        DateTime?
+  scheduledDate      DateTime
+  scheduledTime      DateTime
+  scheduledStart     DateTime?
+  durationMinutes    Int?
+  scheduledEnd       DateTime?        
+  acceptedAt         DateTime?
+  status             BookingStatus    @default(PENDING_PAYMENT)
+  expiresAt          DateTime?
 
   // Preço e descontos
-  totalPrice       Decimal          @db.Decimal(10, 2)
-  discountAmount   Decimal?         @db.Decimal(10, 2)
-  notes            String?
+  totalPrice         Decimal          @db.Decimal(10, 2)
+  discountAmount     Decimal?         @db.Decimal(10, 2)
+  notes              String?
 
   // Timestamps de progresso (FLUXO COMPLETO)
-  onTheWayAt       DateTime?        // Quando prestador ativou "a caminho"
-  arrivedAt        DateTime?        // Quando prestador ativou "cheguei"
-  arrivedLat       Float?
-  arrivedLng       Float?
-  arrivedAccuracyM Float?
-  startedAt        DateTime?        // Quando serviço foi iniciado
-  startedLat       Float?
-  startedLng       Float?
-  startedAccuracyM Float?
-  completedAt      DateTime?        // Quando serviço foi finalizado
-  completedLat     Float?
-  completedLng     Float?
+  onTheWayAt         DateTime?        
+  arrivedAt          DateTime?        
+  arrivedLat         Float?
+  arrivedLng         Float?
+  arrivedAccuracyM   Float?
+  startedAt          DateTime?        
+  startedLat         Float?
+  startedLng         Float?
+  startedAccuracyM   Float?
+  completedAt        DateTime?        
+  completedLat       Float?
+  completedLng       Float?
   completedAccuracyM Float?
 
-  // Auditoria (quem fez a ação)
+  // Auditoria
   startedByUserId    String?
   completedByUserId  String?
-  startedByUser      User?          @relation("BookingStartedBy", fields: [startedByUserId], references: [id])
-  completedByUser    User?          @relation("BookingCompletedBy", fields: [completedByUserId], references: [id])
+  startedByUser      User?            @relation("BookingStartedBy", fields: [startedByUserId], references: [id])
+  completedByUser    User?            @relation("BookingCompletedBy", fields: [completedByUserId], references: [id])
 
-  // Relacionamentos
-  review           Review?
-  isReviewed       Boolean          @default(false)
-  transactions     Transaction[]
-  addressId        String?          @unique
-  address          Address?         @relation("BookingAddress", fields: [addressId], references: [id])
-  dispute          Dispute?
-  subscriptionId   String?
-  subscription     Subscription?    @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
-  periodId         String?          // Identificador único calculado (ex: subID_YYYY_WW)
-  incidents        Incident[]
-  guaranteeClaims  GuaranteeClaim[]
-  insuranceClaims  InsuranceClaim[]
-  couponId         String?
-  coupon           Coupon?          @relation(fields: [couponId], references: [id])
-  couponUsage      CouponUsage?     @relation("BookingCouponUsage")
-  supportTickets   SupportTicket[]
-  paymentIntent    PaymentIntent?
-  ledgerEntries    LedgerEntry[]
-  bookingInsurance BookingInsurance?
-  bookingProofs    BookingProof[]
+  // Relacionamentos e Avaliação
+  review             Review?
+  isReviewed         Boolean          @default(false) // Trava do Modal
+  transactions       Transaction[]
+  addressId          String?          @unique
+  address            Address?         @relation("BookingAddress", fields: [addressId], references: [id])
+  dispute            Dispute?
+  subscriptionId     String?
+  subscription       Subscription?    @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
+  periodId           String?          
+  incidents          Incident[]
+  guaranteeClaims    GuaranteeClaim[]
+  insuranceClaims    InsuranceClaim[]
+  couponId           String?
+  coupon             Coupon?          @relation(fields: [couponId], references: [id])
+  couponUsage        CouponUsage?     @relation("BookingCouponUsage")
+  supportTickets     SupportTicket[]
+  paymentIntent      PaymentIntent?
+  ledgerEntries      LedgerEntry[]
+  bookingInsurance   BookingInsurance?
+  bookingProofs      BookingProof[]
   notificationSchedules NotificationSchedule[]
-  notificationLogs NotificationLog[]
-  policyHits        MessagePolicyHit[]
+  notificationLogs   NotificationLog[]
+  policyHits         MessagePolicyHit[]
 
   // Metadata
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   // Índices para performance
   @@index([providerId, status, scheduledDate])
   @@index([clientId, status, scheduledDate])
   @@index([status, scheduledDate])
   @@index([status, expiresAt])
-  @@index([providerId, scheduledStart, scheduledEnd]) // ✅ NOVO: overlap fast
-  @@unique([subscriptionId, periodId], name: "booking_subscription_period_unique")
+  @@index([providerId, scheduledStart, scheduledEnd]) 
   @@index([providerId, acceptedAt])
+  
+  // ✅ NOVO: Índice específico para o Pop-up de Avaliação
+  // Otimiza a busca: WHERE clientId = X AND status = 'FINISHED' AND isReviewed = false
+  @@index([clientId, status, isReviewed])
+
+  @@unique([subscriptionId, periodId], name: "booking_subscription_period_unique")
 }
 
 model BookingInsurance {
