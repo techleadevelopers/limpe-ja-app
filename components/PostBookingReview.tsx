@@ -20,7 +20,7 @@ import {
 interface Props {
     bookingId?: string; // OBRIGATÓRIO para a trava funcionar
     providerName: string;
-    providerAvatar?: string;
+    providerAvatar?: string | null;
     navigation: any;
     visible?: boolean;
     onClose?: () => void;
