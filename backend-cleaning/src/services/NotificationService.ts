@@ -277,4 +277,106 @@ export class NotificationService {
     }
     await this.sendPush(user.fcmToken, title, body, payload);
   }
+
+  private ensureFirebaseAdminReady(): boolean {
+    this.ensureInitialized();
+    if (!admin.apps.length) {
+      this.logger.warn(
+        '[NotificationService] Firebase Admin não pronto para tópicos ou alertas críticos.',
+      );
+      return false;
+    }
+    return true;
+  }
+
+  async sendServiceAlert(
+    userId: string,
+    body: string,
+    options?: {
+      title?: string;
+      payload?: Record<string, unknown>;
+    },
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    if (!user) {
+      this.logger.warn(
+        `[NotificationService] [PUSH SKIP] Usuário ${userId} não encontrado para Alerta de Serviço.`,
+      );
+      return;
+    }
+    if (user.role !== UserRole.PROVIDER) {
+      const roleLabel = user.role ?? 'desconhecida';
+      this.logger.log(
+        `[NotificationService] [PUSH SKIP] Usuário ${userId} com role ${roleLabel} não é provedor. Ignorando alerta.`,
+      );
+      return;
+    }
+    const title = options?.title ?? 'Alerta de Serviço';
+    await this.sendToUser(userId, title, body, options?.payload);
+  }
+
+  private async getUserFcmToken(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { fcmToken: true },
+    });
+    return user?.fcmToken ?? null;
+  }
+
+  private async manageTopicForUser(
+    action: 'subscribe' | 'unsubscribe',
+    userId: string,
+    topic: string,
+  ): Promise<void> {
+    const normalizedTopic = topic?.trim();
+    if (!normalizedTopic) {
+      this.logger.warn(
+        `[NotificationService] ${action}Topic chamado sem tópico válido para ${userId}.`,
+      );
+      return;
+    }
+
+    const token = await this.getUserFcmToken(userId);
+    if (!token) {
+      this.logger.warn(
+        `[NotificationService] ${action} ${normalizedTopic} cancelado para ${userId}: fcmToken ausente.`,
+      );
+      return;
+    }
+
+    if (!this.ensureFirebaseAdminReady()) {
+      return;
+    }
+
+    try {
+      if (action === 'subscribe') {
+        await admin.messaging().subscribeToTopic(token, normalizedTopic);
+        this.logger.log(
+          `[NotificationService] Usuário ${userId} inscrito no tópico ${normalizedTopic}.`,
+        );
+      } else {
+        await admin.messaging().unsubscribeFromTopic(token, normalizedTopic);
+        this.logger.log(
+          `[NotificationService] Usuário ${userId} removido do tópico ${normalizedTopic}.`,
+        );
+      }
+    } catch (error: unknown) {
+      this.logger.warn(
+        `[NotificationService] Falha ao ${action} ${normalizedTopic} para ${userId}: ${
+          error instanceof Error ? error.message : JSON.stringify(error)
+        }`,
+      );
+    }
+  }
+
+  async subscribeUserToTopic(userId: string, topic: string): Promise<void> {
+    await this.manageTopicForUser('subscribe', userId, topic);
+  }
+
+  async unsubscribeUserFromTopic(userId: string, topic: string): Promise<void> {
+    await this.manageTopicForUser('unsubscribe', userId, topic);
+  }
 }
