@@ -12,6 +12,7 @@ import { io, Socket } from 'socket.io-client';
 import { appQueryClient } from '../components/provider/query-client-provider';
 import { fetchPaymentIntent } from '../services/paymentService';
 import { ackNotification } from '../services/notificationService';
+import { subscribeToTopic, unsubscribeFromTopic } from '../services/topicService';
 import { resolveSocketUrl } from '../utils/socket';
 import type { AxiosError, AxiosRequestConfig } from 'axios';
 import { router } from 'expo-router';
@@ -109,6 +110,9 @@ export const createPaymentConfirmedHandler = (
   return { handler, cleanup };
 };
 
+const CLIENT_PROMOTIONS_TOPIC = 'client_promotions';
+const PROVIDER_ALERTS_TOPIC = 'provider_alerts';
+
 interface AuthDataFromStorage {
   token: string | null;
   user: UserProfile | null;
@@ -160,6 +164,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [paymentOverlayVisible, setPaymentOverlayVisible] = useState(false);
   const paymentSocketRef = useRef<Socket | null>(null);
 
+  const manageTopicSubscriptions = useCallback(
+    async (currentRole: UserRole | null) => {
+      if (!currentRole) {
+        return;
+      }
+      try {
+        if (currentRole === UserRole.CLIENT) {
+          await Promise.all([
+            unsubscribeFromTopic(PROVIDER_ALERTS_TOPIC),
+            subscribeToTopic(CLIENT_PROMOTIONS_TOPIC),
+          ]);
+        } else if (currentRole === UserRole.PROVIDER) {
+          await Promise.all([
+            subscribeToTopic(PROVIDER_ALERTS_TOPIC),
+            unsubscribeFromTopic(CLIENT_PROMOTIONS_TOPIC),
+          ]);
+        } else {
+          await Promise.all([
+            unsubscribeFromTopic(PROVIDER_ALERTS_TOPIC),
+            unsubscribeFromTopic(CLIENT_PROMOTIONS_TOPIC),
+          ]);
+        }
+      } catch (error) {
+        debugWarn('[AuthContext] Topic subscription update falhou', error);
+      }
+    },
+    [],
+  );
+
+  const cleanupTopicSubscriptions = useCallback(async () => {
+    try {
+      await Promise.all([
+        unsubscribeFromTopic(PROVIDER_ALERTS_TOPIC),
+        unsubscribeFromTopic(CLIENT_PROMOTIONS_TOPIC),
+      ]);
+    } catch (error) {
+      debugWarn('[AuthContext] Falha ao limpar inscrições de tópicos', error);
+    }
+  }, []);
+
   // ----------------------------------------------------------------------------
   // 🔥 WEBSOCKET LISTENER — PAGAMENTO PIX CONFIRMADO
   // ----------------------------------------------------------------------------
@@ -202,6 +246,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = useCallback(async () => {
     try {
       setIsLoading(true);
+      await cleanupTopicSubscriptions();
       await authService.logout();
       setUser(null);
       setRole(null);
@@ -260,23 +305,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
         setUser(refreshedUser);
         setRole(authData.user.role as UserRole);
+        void manageTopicSubscriptions(authData.user.role as UserRole);
         resetRevocationCallbackFlag();
         registerDevicePushToken().catch(() => {});
       },
     );
 
-    const removeRevokedListener = onAuthEvent(AuthEventType.SESSION_REVOKED, () => {
-      unregisterDevicePushToken().catch(() => {});
-      setUser(null);
-      setRole(null);
-      setIsRegistrationInProgress(false);
-      try {
-        paymentSocketRef.current?.disconnect();
-        paymentSocketRef.current = null;
-      } catch {
-        // ignore
-      }
-    });
+    const removeRevokedListener = onAuthEvent(
+      AuthEventType.SESSION_REVOKED,
+      async () => {
+        await cleanupTopicSubscriptions();
+        unregisterDevicePushToken().catch(() => {});
+        setUser(null);
+        setRole(null);
+        setIsRegistrationInProgress(false);
+        try {
+          paymentSocketRef.current?.disconnect();
+          paymentSocketRef.current = null;
+        } catch {
+          // ignore
+        }
+      },
+    );
 
     return () => {
       removeRefreshListener();
@@ -292,6 +342,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(authData.role);
+      void manageTopicSubscriptions(authData.role);
     } else {
       setUser(null);
       setRole(null);
@@ -322,6 +373,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
+      void manageTopicSubscriptions(authData.user.role as UserRole);
       resetRevocationCallbackFlag();
       registerDevicePushToken().catch(() => {});
     } catch (error) {
@@ -347,6 +399,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
+      void manageTopicSubscriptions(authData.user.role as UserRole);
     } catch (error) {
       debugError('[AuthContext | register] Erro de registro:', error);
       throw error;
@@ -399,6 +452,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(latestUserProfile.role as UserRole);
+      void manageTopicSubscriptions(latestUserProfile.role as UserRole);
       resetRevocationCallbackFlag();
       registerDevicePushToken().catch(() => {});
     } catch (error: any) {
@@ -424,6 +478,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           };
           setUser(updatedAuthenticatedUser);
           setRole(updatedProfile.role as UserRole);
+          void manageTopicSubscriptions(updatedProfile.role as UserRole);
 
           await authService.storeAuthData({
             token: user.token,
@@ -448,6 +503,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
+      void manageTopicSubscriptions(authData.user.role as UserRole);
       resetRevocationCallbackFlag();
       registerDevicePushToken().catch(() => {});
     } catch (error) {
