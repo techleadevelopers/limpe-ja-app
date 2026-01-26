@@ -45,6 +45,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { UploadModule } from './upload/upload.module';
 import { UsersModule } from './users/users.module';
 import { VerificationModule } from './verification/verification.module';
+import { ZapiModule } from './zapi/zapi.module';
 
 // ConfigModule customizado
 import { CommonModule } from './common/common.module';
@@ -158,6 +159,7 @@ import { ExpireBookingsJob } from './worker/expire-bookings.job';
     SettingsModule,
     UploadModule,
     ConnectModule,
+    ZapiModule,
     HealthModule,
   ],
   controllers: [AppController, ConfigController],
