@@ -32,6 +32,7 @@ import { CLIENT_ROUTES } from '@/app/_shared/routes';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { formatDateTime, formatPriceBRL, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
+import { PaymentIntentStatus } from '../../../types/backend/payments';
 
 import { useDevice } from '@/utils/responsive';
 import { AppColors } from '../../../constants/appStyles';
@@ -188,6 +189,9 @@ function DetailsCard({
   onOpenMap: () => void;
 }) {
   const addr = booking.address;
+  const showFinalPaymentLabel =
+    booking.status === BookingStatus.FINISHED ||
+    booking.paymentStatus === PaymentIntentStatus.PAID;
 
   return (
     <View style={styles.detailsCard}>
@@ -227,10 +231,19 @@ function DetailsCard({
 
       {/* Valor */}
       <View style={styles.detailItem}>
-        <Ionicons name="cash-outline" size={20} color={UI.textSecondary} style={styles.iconAdjust} />
+        {showFinalPaymentLabel ? (
+          <View style={styles.iconPlaceholder} />
+        ) : (
+          <Ionicons name="cash-outline" size={20} color={UI.textSecondary} style={styles.iconAdjust} />
+        )}
         <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={styles.detailLabel}>Valor</Text>
-          <Text style={styles.detailPrice}>{formatPriceBRL(booking.totalPrice)}</Text>
+          <Text style={styles.detailPrice}>
+            {showFinalPaymentLabel && (
+              <Text style={styles.paidLabel}>Pago: </Text>
+            )}
+            {formatPriceBRL(booking.totalPrice)}
+          </Text>
         </View>
       </View>
 
@@ -845,6 +858,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: UI.accent,
+  },
+  paidLabel: {
+    fontWeight: '800',
+    color: UI.accent,
+  },
+  iconPlaceholder: {
+    width: 20,
+    height: 20,
   },
   divider: {
     height: 1,
