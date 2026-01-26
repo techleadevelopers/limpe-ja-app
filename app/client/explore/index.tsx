@@ -36,11 +36,10 @@ import {
     getUserProfile,
     searchProvidersWithLocation,
 } from '../../../services/clientService';
-import { canReviewBooking } from '../../../services/reviewService';
-
 import {
     getRecommendedProviders,
 } from '../../../services/providerService';
+import { api } from '../../../services/api';
 
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
@@ -72,6 +71,7 @@ import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRec
 import SecaoContainer from '../../../components/client/explore/home/SecaoContainer';
 import { normalizeProviderList } from '../../../components/client/explore/home/providerAvailability';
 import { useTutorial } from '../../../hooks/useTutorial';
+import PostBookingReview from '../../../components/PostBookingReview';
 
 // Fallback local: garante render do RecomendacaoCard mesmo se a API falhar
 const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
@@ -224,6 +224,12 @@ export default function ExploreClientScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pendingReview, setPendingReview] = useState<{
+    bookingId: string;
+    providerId: string;
+    providerName: string;
+    providerAvatar?: string | null;
+  } | null>(null);
   // Novo estado para o raio de busca
   const [searchRadiusKm] = useState<number>(50); // Padrão 50 km (como no código original)
   const locationHint = useMemo(() => extractLocationHint(userProfile), [userProfile]);
@@ -260,12 +266,44 @@ export default function ExploreClientScreen() {
     }
   }, [locationError]);
 
-  const [pendingReview, setPendingReview] = useState<{
-    bookingId: string;
-    providerId: string;
-    providerName: string;
-    providerAvatar?: string | null;
-  } | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const fetchPendingReview = async () => {
+        try {
+          const response = await api.get('/bookings/pending-review');
+          if (!isActive) return;
+          const data = response?.data;
+          if (!data || data.isReviewed) {
+            setPendingReview(null);
+            return;
+          }
+          setPendingReview({
+            bookingId: data.id,
+            providerId: data.provider?.id || data.providerId,
+            providerName:
+              data.provider?.fullName || data.providerFullName || 'Prestador',
+            providerAvatar: data.provider?.avatarUrl || data.providerAvatarUrl || null,
+          });
+        } catch (err) {
+          if (!isActive) return;
+          setPendingReview(null);
+          console.log('Nenhuma avaliação pendente.');
+        }
+      };
+
+      if (isAuthenticated) {
+        fetchPendingReview();
+      } else {
+        setPendingReview(null);
+      }
+
+      return () => {
+        isActive = false;
+      };
+    }, [isAuthenticated])
+  );
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const categoriesAnim = useRef(new Animated.Value(0)).current;
@@ -421,14 +459,11 @@ export default function ExploreClientScreen() {
       }
       await onSuccess(result);
       hasSuccessfulData = true;
-    } catch {
-      // Se falhar, aplica fallbacks locais para não quebrar o modo visitante
-      if (label === 'pending review') {
-        setPendingReview(null);
-      }
-      if (label === 'recommended providers') {
-        setRecommendations(normalizeProviderList(FALLBACK_RECOMMENDATIONS));
-      }
+      } catch {
+        // Se falhar, aplica fallbacks locais para não quebrar o modo visitante
+        if (label === 'recommended providers') {
+          setRecommendations(normalizeProviderList(FALLBACK_RECOMMENDATIONS));
+        }
       // log removido para performance
       collectedErrors.push(fallbackMessage);
     }
@@ -436,42 +471,6 @@ export default function ExploreClientScreen() {
 
   const tasks: Promise<any>[] = [];
   const primaryTasks: Promise<any>[] = [];
-
-  if (isAuthenticated) {
-    tasks.push(
-      runAndTrack<BookingDetails[]>(
-        'pending review',
-        () => getBookingsForUser(BookingStatus.FINISHED),
-        async (bookings) => {
-          const candidates = bookings.filter(
-            (b) => !b.isReviewed && !b.reviewId && b.status === BookingStatus.FINISHED,
-          );
-
-          for (const b of candidates) {
-            try {
-              const eligibility = await canReviewBooking(b.id);
-              if (eligibility?.canReview) {
-                setPendingReview({
-                  bookingId: b.id,
-                  providerId: eligibility.providerId || b.providerId,
-                  providerName: eligibility.providerName || b.providerFullName || 'Prestador',
-                  providerAvatar: eligibility.providerAvatar ?? b.providerAvatarUrl,
-                });
-                return;
-              }
-            } catch {
-              // silencioso: n?o bloqueia a UI se um booking falhar
-            }
-          }
-
-          setPendingReview(null);
-        },
-        'Erro ao verificar avalia??es pendentes',
-      )
-    );
-  } else {
-    setPendingReview(null);
-  }
 
 
   tasks.push(
@@ -648,19 +647,6 @@ export default function ExploreClientScreen() {
         return () => { cancelled = true; };
     }, [fetchData, triggerLocationRefresh])
   );
-
-  const handleOpenPendingReview = useCallback(() => {
-    if (!pendingReview) return;
-    router.push({
-      pathname: `/common/feedback/${pendingReview.bookingId}`,
-      params: {
-        providerId: pendingReview.providerId,
-        providerName: pendingReview.providerName,
-        providerAvatar: pendingReview.providerAvatar || undefined,
-      },
-    } as any);
-  }, [pendingReview, router]);
-
 
   const handleProviderPress = useCallback(
     (provider: ProviderDisplayInfo) => {
@@ -1021,41 +1007,18 @@ export default function ExploreClientScreen() {
         {/* DEFENSE_SOS ÚNICO */}
         <DEFENSE_SOS bottomOffset={20} />
 
-        {/* Nudge de avaliação (somente se elegível via can-review) */}
         {pendingReview && (
-          <TouchableOpacity
-            activeOpacity={0.92}
-            style={styles.reviewNudge}
-            onPress={handleOpenPendingReview}
-          >
-            <View style={styles.reviewNudgeLeft}>
-              {pendingReview.providerAvatar ? (
-                <Image
-                  source={{ uri: pendingReview.providerAvatar }}
-                  style={styles.reviewNudgeAvatar}
-                />
-              ) : (
-                <View style={[styles.reviewNudgeAvatar, styles.reviewNudgeAvatarFallback]}>
-                  <Text style={styles.reviewNudgeAvatarFallbackText}>
-                    {(pendingReview.providerName || 'P')[0]?.toUpperCase() ?? 'P'}
-                  </Text>
-                </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.reviewNudgeTitle} numberOfLines={1} allowFontScaling={false}>
-                  Avalie sua experiência
-                </Text>
-                <Text style={styles.reviewNudgeSubtitle} numberOfLines={2} allowFontScaling={false}>
-                  Como foi o serviço com {pendingReview.providerName || 'o prestador'}?
-                </Text>
-              </View>
-            </View>
-            <View style={styles.reviewNudgeButton}>
-              <Text style={styles.reviewNudgeButtonText}>Avaliar agora</Text>
-            </View>
-          </TouchableOpacity>
+          <PostBookingReview
+            visible
+            bookingId={pendingReview.bookingId}
+            providerName={pendingReview.providerName}
+            providerAvatar={pendingReview.providerAvatar}
+            navigation={{ goBack: () => router.back() } as any}
+            onClose={() => setPendingReview(null)}
+          />
         )}
 
+        {/* Nudge de avaliação (somente se elegível via can-review) */}
         {androidDialogElement}
 
 
