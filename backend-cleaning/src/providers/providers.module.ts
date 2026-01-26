@@ -15,6 +15,7 @@ import { ProviderPromotionsService } from './provider-promotions.service';
 import { AvailabilityModule } from '../availability/availability.module';
 import { ComplianceModule } from '../compliance/compliance.module';
 import { GeocodingModule } from '../geocoding/geocoding.module';
+import { ZapiModule } from '../zapi/zapi.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { GeocodingModule } from '../geocoding/geocoding.module';
     LoyaltyModule,
     forwardRef(() => EarningsModule),
     forwardRef(() => AvailabilityModule),
+    ZapiModule,
   ],
   controllers: [ProvidersController],
   providers: [ProvidersService, ProviderPromotionsService],
