@@ -32,6 +32,7 @@ import {
 import { Request } from 'express';
 import { NotificationEntity } from './entities/notification.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { TopicSubscriptionDto } from './dto/topic-subscription.dto';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 type RequestWithUser = Request & {
@@ -353,5 +354,42 @@ export class NotificationsController {
     }
 
     return this.notificationsService.registerDeviceToken(userId, body.token);
+  }
+
+  @Post('topics/subscribe')
+  @ApiOperation({
+    summary: 'Inscrever o usuário logado em um tópico de push',
+  })
+  @ApiResponse({ status: 200, description: 'Inscrição concluída com sucesso.' })
+  async subscribeToTopic(
+    @Req() req: RequestWithUser,
+    @Body() body: TopicSubscriptionDto,
+  ): Promise<{ ok: true }> {
+    const userId = req.user?.userId ?? req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    await this.notificationsService.subscribeCurrentUserToTopic(userId, body.topic);
+    return { ok: true };
+  }
+
+  @Post('topics/unsubscribe')
+  @ApiOperation({
+    summary: 'Remover o usuário logado de um tópico de push',
+  })
+  @ApiResponse({ status: 200, description: 'Remoção concluída com sucesso.' })
+  async unsubscribeFromTopic(
+    @Req() req: RequestWithUser,
+    @Body() body: TopicSubscriptionDto,
+  ): Promise<{ ok: true }> {
+    const userId = req.user?.userId ?? req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    await this.notificationsService.unsubscribeCurrentUserFromTopic(
+      userId,
+      body.topic,
+    );
+    return { ok: true };
   }
 }
