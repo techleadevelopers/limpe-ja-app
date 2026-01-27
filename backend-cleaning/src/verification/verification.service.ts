@@ -448,6 +448,13 @@ export class VerificationService {
       throw new NotFoundException('Provedor não encontrado.');
     }
 
+    if (provider.verificationStatus !== VerificationStatus.PENDING_INITIAL_REVIEW) {
+      this.logger.log(
+        `[VerificationService] advanceVerificationStatus: Provedor ${providerId} já está em "${provider.verificationStatus}" — nada a fazer.`,
+      );
+      return;
+    }
+
     // Altere o status para PENDING_DOCUMENTS_UPLOAD, permitindo o próximo passo no fluxo.
     await this.prisma.provider.update({
       where: { id: providerId },
