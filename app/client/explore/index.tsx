@@ -25,6 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Asset } from 'expo-asset';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icons3D } from '../../../constants/icons3d';
 import { useAndroidDialog } from '../../../hooks/useAndroidDialog';
@@ -42,7 +43,7 @@ import {
 import { api } from '../../../services/api';
 
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
-import { ProviderDisplayInfo } from '../../../types/backend/providers';
+import { ProviderDisplayInfo, ProviderVisibilityStatus } from '../../../types/backend/providers';
 import { VerificationStatus } from '../../../types/backend/auth';
 import { Service } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
@@ -58,6 +59,9 @@ import { getNumericPriceValue } from '../../../utils/service-helpers';
 // --- FIM DAS INTERFACES ---
 
 import ScreenContainer from '@/components/layout/ScreenContainer';
+import { FALLBACK_CATEGORIES, FALLBACK_RECOMMENDATIONS } from '@app/client/explore/data/homeFallbacks';
+import { ExploreFetchResult, useExploreData } from '@app/client/explore/hooks/useExploreData';
+import debounce from 'lodash/debounce';
 import { useDevice } from '@/utils/responsive';
 import CarouselBannerItem from '../../../components/client/explore/home/CarouselBannerItem';
 import CategoriaCard from '../../../components/client/explore/home/CategoriaCard';
@@ -73,20 +77,6 @@ import { normalizeProviderList } from '../../../components/client/explore/home/p
 import { useTutorial } from '../../../hooks/useTutorial';
 import PostBookingReview from '../../../components/PostBookingReview';
 
-// Fallback local: garante render do RecomendacaoCard mesmo se a API falhar
-const FALLBACK_RECOMMENDATIONS: ProviderDisplayInfo[] = [
-
-
-];
-
-const FALLBACK_CATEGORIES: Service[] = [
-  { id: 'residential-basic', name: 'Casa', icon: 'residencial.png' } as Service,
-  { id: 'office-standard', name: 'Empresa', icon: 'comercial.png' } as Service,
-  { id: 'after-build', name: 'Obras', icon: 'obra.png' } as Service,
-  { id: 'windows', name: 'Vidros', icon: 'vidro.png' } as Service,
-  { id: 'upholstery', name: 'Estofados', icon: 'estofados.png' } as Service,
-  { id: 'office-clean', name: 'Escritório', icon: 'escritorio.png' } as Service,
-];
 const PROTOCOL_PREMIUM_SEEN_KEY = 'protocol_premium_seen';
 const extractLocationHint = (profile?: UserProfile | null): CityStateHint => {
   const addr =
@@ -198,6 +188,15 @@ const bannerData: BannerDataItem[] = [
   },
 ];
 
+type ProviderWithKey = ProviderDisplayInfo & { key: string };
+type CategoryWithKey = Service & { key: string };
+
+const MemoizedSecaoRecomendacoes = React.memo(SecaoRecomendacoes);
+const MemoizedSecaoPrestadores = React.memo(SecaoPrestadores);
+const MemoizedCategoriaCard = React.memo(CategoriaCard);
+const MemoizedRecomendacaoCard = React.memo(RecomendacaoCard);
+const MemoizedPrestadorCard = React.memo(PrestadorCard);
+
 export default function ExploreClientScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -218,12 +217,6 @@ export default function ExploreClientScreen() {
     show: showExploreTutorial,
   } = exploreTutorial;
 
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
-  const [recommendations, setRecommendations] = useState<ProviderDisplayInfo[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [pendingReview, setPendingReview] = useState<{
     bookingId: string;
     providerId: string;
@@ -232,39 +225,7 @@ export default function ExploreClientScreen() {
   } | null>(null);
   // Novo estado para o raio de busca
   const [searchRadiusKm] = useState<number>(50); // Padrão 50 km (como no código original)
-  const locationHint = useMemo(() => extractLocationHint(userProfile), [userProfile]);
-  const locationHintRef = useRef<CityStateHint>(locationHint);
-  useEffect(() => {
-    locationHintRef.current = locationHint;
-  }, [locationHint]);
-
-  // MOVEU PARA CÁ (Antes dos useEffects)
-  const {
-    providers: locationProviders,
-    location: locationCoords,
-    isLoading: isLocationLoading,
-    error: locationError,
-    refresh: refreshLocationProviders,
-  } = useLocationBasedProviders({
-    radiusKm: searchRadiusKm,
-    fallbackLocation: locationHint,
-  });
-
-  useEffect(() => {
-    if (locationCoords) {
-      locationHintRef.current = {
-        ...locationHintRef.current,
-        latitude: locationCoords.latitude,
-        longitude: locationCoords.longitude,
-      };
-    }
-  }, [locationCoords]);
-
-  useEffect(() => {
-    if (locationError) {
-      setError(locationError);
-    }
-  }, [locationError]);
+  const locationHintRef = useRef<CityStateHint>(extractLocationHint(null));
 
   useFocusEffect(
     useCallback(() => {
@@ -317,6 +278,48 @@ export default function ExploreClientScreen() {
   // Adicionado ref para verificar se o componente está montado
   const isMounted = useRef(true);
 
+  const {
+    userProfile,
+    serviceCategories,
+    recommendations,
+    loading,
+    error,
+    refreshing: isRefreshing,
+    fetchData,
+  } = useExploreData({
+    isMountedRef: isMounted,
+    locationHintRef,
+    searchRadiusKm,
+    user,
+    networkErrorMessage: t('common.network_error'),
+  });
+
+  const locationHint = useMemo(() => extractLocationHint(userProfile), [userProfile]);
+  useEffect(() => {
+    locationHintRef.current = locationHint;
+  }, [locationHint]);
+
+  const {
+    providers: locationProviders,
+    location: locationCoords,
+    isLoading: isLocationLoading,
+    error: locationError,
+    refresh: refreshLocationProviders,
+  } = useLocationBasedProviders({
+    radiusKm: searchRadiusKm,
+    fallbackLocation: locationHint,
+  });
+
+  useEffect(() => {
+    if (locationCoords) {
+      locationHintRef.current = {
+        ...locationHintRef.current,
+        latitude: locationCoords.latitude,
+        longitude: locationCoords.longitude,
+      };
+    }
+  }, [locationCoords]);
+
   // INTEGRAÇÃO DA LÓGICA DO NEWHEADER: Lógica completa para exibir o nome do usuário (priorizando user do auth e fallback para userProfile)
   const userNameDisplay =
     (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ??
@@ -355,48 +358,6 @@ export default function ExploreClientScreen() {
     );
   }, [showAndroidDialog]);
 
-  const renderCategoriesSection = () => (
-    <Animated.View
-      style={[
-        styles.categoriesSection,
-        !isAuthenticated && styles.visitorCategoriesSectionSpacing,
-        {
-          opacity: categoriesAnim,
-          transform: [
-            {
-              translateY: categoriesAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-12, 0],
-              }),
-            },
-          ],
-        },
-      ]}>
-      <View style={styles.categoryTitleWrapper}>
-        <Text style={styles.categorySectionTitle}>Dia a dia</Text>
-        <TouchableOpacity
-          onPress={() => router.push('/client/explore/todas-categorias' as any)}
-          style={styles.viewAllButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          {/* <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />*/}
-        </TouchableOpacity>
-      </View>
-        <SecaoContainer<Service>
-          titulo={t('search.all_categories')}
-          onVerTudoPress={() => router.push('/client/explore/todas-categorias' as any)}
-          data={categoriesToRender}
-          renderItem={({ item }) => {
-            if (!item || !item.name) return null;
-            return (
-              <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
-            );
-          }}
-          horizontal={true}
-          noDataText={t('search.no_results')}
-        />
-    </Animated.View>
-  );
-
   useEffect(() => {
     let timeout: NodeJS.Timeout | null = null;
 
@@ -431,187 +392,91 @@ export default function ExploreClientScreen() {
     refreshLocationProviders();
   }, [refreshLocationProviders]);
 
-
-
-  const fetchData = useCallback(async () => {
-  if (!isMounted.current) {
-    return;
-  }
-
-  setLoading(true);
-  setError(null);
-
-  const hint = locationHintRef.current;
-
-  const collectedErrors: string[] = [];
-  let hasSuccessfulData = false;
-
-  const runAndTrack = async <T,>(
-    label: string,
-    runner: () => Promise<T>,
-    onSuccess: (value: T) => Promise<void> | void,
-    fallbackMessage: string
-  ) => {
-    try {
-      const result = await runner();
+  const handleDataLoaded = useCallback(
+    (_result: ExploreFetchResult) => {
       if (!isMounted.current) {
         return;
       }
-      await onSuccess(result);
-      hasSuccessfulData = true;
-      } catch {
-        // Se falhar, aplica fallbacks locais para não quebrar o modo visitante
-        if (label === 'recommended providers') {
-          setRecommendations(normalizeProviderList(FALLBACK_RECOMMENDATIONS));
-        }
-      // log removido para performance
-      collectedErrors.push(fallbackMessage);
-    }
-  };
 
-  const tasks: Promise<any>[] = [];
-  const primaryTasks: Promise<any>[] = [];
+      InteractionManager.runAfterInteractions(() => {
+        Asset.loadAsync([
+          require('../../../assets/images/banner6.png'),
+          require('../../../assets/images/banner4.png'),
+          require('../../../assets/images/banner3.png'),
+          Icons3D.support,
+        ] as any).catch(() => {});
+      });
 
-
-  tasks.push(
-    runAndTrack<UserProfile>(
-      'user profile',
-      () => getUserProfile(),
-      profile => {
-        setUserProfile(profile);
-      },
-      'Erro ao carregar perfil'
-    )
-  );
-
-  tasks.push(
-    runAndTrack<Service[]>(
-      'service categories',
-      () => getServiceCategories(),
-      data => setServiceCategories(data),
-      'Erro ao carregar categorias'
-    )
-  );
-
-  const recommendedTask = runAndTrack<ProviderDisplayInfo[]>(
-    'recommended providers',
-    async () => {
-      try {
-        const api = await getRecommendedProviders(
-          hint.latitude != null && hint.longitude != null
-            ? { latitude: hint.latitude, longitude: hint.longitude, radius: searchRadiusKm }
-            : ({} as any)
-        );
-        return (() => {
-          const list = Array.isArray(api) ? api : [];
-          const seen = new Set<string>();
-
-          const merged = [...list, ...FALLBACK_RECOMMENDATIONS].filter(p => {
-            const id = p && typeof p.id === 'string' ? p.id : '';
-            if (!id || seen.has(id)) return false;
-            seen.add(id);
-            return true;
-          });
-
-          const currentProviderId =
-            (user as any)?.providerDetails?.id || (user as any)?.providerDetails?.providerId;
-          const currentProviderEmail = user?.email;
-
-          let idx = -1;
-          if (currentProviderId || currentProviderEmail) {
-            idx = merged.findIndex(p => {
-              if (!p) return false;
-              if (currentProviderId && p.id === currentProviderId) return true;
-              if (currentProviderEmail && p.email === currentProviderEmail) return true;
-              return false;
-            });
-          } else {
-            idx = merged.findIndex(
-              p => p && typeof p.fullName === 'string' && /joana/i.test(p.fullName)
-            );
-          }
-
-          if (idx > 0) {
-            const [first] = merged.splice(idx, 1);
-            merged.unshift(first);
-          }
-
-          return merged;
-        })();
-      } catch {
-        return FALLBACK_RECOMMENDATIONS;
+      const D = 240;
+      const S = 60;
+      if (reducedMotion) {
+        headerAnim.setValue(1);
+        categoriesAnim.setValue(1);
+        bannerAnim.setValue(1);
+        recommendationsAnim.setValue(1);
+        providersAnim.setValue(1);
+        navBarAnim.setValue(1);
+        return;
       }
-    },
-    data => setRecommendations(normalizeProviderList(data)),
-    'Erro ao carregar recomendacoes'
-  );
-  tasks.push(recommendedTask);
-  primaryTasks.push(recommendedTask);
 
-  await Promise.race([
-    Promise.allSettled(primaryTasks),
-    new Promise((resolve) => setTimeout(resolve, 1200)),
-  ]);
-  if (isMounted.current) {
-    setLoading(false); // libera a tela assim que as recomendacoes chegam (ou apos timeout curto)
-  }
-
-  await Promise.allSettled(tasks);
-
-  if (isMounted.current) { // Precarregar imagens do banner e do DEFENSE_SOS sem bloquear a primeira render
-    InteractionManager.runAfterInteractions(() => {
-      Asset.loadAsync([
-        require('../../../assets/images/banner6.png'),
-        require('../../../assets/images/banner4.png'),
-        require('../../../assets/images/banner3.png'),
-        Icons3D.support,
-      ] as any).catch(() => { });
-    });
-    const D = 240; // duracao padrao
-    const S = 60; // passo de atraso
-    if (reducedMotion) {
-      headerAnim.setValue(1);
-      categoriesAnim.setValue(1);
-      bannerAnim.setValue(1);
-      recommendationsAnim.setValue(1);
-      providersAnim.setValue(1);
-      navBarAnim.setValue(1);
-    } else {
       Animated.parallel([
-        Animated.timing(headerAnim, { toValue: 1, duration: D, delay: 0, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(categoriesAnim, { toValue: 1, duration: D, delay: S, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(bannerAnim, { toValue: 1, duration: D, delay: S * 2, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(recommendationsAnim, { toValue: 1, duration: D, delay: S * 3, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(providersAnim, { toValue: 1, duration: D, delay: S * 4, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(navBarAnim, { toValue: 1, duration: D, delay: S * 5, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(headerAnim, {
+          toValue: 1,
+          duration: D,
+          delay: 0,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(categoriesAnim, {
+          toValue: 1,
+          duration: D,
+          delay: S,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bannerAnim, {
+          toValue: 1,
+          duration: D,
+          delay: S * 2,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(recommendationsAnim, {
+          toValue: 1,
+          duration: D,
+          delay: S * 3,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(providersAnim, {
+          toValue: 1,
+          duration: D,
+          delay: S * 4,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(navBarAnim, {
+          toValue: 1,
+          duration: D,
+          delay: S * 5,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
       ]).start();
-    }
+    },
+    [
+      bannerAnim,
+      categoriesAnim,
+      headerAnim,
+      isMounted,
+      navBarAnim,
+      providersAnim,
+      reducedMotion,
+      recommendationsAnim,
+    ]
+  );
 
-    setLoading(false);
-    setIsRefreshing(false);
 
-    if (hasSuccessfulData) {
-      setError(null);
-    } else if (collectedErrors.length > 0) {
-      setError(collectedErrors[0]);
-      // log removido para performance
-    } else {
-      setError(t('common.network_error'));
-    }
-  }
-}, [
-  t,
-  headerAnim,
-  categoriesAnim,
-  bannerAnim,
-  recommendationsAnim,
-  providersAnim,
-  navBarAnim,
-  searchRadiusKm,
-  reducedMotion,
-  user,
-  isAuthenticated,
-]);
 
   // Respeitar "reduzir movimento"
   useEffect(() => {
@@ -624,12 +489,14 @@ export default function ExploreClientScreen() {
   }, []);
   useEffect(() => {
     isMounted.current = true; // Componente montado
-    fetchData();
+    fetchData()
+      .then(handleDataLoaded)
+      .catch(() => {});
     triggerLocationRefresh();
     return () => {
       isMounted.current = false; // Componente desmontado
     };
-  }, [fetchData, triggerLocationRefresh]);
+  }, [fetchData, handleDataLoaded, triggerLocationRefresh]);
   // Refetch quando raio foi salvo no painel do provedor
   useFocusEffect(
     React.useCallback(() => {
@@ -639,13 +506,23 @@ export default function ExploreClientScreen() {
           const flag = await AsyncStorage.getItem('@settings:radius:changed');
           if (!cancelled && flag === '1') {
             await AsyncStorage.removeItem('@settings:radius:changed');
-            fetchData();
-              triggerLocationRefresh();
-            }
-          } catch { }
-        })();
-        return () => { cancelled = true; };
-    }, [fetchData, triggerLocationRefresh])
+            fetchData()
+              .then((result) => {
+                if (!cancelled) {
+                  handleDataLoaded(result);
+                }
+              })
+              .catch(() => {});
+            triggerLocationRefresh();
+          }
+        } catch {
+          // ignore
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [fetchData, handleDataLoaded, triggerLocationRefresh])
   );
 
   const handleProviderPress = useCallback(
@@ -661,10 +538,28 @@ export default function ExploreClientScreen() {
     [router]
   );
 
-  const safeServiceCategories = serviceCategories.filter((c) => c && c.name);
-  const categoriesToRender = safeServiceCategories.length > 0 ? safeServiceCategories : FALLBACK_CATEGORIES;
+  const handleViewAllCategories = useCallback(() => {
+    router.push('/client/explore/todas-categorias' as any);
+  }, [router]);
 
-  // Filtrar nearbyProviders com base em serviços disponíveis
+  const safeServiceCategories = useMemo(
+    () => serviceCategories.filter((c: Service) => c && c.name),
+    [serviceCategories]
+  );
+  const categoriesToRender = useMemo(
+    () =>
+      safeServiceCategories.length > 0 ? safeServiceCategories : FALLBACK_CATEGORIES,
+    [safeServiceCategories]
+  );
+  const processedCategories = useMemo<CategoryWithKey[]>(
+    () =>
+      categoriesToRender.map((cat, idx) => ({
+        ...cat,
+        key: cat.id ?? `category-${idx}`,
+      })),
+    [categoriesToRender]
+  );
+
   const radiusMeters = searchRadiusKm * 1000;
   const normalizedNearbyProviders = Array.isArray(locationProviders)
     ? normalizeProviderList(locationProviders)
@@ -684,10 +579,11 @@ export default function ExploreClientScreen() {
   const sortedNearbyProviders = sortByDistanceStable(nearbyWithinRadius);
   const activeNearbyProviders = sortedNearbyProviders.filter(
     (provider) =>
-      provider?.verificationStatus === VerificationStatus.APPROVED,
+      provider?.verificationStatus === VerificationStatus.APPROVED &&
+      provider?.visibilityStatus === ProviderVisibilityStatus.VISIBLE,
   );
 
-  const safeRecommendations = (() => {
+  const safeRecommendations = useMemo(() => {
     const valid = Array.isArray(recommendations)
       ? recommendations
           .filter(
@@ -702,7 +598,9 @@ export default function ExploreClientScreen() {
           .filter(
             (item) =>
               (item as ProviderDisplayInfo)?.verificationStatus ===
-              VerificationStatus.APPROVED,
+                VerificationStatus.APPROVED &&
+              (item as ProviderDisplayInfo)?.visibilityStatus ===
+                ProviderVisibilityStatus.VISIBLE,
           )
       : [];
     const mergedPool = [...valid, ...activeNearbyProviders];
@@ -720,17 +618,57 @@ export default function ExploreClientScreen() {
     );
     const combined = [...deduped, ...mergedFallback];
     return combined.length > 0 ? combined : FALLBACK_RECOMMENDATIONS;
-  })();
+  }, [recommendations, activeNearbyProviders]);
 
-  // Usa o mesmo pool unificado de recomendações (recs + nearby + fallback) para os PrestadorCards,
-  // garantindo que a seção de prestadores exiba o mesmo universo de providers já deduplicado.
-  const prestadoresData = safeRecommendations;
+  const processedRecommendations = useMemo<ProviderWithKey[]>(
+    () =>
+      safeRecommendations.map((item, idx) => ({
+        ...item,
+        key: item.id ?? `provider-${idx}-${item.fullName ?? 'provider'}`,
+      })),
+    [safeRecommendations]
+  );
+
+  const prestadoresData = processedRecommendations;
+
+  useEffect(() => {
+    const startTime = Date.now();
+    return () => {
+      const renderTime = Date.now() - startTime;
+      if (renderTime > 100) {
+        console.warn(`ExploreScreen render took ${renderTime}ms`);
+      }
+    };
+  }, [loading, processedRecommendations.length, processedCategories.length]);
+
+  const keyExtractor = useCallback(
+    (item: ProviderWithKey, index: number) =>
+      item?.id ? `item-${item.id}` : `item-${index}`,
+    []
+  );
+
+  const debouncedRefresh = useMemo(
+    () =>
+      debounce(() => {
+        fetchData({ isRefresh: true })
+          .then(handleDataLoaded)
+          .catch(() => {});
+      }, 1000),
+    [fetchData, handleDataLoaded]
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedRefresh.cancel();
+    };
+  }, [debouncedRefresh]);
 
   const onRefresh = useCallback(() => {
-    setIsRefreshing(true);
-    fetchData();
+    debouncedRefresh();
     triggerLocationRefresh();
-  }, [fetchData, triggerLocationRefresh]);
+  }, [debouncedRefresh, triggerLocationRefresh]);
+
+  const globalError = error ?? locationError;
 
   if (loading && !isRefreshing) {
     return (
@@ -771,207 +709,30 @@ export default function ExploreClientScreen() {
         <FlatList
           data={[]} // Header-only: data vazia, mas header rola tudo
           renderItem={() => null} // FIX: Adicionado renderItem dummy para FlatList header-only (evita erro TS)
-          keyExtractor={() => 'header-only'}
-          ListHeaderComponent={(
-            <>
-              {/* NewHeader ÚNICO */}
-              <Animated.View
-                style={{
-                  opacity: headerAnim,
-                  transform: [
-                    {
-                      translateY:
-                        Platform.OS === 'android'
-                          ? 0
-                          : headerAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [-12, 0],
-                            }),
-                    },
-                  ],
-                }}>
-                {/* Aplica o ajuste de margem inferior para visitantes Android */}
-              <View style={[styles.androidHeaderLift, isAndroidVisitor && { marginBottom: 20 }]}>
-                <NewHeader
-                  userName={userNameDisplay}
-                  userAddress={addressToDisplay}
-                  isVisitor={!isAuthenticated}
-                />
-              </View>
-            </Animated.View>
-            {/* Banner for logged-in users is currently disabled */}
-            {/*
-            {isAuthenticated && primaryBanner && (
-              <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim }]}>
-                <CarouselBannerItem
-                  title={primaryBanner.title}
-                  discount={primaryBanner.discount}
-                  description={primaryBanner.description}
-                  buttonText={primaryBanner.buttonText}
-                  badgeText={primaryBanner.badgeText}
-                  onPress={primaryBanner.onPress}
-                />
-              </Animated.View>
-            )}
-            */}
-              {/*QA_PANEL_ENABLED && (
-                <TouchableOpacity
-                  style={styles.devPanelBadge}
-                  onPress={() => router.push('/dev-panel')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Abrir painel QA"
-                >
-                  <Text style={styles.devPanelBadgeText}>Painel QA</Text>
-                </TouchableOpacity>
-              )}*/}
-
-              {/* Exibe o bloco Dia a dia (categories) */}
-              {renderCategoriesSection()}
-              {/* Visitante continua vendo o bloco Como Funciona */}
-              {/* 
-                <View
-                  style={[
-                    styles.howItWorksTutorialContainer,
-                    visitorHowItWorksAdjustment,
-                    { width: '90%', left: 0 },
-                  ]}>
-                  <Text style={styles.howItWorksTitle} allowFontScaling={false}>
-                    Como funciona o LimpeJá
-                  </Text>
-                  <View style={styles.howItWorksSteps}>
-                    <View style={styles.howItWorksStep}>
-                      <Image source={Icons3D.provider} style={styles.howItWorksIcon} />
-                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
-                        Escolha o profissional
-                      </Text>
-                    </View>
-                    <View style={styles.howItWorksStep}>
-                      <Image source={Icons3D.calendar} style={styles.howItWorksIcon} />
-                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
-                        Agende data e hora
-                      </Text>
-                    </View>
-                    <View style={styles.howItWorksStep}>
-                      <Image source={Icons3D.payments} style={styles.howItWorksIcon} />
-                      <Text style={styles.howItWorksStepLabel} allowFontScaling={false}>
-                        Pague via PIX
-                      </Text>
-                    </View>
-                  </View>
-
-                </View>
-              )}*/}
-              {/* FIM NOVO BLOCO CONDICIONAL */}
-
-              {/* ContentWrapper ÚNICO - TODO o conteúdo aqui */}
-              <View style={styles.contentWrapper}>
-                {error && (
-                  <View style={styles.errorBanner}>
-                    <Text style={styles.errorBannerTitle} allowFontScaling={false}>
-                      {t('common.error', { defaultValue: 'Erro' })}
-                    </Text>
-                    <Text style={styles.errorBannerText} allowFontScaling={false}>
-                      {error}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.errorBannerCTA}
-                      onPress={onRefresh}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('common.retry', { defaultValue: 'Tentar novamente' })}
-                    >
-                      <Text style={styles.errorBannerCTAText} allowFontScaling={false}>
-                        {t('common.retry', { defaultValue: 'Tentar novamente' })}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-                {/* Recomendações ÚNICAS */}
-                <Animated.View
-                  style={{
-                    opacity: recommendationsAnim,
-                    transform: [
-                      {
-                        translateY:
-                          Platform.OS === 'android'
-                            ? 0
-                            : recommendationsAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [-12, 0],
-                              }),
-                      },
-                    ],
-                  }}>
-                <SecaoRecomendacoes
-                  titulo={t('search.recommended_providers')}
-                  onVerTudoPress={() => router.push('/client/explore/todos-recomendacoes' as any)}
-                  data={safeRecommendations}
-                  renderItem={({ item, index }) => {
-                    if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        // log removido para performance
-                        return null;
-                      }
-                    return <RecomendacaoCard key={item.id} item={item} />;
-                  }}
-                  horizontal={true}
-                  titleColor="rgba(95, 118, 141, 0.7)"
-                  noDataText={t('search.no_results')}
-                />
-                </Animated.View>
-
-                {/* Profissionais por Perto ÚNICOS */}
-                <Animated.View
-                  style={{
-                    opacity: providersAnim,
-                    transform: [
-                      {
-                        translateY:
-                          Platform.OS === 'android'
-                            ? 0
-                            : providersAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [-12, 0],
-                              }),
-                      },
-                    ],
-                  }}>
-                <SecaoPrestadores
-                  titulo={t('search.nearby_providers')}
-                  onVerTudoPress={() => router.push('/client/explore/todos-prestadores-proximos' as any)}
-                  data={prestadoresData}
-
-                    renderItem={({ item, index }) => {
-                      if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        // log removido para performance
-                        return null;
-                      }
-                      return (
-                        <PrestadorCard key={item.id} item={item} onPress={() => handleProviderPress(item)} />
-                      );
-                    }}
-                    horizontal={true}
-                    noDataText={t('search.no_results')}
-                  />
-
-                </Animated.View>
-
-                {!isAuthenticated && primaryBanner && (
-                  <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim, marginTop: 18 }]}>
-                    <CarouselBannerItem
-                      title={primaryBanner.title}
-                      discount={primaryBanner.discount}
-                      description={primaryBanner.description}
-                      buttonText={primaryBanner.buttonText}
-                      badgeText={primaryBanner.badgeText}
-                      onPress={primaryBanner.onPress}
-                    />
-                  </Animated.View>
-                )}
-
-                {/* Spacer para scroll extra (compensa absolutos) */}
-                <View style={{ height: 10 }} />
-              </View>
-            </>
-          )}
+          keyExtractor={keyExtractor}
+          ListHeaderComponent={
+            <ListHeader
+              headerAnim={headerAnim}
+              categoriesAnim={categoriesAnim}
+              bannerAnim={bannerAnim}
+              recommendationsAnim={recommendationsAnim}
+              providersAnim={providersAnim}
+              isAuthenticated={isAuthenticated}
+              isAndroidVisitor={isAndroidVisitor}
+              primaryBanner={primaryBanner}
+              processedCategories={processedCategories}
+              processedRecommendations={processedRecommendations}
+              prestadoresData={prestadoresData}
+              handleProviderPress={handleProviderPress}
+              handleViewAllCategories={handleViewAllCategories}
+              globalError={globalError}
+              onRefresh={onRefresh}
+              t={t}
+              router={router}
+              userName={userNameDisplay}
+              addressToDisplay={addressToDisplay}
+            />
+          }
           style={styles.scrollViewArea}
           contentContainerStyle={{
             paddingBottom: 10, // Padding alto para NavBar + Nudges + FABs
@@ -988,7 +749,11 @@ export default function ExploreClientScreen() {
             />
           }
           nestedScrollEnabled={true} // Para Android
-          removeClippedSubviews={false} // Evita corte de animações
+          removeClippedSubviews={Platform.OS === 'android'} // Evita corte de animações em Android
+          initialNumToRender={1}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          updateCellsBatchingPeriod={50}
         />
 
         {/* NavBar ÚNICA */}
@@ -1027,6 +792,210 @@ export default function ExploreClientScreen() {
     </SafeAreaView>
   );
 }
+
+type ListHeaderProps = {
+  headerAnim: Animated.Value;
+  categoriesAnim: Animated.Value;
+  bannerAnim: Animated.Value;
+  recommendationsAnim: Animated.Value;
+  providersAnim: Animated.Value;
+  isAuthenticated: boolean;
+  isAndroidVisitor: boolean;
+  primaryBanner?: BannerDataItem;
+  processedCategories: CategoryWithKey[];
+  processedRecommendations: ProviderWithKey[];
+  prestadoresData: ProviderWithKey[];
+  handleProviderPress: (provider: ProviderDisplayInfo) => void;
+  handleViewAllCategories: () => void;
+  globalError: string | null;
+  onRefresh: () => void;
+  t: TFunction;
+  router: ReturnType<typeof useRouter>;
+  userName: string;
+  addressToDisplay: string;
+};
+
+const ListHeader = React.memo<ListHeaderProps>(
+  ({
+    headerAnim,
+    categoriesAnim,
+    bannerAnim,
+    recommendationsAnim,
+    providersAnim,
+    isAuthenticated,
+    isAndroidVisitor,
+    primaryBanner,
+    processedCategories,
+    processedRecommendations,
+    prestadoresData,
+    handleProviderPress,
+    handleViewAllCategories,
+    globalError,
+    onRefresh,
+    t,
+    router,
+    userName,
+    addressToDisplay,
+  }) => (
+    <>
+      <Animated.View
+        style={{
+          opacity: headerAnim,
+          transform: [
+            {
+              translateY:
+                Platform.OS === 'android'
+                  ? 0
+                  : headerAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-12, 0],
+                    }),
+            },
+          ],
+        }}>
+        <View style={[styles.androidHeaderLift, isAndroidVisitor && { marginBottom: 20 }]}>
+          <NewHeader userName={userName} userAddress={addressToDisplay} isVisitor={!isAuthenticated} />
+        </View>
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.categoriesSection,
+          !isAuthenticated && styles.visitorCategoriesSectionSpacing,
+          {
+            opacity: categoriesAnim,
+            transform: [
+              {
+                translateY: categoriesAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-12, 0],
+                }),
+              },
+            ],
+          },
+        ]}>
+        <View style={styles.categoryTitleWrapper}>
+          <Text style={styles.categorySectionTitle}>Dia a dia</Text>
+          <TouchableOpacity
+            onPress={handleViewAllCategories}
+            style={styles.viewAllButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            {/* <Ionicons name="add" size={16} color="#398beeff" style={styles.viewAllIcon} />*/}
+          </TouchableOpacity>
+        </View>
+        <SecaoContainer<Service>
+          titulo={t('search.all_categories')}
+          onVerTudoPress={handleViewAllCategories}
+          data={processedCategories}
+          renderItem={({ item }) => {
+            if (!item || !item.name) return null;
+            return <MemoizedCategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />;
+          }}
+          horizontal={true}
+          noDataText={t('search.no_results')}
+        />
+      </Animated.View>
+
+      <View style={styles.contentWrapper}>
+        {globalError && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerTitle} allowFontScaling={false}>
+              {t('common.error', { defaultValue: 'Erro' })}
+            </Text>
+            <Text style={styles.errorBannerText} allowFontScaling={false}>
+              {globalError}
+            </Text>
+            <TouchableOpacity
+              style={styles.errorBannerCTA}
+              onPress={onRefresh}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.retry', { defaultValue: 'Tentar novamente' })}>
+              <Text style={styles.errorBannerCTAText} allowFontScaling={false}>
+                {t('common.retry', { defaultValue: 'Tentar novamente' })}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <Animated.View
+          style={{
+            opacity: recommendationsAnim,
+            transform: [
+              {
+                translateY:
+                  Platform.OS === 'android'
+                    ? 0
+                    : recommendationsAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [-12, 0],
+                      }),
+              },
+            ],
+          }}>
+          <MemoizedSecaoRecomendacoes
+            titulo={t('search.recommended_providers')}
+            onVerTudoPress={() => router.push('/client/explore/todos-recomendacoes' as any)}
+            data={processedRecommendations}
+            renderItem={({ item }) => {
+              if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
+                return null;
+              }
+              return <MemoizedRecomendacaoCard key={item.id} item={item} />;
+            }}
+            horizontal={true}
+            titleColor="rgba(95, 118, 141, 0.7)"
+            noDataText={t('search.no_results')}
+          />
+        </Animated.View>
+
+        <Animated.View
+          style={{
+            opacity: providersAnim,
+            transform: [
+              {
+                translateY:
+                  Platform.OS === 'android'
+                    ? 0
+                    : providersAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [-12, 0],
+                      }),
+              },
+            ],
+          }}>
+          <MemoizedSecaoPrestadores
+            titulo={t('search.nearby_providers')}
+            onVerTudoPress={() => router.push('/client/explore/todos-prestadores-proximos' as any)}
+            data={prestadoresData}
+            renderItem={({ item }) => {
+              if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
+                return null;
+              }
+              return <MemoizedPrestadorCard key={item.id} item={item} onPress={() => handleProviderPress(item)} />;
+            }}
+            horizontal={true}
+            noDataText={t('search.no_results')}
+          />
+        </Animated.View>
+
+        {!isAuthenticated && primaryBanner && (
+          <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim, marginTop: 18 }]}>
+            <CarouselBannerItem
+              title={primaryBanner.title}
+              discount={primaryBanner.discount}
+              description={primaryBanner.description}
+              buttonText={primaryBanner.buttonText}
+              badgeText={primaryBanner.badgeText}
+              onPress={primaryBanner.onPress}
+            />
+          </Animated.View>
+        )}
+
+        <View style={{ height: 10 }} />
+      </View>
+    </>
+  )
+);
 
 const styles = StyleSheet.create({
   safeArea: {
