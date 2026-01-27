@@ -24,7 +24,6 @@ import { DocumentPhotoType } from '../../../types/backend/verification';
 import { PROVIDER_ROUTES } from '../../_shared/routes';
 import DocumentUploadScreen from './verification/document-upload';
 
-const LOGO_IMAGE = require('../../../assets/images/logo.png');
 const HEADER_ICON_IMAGE = require('../../../assets/images/facer.png');
 
 const Colors = {
@@ -234,7 +233,6 @@ export default function VerifyAccountScreen() {
             return (
                 <View style={styles.analysisContent}>
                     <View style={styles.analysisLogoWrapper}>
-                        <Image source={LOGO_IMAGE} style={styles.analysisLogo} />
                         <Animated.View style={[
                             styles.scannerBar,
                             {
