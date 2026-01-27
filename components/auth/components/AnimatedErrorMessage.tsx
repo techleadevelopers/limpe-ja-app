@@ -39,7 +39,7 @@ export const AnimatedErrorMessage: React.FC<AnimatedErrorMessageProps> = ({
 // Estilos especificos para o AnimatedErrorMessage, agora definidos internamente
 const internalStyles = StyleSheet.create({
   container: {
-    minHeight: 16, // Altura fixa para evitar o "pulo" do layout
+    minHeight: 5, // Altura fixa para evitar o "pulo" do layout
     marginTop: 2,
     justifyContent: 'center',
   },
