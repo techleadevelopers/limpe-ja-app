@@ -163,32 +163,7 @@ export class AuthService {
   }
 
   async login(user: User): Promise<AuthResponseDto> {
-    const fullUser = (await this.prisma.user.findUnique({
-      where: { id: user.id },
-      include: {
-        client: {
-          include: loginClientInclude,
-        },
-        provider: {
-          include: loginProviderInclude,
-        },
-        loyalty: true, // Incluído
-        referredBy: true, // Incluído
-        referralsMade: true, // Incluído
-        userConsents: {
-          orderBy: { consentedAt: 'desc' as Prisma.SortOrder },
-          select: {
-            documentType: true,
-            version: true,
-            consentedAt: true,
-          },
-        },
-      },
-    })) as UserWithAllRelations;
-
-    if (!fullUser) {
-      throw new UnauthorizedException('Usuário não encontrado após validação.');
-    }
+    const fullUser = await this.loadFreshUserById(user.id);
 
     const payload = {
       email: fullUser.email,
@@ -236,6 +211,46 @@ export class AuthService {
       accessToken,
       user: userProfile,
     };
+  }
+
+  async refreshSession(userId: string): Promise<AuthResponseDto> {
+    this.logger.log(
+      `[AuthService] refreshSession: gerando novo token para userId=${userId}`,
+    );
+    const replayUser = { id: userId } as User;
+    return this.login(replayUser);
+  }
+
+  private async loadFreshUserById(
+    userId: string,
+  ): Promise<UserWithAllRelations> {
+    const freshUser = (await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        client: {
+          include: loginClientInclude,
+        },
+        provider: {
+          include: loginProviderInclude,
+        },
+        loyalty: true,
+        referredBy: true,
+        referralsMade: true,
+        userConsents: {
+          orderBy: { consentedAt: 'desc' as Prisma.SortOrder },
+          select: {
+            documentType: true,
+            version: true,
+            consentedAt: true,
+          },
+        },
+      },
+    })) as UserWithAllRelations | null;
+
+    if (!freshUser) {
+      throw new UnauthorizedException('Usuário não encontrado ao revalidar sessão.');
+    }
+    return freshUser;
   }
 
   async registerClient(
