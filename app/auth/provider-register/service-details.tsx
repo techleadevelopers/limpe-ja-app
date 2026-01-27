@@ -11,6 +11,7 @@ import {
     Animated,
     Easing,
     Image,
+    Modal,
     Platform,
     ScrollView,
     StyleProp,
@@ -22,6 +23,7 @@ import {
     View,
     ViewStyle,
 } from 'react-native';
+import { Camera, CameraView } from 'expo-camera';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { bulkSetAvailability, saveProviderSettings, TimeRange } from '../../../services/providerSettingsService';
 import { buildDateTimeForSlot } from '../../../utils/time';
@@ -44,6 +46,8 @@ import { CreateProviderServiceData, UpdateProviderServiceData } from '../../../t
 import { AUTH_ROUTES } from '../../_shared/routes';
 
 const MIN_HOURLY_DURATION = 240;
+
+type CameraPermissionStatus = 'granted' | 'denied' | 'undetermined';
 
 const SERVICE_OPTIONS = [
   { id: 'residencial', label: 'Residencial', icon: 'home-outline', set: 'ion' },
@@ -118,6 +122,11 @@ export default function ServiceDetailsScreen() {
   const [pixKeyError, setPixKeyError] = useState<string | null>(null);
   const [serviceAreasError, setServiceAreasError] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [isCameraModalVisible, setCameraModalVisible] = useState(false);
+  const [cameraPermissionStatus, setCameraPermissionStatus] =
+    useState<CameraPermissionStatus | null>(null);
+  const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
+  const cameraRef = useRef<React.ComponentRef<typeof CameraView> | null>(null);
 
   const cancelRegistrationAndGoBack = React.useCallback(async () => {
     setIsRegistrationInProgress(false);
@@ -325,31 +334,47 @@ export default function ServiceDetailsScreen() {
   
   };
 
-  const handleOpenCamera = async () => {
+  const requestCameraPermission = useCallback(async () => {
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    setCameraPermissionStatus(status);
+    return status === 'granted';
+  }, []);
+
+  const openCustomCamera = useCallback(async () => {
+    const granted =
+      cameraPermissionStatus === 'granted'
+        ? true
+        : await requestCameraPermission();
+    if (!granted) {
+      Alert.alert('Permissão necessária', 'É preciso permitir acesso à câmera para continuar.');
+      return;
+    }
+    setCameraModalVisible(true);
+  }, [cameraPermissionStatus, requestCameraPermission]);
+
+  const handleCapturePhoto = useCallback(async () => {
+    if (isCapturingPhoto) return;
+    const cameraInstance = cameraRef.current;
+    if (!cameraInstance) return;
+    setIsCapturingPhoto(true);
     try {
-      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      if (permissionResult.granted === false) {
-        Alert.alert('Permissão necessária', 'É preciso permitir acesso à câmera para continuar.');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          profilePhoto: result.assets[0].uri
-        }));
-        setProfilePhotoError(null);
-      }
+      const photo = await cameraInstance.takePictureAsync({ quality: 0.7, skipProcessing: true });
+      setFormData(prev => ({
+        ...prev,
+        profilePhoto: photo.uri,
+      }));
+      setProfilePhotoError(null);
+      setCameraModalVisible(false);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível capturar a imagem.');
+    } finally {
+      setIsCapturingPhoto(false);
     }
-  };
+  }, []);
+
+  const handleCancelCamera = useCallback(() => {
+    setCameraModalVisible(false);
+  }, []);
 
   const handleSelectPhoto = () => {
     Alert.alert('Atualizar foto profissional', 'Selecione uma fonte:', [
@@ -359,7 +384,7 @@ export default function ServiceDetailsScreen() {
       },
       {
         text: 'Câmera',
-        onPress: handleOpenCamera,
+        onPress: openCustomCamera,
       },
       {
         text: 'Cancelar',
@@ -371,9 +396,10 @@ export default function ServiceDetailsScreen() {
   // Validation functions
   const validateSubStep1 = useCallback(() => {
     let isValid = true;
-    setProfilePhotoError(null);
-    setDescriptionError(null);
+      setProfilePhotoError(null);
+      setDescriptionError(null);
 
+    setYearsOfExperienceError(null);
     if (!formData.profilePhoto) {
       setProfilePhotoError('Adicione uma foto de vitrine profissional para aparecer na busca.');
       isValid = false;
@@ -382,19 +408,19 @@ export default function ServiceDetailsScreen() {
       setDescriptionError('A descrição do serviço é obrigatória.');
       isValid = false;
     }
+    const years = parseInt(formData.yearsOfExperience);
+    if (!formData.yearsOfExperience.trim() || isNaN(years) || years < 0) {
+      setYearsOfExperienceError('Os anos de experiência são obrigatórios e devem ser um número válido.');
+      isValid = false;
+    }
     return isValid;
-  }, [formData.profilePhoto, formData.description]);
+  }, [formData.profilePhoto, formData.description, formData.yearsOfExperience]);
 
   const validateSubStep2 = useCallback(() => {
     let isValid = true;
     setYearsOfExperienceError(null);
     setSpecialtiesError(null);
 
-    const years = parseInt(formData.yearsOfExperience);
-    if (!formData.yearsOfExperience.trim() || isNaN(years) || years < 0) {
-      setYearsOfExperienceError('Os anos de experiência são obrigatórios e devem ser um número válido.');
-      isValid = false;
-    }
     if (formData.specialties.length === 0) {
       setSpecialtiesError('Por favor, selecione pelo menos um tipo de serviço.');
       isValid = false;
@@ -770,8 +796,10 @@ export default function ServiceDetailsScreen() {
                 </TouchableOpacity>
                 <View style={styles.photoHintContainer}>
                   <Text style={styles.photoHintText}>
-                    Olhe para a câmera e tire a foto da cintura para cima. {'\n'}
-                    Nossa inteligência cuidará do fundo para você!
+                    📸 <Text style={{ fontWeight: '700' }}>Padrão Profissional LimpeJá:</Text>{'\n'}
+                    1. Use uma <Text style={{ fontWeight: '700' }}>blusa de cor escura</Text> (preta, azul ou cinza).{'\n'}
+                    2. Fique de frente para uma <Text style={{ fontWeight: '700' }}>parede branca ou clara</Text>.{'\n'}
+                    3. Posicione a câmera na altura dos olhos, da <Text style={{ fontWeight: '700' }}>cintura para cima</Text>.
                   </Text>
                 </View>
                 {profilePhotoError && <Text style={styles.inlineErrorMessageCentered}>{profilePhotoError}</Text>}
@@ -791,12 +819,6 @@ export default function ServiceDetailsScreen() {
                   descriptionError,
                   validateSubStep1
                 )}
-              </View>
-            )}
-
-            {/* Sub-step 2: Experience + Specialties */}
-            {currentServiceSubStep === 2 && (
-              <View style={[styles.formContainer, styles.step2Spacing]}>
                 {renderInputSection(
                   'Anos de Experiência',
                   'Ex: 5',
@@ -809,9 +831,14 @@ export default function ServiceDetailsScreen() {
                   styles.descriptionInputContainerShadow,
                   styles.yearsTitleSpacing,
                   yearsOfExperienceError,
-                  validateSubStep2
+                  validateSubStep1
                 )}
+              </View>
+            )}
 
+            {/* Sub-step 2: Experience + Specialties */}
+            {currentServiceSubStep === 2 && (
+              <View style={[styles.formContainer, styles.step2Spacing]}>
                 {/* Service Type Selection (Using PremiumServiceChip) */}
                 <View style={styles.serviceTypeContainer}>
                   <Text style={styles.sectionTitle}>
@@ -863,6 +890,7 @@ export default function ServiceDetailsScreen() {
                     'cash-outline',
                     undefined,
                     styles.descriptionInputContainerShadow,
+                    undefined,
                     basePriceError,
                     validateSubStep3
                   )}
@@ -874,18 +902,20 @@ export default function ServiceDetailsScreen() {
             {/* Sub-step 3: PIX + Service Areas */}
             {currentServiceSubStep === 3 && (
               <View style={styles.formContainer}>
-                {renderInputSection(
-                  'Chave PIX',
-                  'Ex: seuemail@... ou 000.000.000-00',
-                  formData.pixKey,
-                  (text) => { setFormData(prev => ({ ...prev, pixKey: text })); setPixKeyError(null); },
-                  'default',
-                  false,
-                  'card-outline',
-                  undefined,
-                  pixKeyError,
-                  validateSubStep4
-                )}
+                  {renderInputSection(
+                    'Chave PIX',
+                    'Ex: seuemail@... ou 000.000.000-00',
+                    formData.pixKey,
+                    (text) => { setFormData(prev => ({ ...prev, pixKey: text })); setPixKeyError(null); },
+                    'default',
+                    false,
+                    'card-outline',
+                    undefined,
+                    styles.descriptionInputContainerShadow,
+                    undefined,
+                    pixKeyError,
+                    validateSubStep4
+                  )}
 
                 {false && renderInputSection(
                   'Áreas de Atendimento',
@@ -896,6 +926,8 @@ export default function ServiceDetailsScreen() {
                   true,
                   'location-outline',
                   300,
+                  styles.descriptionInputContainerShadow,
+                  undefined,
                   serviceAreasError,
                   validateSubStep4
                 )}
@@ -952,6 +984,48 @@ export default function ServiceDetailsScreen() {
             </View>
           </View>
         </Animated.View>
+        <Modal
+          visible={isCameraModalVisible}
+          animationType="slide"
+          onRequestClose={handleCancelCamera}
+          presentationStyle="fullScreen"
+          hardwareAccelerated>
+          <SafeAreaView style={styles.cameraModalContainer}>
+              <CameraView
+                style={StyleSheet.absoluteFill}
+                ratio="4:3"
+                ref={cameraRef}
+                facing="front"
+              >
+              <View style={styles.cameraOverlay}>
+                <Text style={styles.cameraInstruction}>
+                  Encaixe seu rosto e ombros dentro da marcação
+                </Text>
+                <View style={styles.overlayFrameContainer}>
+                  <View style={styles.overlayFrame}>
+                    <View style={styles.overlayBust} />
+                  </View>
+                </View>
+                <View style={styles.cameraControls}>
+                  <TouchableOpacity
+                    onPress={handleCapturePhoto}
+                    style={styles.captureButton}
+                    disabled={isCapturingPhoto}
+                  >
+                    {isCapturingPhoto ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <View style={styles.captureIndicator} />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleCancelCamera} style={styles.cameraCancelButton}>
+                    <Text style={styles.cameraCancelText}>Cancelar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </CameraView>
+          </SafeAreaView>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -1382,6 +1456,81 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 10,
     marginBottom: 10,
+  },
+  cameraModalContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  cameraOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'space-between',
+    padding: 24,
+  },
+  cameraInstruction: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: Platform.OS === 'android' ? 20 : 40,
+  },
+  overlayFrameContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayFrame: {
+    width: '80%',
+    aspectRatio: 3 / 4,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.9)',
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  overlayBust: {
+    width: '70%',
+    height: '60%',
+    borderRadius: 100,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.85)',
+    borderBottomWidth: 0,
+    marginBottom: 12,
+  },
+  cameraControls: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  captureButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 16,
+  },
+  captureIndicator: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#fff',
+  },
+  cameraCancelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+  },
+  cameraCancelText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
