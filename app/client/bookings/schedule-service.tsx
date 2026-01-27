@@ -506,11 +506,6 @@ const BookingSummaryPreview = ({
         reviewCardAnim,
       ]}
     >
-      <View style={{ alignItems: 'center', marginBottom: 16, marginTop: 4 }}>
-        <Text style={styles.premiumReviewTitle}>
-          {t('schedule_service.review_booking_title', { defaultValue: 'Revise seu agendamento' })}
-        </Text>
-      </View>
 
       {false && (
         <Animated.View style={[styles.compactSection, cupomSectionAnim]}>
