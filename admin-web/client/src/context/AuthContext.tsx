@@ -1,64 +1,77 @@
-// admin-web/client/src/context/AuthContext.tsx
-
-import { login as apiLogin, logout as apiLogout, setUnauthorizedHandler } from '@/lib/api'; // Importa as funções de login/logout da API
-import { AuthUser } from '@/lib/types'; // Importa AuthUser do types.ts
+import { 
+  login as apiLogin, 
+  logout as apiLogout, 
+  setUnauthorizedHandler,
+  getProfile // ADICIONADO: Certifique-se de que essa função existe no seu lib/api
+} from '@/lib/api'; 
+import { AuthUser } from '@/lib/types'; 
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { useLocation } from 'wouter'; // CORREÇÃO: useLocation no lugar de useNavigate
+import { useLocation } from 'wouter'; 
 
 // 1. Definição dos Tipos
-// Interface para o objeto de usuário que será armazenado e usado no contexto.
-// Usamos AuthUser do types.ts para consistência com a API.
 interface User extends AuthUser {}
 
-// Interface para a forma do objeto de contexto de autenticação.
 interface AuthContextType {
-  user: User | null; // O usuário logado, ou null se não houver.
-  isAuthenticated: boolean; // Flag para indicar se o usuário está autenticado.
-  // CORREÇÃO: A função login agora aceita credenciais e retorna uma Promise<void>
+  user: User | null; 
+  isAuthenticated: boolean; 
   login: (credentials: { email: string; password: string }) => Promise<void>;
-  logout: () => void; // Função para realizar o logout.
-  isLoading: boolean; // Flag para indicar se o estado de autenticação ainda está sendo carregado (ex: da localStorage).
+  logout: () => void; 
+  isLoading: boolean; 
 }
 
 // 2. Criação do Contexto
-// Crie o contexto com um valor padrão de `undefined`.
-// Isso permite que o hook `useAuth` verifique se ele está sendo usado fora do `AuthProvider`.
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // 3. Componente Provider de Autenticação
-/**
- * `AuthProvider` é um componente React que fornece o contexto de autenticação
- * para todos os seus componentes filhos.
- * Gerencia o estado de autenticação (usuário logado, token) usando localStorage.
- */
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Começa como true para indicar carregamento inicial.
-  // CORREÇÃO: useLocation retorna um array, o segundo elemento é a função navigate
+  const [isLoading, setIsLoading] = useState(true); 
   const [, navigate] = useLocation(); 
 
-  // Efeito para carregar o estado de autenticação do localStorage na montagem do componente.
+  // Efeito para carregar e REVALIDAR o estado de autenticação
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    const userDataString = localStorage.getItem('userData');
+    const initAuth = async () => {
+      const token = localStorage.getItem('authToken');
+      const userDataString = localStorage.getItem('userData');
 
-    if (token && userDataString) {
-      try {
-        const userData: User = JSON.parse(userDataString);
-        setUser(userData);
-        setIsAuthenticated(true);
-      } catch (e) {
-        // Se houver um erro ao parsear os dados, limpa o localStorage e desloga.
-        console.error("Falha ao analisar dados do usuário do localStorage:", e);
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
-        setUser(null);
-        setIsAuthenticated(false);
+      if (token && userDataString) {
+        try {
+          // 1. Carrega o que tem no localStorage para não travar a UI
+          const cachedUserData: User = JSON.parse(userDataString);
+          setUser(cachedUserData);
+          setIsAuthenticated(true);
+
+          // 2. BUSCA DADOS FRESCOS (Resolve o bug do status antigo no localStorage)
+          const freshUserData = await getProfile(); 
+          
+          // Atualiza o estado e o storage com os dados novos do banco/prisma
+          localStorage.setItem('userData', JSON.stringify(freshUserData));
+          setUser(freshUserData);
+
+          // Se o status mudou para VISIBLE e ela estava na tela de correção, manda pro dashboard
+          if (
+            window.location.pathname.includes('/profile/correction') && 
+            (freshUserData as any).status !== 'VITRINE_IRREGULAR' &&
+            (freshUserData as any).provider?.verificationStatus !== 'VITRINE_IRREGULAR'
+          ) {
+            navigate('/dashboard');
+          }
+
+        } catch (e) {
+          console.error("Falha ao sincronizar perfil ou analisar localStorage:", e);
+          // Se o token estiver vencido ou os dados corrompidos, limpa tudo
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userData');
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       }
-    }
-    setIsLoading(false); // Finaliza o carregamento inicial.
-  }, []); // Executa apenas uma vez na montagem do componente.
+      setIsLoading(false);
+    };
+
+    initAuth();
+  }, [navigate]);
 
   useEffect(() => {
     const handleUnauthorized = async () => {
@@ -74,48 +87,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => setUnauthorizedHandler();
   }, [navigate]);
 
-  /**
-   * Função para lidar com o processo de login.
-   * Chama a API de login, armazena o token e os dados do usuário no localStorage e atualiza o estado.
-   * @param credentials Objeto contendo email e password.
-   */
   const login = async (credentials: { email: string; password: string }) => {
-    setIsLoading(true); // Ativa o estado de carregamento
+    setIsLoading(true); 
     try {
-      const { accessToken, user: userData } = await apiLogin(credentials); // Chama a função de login da API
+      const { accessToken, user: userData } = await apiLogin(credentials); 
       localStorage.setItem('authToken', accessToken);
       localStorage.setItem('userData', JSON.stringify(userData));
       setUser(userData);
       setIsAuthenticated(true);
 
-      // Verifica se o status do usuário é VITRINE_IRREGULAR para redirecionamento
       if ((userData as any).status === 'VITRINE_IRREGULAR' || (userData as any).provider?.verificationStatus === 'VITRINE_IRREGULAR') {
         navigate('/profile/correction');
       } else {
-        navigate('/dashboard'); // Redireciona o usuário para o dashboard após o login.
+        navigate('/dashboard'); 
       }
     } catch (error) {
       console.error("Login failed:", error);
-      // Aqui você pode adicionar lógica para mostrar uma mensagem de erro ao usuário (ex: toast)
-      throw error; // Re-lança o erro para que o componente chamador possa tratá-lo (ex: exibir mensagem de erro)
+      throw error; 
     } finally {
-      setIsLoading(false); // Desativa o estado de carregamento
+      setIsLoading(false); 
     }
   };
 
-  /**
-   * Função para lidar com o processo de logout.
-   * Remove o token e os dados do usuário do localStorage e limpa o estado.
-   * Chama a função de logout da API (se houver).
-   */
   const logout = () => {
-    apiLogout(); // Chama a função de logout da API (que limpa localStorage)
+    apiLogout(); 
     setUser(null);
     setIsAuthenticated(false);
-    navigate('/login'); // Redireciona o usuário para a página de login após o logout.
+    navigate('/login'); 
   };
 
-  // O objeto de valor que será fornecido pelo contexto.
   const value = {
     user,
     isAuthenticated,
@@ -131,18 +131,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// 4. Hook Customizado para Consumir o Contexto
-/**
- * Hook customizado `useAuth` para acessar facilmente o contexto de autenticação.
- * Garante que o hook seja usado dentro de um `AuthProvider`.
- * @returns O objeto de contexto de autenticação.
- * @throws Erro se `useAuth` for chamado fora de um `AuthProvider`.
- */
+// 4. Hook Customizado
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    // Fallback seguro para evitar crash caso o Provider não envolva o componente (ex.: pré-visualização isolada).
-    console.warn('useAuth chamado fora de um AuthProvider. Usando contexto padrão não autenticado.');
+    console.warn('useAuth chamado fora de um AuthProvider.');
     return {
       user: null,
       isAuthenticated: false,
