@@ -22,6 +22,7 @@ import {
     TouchableOpacity,
     View,
     ViewStyle,
+    Image,
 } from 'react-native';
 
 import { getPricingConfig } from '../../../services/configService';
@@ -419,19 +420,19 @@ const BookingSummaryPreview = ({
   const addressLine2 = `${address.neighborhood || ''}${address.city ? ` · ${address.city}` : ''}${address.state ? `/${address.state}` : ''}`.trim();
   const reviewRows = useMemo(() => {
     return [
+       {
+        key: 'provider',
+        icon: 'person-outline',
+        label: t('schedule_service.summary_provider', { defaultValue: 'Diarista' }),
+        value: provider?.fullName || t('common.na', { defaultValue: 'N/A' }),
+        action: onEditProvider,
+      },
       {
         key: 'service',
         icon: 'briefcase-outline',
         label: t('schedule_service.summary_service', { defaultValue: 'Serviço' }),
         value: selectedProviderService?.service?.name || t('common.na', { defaultValue: 'N/A' }),
         action: onEditService,
-      },
-      {
-        key: 'provider',
-        icon: 'person-outline',
-        label: t('schedule_service.summary_provider', { defaultValue: 'Prestador' }),
-        value: provider?.fullName || t('common.na', { defaultValue: 'N/A' }),
-        action: onEditProvider,
       },
       {
         key: 'datetime',
@@ -466,11 +467,6 @@ const BookingSummaryPreview = ({
         value: (
           <View style={styles.reviewInsuranceValue}>
             <Text style={styles.reviewRowValue}>{insuranceLabel}</Text>
-            <Text style={styles.reviewInsurancePrice}>
-              {insuranceFeeCents > 0
-                ? `+${formatBRL(insuranceFeeCents / 100)}`
-                : t('schedule_service.insurance_none_price', { defaultValue: 'Sem custo' })}
-            </Text>
           </View>
         ),
         action: onEditInsurance,
@@ -506,6 +502,7 @@ const BookingSummaryPreview = ({
         reviewCardAnim,
       ]}
     >
+    
 
       {false && (
         <Animated.View style={[styles.compactSection, cupomSectionAnim]}>
@@ -596,113 +593,137 @@ const BookingSummaryPreview = ({
       )}
 
       <Animated.View style={[styles.summarySection, summarySectionAnim]}>
-        <View style={styles.premiumSummaryCard}>
-          {reviewRows.map((row) => (
-            <View key={row.key} style={styles.premiumSummaryRow}>
-              <Ionicons
-                name={row.icon as any}
-                size={18}
-                color={AppColors.primaryInteractive}
-                style={styles.premiumSummaryIcon}
-              />
-              <View style={styles.premiumSummaryContent}>
-                <Text style={styles.premiumSummaryLabel}>{row.label}</Text>
-                {typeof row.value === 'string' ? (
-                  <Text style={styles.premiumSummaryValue}>{row.value}</Text>
-                ) : (
-                  row.value
-                )}
-              </View>
-              {row.action && row.key === 'insurance' && (
-                <TouchableOpacity onPress={row.action} style={styles.reviewAction}>
-                  <Text style={styles.reviewActionText}>{changeLabel}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
-        </View>
+  <View style={styles.premiumSummaryCard}>
 
-        <View style={styles.premiumCostCard}>
-          <View style={styles.premiumCostRow}>
-            <View>
-              <Text style={styles.premiumSummaryLabel}>
-                {t('schedule_service.subtotal', { defaultValue: 'Subtotal' })}
-              </Text>
-              <Text style={[styles.premiumSummaryValue, styles.subtotalValue]}>
-                {formatBRL(subtotal)}
-              </Text>
-            </View>
-          </View>
-          {insuranceFeeCents > 0 && (
-            <View style={styles.premiumCostRow}>
-              <Text style={styles.insuranceLabel}>
-                {t('schedule_service.summary_insurance_label', { defaultValue: 'Proteção Essencial' })}
-              </Text>
-              <Text style={styles.insuranceValue}>
-                +{formatBRL(insuranceFeeCents / 100)}
-              </Text>
-            </View>
-          )}
-          {discountAmount > 0 && (
-            <View style={styles.premiumCostRow}>
-              <Text style={styles.premiumSummaryLabel}>
-                {t('schedule_service.discount', { defaultValue: 'Desconto' })}
-              </Text>
-              <Text style={[styles.premiumSummaryValue, styles.discountValue]}>
-                - {formatBRL(discountAmount)}
-              </Text>
-            </View>
-          )}
-          <View style={styles.premiumCostRow}>
-            <Text style={styles.totalPriceLabel}>
-              {t('schedule_service.total_to_pay', { defaultValue: 'Total a Pagar' })}
-            </Text>
-            <Animated.Text
-              style={[
-                styles.totalPriceValue,
-                {
-                  transform: [
-                    {
-                      scale: finalPriceAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.95, 1],
-                      }),
-                    },
-                  ],
-                  marginLeft: 0,
-                },
-              ]}
-            >
-              {formatBRL(finalPrice)}
-            </Animated.Text>
-          </View>
-          <Text style={styles.paymentMicrocopy}>
-            {t('schedule_service.payment_microcopy', { defaultValue: 'PIX • Confirmação em instantes' })}
-          </Text>
-        </View>
-
-        {quoteStatus === 'refreshing' && (
-          <Text style={styles.quoteStatusText}>
-            {t('schedule_service.quote_refreshing', { defaultValue: 'Atualizando cotação...' })}
-          </Text>
-        )}
-        {quoteStatus === 'rateLimited' && quoteRateLimitRemainingSeconds > 0 && (
-          <Text style={styles.quoteStatusText}>
-            {t('schedule_service.rate_limit_hint', {
-              defaultValue: `Tente novamente em ${quoteRateLimitRemainingSeconds}s`,
-              seconds: quoteRateLimitRemainingSeconds,
-            })}
-          </Text>
+    
+    {reviewRows.map((row) => (
+      <View key={row.key} style={styles.premiumSummaryRow}>
+        
+        {/* --- INÍCIO DA ALTERAÇÃO: Lógica do Avatar --- */}
+        {row.key === 'provider' && provider?.avatarUrl ? (
+          <Image
+            source={{ uri: provider.avatarUrl }}
+            style={styles.premiumSummaryAvatar}
+          />
+        ) : (
+          <Ionicons
+            name={row.icon as any}
+            size={18}
+            color={AppColors.primaryInteractive}
+            style={styles.premiumSummaryIcon}
+          />
         )}
 
-        <SafetyReminderBanner />
+        
+        {/* --- FIM DA ALTERAÇÃO --- */}
 
-        <TouchableOpacity onPress={onShowCancellationPolicy} style={styles.cancellationPolicyLink}>
-          <Text style={styles.cancellationPolicyText}>
-            {t('schedule_service.cancellation_policy', { defaultValue: 'Política de Cancelamento' })}
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
+        <View style={styles.premiumSummaryContent}>
+          <Text style={styles.premiumSummaryLabel}>{row.label}</Text>
+          {typeof row.value === 'string' ? (
+            <Text style={styles.premiumSummaryValue}>{row.value}</Text>
+          ) : (
+            row.value
+          )}
+        </View>
+        {row.action && row.key === 'insurance' && (
+          <TouchableOpacity onPress={row.action} style={styles.reviewAction}>
+            <Text style={styles.reviewActionText}>{changeLabel}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    ))}
+  </View>
+
+  <View style={styles.premiumCostCard}>
+    
+    {/* 1. PROTEÇÃO ESSENCIAL (Agora aparece primeiro) */}
+    {insuranceFeeCents > 0 && (
+      <View style={styles.premiumCostRow}>
+        <Text style={styles.insuranceLabel}>
+          {t('schedule_service.summary_insurance_label', { defaultValue: 'Proteção Essencial' })}
+        </Text>
+        <Text style={styles.insuranceValue}>
+          +{formatBRL(insuranceFeeCents / 100)}
+        </Text>
+      </View>
+    )}
+
+    {/* 2. SUBTOTAL (Agora aparece abaixo da proteção) */}
+    <View style={styles.premiumCostRow}>
+      <View>
+        <Text style={styles.premiumSummaryLabel}>
+          {t('schedule_service.subtotal', { defaultValue: 'Subtotal' })}
+        </Text>
+        <Text style={[styles.premiumSummaryValue, styles.subtotalValue]}>
+          {formatBRL(subtotal)}
+        </Text>
+      </View>
+    </View>
+
+    {/* 3. DESCONTO (Se houver) */}
+    {discountAmount > 0 && (
+      <View style={styles.premiumCostRow}>
+        <Text style={styles.premiumSummaryLabel}>
+          {t('schedule_service.discount', { defaultValue: 'Desconto' })}
+        </Text>
+        <Text style={[styles.premiumSummaryValue, styles.discountValue]}>
+          - {formatBRL(discountAmount)}
+        </Text>
+      </View>
+    )}
+
+    {/* 4. TOTAL A PAGAR (Fica por último) */}
+    <View style={styles.premiumCostRow}>
+      <Text style={styles.totalPriceLabel}>
+        {t('schedule_service.total_to_pay', { defaultValue: 'Total a Pagar' })}
+      </Text>
+      <Animated.Text
+        style={[
+          styles.totalPriceValue,
+          {
+            transform: [
+              {
+                scale: finalPriceAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.95, 1],
+                }),
+              },
+            ],
+            marginLeft: 0,
+          },
+        ]}
+      >
+        {formatBRL(finalPrice)}
+      </Animated.Text>
+    </View>
+    
+    <Text style={styles.paymentMicrocopy}>
+      {t('schedule_service.payment_microcopy', { defaultValue: 'PIX • Confirmação em instantes' })}
+    </Text>
+  </View>
+
+  {quoteStatus === 'refreshing' && (
+    <Text style={styles.quoteStatusText}>
+      {t('schedule_service.quote_refreshing', { defaultValue: 'Atualizando cotação...' })}
+    </Text>
+  )}
+  {quoteStatus === 'rateLimited' && quoteRateLimitRemainingSeconds > 0 && (
+    <Text style={styles.quoteStatusText}>
+      {t('schedule_service.rate_limit_hint', {
+        defaultValue: `Tente novamente em ${quoteRateLimitRemainingSeconds}s`,
+        seconds: quoteRateLimitRemainingSeconds,
+      })}
+    </Text>
+  )}
+
+  <SafetyReminderBanner />
+
+  <TouchableOpacity onPress={onShowCancellationPolicy} style={styles.cancellationPolicyLink}>
+    <Text style={styles.cancellationPolicyText}>
+      {t('schedule_service.cancellation_policy', { defaultValue: 'Política de Cancelamento' })}
+    </Text>
+  </TouchableOpacity>
+</Animated.View>
 
 </Animated.View>
 );
@@ -2919,6 +2940,24 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#FAFAFA',
   },
+  cardInternalTitle: {
+    fontSize: 12, // Pequeno como pediu
+    fontWeight: '700',
+    color: '#9CA3AF', // Cinza suave (Premium)
+    textAlign: 'center',
+    textTransform: 'uppercase', // Caixa alta
+    letterSpacing: 1.5, // Espaçamento elegante
+    marginBottom: 20, // Espaço até o Prestador
+    marginTop: 4,
+  },
+  premiumSummaryAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 31, // Metade da largura para ficar redondo
+    marginTop: 1,
+    marginRight: 8, // Ajuste fino para alinhar com o texto
+    backgroundColor: '#E5E7EB', // Cor de fundo caso a imagem demore a carregar
+  },
   contentWrapper: {
     flex: 1,
     backgroundColor: '#FAFAFA',
@@ -3261,11 +3300,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginHorizontal: 12,
     marginBottom: 12,
-    shadowColor: '#04152d',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+
   },
   premiumSummaryRow: {
     flexDirection: 'row',
@@ -3313,13 +3348,7 @@ const styles = StyleSheet.create({
     padding: 18,
     marginHorizontal: 12,
     marginBottom: 11,
-    borderWidth: 1,
-    borderColor: '#ECEFF3',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    
   },
   premiumCostRow: {
     flexDirection: 'row',
@@ -3392,6 +3421,7 @@ const styles = StyleSheet.create({
   },
   reviewInsuranceValue: {
     flexDirection: 'row',
+    left: 0,
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
@@ -3399,13 +3429,14 @@ const styles = StyleSheet.create({
   reviewInsurancePrice: {
     fontSize: Platform.OS === 'android' ? 14 : 13,
     fontWeight: '800',
-    color: AppColors.successStandard,
+    color: AppColors.primaryInteractive,
     backgroundColor: '#E8F5E9',
     paddingHorizontal: 8,
     paddingVertical: 2,
+    left: 49,
     borderRadius: 6,
     overflow: 'hidden',
-    marginLeft: 8,
+    marginLeft: 0,
   },
   priceSummary: {
     flexDirection: 'row',

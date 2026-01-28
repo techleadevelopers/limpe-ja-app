@@ -46,7 +46,7 @@ const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({
                         style={styles.iconBtn}
                         // Removida animação de press (scale) para simplicidade e performance
                     >
-                        <Ionicons name="arrow-back" size={24} color={AppColors.textBody} />
+                        <Ionicons name="arrow-back" size={24} color={'#9CA3AF'} />
                     </TouchableOpacity>
 
                     <Text numberOfLines={1} style={styles.headerTitle}>
@@ -100,8 +100,10 @@ const styles = StyleSheet.create({
     headerTitle: {
         flex: 1,
         textAlign: 'center',
-        color: AppColors.textBody,
-        fontSize: 16,
+        color: '#9CA3AF',
+        fontSize: 12,
+        textTransform: 'uppercase', // CAIXA ALTA
+  letterSpacing: 1.5,     // E s p a ç a m e n t o
         fontWeight: '700',
         // Font family cross-platform otimizada (evita problemas de cursor/web)
         fontFamily: Platform.select({

@@ -1373,10 +1373,25 @@ function RootLayoutContent() {
         return;
       }
 
-      if (user?.role === UserRole.PROVIDER) {
-        const verificationStatus = user?.providerDetails?.verificationStatus;
+if (user?.role === UserRole.PROVIDER) {
+        // --- CORREÇÃO 1: BUSCA ROBUSTA DOS DADOS ---
+        // Às vezes vem em 'providerDetails', às vezes em 'provider'. Vamos tentar os dois.
+        const providerData = user?.providerDetails || (user as any)?.provider;
+        
+        // --- CORREÇÃO 2: TRAVA DE SEGURANÇA (LOADING) ---
+        // Se é Provider mas os detalhes ainda estão vazios/carregando, NÃO CHUTA pra cadastro.
+        // Espera carregar. Retorna um loading simples ou null pra manter na tela atual.
+        if (!providerData) {
+           return;
+        }
 
-        const isApproved = verificationStatus === VerificationStatus.APPROVED;
+        const verificationStatus = providerData.verificationStatus;
+
+        // --- CORREÇÃO 3: ACEITA AS DUAS GRAFIAS DA VITRINE + APROVADO ---
+        const isApproved =
+          verificationStatus === VerificationStatus.APPROVED ||
+          verificationStatus === ('VITRINE_IRREGULAR' as any) ||
+          verificationStatus === ('VITRINE_IRREGULAR' as any); // Previne erro de digitação no banco
 
         const isPendingInitialReview =
           verificationStatus === VerificationStatus.PENDING_INITIAL_REVIEW;
@@ -1400,25 +1415,18 @@ function RootLayoutContent() {
             isPathOrChild(PROVIDER_ROUTES.REVIEWS, cleanedCurrentPath);
 
           if (!isAllowedProviderRoute) {
-            // Removido: console.log de redirecionamento para Dashboard.
-
             router.replace(targetDashboardPath as any);
           }
         } else if (isPendingInitialReview) {
           if (cleanedCurrentPath !== authServiceDetailsStep) {
-            // Removido: console.log de redirecionamento para detalhes do serviÃ§o.
-
             router.replace(authServiceDetailsStep as any);
           }
         } else if (isPendingDocsUpload) {
           if (cleanedCurrentPath !== providerRegistrationVerifyAccountPath) {
-            // Removido: console.log de redirecionamento para verificaÃ§Ã£o de docs.
-
             router.replace(providerRegistrationVerifyAccountPath as any);
           }
         } else {
-          // Removido: console.log de status inesperado.
-
+          // Status REJECTED ou outros caem aqui
           if (cleanedCurrentPath !== providerRegistrationVerifyAccountPath) {
             router.replace(providerRegistrationVerifyAccountPath as any);
           }
@@ -1464,7 +1472,10 @@ function RootLayoutContent() {
     navigatePendingPayment,
   ]);
 
-  if (!appReady || authIsLoading || initializationError) {
+  const providerData = user?.providerDetails || (user as any)?.provider;
+  const isProviderLoading = user?.role === UserRole.PROVIDER && !providerData;
+
+  if (!appReady || authIsLoading || initializationError || isProviderLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />

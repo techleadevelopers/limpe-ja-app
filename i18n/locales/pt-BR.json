@@ -190,7 +190,7 @@
       }
     },
     "schedule_service": {
-      "header_title": "Agendar",
+      "header_title": "Agendamento",
       "progress_step_date_time": "Data e Hora",
       "progress_step_complete_review": "Revisão",
       "coupon_section_title": "Cupom de Desconto",

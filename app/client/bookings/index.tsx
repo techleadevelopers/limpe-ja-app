@@ -670,7 +670,8 @@ export default function MyBookingsScreen() {
       : undefined;
 
   return (
-    <ScreenContainer style={[styles.container, { backgroundColor: theme.background, paddingTop: 0, paddingBottom: 92 }]}>
+    
+    <ScreenContainer style={[styles.container, { backgroundColor: "#f1f2f1", paddingTop: 0, paddingBottom: 92 }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header temático (alinha com ScheduleHeader: vidro leve + cantos arredondados) */}
@@ -684,13 +685,28 @@ export default function MyBookingsScreen() {
     },
   ]}
 >
-          <BlurView intensity={Platform.OS === 'ios' ? 10 : 20} tint="light" style={StyleSheet.absoluteFillObject} />
-          <LinearGradient colors={[ theme.cardBackground as any, theme.cardBackground as any ]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+          <BlurView 
+    intensity={Platform.OS === 'ios' ? 40 : 65} 
+    tint="light" 
+    style={StyleSheet.absoluteFillObject} 
+  />
+
+  {/* 2. Gradiente Branco Luxo (Copiado do NavBar) */}
+  <LinearGradient 
+    colors={[
+      'rgba(255,255,255,0.80)',
+      'rgba(245,245,250,0.92)',
+      'rgba(240,240,250,0.97)',
+    ]} 
+    start={{ x: 0, y: 0 }} 
+    end={{ x: 1, y: 1 }} 
+    style={StyleSheet.absoluteFillObject} 
+  />
           <View style={styles.headerRow}>
             <TouchableOpacity onPress={() => router.back()} style={styles.headerIconBtn} accessibilityRole="button" accessibilityLabel="Voltar">
-              <Ionicons name="arrow-back" size={22} color={(theme as any).text} style={styles.iconAdjust} />
+              <Ionicons name="arrow-back" size={19} color="#9CA3AF" style={styles.iconAdjust} />
             </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: (theme as any).text, fontSize: fix.font(17) }]}>{headerTitle}</Text>
+            <Text style={[styles.headerTitle, { color: '#9CA3AF', fontSize: fix.font(12) }]}>{headerTitle}</Text>
             <View style={styles.headerIconBtn} />
           </View>
         </View>
@@ -703,7 +719,7 @@ export default function MyBookingsScreen() {
           styles.filterContainer,
           {
             marginTop: 8,
-            backgroundColor: (theme as any).cardBackground,
+            backgroundColor: '#94b4ec7e',
             borderTopColor: (theme as any).borderSubtle || '#EEF3FA',
             borderBottomColor: (theme as any).borderSubtle || '#E9F0FA',
           },
@@ -809,11 +825,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F1F2F2' },
   // Header temático (vidro leve + bordas arredondadas) alinhado ao ScheduleHeader
   thematicHeader: {
-  marginHorizontal: 12,
+  marginHorizontal: 0,
   marginTop: Platform.OS === 'android' ? 10 : 28,
     marginBottom: 6,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
     overflow: 'hidden',
@@ -826,20 +840,24 @@ const styles = StyleSheet.create({
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'space-between',
-  paddingHorizontal: 10,
+  paddingHorizontal: 0,
   paddingVertical: 10,
   ...(Platform.OS === 'android' ? { marginTop: -10 } : { marginTop: 28 }),
 },
   headerIconBtn: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
+    left: 12,
+    color: '#9CA3AF',
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'android'
       ? { top: SCREEN_HEIGHT * 0.01 }
       : undefined),
   },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 14, fontWeight: '600', color: UI.textPrimary, left: 4,
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '600', color: '#9CA3AF', left: 4,
+    textTransform: 'uppercase', // Caixa alta
+    letterSpacing: 1.5, // Espaçamento elegante
     top: Platform.OS === 'android' ? 8 : 0,
    },
   navbarContainer: {
@@ -848,9 +866,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     marginBottom: 0,
+    backgroundColor: 'transparent', // Garante que não tenha cor sólida quadrada
     zIndex: 200,
- 
-
+    
+    // --- ADICIONE ISTO ---
+    borderTopLeftRadius: 38,  // Mesma curvatura do NavBar.tsx
+    borderTopRightRadius: 38, // Mesma curvatura do NavBar.tsx
+    overflow: 'hidden',       // Corta o BlurView e o Gradiente para ficarem redondos
+    // ---------------------
   },
   filterHeaderRow: {
     flexDirection: 'row',
@@ -1025,7 +1048,7 @@ const styles = StyleSheet.create({
   centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, backgroundColor: UI.bg },
   loadingText: { fontSize: 15, color: AppColors.textAuxiliary, fontFamily: 'Montserrat-Regular', marginTop: 12 },
 
-  emptyText: { fontSize: fix.font(20), fontWeight: '700', color: AppColors.textBody, textAlign: 'center', marginBottom: 10, fontFamily: 'Montserrat-SemiBold' },
+  emptyText: { fontSize: fix.font(19), fontWeight: '700', color: '#9CA3AF', textAlign: 'center', marginBottom: 10, fontFamily: 'Montserrat-SemiBold' },
   emptySubText: {
     fontSize: Platform.OS === 'android' ? 13 : 15,
     color: AppColors.textAuxiliary,

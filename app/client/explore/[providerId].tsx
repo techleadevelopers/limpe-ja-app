@@ -701,24 +701,27 @@ export default function ProviderDetailsScreen() {
           <Ionicons
             name="arrow-back"
             size={20}
-            color={AppColors.textBody}
+            color={'#9CA3AF'}
             style={{ top: Platform.OS === 'ios' ? 0 : 6 }}
           />
         </TouchableOpacity>
+                  
         <Text
           style={{
             flex: 1,
             textAlign: 'center',
-            fontSize: Platform.OS === 'ios' ? 17 : 17,
+            fontSize: Platform.OS === 'ios' ? 12 : 12,
+             textTransform: 'uppercase', // Caixa alta
+             letterSpacing: 1.9, // Espaçamento elegante
             left: 4,
             top: Platform.OS === 'ios' ? 0 : 4,
-            fontFamily: 'Montserrat-Regular',
+            fontFamily: Platform.OS === 'ios' ? 'Montserrat-Regular' : 'Montserrat-Regular',
             fontWeight: Platform.OS === 'ios' ? '800' :'700',
-            color: AppColors.textBody,
+            color: '#9CA3AF',
             marginRight: 24,
           }}
         >
-          Detalhes
+         Detalhes
         </Text>
       </View>
 

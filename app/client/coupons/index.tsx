@@ -104,7 +104,7 @@ function CouponCard({ coupon, onUseCoupon, theme }: { coupon: CouponItem; onUseC
           />
         </View>
         <View style={styles.couponInfo}>
-          <Text style={[styles.couponTitle, { color: theme.text }]} numberOfLines={1}>{coupon.title}</Text>
+          <Text style={[styles.couponTitle, { color: '#4c586b' }]} numberOfLines={1}>{coupon.title}</Text>
           {!!coupon.description && (
             <Text style={[styles.couponDescription, { color: theme.textMuted }]} numberOfLines={2}>{coupon.description}</Text>
           )}
@@ -225,9 +225,9 @@ export default function ClientCouponsScreen() {
       {/* Header semelhante ao Cashback */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} accessibilityLabel={'Voltar'}>
-          <Ionicons name="arrow-back" size={22} color={theme.text} />
+          <Ionicons name="arrow-back" size={19} color={'#9CA3AF'} style={{ marginLeft: 10 }} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Meus Cupons</Text>
+        <Text style={[styles.headerTitle, { color: '#9CA3AF' }]}>Meus Cupons</Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -304,12 +304,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { paddingTop:Platform.OS === 'ios' ? 80 : 40, paddingHorizontal: 16, paddingBottom: Platform.OS === 'ios' ? 12 : 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerTitle: { fontSize: Platform.OS === 'ios' ? 17 : 16.5 , fontWeight: '800' },
+  headerTitle: { fontSize: Platform.OS === 'ios' ? 17 : 16.5 , fontWeight: '800', color: '#9CA3AF', },
   content: { flex: 1, paddingHorizontal: Platform.OS === 'ios' ? 16 : 16, paddingBottom: 16, marginTop: 10 },
   tabsRow: { flexDirection: 'row',  alignItems: 'center', justifyContent: 'space-between', padding: 6, borderRadius: 12, borderWidth: 1, marginBottom: 12 },
   tabPill: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
   tabPillActive: { backgroundColor: '#FFFFFF' },
-  tabText: { fontWeight: '700' },
+  tabText: { fontWeight: '700', color: '#75839c', },
   couponErrorBanner: {
     borderRadius: 10,
     borderWidth: 1,
@@ -356,11 +356,11 @@ const styles = StyleSheet.create({
     height: 60,
   },
   couponInfo: { flex: 1 },
-  couponTitle: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
-  couponDescription: { fontSize: 12, lineHeight: 18 },
+  couponTitle: { fontSize: 16, fontWeight: '800', marginBottom: 4, color: '#9CA3AF', },
+  couponDescription: { fontSize: 12, lineHeight: 18, color: '#9CA3AF', },
   couponDetailsRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 8 },
   couponDetailsCol: { flexShrink: 1, paddingRight: 10 },
-  couponValue: { fontSize: 20, fontWeight: '800', marginBottom: 6 },
+  couponValue: { fontSize: 20, fontWeight: '800', marginBottom: 6,  },
   couponMinOrder: { fontSize: 12, marginBottom: 2, fontWeight: '600' },
   couponExpiry: { fontSize: 12, fontWeight: '600' },
   primaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, alignSelf: 'flex-start', marginHorizontal: 14 },

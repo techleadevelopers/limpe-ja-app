@@ -117,9 +117,11 @@ export const styles = StyleSheet.create({
     
   },
   headerTitle: {
-    color: AppColors.textBody, // Usando AppColors
+    color: '#9CA3AF', // Cinza suave (Premium)
     fontSize: Platform.OS === 'android' ? 22 : 20,
-    fontWeight: '600',
+    fontWeight: '700',
+    textTransform: 'uppercase', // Caixa alta
+    letterSpacing: 1.5, // Espaçamento elegante
   },
   // --- FIM DOS NOVOS ESTILOS PARA O CABEÇALHO ---
 // providerStyles.ts (Adicione no final do seu arquivo de estilos)

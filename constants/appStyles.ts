@@ -21,7 +21,7 @@ export const AppColors = {
   textBody: '#333',
   textAuxiliary: '#666',
   white: '#FFFFFF',
-  black: '#000000',
+  black: '#4c586b',
   lightGray: '#CED4DA',
   mediumGray: '#868E96',
   accentLight: '#EBF5FF', // Adicionado: Um azul claro para acentos

@@ -141,6 +141,22 @@ const sortByDistanceThenAvailabilityStable = (items: ProviderDisplayInfo[]): Pro
     .map(({ it }) => it);
 };
 
+// Adicione esta função auxiliar para calcular distância entre duas coordenadas
+const calculateDistanceMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371e3; // Raio da terra em metros
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Retorna em metros
+};
+
 
 const COR_CINZA_FUNDO = '#FFFFFF';
 const COR_BORDA_SUAVE = '#c0b5ca92';
@@ -584,41 +600,69 @@ export default function ExploreClientScreen() {
   );
 
   const safeRecommendations = useMemo(() => {
-    const valid = Array.isArray(recommendations)
-      ? recommendations
-          .filter(
-            (item) =>
-              item &&
-              typeof item === 'object' &&
-              typeof (item as any).id === 'string' &&
-              (item as any).id.trim() !== '' &&
-              typeof (item as any).fullName === 'string' &&
-              (item as any).fullName.trim() !== '',
-          )
-          .filter(
-            (item) =>
-              (item as ProviderDisplayInfo)?.verificationStatus ===
-                VerificationStatus.APPROVED &&
-              (item as ProviderDisplayInfo)?.visibilityStatus ===
-                ProviderVisibilityStatus.VISIBLE,
-          )
-      : [];
+    // 1. Pega as recomendações brutas
+    const rawRecommendations = Array.isArray(recommendations) ? recommendations : [];
+    
+    // 2. Define a localização de referência (Prioridade: GPS em tempo real > Endereço do Perfil)
+    const currentLoc = locationCoords || locationHint;
+    const userLat = currentLoc?.latitude;
+    const userLon = currentLoc?.longitude;
+
+    const valid = rawRecommendations
+      .filter(
+        (item) =>
+          item &&
+          typeof item === 'object' &&
+          typeof (item as any).id === 'string' &&
+          (item as any).id.trim() !== '' &&
+          typeof (item as any).fullName === 'string' &&
+          (item as any).fullName.trim() !== '',
+      )
+      .filter(
+        (item) =>
+          (item as ProviderDisplayInfo)?.verificationStatus === VerificationStatus.APPROVED &&
+          (item as ProviderDisplayInfo)?.visibilityStatus === ProviderVisibilityStatus.VISIBLE,
+      )
+      // --- AQUI ESTÁ A MÁGICA QUE FALTAVA ---
+      .map((item) => {
+        // Se a API já mandou a distância, usa ela
+        if (typeof (item as any).distance === 'number') return item;
+
+        // Se não mandou, vamos tentar calcular manualmente
+        const provLat = (item as any).address?.latitude || (item as any).latitude;
+        const provLon = (item as any).address?.longitude || (item as any).longitude;
+
+        // Só calcula se tivermos a localização do User E do Prestador
+        if (userLat && userLon && provLat && provLon) {
+          const distMeters = calculateDistanceMeters(userLat, userLon, provLat, provLon);
+          // Retorna o item com a distância injetada
+          return { ...item, distance: distMeters };
+        }
+        
+        return item;
+      });
+
+    // 3. Junta com os próximos (que já têm distância garantida pelo hook useLocationBasedProviders)
     const mergedPool = [...valid, ...activeNearbyProviders];
     const mergedSorted = sortByDistanceThenAvailabilityStable(mergedPool);
+    
     const deduped: ProviderDisplayInfo[] = [];
     const seen = new Set<string>();
+    
     mergedSorted.forEach((it) => {
       if (it?.id && !seen.has(it.id)) {
         seen.add(it.id);
         deduped.push(it);
       }
     });
+
     const mergedFallback = FALLBACK_RECOMMENDATIONS.filter(
       (it) => it && it.id && !seen.has(it.id),
     );
+    
     const combined = [...deduped, ...mergedFallback];
     return combined.length > 0 ? combined : FALLBACK_RECOMMENDATIONS;
-  }, [recommendations, activeNearbyProviders]);
+  }, [recommendations, activeNearbyProviders, locationHint, locationCoords]);
 
   const processedRecommendations = useMemo<ProviderWithKey[]>(
     () =>
