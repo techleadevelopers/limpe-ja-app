@@ -1386,12 +1386,10 @@ if (user?.role === UserRole.PROVIDER) {
         }
 
         const verificationStatus = providerData.verificationStatus;
+        const visibilityStatus = providerData.visibilityStatus; // status de vitrine não interfere em navegação
 
-        // --- CORREÇÃO 3: ACEITA AS DUAS GRAFIAS DA VITRINE + APROVADO ---
-        const isApproved =
-          verificationStatus === VerificationStatus.APPROVED ||
-          verificationStatus === ('VITRINE_IRREGULAR' as any) ||
-          verificationStatus === ('VITRINE_IRREGULAR' as any); // Previne erro de digitação no banco
+        // Aprovação de credenciamento (vitrine irregular NÃO bloqueia navegação)
+        const isApproved = verificationStatus === VerificationStatus.APPROVED;
 
         const isPendingInitialReview =
           verificationStatus === VerificationStatus.PENDING_INITIAL_REVIEW;
