@@ -67,7 +67,7 @@ import CarouselBannerItem from '../../../components/client/explore/home/Carousel
 import CategoriaCard from '../../../components/client/explore/home/CategoriaCard';
 import DEFENSE_SOS from '../../../components/client/explore/home/DEFENSE_SOS';
 import NavBar from '../../../components/client/explore/home/NavBar';
-import NewHeader from '../../../components/client/explore/home/NewHeader';
+import Header2Test from '../../../components/client/explore/home/Header2Test';
 import PrestadorCard from '../../../components/client/explore/home/PrestadorCard';
 import RecomendacaoCard from '../../../components/client/explore/home/RecomendacaoCard';
 import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrestadores';
@@ -220,7 +220,7 @@ export default function ExploreClientScreen() {
   const { user, isAuthenticated } = useAuth();
   const { isLargePhone } = useDevice();
 
-  // Variável para compensar o ajuste do NewHeader para visitantes Android
+  // Variável para compensar o ajuste do Header2Test para visitantes Android
   const isAndroidVisitor = Platform.OS === 'android' && !isAuthenticated;
   const navWrap: StyleProp<ViewStyle> = React.useMemo(
     () => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined),
@@ -898,7 +898,7 @@ const ListHeader = React.memo<ListHeaderProps>(
           ],
         }}>
         <View style={[styles.androidHeaderLift, isAndroidVisitor && { marginBottom: 20 }]}>
-          <NewHeader userName={userName} userAddress={addressToDisplay} isVisitor={!isAuthenticated} />
+          <Header2Test userName={userName} userAddress={addressToDisplay} isVisitor={!isAuthenticated} />
         </View>
       </Animated.View>
 
