@@ -171,6 +171,7 @@ export class AuthService {
       role: fullUser.role,
       // Expor status para que o Frontend possa redirecionar VITRINE_IRREGULAR
       status: fullUser.provider?.verificationStatus,
+      visibilityStatus: fullUser.provider?.visibilityStatus ?? null,
     };
     const expiresIn = this.configService.get<string>('jwt.expirationTime');
     const accessToken = this.jwtService.sign(payload, { expiresIn });
