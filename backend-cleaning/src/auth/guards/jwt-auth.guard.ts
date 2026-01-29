@@ -31,9 +31,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       });
     }
 
-    // Permite explicitamente usuários com status VITRINE_IRREGULAR para que possam
-    // acessar rotas de correção de perfil no frontend.
-    if (user?.provider?.verificationStatus === 'VITRINE_IRREGULAR') {
+    // Permite explicitamente usuários com vitrine irregular (campo correto: visibilityStatus)
+    // para que possam acessar rotas de correção de perfil no frontend.
+    if (user?.provider?.visibilityStatus === 'VITRINE_IRREGULAR') {
       return user;
     }
 
