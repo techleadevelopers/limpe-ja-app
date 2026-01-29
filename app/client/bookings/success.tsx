@@ -662,7 +662,6 @@ onGoToBookings={handleGoToBookings}
 onGoHome={handleGoHome}
 headerPrimaryColor={HEADER_PRIMARY_COLOR}
 />
-<SecurityInfoSection successColor={SUCCESS_COLOR} bookingId={booking.id} />
 </>
 ) : null}
 <View style={styles.bottomSpacer} />
