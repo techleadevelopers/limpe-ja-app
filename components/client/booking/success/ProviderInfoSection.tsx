@@ -1,6 +1,7 @@
 // LimpeJaApp/app/client/bookings/components/success/ProviderInfoSection.tsx
 import React, { useEffect, useRef } from 'react';
 import { Image, StyleSheet, Text, View, Animated, Easing, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { renderStars } from '../../../../utils/ui-helpers';
 import { AppColors } from '../../../../constants/appStyles';
 import { sanitizeText } from '../../../../utils/formatters';
@@ -89,23 +90,12 @@ export default function ProviderInfoSection({
           {sanitizeText(providerFullName)}
         </Text>
         <Text style={styles.providerRoleText} maxFontSizeMultiplier={1.2}>
-          Prestador(a) de Serviço
+          Prestadora de Serviço
         </Text>
 
-        <View style={styles.badgesRow}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{`${acceptanceRateToDisplay}% aceitação`}</Text>
-          </View>
-
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{`${responseTimeToDisplay} min resposta`}</Text>
-          </View>
-
-          {(providerMetrics.badges || []).slice(0, 2).map((badge: string, index: number) => (
-            <View key={index} style={styles.badge}>
-              <Text style={styles.badgeText}>{badge}</Text>
-            </View>
-          ))}
+        <View style={styles.trustRow}>
+          <Ionicons name="shield-checkmark-outline" size={18} color={AppColors.primaryInteractive} />
+          <Text style={styles.trustText}>Antecedentes verificados</Text>
         </View>
       </View>
 
@@ -129,7 +119,7 @@ const styles = StyleSheet.create({
   providerHeaderSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 6,
     paddingHorizontal: 5,
     paddingTop: Platform.OS === 'android' ? 8 : 0,
   },
@@ -202,5 +192,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '500',
     textTransform: 'uppercase',
+  },
+
+  trustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 6,
+  },
+  trustText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: AppColors.textBody,
   },
 });
