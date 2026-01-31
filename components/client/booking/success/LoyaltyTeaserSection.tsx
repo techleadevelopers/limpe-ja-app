@@ -145,9 +145,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 18,
     alignSelf: 'center',
-    marginTop: 20,
+    marginTop: 14,
     alignItems: 'center',
-    
+    marginBottom: 20,
     overflow: 'hidden',
     borderWidth: 0,
   },
