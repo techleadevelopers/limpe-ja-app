@@ -13,7 +13,7 @@ import {
 import { AppColors } from '../../../../constants/appStyles';
 import TimeSlotButton from './TimeSlotButton';
 import { TimeSlot } from '../../../../utils/timeSlots';
-import { normalizeSlotLabel } from '../../../../utils/time';
+import { normalizeSlotLabel, getNowInBrazil, isSameDayInBrazil } from '../../../../utils/time';
 
 interface SlotItem {
   time: string;
@@ -110,13 +110,23 @@ export default function TimeSlotsSection({
   const slotsToRender = React.useMemo(() => {
     if (!displaySlotsInfo) return [];
 
+    const now = getNowInBrazil();
+    const selectedDate = date ? new Date(date) : null;
+    const isToday = selectedDate ? isSameDayInBrazil(selectedDate, now) : false;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
     return [...displaySlotsInfo]
       .map((slot) => ({
         ...slot,
         time: normalizeSlotLabel(slot.time),
       }))
+      .filter((slot) => {
+        if (!isToday) return true;
+        const slotMinutes = toMinutes(slot.time);
+        return slotMinutes >= currentMinutes;
+      })
       .sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
-  }, [displaySlotsInfo]);
+  }, [displaySlotsInfo, date]);
 
   const sections = React.useMemo(() => {
     if (!slotsToRender || slotsToRender.length === 0) return [];
