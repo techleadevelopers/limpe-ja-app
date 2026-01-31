@@ -10,17 +10,17 @@ import {
   Image,
   Platform,
   Animated,
-  ScrollView,
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getMyNotifications } from '../../../../services/notificationService';
+import { api } from '../../../../services/api';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useAndroidDialog } from '../../../../hooks/useAndroidDialog';
-import CategoriaCard from './CategoriaCard';
 
 interface NewHeaderProps {
   userName: string;
@@ -30,13 +30,6 @@ interface NewHeaderProps {
   isVisitor?: boolean;
 }
 
-const CATEGORY_ITEMS = [
-  { id: 'residencial', name: 'Residencial', icon: 'residencial' },
-  { id: 'comercial', name: 'Comercial', icon: 'comercial' },
-  { id: 'pós-obra', name: 'Pós-obra', icon: 'obra' },
-  { id: 'vidros', name: 'Vidros', icon: 'vidro' },
-];
-
 const NewHeader: React.FC<NewHeaderProps> = ({
   userName,
   userAvatarUrl,
@@ -45,7 +38,7 @@ const NewHeader: React.FC<NewHeaderProps> = ({
   isVisitor,
 }) => {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, updateUser, user } = useAuth();
   const insets = useSafeAreaInsets?.() || { top: 0 } as any;
 
   const displayName =
@@ -53,7 +46,6 @@ const NewHeader: React.FC<NewHeaderProps> = ({
 
   const avatarScale = useRef(new Animated.Value(1)).current;
   const notifyScale = useRef(new Animated.Value(1)).current;
-  const categoryScale = useRef(new Animated.Value(1)).current;
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoadingUnread, setIsLoadingUnread] = useState(false);
 
@@ -73,12 +65,60 @@ const NewHeader: React.FC<NewHeaderProps> = ({
 
   const handleProfilePress = () =>
     router.push('/client/profile' as any);
-  const handleCategoryPress = () =>
-    router.push('/client/explore/menu' as any);
 
   const effectiveVisitor = isVisitor || !isAuthenticated;
 
   const { showDialog, dialogElement } = useAndroidDialog();
+
+  const handleAvatarPress = async () => {
+    if (effectiveVisitor) {
+      handleProfilePress();
+      return;
+    }
+
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permissão necessária', 'Habilite o acesso às fotos para trocar sua imagem de perfil.');
+        return;
+      }
+
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (pickerResult.canceled || !pickerResult.assets?.length) return;
+
+      const uri = pickerResult.assets[0].uri;
+      const filename = uri.split('/').pop() || `avatar-${Date.now()}.jpg`;
+      const ext = filename.split('.').pop()?.toLowerCase();
+      const mime =
+        ext === 'png' ? 'image/png' : ext === 'heic' ? 'image/heic' : 'image/jpeg';
+
+      const form = new FormData();
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        const webFile = new File([blob], filename, { type: blob.type || mime });
+        form.append('file', webFile);
+      } else {
+        form.append('file' as any, { uri, name: filename, type: mime } as any);
+      }
+
+      const uploadResp = await api.post<{ url?: string }>('/upload/avatar', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const uploadedUrl = uploadResp.data?.url || uri;
+      await api.patch('/users/me', { avatarUrl: uploadedUrl });
+      await updateUser?.({ avatarUrl: uploadedUrl });
+      Alert.alert('Foto atualizada', 'Sua imagem de perfil foi enviada com sucesso.');
+    } catch (error: any) {
+      Alert.alert('Não foi possível atualizar a foto', error?.message || 'Tente novamente em instantes.');
+    }
+  };
 
   const handleNotificationPress = () => {
     if (effectiveVisitor) {
@@ -149,36 +189,46 @@ const NewHeader: React.FC<NewHeaderProps> = ({
       <View style={styles.leftContent}>
         <Animated.View style={{ transform: [{ scale: avatarScale }] }}>
           <TouchableOpacity
-            onPress={handleProfilePress}
+            onPress={handleAvatarPress}
             onPressIn={() => pressIn(avatarScale)}
             onPressOut={() => pressOut(avatarScale)}
             style={[
               styles.fixedCircle,
               {
                 marginRight: 4,
-                width: Platform.OS === 'android' ? 30 : 38,
-                height: Platform.OS === 'android' ? 30 : 38,
+                width: Platform.OS === 'android' ? 38 : 37,
+                height: Platform.OS === 'android' ? 38 : 37,
               },
             ]}
             activeOpacity={0.9}
           >
-            <Ionicons
-              name="add"
-              size={Platform.OS === 'android' ? 18 : 15}
-              color="#4c8fd1ff"
-            />
+            {userAvatarUrl || user?.avatarUrl ? (
+              <Image
+                source={{ uri: userAvatarUrl || (user as any)?.avatarUrl }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Ionicons
+                name="camera-outline"
+                size={Platform.OS === 'android' ? 18 : 18}
+                color="#4c8fd1ff"
+              />
+            )}
           </TouchableOpacity>
         </Animated.View>
 
         <View>
           <Text style={styles.greetingText}>{getGreeting()}</Text>
           <Text style={styles.userNameText}>{displayName}</Text>
+          <Text style={styles.subtleText} numberOfLines={1}>
+            {userAddress || 'Escolha o endereço ideal'}
+          </Text>
         </View>
       </View>
 
       {/* DIREITA – CATEGORY → NOTIFICATIONS */}
       <View style={styles.rightContent}>
-        {/* CATEGORY */}
+        {/* CATEGORY 
         <Animated.View style={{ transform: [{ scale: categoryScale }] }}>
           <TouchableOpacity
             onPress={handleCategoryPress}
@@ -198,7 +248,7 @@ const NewHeader: React.FC<NewHeaderProps> = ({
               resizeMode="contain"
             />
           </TouchableOpacity>
-        </Animated.View>
+        </Animated.View>*/}
 
         {/* NOTIFICATIONS */}
         <Animated.View style={{ transform: [{ scale: notifyScale }] }}>
@@ -228,6 +278,7 @@ const NewHeader: React.FC<NewHeaderProps> = ({
         </Animated.View>
       </View>
       </LinearGradient>
+
       {dialogElement}
     </>
   );
@@ -245,14 +296,14 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'android' ? 20 : -180,
     left: 3,
     top: Platform.OS === 'android' ? 2 : 0,
-    marginTop: Platform.OS === 'android' ? 18 : 0,
+    marginTop: Platform.OS === 'android' ? 16 : 0,
     marginHorizontal: Platform.OS === 'android' ? 10 : 12,
     paddingHorizontal: Platform.OS === 'android' ? 7 : 9,
     borderBottomEndRadius: 40,
     borderBottomStartRadius: 40,
     borderTopEndRadius: 40,
     borderTopStartRadius: 40,
-    marginBottom: Platform.OS === 'android' ? -10 : -2,
+    marginBottom: Platform.OS === 'android' ? -1 : -2,
 
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -260,10 +311,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   iconBare: {
-    width: Platform.OS === 'android' ? 40 : 50,
-    height: Platform.OS === 'android' ? 40 : 50,
+    width: Platform.OS === 'android' ? 30 : 40,
+    height: Platform.OS === 'android' ? 30 : 40,
     borderRadius: 20,
     justifyContent: 'center',
+    gap: 9,
     alignItems: 'center',
   },
 
@@ -286,6 +338,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
+  },
+
   rightContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -293,7 +351,7 @@ const styles = StyleSheet.create({
 
   badge: {
     position: 'absolute',
-    top: 9,
+    bottom: 14,
     right: 2,
     minWidth: 13,
     height: 12,
@@ -306,6 +364,7 @@ const styles = StyleSheet.create({
   badgePill: {
     minWidth: 16,
     height: 12,
+     bottom: 10,
     paddingHorizontal: 3,
     borderRadius: 10,
     backgroundColor: '#ff3b30',
@@ -326,8 +385,15 @@ const styles = StyleSheet.create({
     fontWeight: Platform.select({ ios: '300', android: '300' }),
   },
 
+  subtleText: {
+    fontSize: 10,
+    color: '#8d9fafff',
+    marginLeft: Platform.OS === 'android' ? 2 : 5,
+    marginBottom: Platform.OS === 'android' ? -2 : -1,
+  },
+
   userNameText: {
-    fontSize: Platform.OS === 'android' ? 17 : 18.5,
+    fontSize: Platform.OS === 'android' ? 16 : 17.5,
     marginLeft: Platform.OS === 'android' ? 2 : 5,
     fontFamily: Platform.select({
       ios: 'Roboto',
