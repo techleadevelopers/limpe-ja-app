@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, StyleProp, ViewStyle } from 'react-native';
+import { Animated, Easing, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, StyleProp, ViewStyle, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BookingSummaryCard from '../../../components/client/booking/success/BookingSummaryCard';
@@ -12,7 +12,6 @@ import MainActionButtons from '../../../components/client/booking/success/MainAc
 import PaymentConfirmationCard from '../../../components/client/booking/success/PaymentConfirmationCard';
 import { ReturnCouponCard } from '../../../components/client/booking/success/ReturnCouponCard';
 import SecurityInfoSection from '../../../components/client/booking/success/SecurityInfoSection';
-import SuccessHeader from '../../../components/client/booking/success/SuccessHeader';
 import SuccessLoadingError from '../../../components/client/booking/success/SuccessLoadingError';
 import NavBar from '../../../components/client/explore/home/NavBar';
 import { useAuth } from '../../../hooks/useAuth';
@@ -79,6 +78,7 @@ const buildPixChargeFallback = (
   providerId: booking.providerId,
   paymentIntent: intent,
 });
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 export default function BookingSuccessScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<SuccessRouteParams>();
@@ -185,7 +185,7 @@ useNativeDriver: true,
 }, [contentOpacity, contentTranslateY, navBarAnim]);
 const loadData = useCallback(async () => {
 if (!bookingId) {
-setError('Agendamento nÃ£o encontrado.');
+setError('Agendamento não encontrado.');
 setIsLoading(false);
 return;
 }
@@ -198,7 +198,7 @@ onceRef.current = false;
 try {
 const bookingDetails = await getBookingDetails(bookingId);
 if (!bookingDetails) {
-throw new Error('Agendamento nÃ£o encontrado.');
+throw new Error('Agendamento não encontrado.');
 }
 // log removido para performance
 setBooking(bookingDetails);
@@ -222,7 +222,7 @@ const candidate = offers.find(offer => offer?.couponCode && offer.target !== 'NE
 if (candidate?.couponCode) {
 setReturnCoupon({
 code: candidate.couponCode,
-title: candidate.title || 'Cupom especial para sua prÃ³xima reserva',
+title: candidate.title || 'Cupom especial para sua próxima reserva',
 subtitle: candidate.description ?? undefined,
 expiresAt: candidate.validUntil ? new Date(candidate.validUntil) : undefined,
 });
@@ -316,7 +316,7 @@ setPaid(true);
 const message =
 loadError?.message ||
 loadError?.response?.data?.message ||
-'NÃ£o foi possÃ­vel carregar os detalhes do agendamento.';
+'Não foi possível carregar os detalhes do agendamento.';
 await clearPendingPayment();
 setError(message);
 setIsLoading(false);
@@ -334,7 +334,7 @@ if (paymentIntent?.status === PaymentIntentStatus.PAID) {
 const intentKey = paymentIntent.id ?? booking?.id ?? 'paid';
 if (paymentToastIntentRef.current !== intentKey) {
 NotificationUIService.showInfo(
-'Pagamento confirmado. Seu atendimento estÃ¡ garantido.',
+'Pagamento confirmado. Seu atendimento está seguro.',
 'Pagamento confirmado',
 );
 paymentToastIntentRef.current = intentKey;
@@ -462,6 +462,7 @@ const handleGoToBookings = useCallback(() => {
     clearInterval(pollRef.current);
     pollRef.current = null;
   }
+  setShouldPollIntent(false);
   if (Platform.OS === 'ios') {
     try { Haptics.selectionAsync(); } catch {}
   }
@@ -472,6 +473,7 @@ const handleGoHome = useCallback(() => {
     clearInterval(pollRef.current);
     pollRef.current = null;
   }
+  setShouldPollIntent(false);
   if (Platform.OS === 'ios') {
     try { Haptics.selectionAsync(); } catch {}
   }
@@ -544,8 +546,8 @@ router.push('/client/missions' as any);
 }, [router]);
 const handleSupportCTA = useCallback(() => {
 NotificationUIService.showInfo(
-'Nossa equipe de suporte jÃ¡ recebeu o caso. Caso precise, podemos acompanhar de perto.',
-'Suporte disponÃ­vel',
+'Nossa equipe de suporte já recebeu o caso. Caso precise, podemos acompanhar de perto.',
+'Suporte disponível',
 );
 }, []);
 const handleRebookNow = useCallback(
@@ -571,99 +573,86 @@ return (
 colors={['#f2f2f2', '#ffffff']}
 style={styles.background}
 />
+<View style={styles.monitoringNotice}>
+  <Text style={styles.monitoringText}>
+    Este serviço tem monitoramento em tempo real pela equipe de segurança.
+  </Text>
+</View>
 <ScrollView
 contentContainerStyle={styles.scrollContent}
 showsVerticalScrollIndicator={false}
 >
 <View testID="booking-success-title">
-<SuccessHeader
-successColor={SUCCESS_COLOR}
-headerPrimaryColor={HEADER_PRIMARY_COLOR}
-headerSecondaryColor={HEADER_SECONDARY_COLOR}
-/>
 </View>
 <View testID="booking-success-loader">
 <SuccessLoadingError
 isLoading={isLoading}
 error={error}
-headerPrimaryColor={HEADER_PRIMARY_COLOR}
-onRetryPress={loadData}
-/>
-</View>
-{!isLoading && !error && booking ? (
-<>
-{paymentMethod === 'PIX' && (
-<View style={styles.paymentStatusContainer}>
-{paymentIntent?.status === PaymentIntentStatus.PAID ? (
-<View testID="booking-success-primary-cta">
-<PaymentConfirmationCard onPressCta={handleGoToBookings} />
-</View>
-) : null}
-{pixFallbackActive && (
-<View style={styles.paymentFallbackCard}>
-<Text style={styles.paymentFallbackText}>
-{pixFallbackMessage ??
-'Pagamento Pendente.'}
-</Text>
-<TouchableOpacity
-style={styles.supportButton}
-onPress={handleSupportCTA}
->
-<Text style={styles.supportButtonText}>
-Falar com suporte
-</Text>
-</TouchableOpacity>
-</View>
-)}
-</View>
-)}
-<BookingSummaryCard
-booking={summaryBooking ?? booking}
-provider={provider}
-providerRating={providerRating}
-pixChargeDetails={pixCharge}
-paymentMethod={paymentMethod}
-contentOpacity={contentOpacity}
-contentTranslateY={contentTranslateY}
-iconColor={HEADER_PRIMARY_COLOR}
-successColor={SUCCESS_COLOR}
-headerPrimaryColor={HEADER_PRIMARY_COLOR}
-formattedAddressLine1={formattedAddressLine1}
-formattedAddressLine2={formattedAddressLine2}
-onRegeneratePix={paymentMethod === 'PIX' ? handleRegeneratePix : undefined}
-isRegeneratingPix={isRegeneratingPix}
-insurance={booking.insurance}
-/>
-<ImmediateActionButtons
-onAddToCalendar={handleAddToCalendar}
-onContactProvider={handleContactProvider}
-headerPrimaryColor={HEADER_PRIMARY_COLOR}
-/>
-{!!loyaltyBalance && (
-<LoyaltyTeaserSection
-headerPrimaryColor={HEADER_PRIMARY_COLOR}
-currentPoints={loyaltyPoints}
-nextRewardName={nextRewardName}
-isLoading={false}
-onPressLearnMore={handleLoyaltyLearnMore}
-/>
-)}
-{returnCoupon ? (
-<ReturnCouponCard
-code={returnCoupon.code}
-title={returnCoupon.title}
-subtitle={returnCoupon.subtitle ?? undefined}
-expiresAt={returnCoupon.expiresAt ?? undefined}
-onRebookNow={handleRebookNow}
-/>
-) : null}
-<MainActionButtons
-onGoToBookings={handleGoToBookings}
-onGoHome={handleGoHome}
-headerPrimaryColor={HEADER_PRIMARY_COLOR}
-/>
-</>
-) : null}
+        headerPrimaryColor={HEADER_PRIMARY_COLOR}
+        onRetryPress={loadData}
+      />
+    </View>
+    {isLoading && !error && (
+      <View style={styles.loadingActions}>
+        <TouchableOpacity style={styles.loadingActionBtn} onPress={handleGoHome} activeOpacity={0.8}>
+          <Text style={styles.loadingActionText}>Voltar para início</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.loadingActionBtn} onPress={handleGoToBookings} activeOpacity={0.8}>
+          <Text style={styles.loadingActionText}>Ver meus agendamentos</Text>
+        </TouchableOpacity>
+      </View>
+    )}
+    {!isLoading && !error && booking ? (
+      <>
+        {paymentMethod === 'PIX' && (
+          <View style={styles.paymentStatusContainer}>
+            {paymentIntent?.status === PaymentIntentStatus.PAID ? (
+              <View testID="booking-success-primary-cta">
+                <PaymentConfirmationCard onPressCta={handleGoToBookings} />
+              </View>
+            ) : null}
+          </View>
+        )}
+
+        <BookingSummaryCard
+          booking={summaryBooking ?? booking}
+          provider={provider}
+          providerRating={providerRating}
+          pixChargeDetails={pixCharge}
+          paymentMethod={paymentMethod}
+          contentOpacity={contentOpacity}
+          contentTranslateY={contentTranslateY}
+          iconColor={HEADER_PRIMARY_COLOR}
+          successColor={SUCCESS_COLOR}
+          headerPrimaryColor={HEADER_PRIMARY_COLOR}
+          formattedAddressLine1={formattedAddressLine1}
+          formattedAddressLine2={formattedAddressLine2}
+          onRegeneratePix={paymentMethod === 'PIX' ? handleRegeneratePix : undefined}
+          isRegeneratingPix={isRegeneratingPix}
+          insurance={booking.insurance}
+        />
+
+        {!!loyaltyBalance && (
+          <LoyaltyTeaserSection
+            headerPrimaryColor={HEADER_PRIMARY_COLOR}
+            currentPoints={loyaltyPoints}
+            nextRewardName={nextRewardName}
+            isLoading={false}
+            onPressLearnMore={handleLoyaltyLearnMore}
+          />
+        )}
+
+        {returnCoupon ? (
+          <ReturnCouponCard
+            code={returnCoupon.code}
+            title={returnCoupon.title}
+            subtitle={returnCoupon.subtitle ?? undefined}
+            expiresAt={returnCoupon.expiresAt ?? undefined}
+            onRebookNow={handleRebookNow}
+          />
+        ) : null}
+      </>
+    ) : null}
 <View style={styles.bottomSpacer} />
 </ScrollView>
 <Animated.View
@@ -686,19 +675,35 @@ StyleSheet.create({
 container: {
 flex: 1,
 backgroundColor: '#f2f2f2',
-paddingTop: Platform.OS === 'android' ? insetsTop + 16 : 0, // Android safe area + spacing
+paddingTop: Platform.OS === 'android' ? insetsTop - 6 : 0, // Android safe area + spacing
 },
-background: {
+  background: {
 ...StyleSheet.absoluteFillObject,
 opacity: 0.6,
 },
+  monitoringNotice: {
+    marginHorizontal: 20,
+    marginTop: 15,
+    marginBottom: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#e8f2ff',
+    borderWidth: 0.5,
+    borderColor: '#cdddf8',
+  },
+  monitoringText: {
+    ...textFix({ fontSize: 12, fontWeight: '600' }),
+    color: '#1f4f8a',
+    textAlign: 'center',
+  },
 scrollContent: {
 flexGrow: 1,
 alignItems: 'center',
 justifyContent: 'flex-start',
-paddingHorizontal: 20,
-paddingTop: Platform.OS === 'android' ? 24 : 10, // Android extra spacing
-paddingBottom: Platform.OS === 'android' ? 160 : 190,
+paddingHorizontal: 17,
+paddingTop: SCREEN_HEIGHT * 0.05, // 5% abaixo do aviso
+paddingBottom: Platform.OS === 'android' ? 40 : 60,
 },
 navBarContainer: {
 position: 'absolute',
@@ -717,6 +722,28 @@ pendingStatusText: {
 color: AppColors.textBody,
 textAlign: 'center',
 marginBottom: 6,
+},
+loadingActions: {
+  width: '100%',
+  paddingHorizontal: 20,
+  marginTop: 12,
+  gap: 8,
+  alignItems: 'center',
+},
+loadingActionBtn: {
+  paddingVertical: 12,
+  paddingHorizontal: 18,
+  borderRadius: 12,
+  backgroundColor: '#e7f0ff',
+  borderWidth: 1,
+  borderColor: '#c9dcff',
+  width: '100%',
+  maxWidth: 380,
+  alignItems: 'center',
+},
+loadingActionText: {
+  ...textFix({ fontSize: 14, fontWeight: '700' }),
+  color: AppColors.primaryInteractive,
 },
 paymentFallbackCard: {
 marginTop: 12,
