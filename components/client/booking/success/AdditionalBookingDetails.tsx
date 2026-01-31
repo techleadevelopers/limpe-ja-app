@@ -61,10 +61,6 @@ export default function AdditionalBookingDetails({
         <Text style={styles.additionalDetailValue} numberOfLines={1} maxFontSizeMultiplier={1.2}>{bookingId || 'N/A'}</Text>
       </View>
       <View style={styles.additionalDetailItem}>
-        <Text style={styles.additionalDetailLabel} maxFontSizeMultiplier={1.2}>Valor Total</Text>
-        <Text style={styles.additionalDetailValue} numberOfLines={1} maxFontSizeMultiplier={1.2}>{formattedPaymentValue}</Text>
-      </View>
-      <View style={styles.additionalDetailItem}>
         <Text style={styles.additionalDetailLabel} maxFontSizeMultiplier={1.2}>Método de Pagamento</Text>
         <Text style={styles.additionalDetailValue} numberOfLines={1} maxFontSizeMultiplier={1.2}>{displayPaymentMethod}</Text>
       </View>
@@ -78,6 +74,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', // Fix: Space-between em vez de space-evenly para evitar overflow no iOS
     flexWrap: 'nowrap', // Fix: No wrap para prevenir scroll horizontal
     marginTop: 15,
+    marginBottom: -6,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
     paddingTop: 20,
