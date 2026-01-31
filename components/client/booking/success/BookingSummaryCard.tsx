@@ -148,7 +148,7 @@ export default function BookingSummaryCard({
 
           {/* ✅ NOVO: Barra de total "tint" (ênfase elegante, hierarquia premium sem poluir) */}
           <View style={styles.totalBar}>
-            <Text style={styles.totalValue}>{formattedPaymentValue}</Text>
+            <Text style={styles.totalValue}>{`Total: ${formattedPaymentValue}`}</Text>
           </View>
 
           {displayPaymentMethod === 'PIX' && (
@@ -170,8 +170,9 @@ const styles = StyleSheet.create({
   scrollContent: { // Agora usado como wrapper simples, sem contentContainerStyle
     position: 'relative',
     paddingHorizontal: 16, // Gap lateral premium (16px padrão)
-    paddingBottom: 20, // ✅ Adicionado: Expansão natural no final, sem forçar altura
+    paddingBottom: 10, // ✅ Adicionado: Expansão natural no final, sem forçar altura
     alignItems: 'center',
+    bottom: 20,
     backgroundColor: 'transparent',
     maxWidth: '100%',
   },
@@ -180,8 +181,8 @@ const styles = StyleSheet.create({
     maxWidth: Math.min(SCREEN_WIDTH - 32, SUMMARY_CARD_MAX_WIDTH),
     borderRadius: 15,
     overflow: 'hidden',
-    marginTop: 16,
-    marginBottom: 12,
+    marginTop: -11,
+    marginBottom: 1,
     alignSelf: 'center',
     
   },
