@@ -450,6 +450,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(
 
         <View style={{ paddingHorizontal: 24 }}>
           <Calendar
+            key={currentMonthStr} // força rerender quando o mês exibido muda
             current={currentMonthStr}
             onDayPress={handleDayPress}
             markedDates={finalMarkedDates}
