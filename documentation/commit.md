@@ -1,6 +1,6 @@
 git status --porcelain | ForEach-Object {
     $file = $_.Substring(3)   # pega o caminho do arquivo (coluna 2)
     git add "$file"
-    git commit -m "chore: update $file"
+    git commit -m "update: update $file"
 }
 git push origin master
