@@ -22,7 +22,6 @@ export default function InsuranceSummary({ insurance }: InsuranceSummaryProps) {
         style={styles.icon}
       />
       <View style={styles.textContainer}>
-        <Text style={styles.title}>Proteção Residencial</Text>
         <Text style={styles.planName}>{insurance.planId}</Text>
         <Text style={styles.details}>
           {`${price} • Cobertura ${coverage} • Franquia ${deductible}`}
@@ -36,9 +35,10 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginTop: -2,
-    marginBottom: 17,
+    marginTop: -28,
+    marginBottom: 1,
     paddingVertical: 6,
+    marginHorizontal: 12,
   },
   icon: {
     marginRight: 12,
