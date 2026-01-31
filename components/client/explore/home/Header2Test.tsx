@@ -48,7 +48,6 @@ const Header2Test: React.FC<Header2TestProps> = ({
   const avatarScale = useRef(new Animated.Value(1)).current;
   const notifyScale = useRef(new Animated.Value(1)).current;
   const actionScale = useRef(new Animated.Value(1)).current;
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoadingUnread, setIsLoadingUnread] = useState(false);
@@ -166,20 +165,6 @@ const Header2Test: React.FC<Header2TestProps> = ({
     fetchUnread();
   }, [fetchUnread]);
 
-  useEffect(() => {
-    const loop = () => {
-      shimmerAnim.setValue(0);
-      Animated.timing(shimmerAnim, {
-        toValue: 1,
-        duration: 2400,
-        delay: 600,
-        useNativeDriver: true,
-      }).start(() => loop());
-    };
-    loop();
-    return () => shimmerAnim.stopAnimation();
-  }, [shimmerAnim]);
-
   useFocusEffect(
     useCallback(() => {
       fetchUnread();
@@ -253,37 +238,17 @@ const Header2Test: React.FC<Header2TestProps> = ({
               style={styles.ctaCard}
               activeOpacity={0.92}
             >
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.ctaShimmer,
-                  {
-                    transform: [
-                      {
-                        translateX: shimmerAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [-120, 240],
-                        }),
-                      },
-                      { skewX: '-10deg' },
-                    ],
-                  },
-                ]}
-              >
-                <LinearGradient
-                  colors={['#e0e8f5ff00', '#afd0f1ff', '#e0e8f5ff00']}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={styles.ctaShimmerGradient}
-                />
-              </Animated.View>
               <View style={styles.ctaIconCircle}>
-                <Ionicons name="shield-checkmark" size={18} color="#4c8fd1ff" />
+                <Image
+                  source={require('../../../../assets/images/safe.png')}
+                  style={styles.ctaBadgeIcon}
+                  resizeMode="contain"
+                />
               </View>
               <View style={{ flex: 1, paddingHorizontal: 10, }}>
                 
                 <Text style={styles.ctaSubtitle}>
-                  Diaristas com verificação de identidade, antecedentes e cobertura ativa.
+                  Profissionais com verificação de identidade, antecedentes e monitoramento ativo.
                 </Text>
               </View>
             </TouchableOpacity>
@@ -306,29 +271,30 @@ const getGreeting = () => {
 const styles = StyleSheet.create({
   wrapper: {
     width: '100%',
-    paddingHorizontal: Platform.OS === 'android' ? 12 : 16,
-    paddingBottom: 12,
-    borderBottomEndRadius: 30,
-    borderBottomStartRadius: 30,
+    bottom: Platform.OS === 'android' ? 29 : 0,
+    paddingHorizontal: Platform.OS === 'android' ? 14 : 10,
+    paddingBottom: 0,
+    borderBottomEndRadius: 22,
+    borderBottomStartRadius: 22,
   },
   card: {
-    backgroundColor: '#e0e8f5ff',
-    borderRadius: 32,
+    backgroundColor: 'transparent',
+    borderRadius: 20,
     borderWidth: 0,
     borderColor: '#afd0f1ff',
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    shadowColor: '#7398b9ff',
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
   cardTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 8,
   },
   left: {
     flexDirection: 'row',
@@ -337,10 +303,10 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   avatarButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
     backgroundColor: '#e0e8f5ff',
     borderWidth: 1,
     borderColor: '#afd0f1ff',
@@ -349,14 +315,14 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   cameraBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 1,
+    bottom: 4,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -367,39 +333,40 @@ const styles = StyleSheet.create({
   },
   cameraBadgePlus: {
     color: '#4c8fd1ff',
-    fontSize: 20,
-    bottom: 10,
+    fontSize: 16,
+    bottom: 6,
     fontWeight: '700',
   },
   greetingText: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#8d9fafff',
     marginBottom: 2,
   },
   userNameText: {
-    fontSize: 18,
+    fontSize: 14,
     color: '#7398b9ff',
     fontWeight: Platform.select({ ios: '700', android: '700' }),
   },
   subtleText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#8d9fafff',
   },
   notifyButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#afd0f1ff',
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    borderWidth: 0,
+    borderColor: 'transparent',
     backgroundColor: '#e0e8f5ff',
     justifyContent: 'center',
     alignItems: 'center',
   },
   badge: {
     position: 'absolute',
-    top: 6,
+    top: 0,
     right: 6,
     minWidth: 10,
+    bottom: 10,
     height: 10,
     borderRadius: 8,
     paddingHorizontal: 4,
@@ -410,6 +377,7 @@ const styles = StyleSheet.create({
   badgePill: {
     minWidth: 16,
     height: 14,
+   
   },
   badgeText: {
     color: '#fff',
@@ -419,44 +387,35 @@ const styles = StyleSheet.create({
   ctaCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    backgroundColor: '#e0e8f5ff',
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    marginHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#afd0f1ff',
-    marginBottom: 14,
+    marginTop: 2,
+    backgroundColor: 'transparent',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    marginHorizontal: 10,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    marginBottom: 4,
     overflow: 'hidden',
     position: 'relative',
   },
   ctaSubtitle: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#8d9fafff',
     lineHeight: 18,
      
   },
   ctaIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 20,
-    marginLeft: 12,
-    backgroundColor: '#e0e8f5ff',
-    borderWidth: 1,
-    borderColor: '#afd0f1ff',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginLeft: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  ctaShimmer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 140,
-    opacity: 0.42,
-  },
-  ctaShimmerGradient: {
-    flex: 1,
+  ctaBadgeIcon: {
+    width: 16,
+    height: 16,
   },
 });
 
