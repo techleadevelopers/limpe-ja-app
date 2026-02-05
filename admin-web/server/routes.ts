@@ -51,7 +51,7 @@ const createReverseProxy =
 export async function registerRoutes(app: Express): Promise<Server> {
   const backendUrl = normalizeUrl(
     process.env.ADMIN_BACKEND_URL ?? process.env.VITE_APP_API_URL,
-    "https://limpeja-backend-production-edfa.up.railway.app",
+    "limpeja-backend-production-5956.up.railway.app",
   );
   const useMockApi = process.env.ADMIN_USE_MOCK_API === "1";
 
