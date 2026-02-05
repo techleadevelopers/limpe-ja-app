@@ -23,7 +23,7 @@
     },
     "typeRoots": [
       "./node_modules/@types",
-      "./src/types" // Esta linha é crucial para que o TypeScript encontre seu .d.ts
+      "./src/types" // Esta linha Ã© crucial para que o TypeScript encontre seu .d.ts
     ]
   },
   "include": [
