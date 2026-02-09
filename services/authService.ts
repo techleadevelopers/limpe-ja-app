@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthResponse, UserRole, MessageResponseDto } from '../types/backend/auth';
 import { UserProfile } from '../types/backend/users';
 import { api } from './api';
-import axios from 'axios';
+import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
+import { authClient, firebaseInitializationPromise } from '../config/firebaseClient';
 import { createLocalConsole } from './logging';
 const console = createLocalConsole();
 
@@ -146,14 +147,47 @@ class AuthService {
   }
 
   async sendPasswordReset(email: string): Promise<MessageResponseDto> {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      throw new Error('Por favor, informe um e-mail.');
+    }
+
     try {
-      if (__DEV__) console.log(`[AuthService Frontend] Solicitando redefinição de senha para: ${email}`);
-      const response = await api.post<MessageResponseDto>('/auth/forgot-password', { email });
-      if (__DEV__) console.log(`[AuthService Frontend] Redefinição de senha solicitada com sucesso para: ${email}`);
-      return response.data;
+      await firebaseInitializationPromise;
+      const auth = authClient ?? getAuth();
+
+      const actionCodeSettings = {
+        url: 'https://limpeja-app.firebaseapp.com/login',
+        handleCodeInApp: true,
+      };
+
+      if (__DEV__) {
+        console.log(`[AuthService Frontend] Firebase reset: disparando e-mail para ${normalizedEmail}`);
+      }
+
+      await sendPasswordResetEmail(auth, normalizedEmail, actionCodeSettings);
+
+      return {
+        message: 'Um link de redefinição foi enviado. Verifique sua caixa de entrada (e spam).',
+      };
     } catch (error: any) {
-      console.error(`[AuthService Frontend] Erro ao solicitar redefinição de senha para ${email}:`, error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Erro ao enviar link de redefinição de senha.');
+      const code = error?.code;
+
+      if (__DEV__) {
+        console.error('[AuthService Frontend] Firebase reset error:', code, error?.message);
+      }
+
+      switch (code) {
+        case 'auth/user-not-found':
+          throw new Error('Usuário não encontrado.');
+        case 'auth/invalid-email':
+          throw new Error('E-mail inválido.');
+        case 'auth/too-many-requests':
+          throw new Error('Muitas solicitações. Tente novamente mais tarde.');
+        default:
+          throw new Error('Erro ao enviar link de redefinição de senha. Tente novamente.');
+      }
     }
   }
 
